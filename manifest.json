@@ -1,0 +1,24 @@
+{
+  "name": "간판지원단 - 경기도 소상공인 경영환경개선사업",
+  "short_name": "간판지원단",
+  "description": "경기도 소상공인의 경영환경개선을 위한 노후 간판 교체 및 정비 지원 사업 포털입니다.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "./간판지원단 로고-3.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./간판지원단 로고-2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

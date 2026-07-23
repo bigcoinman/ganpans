@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>간판 정부 지원단 - 경기도 소상공인 경영환경개선사업</title>
+
+    <!-- PWA Manifest & Mobile Capability -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="간판지원단">
+    <link rel="apple-touch-icon" href="간판지원단 로고-3.png">
+    <meta name="theme-color" content="#2563eb">
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Core stylesheet -->
+    <link rel="stylesheet" href="style.css">
+
+    <meta name="description" content="경기도 소상공인의 경영환경개선을 위한 노후 간판 교체 및 정비 지원 사업 포털입니다. 실시간 간판 시뮬레이터로 나만의 간판을 디자인해보세요.">
+    <meta property="og:title" content="간판 지원단 - 경기도 소상공인 경영환경개선사업">
+    <meta property="og:description" content="우리 가게 첫인상, 경기도가 지원합니다. 노후 간판 교체부터 디자인 컨설팅, 최대 200만원 보조금 신청까지!">
+    <meta property="og:type" content="website">
+</head>
+
+<body>
+
+    <!-- Dynamic Background Effects -->
+    <div class="bg-blob blob-1" style="background: var(--accent-primary);"></div>
+    <div class="bg-blob blob-2" style="background: var(--accent-secondary);"></div>
+    <div class="bg-blob blob-3" style="background: #3b82f6;"></div>
+
+    <!-- Header Navigation -->
+    <header class="glass-nav">
+        <div class="nav-container">
+            <a href="#home" class="logo">
+                <img src="간판지원단 로고-3.png" alt="간판지원단 로고" class="logo-img">
+            </a>
+            <ul class="nav-menu">
+                <li><a href="#home" class="nav-link">홈</a></li>
+                <li><a href="#intro" class="nav-link">사업소개</a></li>
+                <li><a href="#showcase" class="nav-link">간판 갤러리</a></li>
+                <li><a href="#simulator" class="nav-link">간판 시뮬레이터</a></li>
+                <li><a href="#faq" class="nav-link">FAQ</a></li>
+                <li><a href="#reviews" class="nav-link">후기</a></li>
+                <li><a href="#" id="nav-install-app" class="nav-link" style="color: var(--accent-primary); font-weight: 700;"><i class="fa-solid fa-mobile-screen-button"></i> 앱 설치</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="#apply-section" class="btn btn-primary" style="padding: 8px 20px; font-size: 0.85rem;">간편
+                    신청하기</a>
+                <button id="auth-btn" class="btn btn-primary" style="padding: 10px 22px; font-size: 0.9rem;"><i
+                        class="fa-solid fa-right-to-bracket"></i> 로그인</button>
+                <div id="user-info-area" style="display: none; align-items: center; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+                        <span id="header-user-name"
+                            style="font-weight: 600; color: var(--text-primary); font-size: 0.9rem; line-height: 1.2;"></span>
+                        <button id="logout-btn" class="btn btn-secondary"
+                            style="padding: 5px 10px; font-size: 0.78rem; min-height: auto;"><i
+                                class="fa-solid fa-right-from-bracket"></i> 로그아웃</button>
+                    </div>
+                    <a href="dashboard.html" target="_blank" class="nav-link" id="nav-dashboard"
+                        style="display: none; font-size: 0.87rem; white-space: nowrap;">마이페이지</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section id="home" class="hero-section">
+            <div class="container hero-grid">
+                <div class="hero-content">
+                    <h1>
+                        <span class="gradient-text">우리 가게의 첫인상,</span>
+                        <span>경기도가 지원합니다.</span>
+                    </h1>
+                    <p>
+                        경기도 내 소상공인의 경영 안정을 위한 노후 간판 교체 및 맞춤형 디자인 컨설팅! 지금 바로 나만의 간판을 미리 디자인하고 지원 사업에 참여해 보세요.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="#simulator" class="btn btn-primary">AI 간판 시뮬레이터 <i
+                                class="fa-solid fa-wand-magic-sparkles"></i></a>
+                        <a href="#check" class="btn btn-secondary">신청 자격 자가진단</a>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <h4>지원 대상</h4>
+                            <p>경기도내 사업체</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>최대 200만원(100%지원)</h4>
+                            <p>간판 교체 지원금(자부담 0원 - VAT 별도)</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>1:1 맞춤형</h4>
+                            <p>디자인 및 컨설팅</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hero-visual">
+                    <div class="sign-card-3d" style="border-image: var(--grad-primary) 1;">
+                        <div class="neon-border" style="border-color: rgba(0, 102, 255, 0.3);"></div>
+                        <img src="경영환경개선 이미지.png" alt="경영환경개선사업 지원" class="hero-sign-image">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Business Intro Section (Merged) -->
+        <section id="intro" class="section">
+            <div class="container">
+                <div class="section-title">
+                    <h2>경영환경개선사업이란?</h2>
+                    <p>경기도 소상공인의 경쟁력 강화와 활력 제고를 위해 매년 실시하는 노후 간판 교체 개선 사업 입니다.</p>
+                    <p>▶ 소상공인 이란? ◀</p>
+                    <p>- 도.소매업, 음식점업, 숙박업, 서비스업 : 상시 직원 5인 미만 업체</p>
+                    <p>- 광업, 제조업, 건설업 및 운수업 : 상시 직원 10인 미만 업체</p>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-card glass-panel">
+                        <div class="info-icon"
+                            style="background: rgba(0, 102, 255, 0.1); color: var(--accent-primary); border-color: rgba(0, 102, 255, 0.2);">
+                            <i class="fa-solid fa-store"></i>
+                        </div>
+                        <h3>지원 대상</h3>
+                        <p>경기도 내 창업 3년 이상 영업 중인 소상공인으로 노후 간판 교체가 시급한 점포주분들을 대상으로 합니다.</p>
+                    </div>
+
+                    <div class="info-card glass-panel">
+                        <div class="info-icon"
+                            style="background: rgba(255, 183, 0, 0.1); color: var(--accent-secondary); border-color: rgba(255, 183, 0, 0.2);">
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                        </div>
+                        <h3>지원 금액</h3>
+                        <p>점포당 간판 교체 최대 200만원까지 제작 및 철거 설치 비용을 100% 보조지원 합니다.(자부담 0원 - VAT 별도)</p>
+                    </div>
+
+                    <div class="info-card glass-panel">
+                        <div class="info-icon"
+                            style="background: rgba(16, 185, 129, 0.1); color: var(--accent-success); border-color: rgba(16, 185, 129, 0.2);">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                        <h3>경영 개선 혜택</h3>
+                        <p>트렌디한 디자인으로 간판 교체와 일대일 맞춤형 브랜딩 디자인 컨설팅을 무상으로 연계 제공합니다.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+
+        <!-- Signboard Application Process Steps Timeline -->
+        <section id="process-steps" class="section" style="background: var(--bg-secondary);">
+            <div class="container">
+                <div class="section-title">
+                    <h2>간판 온라인 신청에서 완료까지 진행 단계</h2>
+                    <p>경기도 소상공인 경영환경개선사업의 신청 접수부터 보조금 환급 완료까지의 전체 진행 흐름입니다.</p>
+                </div>
+
+                <div class="process-steps-timeline">
+                    <!-- Step 1 -->
+                    <div class="process-step-card glass-panel">
+                        <div class="step-badge">1</div>
+                        <div class="step-icon-wrapper">
+                            <i class="fa-solid fa-file-signature"></i>
+                        </div>
+                        <h3>온라인 간판 접수 신청</h3>
+                        <p>지원요건 자가진단 후 온라인을 통해 신청 서류 접수</p>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="process-step-card glass-panel">
+                        <div class="step-badge">2</div>
+                        <div class="step-icon-wrapper">
+                            <i class="fa-solid fa-award"></i>
+                        </div>
+                        <h3>지원 대상 선정</h3>
+                        <p>경기도시장상권진흥원 심사단 서류 검토 및 적격 여부 판단 후 최종 선정</p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="process-step-card glass-panel">
+                        <div class="step-badge">3</div>
+                        <div class="step-icon-wrapper">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                        </div>
+                        <h3>철거 및 교체 설치</h3>
+                        <p>기존의 낡고 노후된 간판을 철거하고, 신규 디자인 간판으로 제작 및 설치</p>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="process-step-card glass-panel highlighted-step">
+                        <div class="step-badge">4</div>
+                        <div class="step-icon-wrapper">
+                            <i class="fa-solid fa-credit-card"></i>
+                        </div>
+                        <h3>시공 업체로 입금</h3>
+                        <p class="highlight-desc">시공 완료 후 점포주가 시공 업체로 대금 지급<br><strong>2,200,000원 <small>(VAT
+                                    포함)</small></strong></p>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="process-step-card glass-panel">
+                        <div class="step-badge">5</div>
+                        <div class="step-icon-wrapper">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                        </div>
+                        <h3>완료 보고서 제출</h3>
+                        <p>간판 교체 시공 증빙자료와 완료 보고서 작성 후 경기도시장상권진흥원에 제출</p>
+                    </div>
+
+                    <!-- Step 6 -->
+                    <div class="process-step-card glass-panel">
+                        <div class="step-badge">6</div>
+                        <div class="step-icon-wrapper">
+                            <i class="fa-solid fa-piggy-bank"></i>
+                        </div>
+                        <h3> 보조 지원금 입금</h3>
+                        <p>제출 보고서 최종 검토 후, 경기도시장상권진흥원에서 선정 업체(점포주) 계좌로 <strong>2,000,000원</strong> 입금</p>
+                    </div>
+
+                    <!-- Step 7 -->
+                    <div class="process-step-card glass-panel success-step">
+                        <div class="step-badge success-badge"><i class="fa-solid fa-check"></i></div>
+                        <div class="step-icon-wrapper">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <h3>지원 사업 완료</h3>
+                        <p>교체 비용 보조 및 경영환경 개선 프로세스 최종 종료</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Before & After Comparison Showcase (디자인 샘플 갤러리) -->
+        <section id="showcase" class="section">
+            <div class="container">
+                <div class="section-title">
+                    <h2>간판 갤러리</h2>
+                    <p>경기도 지자체 사업으로 보조 지원 받은 업체 간판 디자인 입니다.</p>
+                </div>
+
+                <!-- Building Gallery Container -->
+                <div class="building-gallery-wrapper">
+                    <!-- Gallery Top Controls -->
+                    <div class="gallery-controls glass-panel">
+                        <div class="control-info">
+                            <i class="fa-solid fa-building"></i>
+                            <span> 간판 디자인</span>
+                        </div>
+                        <div class="toggle-group">
+                            <span class="toggle-label"><i class="fa-solid fa-moon"></i> 야간 조명 보기</span>
+                            <label class="switch">
+                                <input type="checkbox" id="gallery-light-toggle">
+                                <span class="slider-round"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Building Viewport -->
+                    <div class="building-scroll-viewport">
+                        <!-- Shop 1: 겨르메기카페 -->
+                        <div class="shop-slot" data-shop="cafe">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="겨르메기카페 간판.png" alt="겨르메기카페 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 2: LG공인중개사 -->
+                        <div class="shop-slot" data-shop="lg">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="LG공인중개사 간판.png" alt="LG공인중개사 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="window glass-window"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 3: 뉴다올부동산 -->
+                        <div class="shop-slot" data-shop="daol">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="뉴다올부동산 간판.png" alt="뉴다올부동산 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 4: 가래비안경사랑 -->
+                        <div class="shop-slot" data-shop="eyewear">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="가래비안경사랑-간판.png" alt="가래비안경사랑 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 5: 갑오정육식당 -->
+                        <div class="shop-slot" data-shop="butcher">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="갑오정육식당 간판.png" alt="갑오정육식당 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                                <div class="window glass-window"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 6: 나라시스템 -->
+                        <div class="shop-slot" data-shop="sink">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="나라시스템 간판.png" alt="나라시스템 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 7: 네일을부탁해 -->
+                        <div class="shop-slot" data-shop="nail">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="네일을부탁해.png" alt="네일을부탁해 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 8: 카스전자저울 -->
+                        <div class="shop-slot" data-shop="cas">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="카스전자저울 간판.png" alt="카스전자저울 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="window glass-window"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 9: 이모네식당 -->
+                        <div class="shop-slot" data-shop="imone">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="이모네식당-간판.png" alt="이모네식당 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 10: 록씨티뮤직실용음악학원 -->
+                        <div class="shop-slot" data-shop="music">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="록씨티뮤직 간판.png" alt="록씨티뮤직 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                                <div class="window glass-window"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 11: 양지낚시 -->
+                        <div class="shop-slot" data-shop="fishing">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="양지낚시-간판.png" alt="양지낚시 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 12: 우진가구갤러리 -->
+                        <div class="shop-slot" data-shop="woojin">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="우진가구 간판.png" alt="우진가구 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 13: 세원정밀 -->
+                        <div class="shop-slot" data-shop="sewon">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="세원정밀 간판.png" alt="세원정밀 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 14: 신세기포장 -->
+                        <div class="shop-slot" data-shop="sinsegi">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="신세기포장-간판.png" alt="신세기포장 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="window glass-window"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 15: 신진철물 -->
+                        <div class="shop-slot" data-shop="shinjin_bolt">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="신진볼트 간판.png" alt="신진철물 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                                <div class="window glass-window"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 16: 신진베어링 -->
+                        <div class="shop-slot" data-shop="shinjin_bearing">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="신진베어링 간판.png" alt="신진베어링 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 17: 서정정밀 -->
+                        <div class="shop-slot" data-shop="seojeong">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="서정정밀 간판.png" alt="서정정밀 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 18: 현대종합인테리어 -->
+                        <div class="shop-slot" data-shop="hyundai">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="현대종합인테리어 간판.png" alt="현대종합인테리어 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 19: 초원식당 -->
+                        <div class="shop-slot" data-shop="chowon">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="초원식당 간판.png" alt="초원식당 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                                <div class="window glass-window"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 20: 신우카센터 -->
+                        <div class="shop-slot" data-shop="shinwoo">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="신우카센터 간판.png" alt="신우카센터 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 21: 삼동콩나물국밥 -->
+                        <div class="shop-slot" data-shop="samdong">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="삼동콩나물국밥 간판.png" alt="삼동콩나물국밥 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 22: 행운열쇠 -->
+                        <div class="shop-slot" data-shop="haengun">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="행운열쇠 간판.png" alt="행운열쇠 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 23: 한결종합배관 -->
+                        <div class="shop-slot" data-shop="hangyeol">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="한결종합배관간판.png" alt="한결종합배관 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shop 24: 황도야지 -->
+                        <div class="shop-slot" data-shop="hwangdoyaji">
+                            <div class="wall-lamp"></div>
+                            <div class="signboard-area">
+                                <img src="황도야지-전면간판.png" alt="황도야지 간판" class="signboard-img">
+                            </div>
+                            <div class="storefront-facade">
+                                <div class="window glass-window"></div>
+                                <div class="door glass-door"></div>
+                                <div class="window glass-window"></div>
+                            </div>
+                        </div>
+                    </div> <!-- building-scroll-viewport 닫기 -->
+
+                    <!-- Shop Details Panel (Updates dynamically when hovering/clicking on the building slots) -->
+                    <div class="shop-details-card glass-panel" id="gallery-shop-details" style="margin-top: 5px;">
+                        <div class="details-placeholder">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <p>건물의 간판을 클릭하거나 마우스를 올려 상세 지원 현황을 확인하세요.</p>
+                        </div>
+                        <div class="details-content" style="display: none;">
+                            <div class="details-header">
+                                <span class="badge" id="detail-category">카테고리</span>
+                                <h3 id="detail-title">상호명</h3>
+                            </div>
+                            <div class="details-body">
+                                <div class="detail-row">
+                                    <span>지원 내용</span>
+                                    <strong id="detail-support">간판 교체 및 컨설팅</strong>
+                                </div>
+                                <div class="detail-row">
+                                    <span>보조 지원금</span>
+                                    <strong id="detail-subsidy">최대 200만원</strong>
+                                </div>
+                                <div class="detail-row">
+                                    <span>시공 일자</span>
+                                    <strong id="detail-date">-</strong>
+                                </div>
+                                <div class="detail-row">
+                                    <span>만족도</span>
+                                    <strong id="detail-satisfaction">★★★★★ 99%</strong>
+                                </div>
+                                <div class="detail-row detail-desc-row">
+                                    <span>시공 평가</span>
+                                    <p id="detail-desc">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Signboard Simulator Section -->
+        <section id="simulator" class="section"
+            style="background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);">
+            <div class="container">
+                <div class="section-title">
+                    <h2>실시간 간판 시뮬레이터</h2>
+                    <p>가게 상호를 입력하고 폰트, 색상, 조명 모드를 바꾸며 가상 상점 외관에 완벽히 피팅되는 옥외 광고물 간판을 디자인해보세요.</p>
+                </div>
+
+                <div class="simulator-layout">
+                    <!-- Left Panel: Configurations -->
+                    <div class="sim-controls glass-panel">
+                        <h3 class="gradient-text" style="margin-bottom: 20px;"><i class="fa-solid fa-sliders"></i> 디자인
+                            컨트롤러</h3>
+
+                        <!-- Presets -->
+                        <div class="sim-group">
+                            <label>추천 스타일 프리셋</label>
+                            <div class="presets-grid">
+                                <div class="preset-card active" data-preset="cafe">
+                                    <h4>청춘카페</h4>
+                                    <span>네온 퍼플</span>
+                                </div>
+                                <div class="preset-card" data-preset="bakery">
+                                    <h4>베이커리</h4>
+                                    <span>클래식 우드</span>
+                                </div>
+                                <div class="preset-card" data-preset="flower">
+                                    <h4>꽃집</h4>
+                                    <span>LED 에메랄드</span>
+                                </div>
+                                <div class="preset-card" data-preset="salon">
+                                    <h4>헤어살롱</h4>
+                                    <span>스틸 메탈</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Shop name input -->
+                        <div class="sim-group">
+                            <label for="shop-name-input">상호명 입력</label>
+                            <input type="text" id="shop-name-input" class="input-text" value="청춘카페"
+                                placeholder="상호명을 입력하세요" maxlength="15">
+                        </div>
+
+                        <!-- Font selector -->
+                        <div class="sim-group">
+                            <label for="font-select">글꼴 스타일</label>
+                            <select id="font-select" class="select-sim">
+                                <option value="'Nanum Pen Script', sans-serif">나눔 손글씨체</option>
+                                <option value="'Black Han Sans', sans-serif">블랙 고딕체</option>
+                                <option value="'East Sea Dokdo', sans-serif">독도 서체</option>
+                                <option value="'Noto Sans KR', sans-serif">본고딕 (클래식)</option>
+                                <option value="'Montserrat', sans-serif">Montserrat (영문)</option>
+                                <option value="'Jua', sans-serif">주아체</option>
+                                <option value="'Do Hyeon', sans-serif">도현체</option>
+                                <option value="'Yeon Sung', sans-serif">연성체</option>
+                                <option value="'Gowun Dodum', sans-serif">고운돋움체</option>
+                                <option value="'Gowun Batang', sans-serif">고운바탕체</option>
+                                <option value="'Nanum Brush Script', sans-serif">나눔 붓글씨체</option>
+                                <option value="'Gaegu', sans-serif">개구체</option>
+                                <option value="'Song Myung', sans-serif">송명체</option>
+                                <option value="'Gamja Flower', sans-serif">감자꽃체</option>
+                                <option value="'Cute Font', sans-serif">큐트폰트체</option>
+                                <option value="'Single Day', sans-serif">싱글데이체</option>
+                                <option value="'Bagel Fat One', sans-serif">베이글팻원체</option>
+                                <option value="'Pacifico', cursive">Pacifico (영문 필기)</option>
+                                <option value="'Lobster', sans-serif">Lobster (영문 타이틀)</option>
+                                <option value="'Bebas Neue', sans-serif">Bebas Neue (영문 고딕)</option>
+                            </select>
+                        </div>
+
+                        <!-- Text Size -->
+                        <div class="sim-group">
+                            <label for="text-size-input">글자 크기 배율</label>
+                            <div class="range-slider">
+                                <input type="range" id="text-size-input" class="range-input" min="1.2" max="5.0"
+                                    step="0.1" value="2.2">
+                                <span id="text-size-val" class="range-val">2.2x</span>
+                            </div>
+                        </div>
+
+                        <!-- Signboard Material type -->
+                        <div class="sim-group">
+                            <label for="sign-type-select">간판 형태 및 소재</label>
+                            <select id="sign-type-select" class="select-sim">
+                                <option value="neon">조명용 플렉시블 간판</option>
+                            </select>
+                        </div>
+
+                        <!-- Glowing Color Palette -->
+                        <div class="sim-group">
+                            <label>메인 발광 색상</label>
+                            <div class="color-picker-grid">
+                                <button class="color-btn" style="background-color: #ec4899;" data-color="#ec4899"
+                                    title="핑크"></button>
+                                <button class="color-btn" style="background-color: #a855f7;" data-color="#a855f7"
+                                    title="보라"></button>
+                                <button class="color-btn" style="background-color: #0066ff;" data-color="#0066ff"
+                                    title="블루"></button>
+                                <button class="color-btn" style="background-color: #10b981;" data-color="#10b981"
+                                    title="녹색"></button>
+                                <button class="color-btn" style="background-color: #ffffff;" data-color="#ffffff"
+                                    title="흰색"></button>
+                                <button class="color-btn" style="background-color: #ef4444;" data-color="#ef4444"
+                                    title="빨강"></button>
+                                <button class="color-btn" style="background-color: #f97316;" data-color="#f97316"
+                                    title="오렌지"></button>
+                                <button class="color-btn" style="background-color: #eab308;" data-color="#eab308"
+                                    title="노랑"></button>
+                                <button class="color-btn" style="background-color: #06b6d4;" data-color="#06b6d4"
+                                    title="하늘"></button>
+                                <button class="color-btn" style="background-color: #84cc16;" data-color="#84cc16"
+                                    title="라임"></button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Panel: Screen Simulator Preview -->
+                    <div class="sim-preview-container">
+                        <div id="sim-screen" class="sim-screen">
+                            <!-- Floating Day/Night Toggle -->
+                            <div class="floating-night-toggle glass-panel"
+                                style="position: absolute; top: 15px; right: 15px; z-index: 100; padding: 8px 16px; border-radius: 30px; background: rgba(255,255,255,0.75); display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.4);">
+                                <span
+                                    style="font-size: 0.78rem; font-weight: 700; color: var(--text-primary); white-space: nowrap;"><i
+                                        class="fa-solid fa-moon"
+                                        style="color: var(--accent-secondary); margin-right: 4px;"></i> 야간 경관 조명</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="day-night-toggle">
+                                    <span class="slider-round"></span>
+                                </label>
+                            </div>
+                            <div class="sky-effects"></div>
+                            <div class="stars"></div>
+                            <div class="light-beam"></div>
+
+                            <!-- Shop Building Structure -->
+                            <div class="shop-building">
+
+                                <!-- Mounting Sign Frame -->
+                                <div class="sign-mounting-bracket">
+                                    <!-- Sign Lights -->
+                                    <div class="sign-lights">
+                                        <div class="sign-light">
+                                            <div class="light-fixture"></div>
+                                            <div class="light-glow"></div>
+                                        </div>
+                                        <div class="sign-light">
+                                            <div class="light-fixture"></div>
+                                            <div class="light-glow"></div>
+                                        </div>
+                                        <div class="sign-light">
+                                            <div class="light-fixture"></div>
+                                            <div class="light-glow"></div>
+                                        </div>
+                                    </div>
+                                    <div id="live-signboard" class="live-signboard">
+                                        <span id="live-sign-text" class="live-sign-text">청춘카페</span>
+                                    </div>
+                                </div>
+
+                                <!-- Windows and Doors -->
+                                <div class="shop-bottom-facade">
+                                    <div class="sim-window"></div>
+                                    <div class="sim-door"></div>
+                                    <div class="sim-window"></div>
+                                </div>
+
+                            </div>
+                            <!-- Street Pavement -->
+                            <div class="street-ground"></div>
+                        </div>
+
+                        <!-- Simulator Actions -->
+                        <div class="action-bar glass-panel" style="border-radius: 0 0 20px 20px; border-top: none;">
+                            <p><i class="fa-solid fa-circle-info"></i> 야간 조명을 활성화하면 조명형 입체 채널 또는 네온 발광 질감이 적용됩니다.</p>
+                            <button id="apply-design-btn" class="btn btn-primary">이 디자인으로 지원 신청 <i
+                                    class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Eligibility Checklist Section (Merged) -->
+        <section id="check" class="section"
+            style="background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);">
+            <div class="container">
+                <div class="section-title">
+                    <h2>우리 가게도 신청 가능할까?</h2>
+                    <p>아래 자가진단 항목을 하나씩 선택해보세요. 네 가지 조건이 모두 부합하면 신청 가능 대상자 입니다.</p>
+                </div>
+
+                <div class="check-list-container">
+                    <div class="check-card">
+                        <input type="checkbox" id="check-1">
+                        <div class="check-card-text">경기도 내 창업 3년 이상 영업중인 소상공인 입니다.</div>
+                    </div>
+                    <div class="check-card">
+                        <input type="checkbox" id="check-2">
+                        <div class="check-card-text">매장 간판이 낡았거나, 탈색 및 파손되어 교체가 시급한 노후 상태입니다.</div>
+                    </div>
+                    <div class="check-card">
+                        <input type="checkbox" id="check-3">
+                        <div class="check-card-text">최근 3년 동안 경기도 내 지자체 보조 지원 사업을 받아 본 이력이 없습니다.</div>
+                    </div>
+                    <div class="check-card">
+                        <input type="checkbox" id="check-4">
+                        <div class="check-card-text">소상공인 기준(상시근로자 5인 or 10인 미만)을 충족합니다.</div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Eligibility badge -->
+                <div id="eligibility-status" class="eligibility-status-box locked">
+                    <i class="fa-solid fa-lock"></i> 자격 요건 확인 중 (0/4 체크됨)
+                </div>
+            </div>
+        </section>
+
+        <!-- Multi-Step Application Form Wizard (간편 신청) -->
+        <section id="apply-section" class="section">
+            <div class="container">
+                <div class="section-title">
+                    <h2>온라인 간편 지원 신청</h2>
+                    <p>간단한 인적 사항 및 점포 정보 기입해 주시면 담당자가 순차적으로 연락 드리겠습니다.</p>
+                </div>
+
+                <div class="wizard-container glass-panel">
+
+                    <!-- Progression nodes -->
+                    <div class="wizard-steps">
+                        <div class="wizard-progress"></div>
+                        <div class="step-node active">1</div>
+                        <div class="step-node">2</div>
+                        <div class="step-node">3</div>
+                    </div>
+
+                    <!-- Forms steps -->
+                    <form id="apply-form" onsubmit="event.preventDefault();">
+
+                        <!-- Step 1: Applicant info -->
+                        <div class="step-pane active" data-step="1">
+                            <h3 style="margin-bottom: 24px; color: var(--text-primary);"><i
+                                    class="fa-solid fa-user"></i> 단계 1: 신청인 대표
+                                정보</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="owner-name">대표자 성명</label>
+                                    <input type="text" id="owner-name" class="form-input" placeholder="홍길동" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="owner-phone">휴대전화 번호</label>
+                                    <input type="tel" id="owner-phone" class="form-input" placeholder="010-1234-5678"
+                                        required>
+                                </div>
+                                <div class="form-group form-grid-full">
+                                    <label for="owner-email">대표 이메일 주소 (선택)</label>
+                                    <input type="email" id="owner-email" class="form-input"
+                                        placeholder="representative@domain.com">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Store info -->
+                        <div class="step-pane" data-step="2">
+                            <h3 style="margin-bottom: 24px; color: var(--text-primary);"><i
+                                    class="fa-solid fa-shop"></i> 단계 2:
+                                사업장(점포) 정보 및 현황</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="app-shop-name">사업자 상호명</label>
+                                    <input type="text" id="app-shop-name" class="form-input" placeholder="상호명 입력"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="app-sign-type">선택한 간판 소재</label>
+                                    <input type="text" id="app-sign-type" class="form-input"
+                                        placeholder="예: 플렉스(기본형), LED" readonly>
+                                </div>
+                                <div class="form-group form-grid-full">
+                                    <label for="store-address">설치 예정지 전체 주소</label>
+                                    <input type="text" id="store-address" class="form-input"
+                                        placeholder="경기도 수원시 OO구 OO로 1" required>
+                                </div>
+
+                                <!-- Photo upload drag & drop area -->
+                                <div class="form-group form-grid-full">
+                                    <label>기존 노후 간판 정면 현장 촬영 사진</label>
+                                    <div class="file-upload-area" id="file-upload-area">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                                        <p>사진 파일을 드래그하여 드롭하거나 영역을 클릭해 선택하세요.</p>
+                                        <span>지원 규격: JPG, PNG (최대 10MB)</span>
+                                        <input type="file" id="store-photo" accept="image/*">
+                                        <div id="uploaded-file-name" class="uploaded-file-name"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Application validation summary review -->
+                        <div class="step-pane" data-step="3">
+                            <h3 style="margin-bottom: 24px; color: var(--text-primary);"><i
+                                    class="fa-solid fa-file-shield"></i> 단계 3:
+                                제출 서류 정보 최종 확인</h3>
+                            <p style="color: var(--text-secondary); margin-bottom: 20px;">접수하기 전에 기입하신 자격 증빙 자료가 사실과
+                                일치하는지 재확인해 주십시오.</p>
+
+                            <div class="summary-card">
+                                <h4>신청 세부 확인 목록</h4>
+                                <div class="summary-list">
+                                    <div class="summary-item">
+                                        <span>대표 신청자</span>
+                                        <strong id="sum-owner-name">-</strong>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span>연락처</span>
+                                        <strong id="sum-owner-phone">-</strong>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span>상호명</span>
+                                        <strong id="sum-store-name">-</strong>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span>경기도 내 설치 주소</span>
+                                        <strong id="sum-store-address">-</strong>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span>간판 형태</span>
+                                        <strong id="sum-sign-type">-</strong>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span>기존 사진 첨부</span>
+                                        <strong id="sum-file-name">-</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group"
+                                style="margin-top: 24px; flex-direction: row; gap: 10px; align-items: flex-start;">
+                                <input type="checkbox" id="agree-terms" style="margin-top: 5px; cursor: pointer;"
+                                    required checked>
+                                <label for="agree-terms"
+                                    style="cursor: pointer; font-size: 0.85rem; color: var(--text-secondary);">
+                                    개인정보 수집 및 경영환경 개선 조례 제반 심사 규정에 동의하며, 사업자등록에 위배 사실이 없음을 서약합니다.
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Wizard controls -->
+                        <div class="wizard-buttons">
+                            <button type="button" class="btn btn-secondary" id="prev-step">이전 단계</button>
+                            <button type="button" class="btn btn-primary" id="next-step">다음 단계</button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- FAQ Section -->
+        <section id="faq" class="section"
+            style="background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);">
+            <div class="container">
+                <div class="section-title">
+                    <h2>자주 묻는 질문 (FAQ)</h2>
+                    <p>경기도 소상공인 경영환경개선사업 간판 부문 신청과 관련한 주요 문의 사항입니다.</p>
+                </div>
+
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <button class="faq-trigger">
+                            <span>Q1. 신청 자격 중 '경기도 내 소상공인' 여부는 어떻게 판단하나요?</span>
+                            <span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                        </button>
+                        <div class="faq-content">
+                            <div class="faq-inner">
+                                사업자등록증상 본점 소재지 및 실제 사업장 위치가 경기도 내에 속해 있어야 하고, 3년이상 영업중이여야 합니다. 또한 상시 근로자 수가
+                                제조업·광업·건설업·운수업은 10인 미만, 서비스업·도소매업 등 기타 업종은 5인 미만인 소상공인 자격 요건을 충족해야 합니다.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-trigger">
+                            <span>Q2. 최대 200만원 보조금 외의 추가 초과 비용은 본인이 부담하나요?</span>
+                            <span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                        </button>
+                        <div class="faq-content">
+                            <div class="faq-inner">
+                                예, 그렇습니다. 최대 200만원 한도 내에서 실 비용(철거 및 시공 비용 포함)은 100% 무상 지원하며, 200만원 초과 금액에
+                                대해서는 자부담 입니다. 또한 부가가치세도 점포주가 직접 정산·부담하셔야 합니다.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-trigger">
+                            <span>Q3. 보조 지원금 200만원은 어떤 방식으로 어느 시점에 지급 받나요?</span>
+                            <span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                        </button>
+                        <div class="faq-content">
+                            <div class="faq-inner">
+                                선정 후 신규 간판 설치 후 선정되신 점포주님께서 간판 설치 업체에 2,200,000원(VAT포함)을 우선 지급하시고 완료보고서 처리 후 약 2주~3주 사이에
+                                선정되신 점포주님 통장으로 보조금 2,000,000원이 입금 됩니다.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-trigger">
+                            <span>Q4. 시뮬레이터 디자인으로 신청하면 100% 동일하게 시공되나요?</span>
+                            <span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                        </button>
+                        <div class="faq-content">
+                            <div class="faq-inner">
+                                본 시뮬레이터는 최적의 디자인 기획안 작성을 지원하기 위한 참고 도구입니다. 최종 선정 통보 후 매칭되는 옥외광고 전문 파트너사와 건물 외장 상태, 시군
+                                조례상의 표시 한계(높이 및 크기 규격), 전기 안전 배선 등을 검토하여 도면 조정이 발생할 수 있습니다.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reviews Section -->
+        <section id="reviews" class="section reviews-section">
+            <div class="container">
+                <div class="section-title">
+                    <h2>사장님들의 후기</h2>
+                    <p>실제 경기도 소상공인 경영환경개선사업을 통해 간판 교체 혜택을 받으신 사장님들의 생생한 사례입니다.</p>
+                </div>
+
+                <!-- Stats Row -->
+                <div class="reviews-stats">
+                    <div class="reviews-stat-item glass-panel">
+                        <div class="reviews-stat-number">4.9<span>/5.0</span></div>
+                        <div class="reviews-stat-label">평균 만족도</div>
+                    </div>
+                    <div class="reviews-stat-item glass-panel">
+                        <div class="reviews-stat-number">2,350<span>+</span></div>
+                        <div class="reviews-stat-label">누적 지원 업체</div>
+                    </div>
+                    <div class="reviews-stat-item glass-panel">
+                        <div class="reviews-stat-number">98<span>%</span></div>
+                        <div class="reviews-stat-label">경영 개선 효과</div>
+                    </div>
+                </div>
+
+                <!-- Reviews Grid -->
+                <div class="reviews-grid" id="reviews-grid">
+
+                    <!-- [기본 노출 1] 늘봄분식 -->
+                    <div class="review-card glass-panel">
+                        <div class="review-card-header">
+                            <span class="review-stars"><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                            <span class="review-date">2026.06</span>
+                        </div>
+                        <p class="review-text">"12년 넘게 쓴 낡은 천막 간판을 이번 사업으로 교체했습니다. LED 입체 채널로 바꿨더니 멀리서도 가게가 환하게 잘 보여요.
+                            저녁 영업 때 손님이 평균 25% 늘었고 전기세도 확 줄었습니다!"</p>
+                        <div class="review-author">
+                            <div class="review-avatar"><i class="fa-solid fa-store"></i></div>
+                            <div class="review-info">
+                                <div class="review-name">김성우 사장님</div>
+                                <div class="review-shop">수원시 · 늘봄분식 운영</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- [기본 노출 2] 온가 가마솥국밥 -->
+                    <div class="review-card glass-panel">
+                        <div class="review-card-header">
+                            <span class="review-stars"><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                            <span class="review-date">2026.05</span>
+                        </div>
+                        <p class="review-text">"낡고 한자가 섞인 칙칙한 나무 간판이었는데 트렌디한 LED 일러스트 간판으로 전면 변경했습니다. 골목 전체가 밝아진 느낌이에요.
+                            젊은 직장인 점심 고객들이 확실히 많이 찾아옵니다."</p>
+                        <div class="review-author">
+                            <div class="review-avatar"><i class="fa-solid fa-bowl-food"></i></div>
+                            <div class="review-info">
+                                <div class="review-name">이혜영 사장님</div>
+                                <div class="review-shop">성남시 · 온가 가마솥국밥 운영</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- [기본 노출 3] 헤어살롱 秀 -->
+                    <div class="review-card glass-panel">
+                        <div class="review-card-header">
+                            <span class="review-stars"><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                            <span class="review-date">2026.05</span>
+                        </div>
+                        <p class="review-text">"가게가 2층 구석이라 지나치는 분들이 많았습니다. 골드 메탈 프레임 돌출 간판과 세련된 전면 LED 간판으로 함께 교체한 뒤로
+                            예약 없이 직접 방문하시는 신규 손님이 매달 눈에 띄게 늘었어요."</p>
+                        <div class="review-author">
+                            <div class="review-avatar"><i class="fa-solid fa-scissors"></i></div>
+                            <div class="review-info">
+                                <div class="review-name">박정호 사장님</div>
+                                <div class="review-shop">안양시 · 헤어살롱 秀 운영</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- [기본 노출 4] 카페 드 솔 -->
+                    <div class="review-card glass-panel">
+                        <div class="review-card-header">
+                            <span class="review-stars"><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                            <span class="review-date">2026.04</span>
+                        </div>
+                        <p class="review-text">"카페 이름이 작아서 손님들이 길을 헤맸었는데 아크릴 면발광 LED 간판으로 교체하고 나서 해결됐습니다. 인스타그램에서 입소문을
+                            타고 골목의 예쁜 카페로 입소문 나며 주말 매출이 부쩍 늘었습니다."</p>
+                        <div class="review-author">
+                            <div class="review-avatar"><i class="fa-solid fa-mug-hot"></i></div>
+                            <div class="review-info">
+                                <div class="review-name">최은지 사장님</div>
+                                <div class="review-shop">고양시 · 카페 드 솔 운영</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- [기본 노출 5] 클래식 옴므 -->
+                    <div class="review-card glass-panel">
+                        <div class="review-card-header">
+                            <span class="review-stars"><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                            <span class="review-date">2026.03</span>
+                        </div>
+                        <p class="review-text">"고급 정장을 파는데 녹슨 철제 프레임 간판이 어울리지 않아 고민이었습니다. 사업비 지원으로 티타늄 역광 간판으로 교체했는데 점포
+                            품격이 살아나며 단골 손님들이 칭찬을 아끼지 않습니다."</p>
+                        <div class="review-author">
+                            <div class="review-avatar"><i class="fa-solid fa-shirt"></i></div>
+                            <div class="review-info">
+                                <div class="review-name">정태수 사장님</div>
+                                <div class="review-shop">부천시 · 클래식 옴므 운영</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- [숨김 처리 6] 도란도란 베이커리 -->
+                    <div class="review-card glass-panel hidden-review">
+                        <div class="review-card-header">
+                            <span class="review-stars"><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                            <span class="review-date">2026.02</span>
+                        </div>
+                        <p class="review-text">"초등학교 앞 골목 구석이라 눈에 띄지 않았는데 귀여운 식빵 캐릭터가 들어간 포인트 조명 간판을 달았습니다. 등하굣길 아이들과
+                            학부모님들이 멀리서 보고 빵 사러 많이 들어옵니다."</p>
+                        <div class="review-author">
+                            <div class="review-avatar"><i class="fa-solid fa-bread-slice"></i></div>
+                            <div class="review-info">
+                                <div class="review-name">강민지 사장님</div>
+                                <div class="review-shop">용인시 · 도란도란 베이커리 운영</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- [숨김 처리 7] 바른정육점 -->
+                    <div class="review-card glass-panel hidden-review">
+                        <div class="review-card-header">
+                            <span class="review-stars"><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                            <span class="review-date">2026.02</span>
+                        </div>
+                        <p class="review-text">"붉은 색 네온사인 간판이 너무 무서워 보인다는 피드백이 있었는데 친환경 느낌의 화이트&그린 LED 간판으로 바꿨습니다. 청결하고
+                            정돈된 분위기가 나서 젊은 주부 고객층의 단골 등록율이 크게 상승했어요."</p>
+                        <div class="review-author">
+                            <div class="review-avatar"><i class="fa-solid fa-cow"></i></div>
+                            <div class="review-info">
+                                <div class="review-name">윤석민 사장님</div>
+                                <div class="review-shop">의정부시 · 바른정육점 운영</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- [숨김 처리 8] 스터디프렌드 독서실 -->
+                    <div class="review-card glass-panel hidden-review">
+                        <div class="review-card-header">
+                            <span class="review-stars"><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                            <span class="review-date">2026.01</span>
+                        </div>
+                        <p class="review-text">"이전 학원 간판을 떼지 못하고 영업하다가 이번 철거 지원과 아크릴 입체 문자 간판 교체를 묶어 100% 무상으로 해결했습니다.
+                            학원가가 몰린 골목에서 확실하게 저희 독서실 존재감을 드러내고 있어요."</p>
+                        <div class="review-author">
+                            <div class="review-avatar"><i class="fa-solid fa-book-open"></i></div>
+                            <div class="review-info">
+                                <div class="review-name">한지민 사장님</div>
+                                <div class="review-shop">안산시 · 스터디프렌드 독서실 운영</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- [숨김 처리 9] 튼튼동물병원 -->
+                    <div class="review-card glass-panel hidden-review">
+                        <div class="review-card-header">
+                            <span class="review-stars"><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                            <span class="review-date">2025.12</span>
+                        </div>
+                        <p class="review-text">"야간 응급 진료를 함께 운영 중인데 외부 간판 불이 약해 보호자분들이 당황하는 일이 잦았습니다. 밤에도 시인성이 탁월한 고휘도
+                            LED 채널 및 외벽 경관바를 설치하여 안전하고 편하게 찾아오십니다."</p>
+                        <div class="review-author">
+                            <div class="review-avatar"><i class="fa-solid fa-paw"></i></div>
+                            <div class="review-info">
+                                <div class="review-name">오창훈 사장님</div>
+                                <div class="review-shop">화성시 · 튼튼동물병원 운영</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- [숨김 처리 10] 플라워 가든 -->
+                    <div class="review-card glass-panel hidden-review">
+                        <div class="review-card-header">
+                            <span class="review-stars"><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                    class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                            <span class="review-date">2025.11</span>
+                        </div>
+                        <p class="review-text">"산뜻한 파스텔톤 플라워 샵 전용 입체 조명 간판으로 교체했습니다. 매장 앞을 포토존처럼 꾸밀 수 있게 조명 설계까지 도와주셔서 꽃
+                            다발 주문은 물론 원데이 클래스 정원도 항상 꽉 차요."</p>
+                        <div class="review-author">
+                            <div class="review-avatar"><i class="fa-solid fa-fan"></i></div>
+                            <div class="review-info">
+                                <div class="review-name">배윤정 사장님</div>
+                                <div class="review-shop">평택시 · 플라워 가든 운영</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- More Reviews & Write Review Buttons -->
+                <div class="reviews-more-container"
+                    style="display: flex; gap: 15px; justify-content: center; margin-top: 20px; flex-wrap: wrap;">
+                    <button class="btn btn-outline" id="btn-more-reviews"
+                        style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 28px; border-radius: 30px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+                        <span>후기 더보기</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <button class="btn btn-primary" id="btn-write-review"
+                        style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 28px; border-radius: 30px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+                        <span>후기 작성하기</span>
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Confirm submission Modal dialog -->
+    <div class="success-modal" id="success-modal">
+        <div class="success-card glass-panel">
+            <div class="success-icon-anim">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3>지원사업 접수 신청 완료!</h3>
+            <p>경기도 소상공인 경영환경개선사업(간판 교체) 신청서가 임시 접수되었습니다.<br>검토 결과 및 공식 옥외광고물 허가 등록용 추가 서류 증빙은 휴대폰 문자로 개별 연락드리겠습니다.</p>
+            <button class="btn btn-primary btn-success" id="success-confirm"
+                style="background: var(--accent-success);">확인</button>
+        </div>
+    </div>
+
+    <!-- Review Write Modal -->
+    <div class="review-modal-overlay" id="review-modal">
+        <div class="review-write-card glass-panel">
+            <button class="auth-close-btn" id="review-close-btn"
+                style="position: absolute; top: 15px; right: 20px; font-size: 1.8rem; background: none; border: none; cursor: pointer; color: var(--text-secondary);">&times;</button>
+
+            <h3
+                style="font-size: 1.4rem; font-weight: 800; color: var(--accent-primary); margin-bottom: 8px; text-align: center;">
+                후기 작성하기</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); text-align: center; margin-bottom: 25px;">지원사업을
+                통한 간판 교체 경험담을 들려주세요.</p>
+
+            <form id="review-form" onsubmit="event.preventDefault();"
+                style="display: flex; flex-direction: column; gap: 18px;">
+                <!-- 별점 선택 -->
+                <div class="form-group-auth" style="text-align: center;">
+                    <label
+                        style="display: block; margin-bottom: 8px; font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">만족도
+                        평가</label>
+                    <div class="rating-stars-select" id="rating-stars-select"
+                        style="display: flex; justify-content: center; gap: 10px; font-size: 2rem; color: #cbd5e1; cursor: pointer;">
+                        <i class="fa-solid fa-star star-select-item active" data-value="1" style="color: #fbbf24;"></i>
+                        <i class="fa-solid fa-star star-select-item active" data-value="2" style="color: #fbbf24;"></i>
+                        <i class="fa-solid fa-star star-select-item active" data-value="3" style="color: #fbbf24;"></i>
+                        <i class="fa-solid fa-star star-select-item active" data-value="4" style="color: #fbbf24;"></i>
+                        <i class="fa-solid fa-star star-select-item active" data-value="5" style="color: #fbbf24;"></i>
+                    </div>
+                    <input type="hidden" id="review-rating-val" value="5">
+                </div>
+
+                <!-- 작성자 아이디 -->
+                <div class="form-group-auth">
+                    <label for="review-author-name"
+                        style="display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.85rem; color: var(--text-primary); text-align: left;">아이디</label>
+                    <input type="text" id="review-author-name" class="form-input-auth" placeholder="아이디를 입력하세요" required
+                        style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 0.9rem;">
+                </div>
+
+                <!-- 지역 및 상호명 -->
+                <div class="form-group-auth">
+                    <label for="review-shop-name"
+                        style="display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.85rem; color: var(--text-primary); text-align: left;">지역
+                        및 상호명</label>
+                    <input type="text" id="review-shop-name" class="form-input-auth" placeholder="예: 수원시 · 늘봄분식 운영"
+                        required
+                        style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 0.9rem;">
+                </div>
+
+                <!-- 후기 내용 -->
+                <div class="form-group-auth">
+                    <label for="review-content"
+                        style="display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.85rem; color: var(--text-primary); text-align: left;">상세
+                        경험담</label>
+                    <textarea id="review-content" class="form-input-auth"
+                        placeholder="간판 교체 후의 변화와 사업에 대한 만족도 등을 자세히 남겨주세요." required
+                        style="width: 100%; height: 120px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 0.9rem; resize: none; font-family: inherit; line-height: 1.5;"></textarea>
+                </div>
+
+                <!-- 등록 버튼 -->
+                <button type="submit" class="phone-submit-btn"
+                    style="margin-top: 10px; font-size: 1rem; padding: 14px;">후기 등록 완료</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Auth Modal (로그인 / 회원가입) -->
+    <div class="auth-modal" id="auth-modal">
+        <div class="auth-card glass-panel">
+            <button class="auth-close-btn" id="auth-close-btn">&times;</button>
+            <div class="auth-tabs">
+                <button class="auth-tab-btn active" id="tab-login-btn">로그인</button>
+                <button class="auth-tab-btn" id="tab-signup-btn">회원가입</button>
+            </div>
+
+            <!-- Login Form Pane -->
+            <div class="auth-pane active" id="login-pane">
+                <form id="login-form" onsubmit="event.preventDefault();">
+                    <div class="form-group-auth">
+                        <label for="login-id">아이디</label>
+                        <input type="text" id="login-id" class="form-input-auth" placeholder="아이디를 입력하세요" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="login-pw">비밀번호</label>
+                        <div class="pw-wrapper">
+                            <input type="password" id="login-pw" class="form-input-auth" placeholder="비밀번호를 입력하세요"
+                                required>
+                            <button type="button" class="pw-toggle-btn" data-target="login-pw" aria-label="비밀번호 보기/숨기기"
+                                tabindex="-1">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full" style="margin-top: 15px;"><i
+                            class="fa-solid fa-right-to-bracket"></i> 로그인</button>
+                    <div class="find-links">
+                        <button type="button" class="find-link-btn" id="btn-find-id">아이디 찾기</button>
+                        <span class="find-link-sep">|</span>
+                        <button type="button" class="find-link-btn" id="btn-find-pw">비밀번호 찾기</button>
+                    </div>
+                </form>
+                <div class="auth-divider"><span>또는 간편 로그인</span></div>
+                <div class="sns-login-buttons">
+                    <button type="button" class="btn btn-google" id="btn-google-login">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
+                            alt="Google" class="sns-logo-icon"> 구글 ID 로그인
+                    </button>
+                    <button type="button" class="btn btn-kakao" id="btn-kakao-login">
+                        <i class="fa-solid fa-comment"></i> 카카오톡 로그인
+                    </button>
+                </div>
+            </div>
+
+            <!-- Find ID Pane -->
+            <div class="auth-pane" id="find-id-pane">
+                <div class="find-pane-header">
+                    <button type="button" class="find-back-btn" id="btn-back-from-find-id">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <h3 class="find-pane-title"><i class="fa-solid fa-magnifying-glass"></i> 아이디 찾기</h3>
+                </div>
+                <p class="find-pane-desc">가입 시 등록한 이름과 휴대폰 번호를 입력해 주세요.</p>
+                <form id="find-id-form" onsubmit="event.preventDefault();">
+                    <div class="form-group-auth">
+                        <label for="find-id-name">이름</label>
+                        <input type="text" id="find-id-name" class="form-input-auth" placeholder="이름을 입력하세요" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="find-id-phone">휴대폰 번호</label>
+                        <input type="tel" id="find-id-phone" class="form-input-auth" placeholder="010-1234-5678"
+                            required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fa-solid fa-magnifying-glass"></i> 아이디 찾기
+                    </button>
+                </form>
+                <div id="find-id-result" class="find-result-box" style="display:none;"></div>
+            </div>
+
+            <!-- Find Password Pane -->
+            <div class="auth-pane" id="find-pw-pane">
+                <div class="find-pane-header">
+                    <button type="button" class="find-back-btn" id="btn-back-from-find-pw">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <h3 class="find-pane-title"><i class="fa-solid fa-key"></i> 비밀번호 찾기</h3>
+                </div>
+                <p class="find-pane-desc">가입한 아이디와 휴대폰 번호를 입력해 주세요.</p>
+                <form id="find-pw-form" onsubmit="event.preventDefault();">
+                    <div class="form-group-auth">
+                        <label for="find-pw-id">아이디</label>
+                        <input type="text" id="find-pw-id" class="form-input-auth" placeholder="아이디를 입력하세요" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="find-pw-phone">휴대폰 번호</label>
+                        <input type="tel" id="find-pw-phone" class="form-input-auth" placeholder="010-1234-5678"
+                            required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fa-solid fa-magnifying-glass"></i> 계정 확인
+                    </button>
+                </form>
+                <!-- New password reset form (shown after account verified) -->
+                <div id="find-pw-reset-group" style="display:none;">
+                    <p class="find-pane-desc" style="margin-top: 20px;">새로운 비밀번호를 설정해 주세요.</p>
+                    <div class="form-group-auth">
+                        <label for="find-pw-new">새 비밀번호</label>
+                        <div class="pw-wrapper">
+                            <input type="password" id="find-pw-new" class="form-input-auth"
+                                placeholder="영문, 숫자, 특수문자 조합 8자리 이상">
+                            <button type="button" class="pw-toggle-btn" data-target="find-pw-new"
+                                aria-label="비밀번호 보기/숨기기" tabindex="-1">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <span class="form-helper" id="find-pw-new-msg"></span>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-full" id="btn-reset-pw">
+                        <i class="fa-solid fa-lock"></i> 비밀번호 변경
+                    </button>
+                </div>
+                <div id="find-pw-result" class="find-result-box" style="display:none;"></div>
+            </div>
+
+            <!-- Signup Form Pane -->
+            <div class="auth-pane" id="signup-pane">
+                <form id="signup-form" onsubmit="event.preventDefault();">
+                    <div class="form-group-auth">
+                        <label for="signup-id">아이디</label>
+                        <div class="input-with-btn">
+                            <input type="text" id="signup-id" class="form-input-auth" placeholder="아이디를 입력하세요" required>
+                            <button type="button" class="btn btn-secondary btn-inline" id="btn-check-id">아이디 사용 가능
+                                검색</button>
+                        </div>
+                        <span class="form-helper" id="id-check-msg"></span>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-pw">비밀번호</label>
+                        <div class="pw-wrapper">
+                            <input type="password" id="signup-pw" class="form-input-auth" placeholder="비밀번호를 입력하세요"
+                                required>
+                            <button type="button" class="pw-toggle-btn" data-target="signup-pw" aria-label="비밀번호 보기/숨기기"
+                                tabindex="-1">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <span class="form-helper-text"
+                            style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">영문,
+                            숫자, 특수문자 조합으로 8자리 이상 입력해 주세요.</span>
+                        <span class="form-helper" id="pw-check-msg"></span>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-pw-confirm">비밀번호 확인</label>
+                        <div class="pw-wrapper">
+                            <input type="password" id="signup-pw-confirm" class="form-input-auth"
+                                placeholder="비밀번호를 다시 입력하세요" required>
+                            <button type="button" class="pw-toggle-btn" data-target="signup-pw-confirm"
+                                aria-label="비밀번호 확인 보기/숨기기" tabindex="-1">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <span class="form-helper" id="pw-confirm-msg"></span>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-name">이름</label>
+                        <input type="text" id="signup-name" class="form-input-auth" placeholder="이름을 입력하세요" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-address">주소</label>
+                        <input type="text" id="signup-address" class="form-input-auth" placeholder="주소를 입력하세요" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-email">이메일 주소</label>
+                        <input type="email" id="signup-email" class="form-input-auth"
+                            placeholder="representative@domain.com" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-phone">휴대폰 번호</label>
+                        <div class="input-with-btn">
+                            <input type="tel" id="signup-phone" class="form-input-auth" placeholder="010-1234-5678"
+                                required>
+                            <button type="button" class="btn btn-secondary btn-inline" id="btn-sms-auth">인증 문자</button>
+                        </div>
+                        <span class="form-helper" id="phone-check-msg"></span>
+                        <div id="sms-auth-group" style="display: none; margin-top: 10px;">
+                            <div class="input-with-btn">
+                                <input type="text" id="sms-auth-code" class="form-input-auth" placeholder="인증번호 6자리 입력">
+                                <button type="button" class="btn btn-primary btn-inline" id="btn-verify-sms">확인</button>
+                            </div>
+                            <span class="form-helper" id="sms-timer">남은 시간 3:00</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full" id="btn-complete-signup"
+                        style="margin-top: 15px;"><i class="fa-solid fa-user-plus"></i> 가입완료</button>
+                </form>
+                <div class="auth-divider"><span>또는 간편 회원가입</span></div>
+                <div class="sns-login-buttons">
+                    <button type="button" class="btn btn-google" id="btn-google-signup">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
+                            alt="Google" class="sns-logo-icon"> 구글 ID 가입
+                    </button>
+                    <button type="button" class="btn btn-kakao" id="btn-kakao-signup">
+                        <i class="fa-solid fa-comment"></i> 카카오톡 가입
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container footer-grid">
+            <div class="footer-brand">
+                <a href="#home" class="logo">
+                    <img src="간판지원단 로고-3.png" alt="간판지원단 로고" class="logo-img">
+                </a>
+                <p>경기도 소상공인 경영환경개선사업 및 거리 미관 조성을 돕는 통합 소상공인 간판개선 지원단입니다.</p>
+            </div>
+            <div class="footer-links">
+                <h4>바로가기</h4>
+                <ul>
+                    <li><a href="#intro">사업 소개</a></li>
+                    <li><a href="#check">자가진단 신청자격</a></li>
+                    <li><a href="#simulator">디자인 시뮬레이터</a></li>
+                    <li><a href="#apply-section">온라인 간편 신청</a></li>
+                    <li><a href="#" id="footer-install-app"><i class="fa-solid fa-mobile-screen-button"></i> 모바일 앱 설치</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>고객 센터</h4>
+                <ul>
+                    <li><span style="color: var(--text-secondary); font-size: 0.9rem;"><i class="fa-solid fa-phone"></i>
+                            문의전화: 010-5687-2499</span></li>
+                    <li><span style="color: var(--text-secondary); font-size: 0.9rem;"><i
+                                class="fa-solid fa-envelope"></i> nubiny@naver.com</span></li>
+                    <li><span style="color: var(--text-secondary); font-size: 0.9rem;"><i
+                                class="fa-solid fa-address"></i>
+                            Add: 경기 고양시 일산동구 성현로93번길13-20</span></li>
+                    <li><span style="color: var(--text-muted); font-size: 0.8rem;">운영시간: 평일 09:00 - 18:00 (주말/공휴일
+                            휴무)</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="container footer-bottom">
+            <p>&copy; 2026 간판지원단. 경기도 소상공인을 힘차게 응원합니다.</p>
+            <div class="social-links">
+                <a href="#" class="social-link"><i class="fa-brands fa-facebook-f"></i></a>
+                <a href="#" class="social-link"><i class="fa-brands fa-instagram"></i></a>
+                <a href="#" class="social-link"><i class="fa-brands fa-youtube"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Mobile App Installation Modal -->
+    <div id="install-modal" class="install-modal-overlay">
+        <div class="install-card">
+            <button class="install-close-x" id="install-modal-close"><i class="fa-solid fa-xmark"></i></button>
+            <div class="install-title-area">
+                <h3><i class="fa-solid fa-mobile-screen-button"></i> 간판지원단 모바일 앱</h3>
+                <p>스마트폰에 앱으로 설치하여 언제 어디서든 편리하게 시뮬레이터와 간편 신청을 이용해 보세요.</p>
+            </div>
+            
+            <!-- QR Code Section (visible on PC) -->
+            <div class="install-qr-section" id="install-qr-section">
+                <div class="install-qr-frame">
+                    <img id="install-qr-img" src="" alt="설치 QR 코드">
+                </div>
+                <div class="install-qr-text">
+                    <i class="fa-solid fa-qrcode"></i> 스마트폰 카메라로 QR 코드를 스캔하세요.
+                </div>
+            </div>
+
+            <!-- Install Instructions Tabs -->
+            <div class="install-guide-tabs">
+                <button class="install-tab-btn active" id="btn-tab-android">안드로이드 (Android)</button>
+                <button class="install-tab-btn" id="btn-tab-ios">아이폰 (iOS)</button>
+            </div>
+
+            <!-- Android Instructions -->
+            <div id="install-guide-android" class="install-tab-content active">
+                <ul class="install-steps">
+                    <li data-step="1">스캔기기 카메라로 QR 코드를 인식하여 모바일 웹 브라우저(크롬 권장)로 접속합니다.</li>
+                    <li data-step="2" class="highlight-step">화면 아래에 나타나는 <strong>'홈 화면에 간판지원단 추가'</strong> 또는 <strong>'앱 설치'</strong> 배너를 탭합니다.</li>
+                    <li data-step="3">배너가 보이지 않는 경우, 크롬 주소창 옆 메뉴(더보기 `⋮`)에서 <strong>'앱 설치'</strong> 또는 <strong>'홈 화면에 추가'</strong>를 선택하세요.</li>
+                </ul>
+            </div>
+
+            <!-- iOS Instructions -->
+            <div id="install-guide-ios" class="install-tab-content">
+                <ul class="install-steps">
+                    <li data-step="1">스캔기기 카메라로 QR 코드를 인식하여 Safari 브라우저로 접속합니다.</li>
+                    <li data-step="2" class="highlight-step">Safari 하단 툴바의 <strong>공유 버튼 <i class="fa-solid fa-share-nodes"></i></strong> (화살표 모양)을 누릅니다.</li>
+                    <li data-step="3">메뉴에서 <strong>'홈 화면에 추가 <i class="fa-solid fa-square-plus"></i>'</strong>를 선택한 후 추가를 누릅니다.</li>
+                </ul>
+            </div>
+
+            <!-- Direct PWA Install Button (visible on supported mobile browsers) -->
+            <div class="install-actions">
+                <button id="pwa-install-btn" class="install-primary-btn" style="display: none;">
+                    <i class="fa-solid fa-download"></i> 스마트폰에 즉시 설치하기
+                </button>
+                <button id="pwa-share-btn" class="install-secondary-btn">
+                    <i class="fa-solid fa-share-nodes"></i> 모바일 앱 공유하기
+                </button>
+                <a href="간판지원단_모바일앱.zip" download class="install-secondary-btn" id="zip-download-btn">
+                    <i class="fa-solid fa-file-zipper"></i> 모바일 앱 패키지 다운로드 (.zip)
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav">
+        <a href="#home" class="mobile-bottom-nav-item active" id="m-nav-home">
+            <i class="fa-solid fa-house"></i>
+            <span>홈</span>
+        </a>
+        <a href="#simulator" class="mobile-bottom-nav-item" id="m-nav-simulator">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>시뮬레이터</span>
+        </a>
+        <a href="#apply-section" class="mobile-bottom-nav-item" id="m-nav-apply">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>간편신청</span>
+        </a>
+        <a href="dashboard.html" class="mobile-bottom-nav-item" id="m-nav-dashboard">
+            <i class="fa-solid fa-user"></i>
+            <span>마이페이지</span>
+        </a>
+    </nav>
+
+    <!-- Main script -->
+    <script src="security-utils.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

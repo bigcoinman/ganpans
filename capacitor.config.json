@@ -1,0 +1,6 @@
+{
+  "appId": "com.ganpan.support",
+  "appName": "간판지원단",
+  "webDir": ".",
+  "bundledWebRuntime": false
+}

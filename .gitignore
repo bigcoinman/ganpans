@@ -1,0 +1,19 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+web_package/
+
+# Build outputs
+dist/
+tmp/
+out/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Large archives or backups
+*.zip
+*.tar.gz
+*.rar
