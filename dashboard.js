@@ -606,6 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const renderManagerPanel = () => {
+    if (activeUser.role !== 'admin') return;
     if (!managerRequestsList || !managerItemsList) return;
 
     // 1. Render Requests
@@ -710,6 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const approveUserConversion = (uid) => {
+    if (activeUser.role !== 'admin') return;
     const code = `BIZ-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
     users = users.map(u => {
@@ -730,6 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const rejectUserConversion = (uid) => {
+    if (activeUser.role !== 'admin') return;
     users = users.map(u => {
       if (u.id === uid) {
         return { ...u, conversionStatus: 'none' };
@@ -743,6 +746,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const updateItemStatus = (uid, itemId, type, value) => {
+    if (activeUser.role !== 'admin') return;
     users = users.map(u => {
       if (u.id === uid) {
         const updatedItems = u.items.map(item => {
@@ -800,6 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const renderPopupManager = () => {
+    if (activeUser.role !== 'admin') return;
     if (!managerPopupsList) return;
     
     // Reload popups from local storage to keep DB state in sync
@@ -921,6 +926,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (managerPopupForm) {
     managerPopupForm.addEventListener('submit', (e) => {
       e.preventDefault();
+      if (activeUser.role !== 'admin') {
+        alert('권한이 없습니다.');
+        return;
+      }
       
       const idVal = popupIdInput.value;
       const titleVal = popupTitleInput.value.trim();
@@ -991,6 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Toggle Active
   const togglePopupActive = (pid) => {
+    if (activeUser.role !== 'admin') return;
     popups = popups.map(p => {
       if (p.id === pid) {
         return { ...p, isActive: !p.isActive };
@@ -1003,6 +1013,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Delete Popup
   const deletePopup = (pid) => {
+    if (activeUser.role !== 'admin') return;
     if (!confirm('정말로 이 팝업창을 삭제하시겠습니까?')) return;
     popups = popups.filter(p => p.id !== pid);
     localStorage.setItem('popups', JSON.stringify(popups));
@@ -1017,6 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Render Online Applications List ---
   const renderApplicationsList = () => {
+    if (activeUser.role !== 'admin') return;
     if (!applicationsTableBody) return;
 
     const apps = JSON.parse(localStorage.getItem('applications')) || [];
@@ -1117,6 +1129,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const updateApplicationStatus = (id, newStatus) => {
+    if (activeUser.role !== 'admin') return;
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
     apps = apps.map(app => {
       if (app.id === id) {
@@ -1131,6 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const deleteApplication = (id) => {
+    if (activeUser.role !== 'admin') return;
     if (!confirm('정말로 이 지원 신청 접수 건을 삭제하시겠습니까?')) return;
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
     apps = apps.filter(app => app.id !== id);
@@ -1284,6 +1298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Render Admin Dashboard Metrics ---
   const renderAdminStats = () => {
+    if (activeUser.role !== 'admin') return;
     const todayStr = new Date().toISOString().split('T')[0];
     const lastDate = localStorage.getItem('visitor_last_date');
     let todayCount = localStorage.getItem('visitor_today') || '34';
