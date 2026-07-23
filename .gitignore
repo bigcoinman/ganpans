@@ -17,3 +17,15 @@ desktop.ini
 *.zip
 *.tar.gz
 *.rar
+
+# API keys, environment variables, and credentials
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.key
+*.pem
+credentials.json
+client_secret*.json
+config.env
