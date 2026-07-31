@@ -469,31 +469,116 @@ body.mobile-app-body {
 }
 
 /* 6.3. Building Gallery Carousel */
-.building-gallery-wrapper {
-    padding: 12px !important;
+#view-home .building-gallery-wrapper {
+    padding: 16px 12px !important;
+    background: var(--bg-secondary) !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: var(--shadow-sm) !important;
 }
 
-.gallery-controls {
+#view-home .gallery-controls {
     flex-direction: row !important;
     justify-content: space-between !important;
     padding: 10px 14px !important;
     margin-bottom: 12px !important;
 }
 
-.building-scroll-viewport {
-    padding: 12px 6px !important;
-    gap: 16px !important;
+#view-home .building-scroll-viewport {
     display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     overflow-x: auto !important;
+    overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     scroll-snap-type: x mandatory !important;
+    gap: 0 !important;
+    padding: 24px 0 16px 0 !important;
+    height: 220px !important;
+    width: 100% !important;
+    border-radius: 16px !important;
+    background: linear-gradient(to bottom, #7ec0ee 0%, #e0f2fe 100%) !important;
 }
 
-.shop-slot {
+#view-home .building-scroll-viewport.night {
+    background: linear-gradient(to bottom, #0a0e1a 0%, #1a234f 100%) !important;
+}
+
+/* Force visible and premium horizontal scrollbar */
+#view-home .building-scroll-viewport::-webkit-scrollbar {
+    height: 6px !important;
+    display: block !important;
+}
+
+#view-home .building-scroll-viewport::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-radius: 10px !important;
+}
+
+#view-home .building-scroll-viewport::-webkit-scrollbar-thumb {
+    background: var(--accent-primary) !important;
+    border-radius: 10px !important;
+}
+
+#view-home .building-scroll-viewport.night::-webkit-scrollbar-thumb {
+    background: #00ffff !important;
+    box-shadow: 0 0 6px rgba(0, 255, 255, 0.6) !important;
+}
+
+/* 1 Shop at a time scroll snap card */
+#view-home .shop-slot {
     flex-shrink: 0 !important;
-    width: 250px !important;
-    height: 200px !important;
-    scroll-snap-align: start !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 100% !important;
+    scroll-snap-align: center !important;
+    padding: 0 20px !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    position: relative !important;
+}
+
+#view-home .signboard-area {
+    width: 100% !important;
+    max-width: 240px !important;
+    height: 75px !important;
+    margin-bottom: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 4px 8px !important;
+}
+
+#view-home .signboard-img {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+}
+
+#view-home .storefront-facade {
+    display: flex !important;
+    width: 90% !important;
+    max-width: 220px !important;
+    height: 50px !important;
+    justify-content: center !important;
+    align-items: flex-end !important;
+    gap: 8px !important;
+    margin-bottom: 2px !important;
+}
+
+#view-home .window {
+    height: 40px !important;
+    border-width: 2px !important;
+    flex: 1 !important;
+}
+
+#view-home .door {
+    width: 20px !important;
+    height: 48px !important;
+    border-width: 2px !important;
 }
 
 /* 6.4. Checklist Overrides */
