@@ -199,6 +199,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- PC Hero Section Buttons Mobile Intercept ---
+    const heroSimBtn = document.querySelector('#view-home .hero-buttons .btn-primary');
+    const heroCheckBtn = document.querySelector('#view-home .hero-buttons .btn-secondary');
+
+    if (heroSimBtn) {
+        heroSimBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchTab('simulator');
+        });
+    }
+
+    if (heroCheckBtn) {
+        heroCheckBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const checkSection = document.getElementById('check');
+            if (checkSection) {
+                // In mobile scroll view, we scroll the app-view viewport instead of window!
+                const homeView = document.getElementById('view-home');
+                if (homeView) {
+                    homeView.scrollTo({
+                        top: checkSection.offsetTop - 20,
+                        behavior: 'smooth'
+                    });
+                } else {
+                    checkSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        });
+    }
+
     // --- Dashboard Status Render Logic ---
     function renderStatusTab() {
         users = JSON.parse(localStorage.getItem('users')) || [];

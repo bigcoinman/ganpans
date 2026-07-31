@@ -25,8 +25,7 @@
     <!-- App Header -->
     <header class="app-header">
         <div class="header-brand" onclick="switchTab('home')">
-            <i class="fa-solid fa-store brand-icon"></i>
-            <span class="brand-text">간판지원단</span>
+            <img src="간판지원단 로고-3.png" alt="간판지원단" style="height: 24px; width: auto; display: block;">
         </div>
         <button class="header-menu-btn" id="app-menu-trigger">
             <i class="fa-solid fa-bars"></i>
@@ -72,15 +71,46 @@
 
         <!-- 1. HOME VIEW -->
         <section id="view-home" class="app-view active">
-            <!-- Hero Banner (Mobile Design Spec) -->
-            <div class="hero-banner">
-                <div class="hero-logo-frame">
-                    <img src="간판지원단 로고-3.png" alt="Ganpan Logo" class="hero-logo">
+            <!-- Hero Banner (PC Content Parity) -->
+            <section id="home" class="hero-section">
+            <div class="container hero-grid">
+                <div class="hero-content">
+                    <h1>
+                        <span class="gradient-text">우리 가게의 첫인상,</span>
+                        <span>경기도가 지원합니다.</span>
+                    </h1>
+                    <p>
+                        경기도 내 소상공인의 경영 안정을 위한 노후 간판 교체 및 맞춤형 디자인 컨설팅! 지금 바로 나만의 간판을 미리 디자인하고 지원 사업에 참여해 보세요.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="#simulator" class="btn btn-primary">AI 간판 시뮬레이터 <i
+                                class="fa-solid fa-wand-magic-sparkles"></i></a>
+                        <a href="#check" class="btn btn-secondary">신청 자격 자가진단</a>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <h4>지원 대상</h4>
+                            <p>경기도내 사업체</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>최대 200만원(100%지원)</h4>
+                            <p>간판 교체 지원금(자부담 0원 - VAT 별도)</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>1:1 맞춤형</h4>
+                            <p>디자인 및 컨설팅</p>
+                        </div>
+                    </div>
                 </div>
-                <h2>새 간판 지원금 <span class="highlight">최대 200만원</span></h2>
-                <p class="hero-subtitle">경기도 노후간판 교체 및 경영환경개선사업 지원 포털</p>
-                <button class="btn btn-white" onclick="switchTab('apply')">지원금 확인하기</button>
+
+                <div class="hero-visual">
+                    <div class="sign-card-3d" style="border-image: var(--grad-primary) 1;">
+                        <div class="neon-border" style="border-color: rgba(0, 102, 255, 0.3);"></div>
+                        <img src="경영환경개선 이미지.png" alt="경영환경개선사업 지원" class="hero-sign-image">
+                    </div>
+                </div>
             </div>
+        </section>
 
             <!-- Intro Section (Exactly from index.html) -->
             <section id="intro" class="section">

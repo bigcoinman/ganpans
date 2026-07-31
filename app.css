@@ -48,9 +48,104 @@ body.mobile-app-body {
     display: none !important;
 }
 
-/* Hide PC Hero Section inside view-home - replaced by mobile hero-banner */
+/* Show and Override PC Hero Section for Mobile Viewport */
 #view-home #home {
-    display: none !important;
+    display: block !important;
+    min-height: auto !important;
+    padding: 30px 16px !important;
+    background: #ffffff !important;
+}
+
+#view-home .hero-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 24px !important;
+    text-align: center !important;
+}
+
+#view-home .hero-content h1 {
+    font-size: 1.8rem !important;
+    line-height: 1.25 !important;
+    margin-bottom: 16px !important;
+}
+
+#view-home .hero-content h1 span {
+    display: inline-block !important;
+}
+
+#view-home .hero-content p {
+    font-size: 0.85rem !important;
+    line-height: 1.45 !important;
+    color: var(--text-secondary) !important;
+    margin-bottom: 24px !important;
+    max-width: 100% !important;
+}
+
+#view-home .hero-buttons {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+    align-items: center !important;
+}
+
+#view-home .hero-buttons .btn {
+    width: 100% !important;
+    max-width: 280px !important;
+    padding: 12px 20px !important;
+    font-size: 0.88rem !important;
+    justify-content: center !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+#view-home .hero-stats {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    margin-top: 30px !important;
+    border-top: 1px solid var(--border-color) !important;
+    padding-top: 20px !important;
+    text-align: left !important;
+}
+
+#view-home .hero-stats .stat-item {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+#view-home .hero-stats .stat-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+#view-home .hero-stats h4 {
+    font-size: 0.88rem !important;
+    font-weight: 700 !important;
+    color: var(--accent-primary) !important;
+    margin-bottom: 4px !important;
+}
+
+#view-home .hero-stats p {
+    font-size: 0.78rem !important;
+    color: var(--text-secondary) !important;
+    margin: 0 !important;
+}
+
+#view-home .hero-visual {
+    margin-top: 16px !important;
+    width: 100% !important;
+    max-width: 320px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+#view-home .hero-sign-image {
+    width: 100% !important;
+    height: auto !important;
+    border-radius: 12px !important;
+    display: block !important;
 }
 
 /* 2. App Header */
