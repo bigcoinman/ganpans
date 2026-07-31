@@ -447,14 +447,56 @@ body.mobile-app-body {
 }
 
 /* 6.1. Intro Info Cards */
-.info-grid {
-    grid-template-columns: 1fr !important;
+#view-home .info-grid {
+    display: flex !important;
+    flex-direction: column !important;
     gap: 16px !important;
 }
 
-.info-card {
-    padding: 20px 16px !important;
-    text-align: center !important;
+#view-home .info-card {
+    padding: 20px !important;
+    display: grid !important;
+    grid-template-areas: 
+        "icon title"
+        "desc desc" !important;
+    grid-template-columns: auto 1fr !important;
+    align-items: center !important;
+    column-gap: 14px !important;
+    row-gap: 16px !important;
+    text-align: left !important;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+#view-home .info-icon {
+    grid-area: icon !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 12px !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.25rem !important;
+}
+
+#view-home .info-card h3 {
+    grid-area: title !important;
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+    color: var(--text-primary) !important;
+    text-align: left !important;
+}
+
+#view-home .info-card p {
+    grid-area: desc !important;
+    font-size: 0.88rem !important;
+    line-height: 1.55 !important;
+    margin: 0 !important;
+    color: var(--text-secondary) !important;
+    text-align: left !important;
 }
 
 /* 6.2. Timeline Steps */
