@@ -534,29 +534,29 @@ body.mobile-app-body {
     position: absolute !important;
     top: calc(50% + 24px) !important;
     transform: translateY(-50%) !important;
-    width: 38px !important;
-    height: 38px !important;
+    width: 56px !important; /* Enlarge by 50% (from 38px) */
+    height: 56px !important;
     border-radius: 50% !important;
-    border: none !important;
+    border: 3px solid #ffffff !important; /* Strong white border to separate from background */
     background: #0056cc !important; /* Solid Gyeonggi Blue */
-    color: #ffffff !important; /* High-contrast white icon */
+    color: #ffffff !important; /* Pure White Icon */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
-    font-size: 1rem !important;
-    box-shadow: 0 4px 12px rgba(0, 86, 204, 0.35) !important;
+    font-size: 1.5rem !important; /* Enlarge icon size by 50% */
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important; /* Darker shadow for high contrast */
     z-index: 99 !important;
     transition: all 0.2s ease !important;
     padding: 0 !important;
 }
 
 .gallery-floating-arrow.prev-arrow {
-    left: 2px !important;
+    left: 6px !important;
 }
 
 .gallery-floating-arrow.next-arrow {
-    right: 2px !important;
+    right: 6px !important;
 }
 
 .gallery-floating-arrow:active {
