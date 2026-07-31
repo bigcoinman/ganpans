@@ -67,10 +67,20 @@ body.mobile-app-body {
     font-size: 1.8rem !important;
     line-height: 1.25 !important;
     margin-bottom: 16px !important;
+    color: var(--accent-primary) !important;
 }
 
 #view-home .hero-content h1 span {
-    display: inline-block !important;
+    display: block !important;
+    color: var(--accent-primary) !important;
+    -webkit-text-fill-color: var(--accent-primary) !important;
+    background: none !important;
+}
+
+#view-home .hero-content h1 .gradient-text {
+    color: var(--accent-secondary) !important;
+    -webkit-text-fill-color: var(--accent-secondary) !important;
+    background: none !important;
 }
 
 #view-home .hero-content p {
