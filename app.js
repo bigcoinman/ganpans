@@ -1,11 +1,11 @@
-// app.js - Mobile App Interactive Logic & State Management
+// app.js - Mobile App Shell & Interactive State Synchronizer
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- State Variables ---
     let users = JSON.parse(localStorage.getItem('users')) || [];
     let activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
     let applications = JSON.parse(localStorage.getItem('applications')) || [];
-    
+
     // --- Drawer Menu Selectors ---
     const menuTrigger = document.getElementById('app-menu-trigger');
     const drawerOverlay = document.getElementById('app-drawer-overlay');
@@ -34,11 +34,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.closeDrawer = function() {
-        drawer.classList.remove('active');
-        drawerOverlay.classList.remove('active');
+        if (drawer && drawerOverlay) {
+            drawer.classList.remove('active');
+            drawerOverlay.classList.remove('active');
+        }
     };
 
     function updateDrawerProfile() {
+        activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
         if (activeUser) {
             drawerUserName.textContent = `${activeUser.name}님`;
             if (activeUser.role === 'admin') {
@@ -87,7 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tabId === 'status') {
             renderStatusTab();
         } else if (tabId === 'apply') {
-            initMobileWizard();
+            // Scroll to the wizard start
+            const appSection = document.getElementById('apply-section');
+            if (appSection) appSection.scrollIntoView({ behavior: 'auto' });
         }
         
         // Auto scroll to top on tab switch
@@ -97,429 +102,104 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- Home View: Eligibility Checklist ---
-    window.toggleCheckCard = function(card) {
-        card.classList.toggle('checked');
-        const checkedCards = document.querySelectorAll('#view-home .check-card.checked');
-        const statusBox = document.getElementById('eligibility-status');
-        
-        if (!statusBox) return;
+    // Link "로그인 / 회원가입" links in drawer and status tab to PC Auth Modal
+    const loginLink = document.getElementById('drawer-login-link');
+    const redirectLoginBtn = document.getElementById('btn-login-mob-redirect');
 
-        if (checkedCards.length === 3) {
-            statusBox.innerHTML = '자가진단 결과: <span class="status-badge eligible">적격 (모든 자격을 만족합니다!)</span>';
-        } else if (checkedCards.length === 0) {
-            statusBox.innerHTML = '자가진단 결과: <span class="status-badge checking">확인 중...</span>';
-        } else {
-            statusBox.innerHTML = '자가진단 결과: <span class="status-badge ineligible">부적격 (일부 자격 미달)</span>';
+    if (loginLink) {
+        loginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeDrawer();
+            openAuthModal();
+        });
+    }
+
+    if (redirectLoginBtn) {
+        redirectLoginBtn.addEventListener('click', () => {
+            openAuthModal();
+        });
+    }
+
+    function openAuthModal() {
+        const authModal = document.getElementById('auth-modal');
+        if (authModal) {
+            authModal.classList.add('active');
         }
-    };
-
-    // --- Home View: Mini Simulator Day/Night Toggle ---
-    let isNightMode = false;
-    window.toggleDayNightSim = function() {
-        isNightMode = !isNightMode;
-        
-        const toggles = document.querySelectorAll('.day-night-toggle');
-        toggles.forEach(toggle => {
-            const dayTab = toggle.querySelector('.day');
-            const nightTab = toggle.querySelector('.night');
-            
-            if (isNightMode) {
-                dayTab.classList.remove('active');
-                nightTab.classList.add('active');
-            } else {
-                dayTab.classList.add('active');
-                nightTab.classList.remove('active');
-            }
-        });
-
-        const canvases = [document.getElementById('sim-canvas'), document.getElementById('full-sim-canvas')];
-        canvases.forEach(canvas => {
-            if (!canvas) return;
-            if (isNightMode) {
-                canvas.classList.remove('day-mode');
-                canvas.classList.add('night-mode');
-            } else {
-                canvas.classList.add('day-mode');
-                canvas.classList.remove('night-mode');
-            }
-        });
-    };
-
-    // Sync Home Widget input with preview
-    const simInputText = document.getElementById('sim-input-text');
-    const simTextDisplay = document.getElementById('sim-text-display');
-    if (simInputText && simTextDisplay) {
-        simInputText.addEventListener('input', (e) => {
-            const val = e.target.value.trim() || '우리 매장 이름';
-            simTextDisplay.textContent = val;
-            
-            // Sync with full simulator tab too
-            const fullInput = document.getElementById('full-sim-input-text');
-            const fullDisplay = document.getElementById('full-sim-text-display');
-            if (fullInput) fullInput.value = val;
-            if (fullDisplay) fullDisplay.textContent = val;
-        });
     }
 
-    // --- Full Simulator Tab Interactivity ---
-    const fullSimInputText = document.getElementById('full-sim-input-text');
-    const fullSimTextDisplay = document.getElementById('full-sim-text-display');
-    const fullSimSignboard = document.getElementById('full-sim-signboard');
-    
-    const simFontSize = document.getElementById('sim-font-size');
-    const simStyleSelect = document.getElementById('sim-style-select');
-    const simFontSelect = document.getElementById('sim-font-select');
-    const colorDots = document.querySelectorAll('.color-dot');
+    // --- Sync PC Auth submissions to mobile status page ---
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    const snsGoogleBtn = document.getElementById('btn-google-login');
+    const snsKakaoBtn = document.getElementById('btn-kakao-login');
 
-    if (fullSimInputText && fullSimTextDisplay) {
-        fullSimInputText.addEventListener('input', (e) => {
-            const val = e.target.value.trim() || '우리 매장 이름';
-            fullSimTextDisplay.textContent = val;
-            
-            // Sync back to home widget
-            if (simInputText) simInputText.value = val;
-            if (simTextDisplay) simTextDisplay.textContent = val;
-        });
-    }
-
-    if (simFontSize && fullSimTextDisplay) {
-        simFontSize.addEventListener('input', (e) => {
-            fullSimTextDisplay.style.fontSize = `${e.target.value / 20}rem`;
-        });
-    }
-
-    if (simStyleSelect && fullSimSignboard) {
-        simStyleSelect.addEventListener('change', (e) => {
-            const style = e.target.value;
-            // Reset styles
-            fullSimSignboard.style.border = '1px solid #ddd';
-            fullSimSignboard.style.background = '#ffffff';
-            fullSimSignboard.style.borderRadius = '4px';
-            fullSimSignboard.style.boxShadow = 'var(--shadow-sm)';
-            
-            if (style === 'led-channel') {
-                fullSimSignboard.style.background = 'transparent';
-                fullSimSignboard.style.border = 'none';
-                fullSimSignboard.style.boxShadow = 'none';
-            } else if (style === 'titanium-backlight') {
-                fullSimSignboard.style.background = '#27272a'; // dark titanium frame
-                fullSimSignboard.style.border = '1px solid #3f3f46';
-                fullSimSignboard.style.borderRadius = '6px';
-            } else if (style === 'acrylic-box') {
-                fullSimSignboard.style.background = 'rgba(255,255,255,0.9)';
-                fullSimSignboard.style.border = '2px solid var(--accent-primary)';
-                fullSimSignboard.style.borderRadius = '0';
-            }
-        });
-    }
-
-    if (simFontSelect && fullSimTextDisplay) {
-        simFontSelect.addEventListener('change', (e) => {
-            fullSimTextDisplay.style.fontFamily = e.target.value;
-        });
-    }
-
-    colorDots.forEach(dot => {
-        dot.addEventListener('click', (e) => {
-            colorDots.forEach(d => d.classList.remove('active'));
-            dot.classList.add('active');
-            
-            const color = dot.dataset.color;
-            if (fullSimTextDisplay) {
-                fullSimTextDisplay.style.color = color;
-            }
-        });
-    });
-
-    window.applySimToWizard = function() {
-        const textVal = fullSimInputText?.value.trim() || '우리 매장 이름';
-        const signStyleName = simStyleSelect ? simStyleSelect.options[simStyleSelect.selectedIndex].text : '플렉스(기본형)';
-        
-        // Switch tab to Apply
-        switchTab('apply');
-        
-        // Prefill Wizard Step 2 inputs
+    const handleSessionRefresh = () => {
         setTimeout(() => {
-            const shopNameInput = document.getElementById('app-shop-name-mob');
-            const signTypeInput = document.getElementById('app-sign-type-mob');
-            if (shopNameInput && textVal !== '우리 매장 이름') {
-                shopNameInput.value = textVal;
-            }
-            if (signTypeInput) {
-                signTypeInput.value = signStyleName;
-            }
-        }, 100);
+            renderStatusTab();
+            updateDrawerProfile();
+        }, 150);
     };
 
-    // --- 4. Simple Application Wizard (Apply Tab) ---
-    let wizardStep = 1;
-    let uploadedFileBase64 = '';
-    const wizardPanes = document.querySelectorAll('.mob-step-pane');
-    const wizardNodes = document.querySelectorAll('.mob-node');
-    const wizardProgressBar = document.getElementById('mob-wizard-progress-bar');
-    const prevBtn = document.getElementById('prev-step-mob');
-    const nextBtn = document.getElementById('next-step-mob');
+    if (loginForm) loginForm.addEventListener('submit', handleSessionRefresh);
+    if (signupForm) signupForm.addEventListener('submit', handleSessionRefresh);
+    if (snsGoogleBtn) snsGoogleBtn.addEventListener('click', handleSessionRefresh);
+    if (snsKakaoBtn) snsKakaoBtn.addEventListener('click', handleSessionRefresh);
 
-    const fileUploadArea = document.getElementById('file-upload-area-mob');
-    const storePhotoInput = document.getElementById('store-photo-mob');
-    const fileNameDisplay = document.getElementById('uploaded-file-name-mob');
-
-    function initMobileWizard() {
-        wizardStep = 1;
-        uploadedFileBase64 = '';
-        if (fileNameDisplay) fileNameDisplay.style.display = 'none';
-        
-        // Pre-populate referrer code from URL if present
-        const urlParams = new URLSearchParams(window.location.search);
-        const refCode = urlParams.get('ref');
-        const refInput = document.getElementById('referrer-code-mob');
-        if (refCode && refInput) {
-            refInput.value = refCode.trim();
-        }
-
-        // Set Sign style if empty
-        const signTypeInput = document.getElementById('app-sign-type-mob');
-        if (signTypeInput && !signTypeInput.value) {
-            signTypeInput.value = '플렉스 플랫 간판 (기본형)';
-        }
-
-        renderWizard();
-    }
-
-    if (fileUploadArea && storePhotoInput) {
-        fileUploadArea.addEventListener('click', () => {
-            storePhotoInput.click();
-        });
-
-        storePhotoInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                const file = e.target.files[0];
-                if (fileNameDisplay) {
-                    fileNameDisplay.textContent = `✓ 업로드됨: ${file.name}`;
-                    fileNameDisplay.style.display = 'block';
-                }
-
-                // Read base64
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    uploadedFileBase64 = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-
-    function renderWizard() {
-        wizardPanes.forEach((pane, idx) => {
-            if (idx + 1 === wizardStep) {
-                pane.classList.add('active');
+    // --- Intercept Drawer Logout Click ---
+    const drawerLogoutBtn = document.getElementById('drawer-logout-btn');
+    if (drawerLogoutBtn) {
+        drawerLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Trigger hidden PC logout button
+            const pcLogoutBtn = document.getElementById('logout-btn');
+            if (pcLogoutBtn) {
+                pcLogoutBtn.click();
             } else {
-                pane.classList.remove('active');
+                // Fallback clean
+                localStorage.removeItem('activeUser');
             }
-        });
-
-        wizardNodes.forEach((node, idx) => {
-            if (idx + 1 < wizardStep) {
-                node.className = 'mob-node complete';
-                node.innerHTML = '<i class="fas fa-check"></i>';
-            } else if (idx + 1 === wizardStep) {
-                node.className = 'mob-node active';
-                node.textContent = idx + 1;
-            } else {
-                node.className = 'mob-node';
-                node.textContent = idx + 1;
-            }
-        });
-
-        const percent = ((wizardStep - 1) / 2) * 100;
-        if (wizardProgressBar) {
-            wizardProgressBar.style.width = `${percent}%`;
-        }
-
-        if (wizardStep === 1) {
-            prevBtn.style.visibility = 'hidden';
-        } else {
-            prevBtn.style.visibility = 'visible';
-        }
-
-        if (wizardStep === 3) {
-            nextBtn.textContent = '신청서 접수';
-            nextBtn.className = 'btn btn-primary btn-success';
-            compileSummaryMob();
-        } else {
-            nextBtn.textContent = '다음 단계';
-            nextBtn.className = 'btn btn-primary';
-        }
-    }
-
-    function compileSummaryMob() {
-        document.getElementById('sum-owner-name-mob').textContent = document.getElementById('owner-name-mob')?.value.trim() || '-';
-        document.getElementById('sum-owner-phone-mob').textContent = document.getElementById('owner-phone-mob')?.value.trim() || '-';
-        document.getElementById('sum-store-name-mob').textContent = document.getElementById('app-shop-name-mob')?.value.trim() || '-';
-        document.getElementById('sum-store-address-mob').textContent = document.getElementById('store-address-mob')?.value.trim() || '-';
-        document.getElementById('sum-sign-type-mob').textContent = document.getElementById('app-sign-type-mob')?.value || '-';
-        
-        const photoInput = document.getElementById('store-photo-mob');
-        document.getElementById('sum-file-name-mob').textContent = photoInput && photoInput.files.length > 0 ? photoInput.files[0].name : '업로드 파일 없음';
-        
-        const refVal = document.getElementById('referrer-code-mob')?.value.trim() || '-';
-        document.getElementById('sum-referrer-code-mob').textContent = refVal;
-    }
-
-    function validateStep(step) {
-        if (step === 1) {
-            const name = document.getElementById('owner-name-mob')?.value.trim();
-            const phone = document.getElementById('owner-phone-mob')?.value.trim();
-            if (!name || !phone) {
-                alert('대표자 성명과 휴대폰 번호를 모두 기입해 주세요.');
-                return false;
-            }
-        } else if (step === 2) {
-            const storeName = document.getElementById('app-shop-name-mob')?.value.trim();
-            const address = document.getElementById('store-address-mob')?.value.trim();
-            if (!storeName || !address) {
-                alert('상호명과 설치 예정지 주소를 모두 기입해 주세요.');
-                return false;
-            }
-        }
-        return true;
-    }
-
-    if (prevBtn) {
-        prevBtn.addEventListener('click', () => {
-            if (wizardStep > 1) {
-                wizardStep--;
-                renderWizard();
-            }
+            closeDrawer();
+            handleSessionRefresh();
         });
     }
 
-    if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-            if (wizardStep === 3) {
-                submitApplicationMob();
-                return;
-            }
-
-            if (validateStep(wizardStep)) {
-                wizardStep++;
-                renderWizard();
-            }
-        });
-    }
-
-    function submitApplicationMob() {
-        const ownerName = document.getElementById('owner-name-mob')?.value.trim() || '';
-        const ownerPhone = document.getElementById('owner-phone-mob')?.value.trim() || '';
-        const storeName = document.getElementById('app-shop-name-mob')?.value.trim() || '';
-        const storeAddress = document.getElementById('store-address-mob')?.value.trim() || '';
-        const signType = document.getElementById('app-sign-type-mob')?.value || '';
-        const photoInput = document.getElementById('store-photo-mob');
-        const fileName = photoInput && photoInput.files.length > 0 ? photoInput.files[0].name : '업로드 파일 없음';
-        const referrerCode = document.getElementById('referrer-code-mob')?.value.trim() || '';
-
-        const userId = activeUser ? activeUser.id : 'guest';
-
-        // GP-ID Generation
-        const padZero = (n) => String(n).padStart(2, '0');
-        const now = new Date();
-        const dateStr = `${now.getFullYear()}${padZero(now.getMonth() + 1)}${padZero(now.getDate())}`;
-        const randVal = Math.floor(1000 + Math.random() * 9000);
-        const customId = `GP-${dateStr}-${randVal}`;
-
-        const newApp = {
-            id: customId,
-            userId,
-            ownerName,
-            ownerPhone,
-            storeName,
-            storeAddress,
-            signType,
-            fileName,
-            fileData: uploadedFileBase64,
-            appliedAt: now.toISOString(),
-            status: 'pending',
-            referrerCode
-        };
-
-        // Save
-        const apps = JSON.parse(localStorage.getItem('applications')) || [];
-        apps.push(newApp);
-        localStorage.setItem('applications', JSON.stringify(apps));
-
-        // Auto refer link (방안 A)
-        if (referrerCode) {
-            let dbUsers = JSON.parse(localStorage.getItem('users')) || [];
-            let bizFound = false;
-
-            const newBizItem = {
-                id: customId,
-                name: storeName,
-                address: storeAddress,
-                photosCount: uploadedFileBase64 ? 1 : 0,
-                receiptStatus: '접수 완료 (간판지원단)',
-                progressStatus: '심사 대기',
-                photos: uploadedFileBase64 ? [uploadedFileBase64] : []
-            };
-
-            dbUsers = dbUsers.map(u => {
-                if (u.role === 'business' && u.bizCode === referrerCode) {
-                    u.items = u.items || [];
-                    if (!u.items.some(item => item.id === customId)) {
-                        u.items.push(newBizItem);
-                        bizFound = true;
+    // Account deletion
+    const deleteAccountBtn = document.getElementById('drawer-delete-account-btn');
+    if (deleteAccountBtn) {
+        deleteAccountBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (confirm('정말로 계정을 탈퇴하시겠습니까?\n등록된 모든 영업물건과 이력이 완전 소멸하며 복구할 수 없습니다.')) {
+                if (confirm('탈퇴 동의 최종 확인')) {
+                    users = JSON.parse(localStorage.getItem('users')) || [];
+                    activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
+                    if (activeUser) {
+                        users = users.filter(u => u.id !== activeUser.id);
+                        localStorage.setItem('users', JSON.stringify(users));
+                        localStorage.removeItem('activeUser');
+                        activeUser = null;
+                        
+                        alert('회원 탈퇴 완료되었습니다. 초기 화면으로 이동합니다.');
+                        closeDrawer();
+                        handleSessionRefresh();
+                        switchTab('home');
                     }
                 }
-                return u;
-            });
-
-            if (bizFound) {
-                localStorage.setItem('users', JSON.stringify(dbUsers));
-                // Reload list if active
-                if (activeUser && activeUser.role === 'business' && activeUser.bizCode === referrerCode) {
-                    activeUser.items = activeUser.items || [];
-                    activeUser.items.push(newBizItem);
-                    localStorage.setItem('activeUser', JSON.stringify(activeUser));
-                }
             }
-        }
-
-        // Show Success Modal
-        const successModal = document.getElementById('success-modal-mob');
-        const successIdContainer = document.getElementById('success-app-id-container-mob');
-        if (successIdContainer) {
-            successIdContainer.textContent = customId;
-        }
-        if (successModal) {
-            successModal.classList.add('active');
-        }
-    }
-
-    const successConfirmBtn = document.getElementById('success-confirm-mob');
-    if (successConfirmBtn) {
-        successConfirmBtn.addEventListener('click', () => {
-            const successModal = document.getElementById('success-modal-mob');
-            if (successModal) {
-                successModal.classList.remove('active');
-            }
-
-            // Reset Wizard Inputs
-            document.getElementById('owner-name-mob').value = '';
-            document.getElementById('owner-phone-mob').value = '';
-            document.getElementById('owner-email-mob').value = '';
-            document.getElementById('referrer-code-mob').value = '';
-            document.getElementById('app-shop-name-mob').value = '';
-            document.getElementById('store-address-mob').value = '';
-            const fileInput = document.getElementById('store-photo-mob');
-            if (fileInput) fileInput.value = '';
-            uploadedFileBase64 = '';
-
-            switchTab('home');
         });
     }
 
-    // --- 5. Status & Dashboard View Render Logic ---
+    // --- Simulator Apply Design Intercept ---
+    const applyDesignBtn = document.getElementById('apply-design-btn');
+    if (applyDesignBtn) {
+        applyDesignBtn.addEventListener('click', () => {
+            // Wait slightly for script.js fields assignment
+            setTimeout(() => {
+                switchTab('apply');
+            }, 100);
+        });
+    }
+
+    // --- Dashboard Status Render Logic ---
     function renderStatusTab() {
         users = JSON.parse(localStorage.getItem('users')) || [];
         activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
@@ -568,14 +248,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 5.1. Normal User Dashboard Rendering ---
+    // --- Client Dashboard ---
     function renderNormalDashboardMob() {
         const myAppsList = document.getElementById('my-apps-list-mobile');
-        const conversionPanel = document.getElementById('mobile-conversion-panel');
         const conversionPendingMsg = document.getElementById('conversion-pending-msg-mob');
         const btnRequestConversion = document.getElementById('btn-request-conversion-mob');
 
-        // Apply converter state
         if (activeUser.conversionStatus === 'pending') {
             btnRequestConversion.style.display = 'none';
             conversionPendingMsg.style.display = 'block';
@@ -609,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             card.innerHTML = `
                 <div class="app-card-header">
-                    <span class="app-card-title">${escapeHtml(app.storeName)}</span>
+                    <span class="app-card-title">${escapeHtml(app.shopName || app.storeName)}</span>
                     <span class="app-card-date">${app.appliedAt ? app.appliedAt.split('T')[0] : ''}</span>
                 </div>
                 <div class="app-card-body-row">주소: ${escapeHtml(app.storeAddress)}</div>
@@ -636,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Normal converter request
+    // Normal client conversion request
     const btnRequestConversionMob = document.getElementById('btn-request-conversion-mob');
     if (btnRequestConversionMob) {
         btnRequestConversionMob.addEventListener('click', () => {
@@ -646,18 +324,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('users', JSON.stringify(users));
                 localStorage.setItem('activeUser', JSON.stringify(activeUser));
                 
-                alert('회원 전환 신청이 임시 접수되었습니다. 현황 탭 상단 최고관리자 계정(admin)으로 로그인하여 승인 처리가 가능합니다.');
+                alert('회원 전환 신청이 접수되었습니다. 최고관리자(admin) 계정 로그인 승인 후 영업코드가 정상 발급됩니다.');
                 renderStatusTab();
             }
         });
     }
 
-    // --- 5.2. Business Rep Dashboard Rendering ---
+    // --- Salesperson Dashboard ---
     function renderBusinessDashboardMob() {
         const bizItemsList = document.getElementById('biz-items-list-mobile');
         if (!bizItemsList) return;
 
-        // Synchronize state with applications DB
+        // Sync items status with main applications
         let items = activeUser.items || [];
         const apps = JSON.parse(localStorage.getItem('applications')) || [];
         let itemsUpdated = false;
@@ -692,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (items.length === 0) {
-            bizItemsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.8rem;">등록된 영업물건이 없습니다. 아래 현장 등록 폼을 채워 신규 추가해 보세요.</p>';
+            bizItemsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.8rem;">등록된 영업물건이 없습니다. 아래 현장 등록 폼을 통해 새로 추가해 보세요.</p>';
             return;
         }
 
@@ -729,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Manual App Linking button click (방안 B)
+    // Sales representative manual link (방안 B)
     const btnLinkAppMob = document.getElementById('btn-link-app-mob');
     const linkAppIdInputMob = document.getElementById('link-app-id-mob');
     if (btnLinkAppMob && linkAppIdInputMob) {
@@ -762,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const newBizItem = {
                 id: targetApp.id,
-                name: targetApp.storeName,
+                name: targetApp.shopName || targetApp.storeName,
                 address: targetApp.storeAddress,
                 photosCount: targetApp.fileData ? 1 : 0,
                 receiptStatus: '접수 완료 (간판지원단)',
@@ -784,13 +462,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             localStorage.setItem('applications', JSON.stringify(updatedApps));
 
-            alert(`고객 신청서 [${targetApp.storeName}] 연동이 완료되었습니다!`);
+            alert(`고객 신청서 [${targetApp.shopName || targetApp.storeName}] 수동 연동 완료되었습니다!`);
             linkAppIdInputMob.value = '';
             renderStatusTab();
         });
     }
 
-    // Business Mobile upload file selector
+    // Photo uploads inside representative dashboard
     const mobFileZoneMob = document.getElementById('mobile-file-zone-mob');
     const mobPhotosInputMob = document.getElementById('mob-photos-input-mob');
     const mobPhotoPreviewsMob = document.getElementById('mob-photo-previews-mob');
@@ -836,7 +514,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Read first photo as base64 or object URL
             const processRegistration = (base64Photo) => {
                 const newItem = {
                     id: Date.now(),
@@ -855,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('users', JSON.stringify(users));
                 localStorage.setItem('activeUser', JSON.stringify(activeUser));
 
-                alert(`영업물건 [${nameVal}] 등록이 완료되었습니다.`);
+                alert(`영업 현장 물건 [${nameVal}] 등록이 완료되었습니다.`);
                 formBizUploadMob.reset();
                 selectedPhotosMob = [];
                 renderMobilePhotoPreviewsMob();
@@ -874,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 5.3. Admin Control Console Rendering ---
+    // --- Admin Dashboard ---
     let adminActiveTab = 'requests';
     window.switchAdminTab = function(tabName) {
         adminActiveTab = tabName;
@@ -906,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (totalStat) totalStat.textContent = `${applications.length}건`;
         if (visitorsStat) visitorsStat.textContent = `${localStorage.getItem('visitor_today') || '34'}명`;
 
-        // 1) Render Requests (영업자 신청 대기 목록)
+        // 1) Render Salesperson Requests
         const requestsList = document.getElementById('admin-requests-list-mob');
         if (requestsList) {
             const pendingUsers = users.filter(u => u.conversionStatus === 'pending');
@@ -922,14 +599,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">아이디: ${u.id} (${u.name})</div>
                         <div style="font-size: 0.7rem; color: var(--text-secondary);">연락처: ${u.phone}</div>
                         <div class="admin-action-row-mob">
-                            <button class="btn btn-primary btn-sm btn-approve-user-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success);"><i class="fa-solid fa-check"></i> 승인</button>
+                            <button class="btn btn-primary btn-sm btn-approve-user-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-check"></i> 승인</button>
                             <button class="btn btn-secondary btn-sm btn-reject-user-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem;"><i class="fa-solid fa-xmark"></i> 반려</button>
                         </div>
                     `;
                     requestsList.appendChild(card);
                 });
 
-                // Attach actions
                 requestsList.querySelectorAll('.btn-approve-user-mob').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const uid = e.target.closest('button').dataset.uid;
@@ -945,15 +621,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 2) Render Online Applications list
+        // 2) Render Applications list
         const appsList = document.getElementById('admin-apps-list-mob');
         if (appsList) {
             if (applications.length === 0) {
                 appsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">접수된 온라인 신청서가 없습니다.</p>';
             } else {
                 appsList.innerHTML = '';
-                // Latest first
-                const sortedApps = [...applications].sort((a, b) => b.id - a.id || b.appliedAt.localeCompare(a.appliedAt));
+                const sortedApps = [...applications].sort((a, b) => b.id.localeCompare(a.id) || b.appliedAt.localeCompare(a.appliedAt));
                 sortedApps.forEach(app => {
                     const card = document.createElement('div');
                     card.className = 'admin-app-card-mob';
@@ -966,7 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (app.status === 'pending') {
                         actionsHtml = `
                             <div class="admin-action-row-mob">
-                                <button class="btn btn-primary btn-sm btn-approve-app-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success);"><i class="fa-solid fa-check"></i> 승인</button>
+                                <button class="btn btn-primary btn-sm btn-approve-app-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-check"></i> 승인</button>
                                 <button class="btn btn-secondary btn-sm btn-reject-app-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem;"><i class="fa-solid fa-xmark"></i> 반려</button>
                             </div>
                         `;
@@ -974,7 +649,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                            <strong style="font-size: 0.85rem;">${escapeHtml(app.storeName)}</strong>
+                            <strong style="font-size: 0.85rem;">${escapeHtml(app.shopName || app.storeName)}</strong>
                             ${statusBadge}
                         </div>
                         <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
@@ -1014,7 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return u;
         });
         localStorage.setItem('users', JSON.stringify(users));
-        alert(`계정이 성공적으로 영업자 회원으로 승인되었습니다!\n(발급된 코드: ${code})`);
+        alert(`영업자 회원 승인이 정상 완료되었습니다! (발급된 영업코드: ${code})`);
         renderStatusTab();
     }
 
@@ -1026,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return u;
         });
         localStorage.setItem('users', JSON.stringify(users));
-        alert('신청이 반려 처리되었습니다.');
+        alert('신청이 반려되었습니다.');
         renderStatusTab();
     }
 
@@ -1038,137 +713,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return app;
         });
         localStorage.setItem('applications', JSON.stringify(applications));
-        alert(`신청서가 [${newStatus === 'approved' ? '승인' : '반려'}] 처리되었습니다.`);
+        alert(`신청 건이 [${newStatus === 'approved' ? '승인' : '반려'}] 처리되었습니다.`);
         renderStatusTab();
     }
 
-    // --- Auth Overlay Popups UI ---
-    window.showAuthModal = function(type) {
-        const overlay = document.getElementById('auth-modal-overlay');
-        const loginCard = document.getElementById('auth-card-login');
-        const regCard = document.getElementById('auth-card-register');
-
-        if (!overlay) return;
-        overlay.classList.add('active');
-
-        if (type === 'login') {
-            loginCard.style.display = 'block';
-            regCard.style.display = 'none';
-        } else {
-            loginCard.style.display = 'none';
-            regCard.style.display = 'block';
-        }
-    };
-
-    window.closeAuthModal = function() {
-        const overlay = document.getElementById('auth-modal-overlay');
-        if (overlay) {
-            overlay.classList.remove('active');
-        }
-    };
-
-    // Form handlers
-    const loginForm = document.getElementById('login-form-mob');
-    if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const id = document.getElementById('login-id-mob')?.value.trim();
-            const pw = document.getElementById('login-pw-mob')?.value;
-
-            const matched = users.find(u => u.id === id && u.pw === sha256(pw));
-            if (matched) {
-                activeUser = sanitizeUser(matched);
-                localStorage.setItem('activeUser', JSON.stringify(activeUser));
-                
-                alert(`반갑습니다, ${activeUser.name}님! 로그인 되었습니다.`);
-                closeAuthModal();
-                updateDrawerProfile();
-                renderStatusTab();
-            } else {
-                alert('아이디 또는 비밀번호를 다시 확인해 주세요.');
-            }
-        });
+    // --- Helper Utilities ---
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
-    const regForm = document.getElementById('register-form-mob');
-    if (regForm) {
-        regForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const id = document.getElementById('reg-id-mob')?.value.trim();
-            const name = document.getElementById('reg-name-mob')?.value.trim();
-            const phone = document.getElementById('reg-phone-mob')?.value.trim();
-            const pw = document.getElementById('reg-pw-mob')?.value;
-
-            if (users.some(u => u.id === id)) {
-                alert('이미 등록된 아이디입니다.');
-                return;
-            }
-
-            const newUser = {
-                id,
-                name,
-                phone,
-                pw: sha256(pw),
-                role: 'user',
-                conversionStatus: 'none',
-                items: []
-            };
-
-            users.push(newUser);
-            localStorage.setItem('users', JSON.stringify(users));
-
-            alert('회원가입이 완료되었습니다. 로그인해 주세요.');
-            showAuthModal('login');
-        });
-    }
-
-    // Logout drawer trigger
-    const logoutBtn = document.getElementById('drawer-logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            localStorage.removeItem('activeUser');
-            activeUser = null;
-            
-            alert('로그아웃 되었습니다.');
-            closeDrawer();
-            updateDrawerProfile();
-            renderStatusTab();
-        });
-    }
-
-    // Delete account drawer trigger
-    const deleteAccountBtn = document.getElementById('drawer-delete-account-btn');
-    if (deleteAccountBtn) {
-        deleteAccountBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (confirm('정말로 계정을 탈퇴하시겠습니까?\n등록된 모든 영업물건과 이력이 완전 소멸하며 복구할 수 없습니다.')) {
-                if (confirm('탈퇴 동의 최종 확인')) {
-                    users = users.filter(u => u.id !== activeUser.id);
-                    localStorage.setItem('users', JSON.stringify(users));
-                    localStorage.removeItem('activeUser');
-                    activeUser = null;
-                    
-                    alert('회원 탈퇴 완료되었습니다. 초기 화면으로 이동합니다.');
-                    closeDrawer();
-                    updateDrawerProfile();
-                    renderStatusTab();
-                }
-            }
-        });
-    }
-
-    // --- Side Drawer trigger settings ---
-    const sideMenuTrigger = document.getElementById('app-menu-trigger');
-    const sideMenuClose = document.getElementById('app-drawer-close');
-    const sideOverlay = document.getElementById('app-drawer-overlay');
-
-    if (sideMenuTrigger) {
-        sideMenuTrigger.addEventListener('click', () => {
-            openDrawer();
-        });
-    }
-
-    // --- Initialize default setups ---
+    // Initialize display states
     updateDrawerProfile();
 });
