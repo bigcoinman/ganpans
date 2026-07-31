@@ -493,25 +493,26 @@ body.mobile-app-body {
     -webkit-overflow-scrolling: touch !important;
     scroll-snap-type: x mandatory !important;
     gap: 0 !important;
-    padding: 24px 0 16px 0 !important;
-    height: 220px !important;
+    padding: 16px 0 !important;
+    height: 130px !important;
     width: 100% !important;
     border-radius: 16px !important;
-    background: linear-gradient(to bottom, #7ec0ee 0%, #e0f2fe 100%) !important;
+    background: #f1f5f9 !important;
+    border: 1px solid var(--border-color) !important;
 }
 
 #view-home .building-scroll-viewport.night {
-    background: linear-gradient(to bottom, #0a0e1a 0%, #1a234f 100%) !important;
+    background: #0f172a !important;
 }
 
 /* Force visible and premium horizontal scrollbar */
 #view-home .building-scroll-viewport::-webkit-scrollbar {
-    height: 6px !important;
+    height: 5px !important;
     display: block !important;
 }
 
 #view-home .building-scroll-viewport::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.05) !important;
+    background: rgba(0, 0, 0, 0.03) !important;
     border-radius: 10px !important;
 }
 
@@ -525,31 +526,43 @@ body.mobile-app-body {
     box-shadow: 0 0 6px rgba(0, 255, 255, 0.6) !important;
 }
 
-/* 1 Shop at a time scroll snap card */
+/* 1 Signboard at a time scroll snap card */
 #view-home .shop-slot {
     flex-shrink: 0 !important;
     width: 100% !important;
     min-width: 100% !important;
     height: 100% !important;
     scroll-snap-align: center !important;
-    padding: 0 20px !important;
+    padding: 0 16px !important;
     box-sizing: border-box !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
-    justify-content: flex-end !important;
+    justify-content: center !important;
     position: relative !important;
+    background: transparent !important;
 }
 
 #view-home .signboard-area {
     width: 100% !important;
-    max-width: 240px !important;
-    height: 75px !important;
-    margin-bottom: 8px !important;
+    max-width: 260px !important;
+    height: 90px !important;
+    margin-bottom: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 4px 8px !important;
+    padding: 8px !important;
+    background: #ffffff !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: var(--transition-quick) !important;
+}
+
+#view-home .building-scroll-viewport.night .signboard-area {
+    background: #1e293b !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.45) !important;
 }
 
 #view-home .signboard-img {
@@ -558,27 +571,11 @@ body.mobile-app-body {
     object-fit: contain !important;
 }
 
-#view-home .storefront-facade {
-    display: flex !important;
-    width: 90% !important;
-    max-width: 220px !important;
-    height: 50px !important;
-    justify-content: center !important;
-    align-items: flex-end !important;
-    gap: 8px !important;
-    margin-bottom: 2px !important;
-}
-
-#view-home .window {
-    height: 40px !important;
-    border-width: 2px !important;
-    flex: 1 !important;
-}
-
-#view-home .door {
-    width: 20px !important;
-    height: 48px !important;
-    border-width: 2px !important;
+/* Hide storefront facades (windows/doors/lamps) on mobile app view */
+#view-home .storefront-facade,
+#view-home .wall-lamp,
+#view-home .street-ground {
+    display: none !important;
 }
 
 /* 6.4. Checklist Overrides */
