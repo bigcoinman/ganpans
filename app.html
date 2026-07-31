@@ -27,9 +27,14 @@
         <div class="header-brand" onclick="switchTab('home')">
             <img src="간판지원단 로고-3.png" alt="간판지원단" style="height: 24px; width: auto; display: block;">
         </div>
-        <button class="header-menu-btn" id="app-menu-trigger">
-            <i class="fa-solid fa-bars"></i>
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="app-install-btn-header" id="mobile-header-install-btn">
+                <i class="fa-solid fa-mobile-screen-button"></i> 앱 설치
+            </button>
+            <button class="header-menu-btn" id="app-menu-trigger">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
     </header>
 
     <!-- Sliding Side Drawer Menu -->
@@ -1491,6 +1496,13 @@
             <div class="auth-tabs">
                 <button class="auth-tab-btn active" id="tab-login-btn">로그인</button>
                 <button class="auth-tab-btn" id="tab-signup-btn">회원가입</button>
+            </div>
+    <div id="install-modal" class="install-modal-overlay">
+        <div class="install-card">
+            <button class="install-close-x" id="install-modal-close"><i class="fa-solid fa-xmark"></i></button>
+            <div class="install-title-area">
+                <h3><i class="fa-solid fa-mobile-screen-button"></i> 간판지원단 모바일 앱</h3>
+                <p>스마트폰에 앱으로 설치하여 언제 어디서든 편리하게 시뮬레이터와 간편 신청을 이용해 보세요.</p>
             </div>
 
     <!-- Hidden triggers for PC script integration -->

@@ -1171,7 +1171,7 @@ body.mobile-app-body {
 }
 
 /* 11. Modal Overrides for Mobile App */
-.auth-modal, .review-modal-overlay, .success-modal {
+.auth-modal, .review-modal-overlay, .success-modal, .install-modal-overlay {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -1185,11 +1185,11 @@ body.mobile-app-body {
     justify-content: center !important;
 }
 
-.auth-modal.active, .review-modal-overlay.active, .success-modal.active {
+.auth-modal.active, .review-modal-overlay.active, .success-modal.active, .install-modal-overlay.active {
     display: flex !important;
 }
 
-.auth-card, .review-write-card, .success-card {
+.auth-card, .review-write-card, .success-card, .install-card {
     width: 90% !important;
     max-width: 350px !important;
     padding: 20px !important;
@@ -1227,4 +1227,30 @@ body.mobile-app-body {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
     border: 1px solid var(--border-color) !important;
     display: block !important;
+}
+
+/* 13. Mobile Header App Install Button */
+.app-install-btn-header {
+    background: transparent !important;
+    border: 1.5px solid var(--accent-primary) !important;
+    color: var(--accent-primary) !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 5px 11px !important;
+    border-radius: 20px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 5px rgba(0, 86, 204, 0.1) !important;
+}
+
+.app-install-btn-header:active {
+    background: rgba(0, 86, 204, 0.08) !important;
+    transform: scale(0.95) !important;
+}
+
+.app-install-btn-header i {
+    font-size: 0.9rem !important;
 }

@@ -256,6 +256,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Mobile Header App Install Trigger ---
+    const mobileHeaderInstallBtn = document.getElementById('mobile-header-install-btn');
+    const mobileInstallModal = document.getElementById('install-modal');
+    if (mobileHeaderInstallBtn && mobileInstallModal) {
+        mobileHeaderInstallBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Set QR code URL dynamically
+            const qrImg = document.getElementById('install-qr-img');
+            if (qrImg) {
+                const currentUrl = window.location.href;
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(currentUrl)}`;
+            }
+
+            // Hide QR section on mobile since they are already on mobile
+            const qrSection = document.getElementById('install-qr-section');
+            if (qrSection) {
+                qrSection.style.display = 'none';
+            }
+
+            mobileInstallModal.classList.add('active');
+        });
+    }
+
     // --- Gallery Arrow Buttons Injector ---
     const wrapper = document.querySelector('#view-home .building-gallery-wrapper');
     const viewport = document.querySelector('#view-home .building-scroll-viewport');
