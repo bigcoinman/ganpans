@@ -195,6 +195,155 @@
             </div>
         </section>
 
+            <!-- Simple Application Section (Exactly from index.html) -->
+            <section id="apply-section" class="section">
+            <div class="container">
+                <div class="section-title">
+                    <h2>온라인 간편 지원 신청</h2>
+                    <p>간단한 인적 사항 및 점포 정보 기입해 주시면 담당자가 순차적으로 연락 드리겠습니다.</p>
+                </div>
+
+                <div class="wizard-container glass-panel">
+
+                    <!-- Progression nodes -->
+                    <div class="wizard-steps">
+                        <div class="wizard-progress"></div>
+                        <div class="step-node active">1</div>
+                        <div class="step-node">2</div>
+                        <div class="step-node">3</div>
+                    </div>
+
+                    <!-- Forms steps -->
+                    <form id="apply-form" onsubmit="event.preventDefault();">
+
+                        <!-- Step 1: Applicant info -->
+                        <div class="step-pane active" data-step="1">
+                            <h3 style="margin-bottom: 24px; color: var(--text-primary);"><i
+                                    class="fa-solid fa-user"></i> 단계 1: 신청인 대표
+                                정보</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="owner-name">대표자 성명</label>
+                                    <input type="text" id="owner-name" class="form-input" placeholder="홍길동" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="owner-phone">휴대전화 번호</label>
+                                    <input type="tel" id="owner-phone" class="form-input" placeholder="010-1234-5678"
+                                        required>
+                                </div>
+                                <div class="form-group form-grid-full">
+                                    <label for="owner-email">대표 이메일 주소 (선택)</label>
+                                    <input type="email" id="owner-email" class="form-input"
+                                        placeholder="representative@domain.com">
+                                </div>
+                                <div class="form-group form-grid-full">
+                                    <label for="referrer-code">추천인 / 담당 영업자 코드 (선택)</label>
+                                    <input type="text" id="referrer-code" class="form-input"
+                                        placeholder="예: BIZ-2026-1234 (자동 입력 가능)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Store info -->
+                        <div class="step-pane" data-step="2">
+                            <h3 style="margin-bottom: 24px; color: var(--text-primary);"><i
+                                    class="fa-solid fa-shop"></i> 단계 2:
+                                사업장(점포) 정보 및 현황</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="app-shop-name">사업자 상호명</label>
+                                    <input type="text" id="app-shop-name" class="form-input" placeholder="상호명 입력"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="app-sign-type">선택한 간판 소재</label>
+                                    <input type="text" id="app-sign-type" class="form-input"
+                                        placeholder="예: 플렉스(기본형), LED" readonly>
+                                </div>
+                                <div class="form-group form-grid-full">
+                                    <label for="store-address">설치 예정지 전체 주소</label>
+                                    <input type="text" id="store-address" class="form-input"
+                                        placeholder="경기도 수원시 OO구 OO로 1" required>
+                                </div>
+
+                                <!-- Photo upload drag & drop area -->
+                                <div class="form-group form-grid-full">
+                                    <label>기존 노후 간판 정면 현장 촬영 사진</label>
+                                    <div class="file-upload-area" id="file-upload-area">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                                        <p>사진 파일을 드래그하여 드롭하거나 영역을 클릭해 선택하세요.</p>
+                                        <span>지원 규격: JPG, PNG (최대 10MB)</span>
+                                        <input type="file" id="store-photo" accept="image/*">
+                                        <div id="uploaded-file-name" class="uploaded-file-name"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Application validation summary review -->
+                        <div class="step-pane" data-step="3">
+                            <h3 style="margin-bottom: 24px; color: var(--text-primary);"><i
+                                    class="fa-solid fa-file-shield"></i> 단계 3:
+                                제출 서류 정보 최종 확인</h3>
+                            <p style="color: var(--text-secondary); margin-bottom: 20px;">접수하기 전에 기입하신 자격 증빙 자료가 사실과
+                                일치하는지 재확인해 주십시오.</p>
+
+                            <div class="summary-card">
+                                <h4>신청 세부 확인 목록</h4>
+                                <div class="summary-list">
+                                    <div class="summary-item">
+                                        <span>대표 신청자</span>
+                                        <strong id="sum-owner-name">-</strong>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span>연락처</span>
+                                        <strong id="sum-owner-phone">-</strong>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span>상호명</span>
+                                        <strong id="sum-store-name">-</strong>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span>경기도 내 설치 주소</span>
+                                        <strong id="sum-store-address">-</strong>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span>간판 형태</span>
+                                        <strong id="sum-sign-type">-</strong>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span>기존 사진 첨부</span>
+                                        <strong id="sum-file-name">-</strong>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span>담당 영업자 코드</span>
+                                        <strong id="sum-referrer-code">-</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group"
+                                style="margin-top: 24px; flex-direction: row; gap: 10px; align-items: flex-start;">
+                                <input type="checkbox" id="agree-terms" style="margin-top: 5px; cursor: pointer;"
+                                    required checked>
+                                <label for="agree-terms"
+                                    style="cursor: pointer; font-size: 0.85rem; color: var(--text-secondary);">
+                                    개인정보 수집 및 경영환경 개선 조례 제반 심사 규정에 동의하며, 사업자등록에 위배 사실이 없음을 서약합니다.
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Wizard controls -->
+                        <div class="wizard-buttons">
+                            <button type="button" class="btn btn-secondary" id="prev-step">이전 단계</button>
+                            <button type="button" class="btn btn-primary" id="next-step">다음 단계</button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </section>
+
             <!-- Process Steps (Exactly from index.html) -->
             <section id="process-steps" class="section" style="background: var(--bg-secondary);">
             <div class="container">
@@ -1263,156 +1412,8 @@
             </div>
         </section>
 
-        <!-- 4. SIMPLE APPLICATION FORM VIEW (Wizard exactly from index.html) -->
-        <section id="view-apply" class="app-view">
-            <section id="apply-section" class="section">
-            <div class="container">
-                <div class="section-title">
-                    <h2>온라인 간편 지원 신청</h2>
-                    <p>간단한 인적 사항 및 점포 정보 기입해 주시면 담당자가 순차적으로 연락 드리겠습니다.</p>
-                </div>
-
-                <div class="wizard-container glass-panel">
-
-                    <!-- Progression nodes -->
-                    <div class="wizard-steps">
-                        <div class="wizard-progress"></div>
-                        <div class="step-node active">1</div>
-                        <div class="step-node">2</div>
-                        <div class="step-node">3</div>
-                    </div>
-
-                    <!-- Forms steps -->
-                    <form id="apply-form" onsubmit="event.preventDefault();">
-
-                        <!-- Step 1: Applicant info -->
-                        <div class="step-pane active" data-step="1">
-                            <h3 style="margin-bottom: 24px; color: var(--text-primary);"><i
-                                    class="fa-solid fa-user"></i> 단계 1: 신청인 대표
-                                정보</h3>
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="owner-name">대표자 성명</label>
-                                    <input type="text" id="owner-name" class="form-input" placeholder="홍길동" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="owner-phone">휴대전화 번호</label>
-                                    <input type="tel" id="owner-phone" class="form-input" placeholder="010-1234-5678"
-                                        required>
-                                </div>
-                                <div class="form-group form-grid-full">
-                                    <label for="owner-email">대표 이메일 주소 (선택)</label>
-                                    <input type="email" id="owner-email" class="form-input"
-                                        placeholder="representative@domain.com">
-                                </div>
-                                <div class="form-group form-grid-full">
-                                    <label for="referrer-code">추천인 / 담당 영업자 코드 (선택)</label>
-                                    <input type="text" id="referrer-code" class="form-input"
-                                        placeholder="예: BIZ-2026-1234 (자동 입력 가능)">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 2: Store info -->
-                        <div class="step-pane" data-step="2">
-                            <h3 style="margin-bottom: 24px; color: var(--text-primary);"><i
-                                    class="fa-solid fa-shop"></i> 단계 2:
-                                사업장(점포) 정보 및 현황</h3>
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="app-shop-name">사업자 상호명</label>
-                                    <input type="text" id="app-shop-name" class="form-input" placeholder="상호명 입력"
-                                        required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="app-sign-type">선택한 간판 소재</label>
-                                    <input type="text" id="app-sign-type" class="form-input"
-                                        placeholder="예: 플렉스(기본형), LED" readonly>
-                                </div>
-                                <div class="form-group form-grid-full">
-                                    <label for="store-address">설치 예정지 전체 주소</label>
-                                    <input type="text" id="store-address" class="form-input"
-                                        placeholder="경기도 수원시 OO구 OO로 1" required>
-                                </div>
-
-                                <!-- Photo upload drag & drop area -->
-                                <div class="form-group form-grid-full">
-                                    <label>기존 노후 간판 정면 현장 촬영 사진</label>
-                                    <div class="file-upload-area" id="file-upload-area">
-                                        <i class="fa-solid fa-cloud-arrow-up"></i>
-                                        <p>사진 파일을 드래그하여 드롭하거나 영역을 클릭해 선택하세요.</p>
-                                        <span>지원 규격: JPG, PNG (최대 10MB)</span>
-                                        <input type="file" id="store-photo" accept="image/*">
-                                        <div id="uploaded-file-name" class="uploaded-file-name"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 3: Application validation summary review -->
-                        <div class="step-pane" data-step="3">
-                            <h3 style="margin-bottom: 24px; color: var(--text-primary);"><i
-                                    class="fa-solid fa-file-shield"></i> 단계 3:
-                                제출 서류 정보 최종 확인</h3>
-                            <p style="color: var(--text-secondary); margin-bottom: 20px;">접수하기 전에 기입하신 자격 증빙 자료가 사실과
-                                일치하는지 재확인해 주십시오.</p>
-
-                            <div class="summary-card">
-                                <h4>신청 세부 확인 목록</h4>
-                                <div class="summary-list">
-                                    <div class="summary-item">
-                                        <span>대표 신청자</span>
-                                        <strong id="sum-owner-name">-</strong>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span>연락처</span>
-                                        <strong id="sum-owner-phone">-</strong>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span>상호명</span>
-                                        <strong id="sum-store-name">-</strong>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span>경기도 내 설치 주소</span>
-                                        <strong id="sum-store-address">-</strong>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span>간판 형태</span>
-                                        <strong id="sum-sign-type">-</strong>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span>기존 사진 첨부</span>
-                                        <strong id="sum-file-name">-</strong>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span>담당 영업자 코드</span>
-                                        <strong id="sum-referrer-code">-</strong>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group"
-                                style="margin-top: 24px; flex-direction: row; gap: 10px; align-items: flex-start;">
-                                <input type="checkbox" id="agree-terms" style="margin-top: 5px; cursor: pointer;"
-                                    required checked>
-                                <label for="agree-terms"
-                                    style="cursor: pointer; font-size: 0.85rem; color: var(--text-secondary);">
-                                    개인정보 수집 및 경영환경 개선 조례 제반 심사 규정에 동의하며, 사업자등록에 위배 사실이 없음을 서약합니다.
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Wizard controls -->
-                        <div class="wizard-buttons">
-                            <button type="button" class="btn btn-secondary" id="prev-step">이전 단계</button>
-                            <button type="button" class="btn btn-primary" id="next-step">다음 단계</button>
-                        </div>
-
-                    </form>
-                </div>
-            </div>
-        </section>
-        </section>
+        <!-- 4. SIMPLE APPLICATION FORM VIEW (Placeholder - Redirected to Home inline form) -->
+        <section id="view-apply" class="app-view"></section>
 
     </main>
 

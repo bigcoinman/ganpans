@@ -70,6 +70,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Tab Switching Logic ---
     window.switchTab = function(tabId) {
+        if (tabId === 'apply') {
+            // Highlight the home navigation button
+            navItems.forEach(btn => {
+                if (btn.id === 'tab-btn-home') {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            // Switch view class to home view
+            tabs.forEach(tab => {
+                if (tab.id === 'view-home') {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            // Scroll to the apply section inside home view
+            setTimeout(() => {
+                const appSection = document.getElementById('apply-section');
+                const homeView = document.getElementById('view-home');
+                if (appSection && homeView) {
+                    homeView.scrollTo({
+                        top: appSection.offsetTop - 10,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 50);
+            return;
+        }
+
         tabs.forEach(tab => {
             if (tab.id === `view-${tabId}`) {
                 tab.classList.add('active');
@@ -89,10 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Trigger Tab-Specific Renderings
         if (tabId === 'status') {
             renderStatusTab();
-        } else if (tabId === 'apply') {
-            // Scroll to the wizard start
-            const appSection = document.getElementById('apply-section');
-            if (appSection) appSection.scrollIntoView({ behavior: 'auto' });
         }
         
         // Auto scroll to top on tab switch
