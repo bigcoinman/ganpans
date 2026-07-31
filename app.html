@@ -159,6 +159,42 @@
             </div>
         </section>
 
+            <!-- Checklist Section (Exactly from index.html) -->
+            <section id="check" class="section"
+            style="background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);">
+            <div class="container">
+                <div class="section-title">
+                    <h2>자가진단</h2>
+                    <p class="section-subtitle-sub" style="font-size: 1.15rem; font-weight: 600; color: var(--text-secondary); margin-top: 8px;">우리 가게도 신청 가능할까?</p>
+                    <p>아래 자가진단 항목을 하나씩 선택해보세요. 네 가지 조건이 모두 부합하면 신청 가능 대상자 입니다.</p>
+                </div>
+
+                <div class="check-list-container">
+                    <div class="check-card">
+                        <input type="checkbox" id="check-1">
+                        <div class="check-card-text">경기도 내 창업 3년 이상 영업중인 소상공인 입니다.</div>
+                    </div>
+                    <div class="check-card">
+                        <input type="checkbox" id="check-2">
+                        <div class="check-card-text">매장 간판이 낡았거나, 탈색 및 파손되어 교체가 시급한 노후 상태입니다.</div>
+                    </div>
+                    <div class="check-card">
+                        <input type="checkbox" id="check-3">
+                        <div class="check-card-text">최근 3년 동안 경기도 내 지자체 보조 지원 사업을 받아 본 이력이 없습니다.</div>
+                    </div>
+                    <div class="check-card">
+                        <input type="checkbox" id="check-4">
+                        <div class="check-card-text">소상공인 기준(상시근로자 5인 or 10인 미만)을 충족합니다.</div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Eligibility badge -->
+                <div id="eligibility-status" class="eligibility-status-box locked">
+                    <i class="fa-solid fa-lock"></i> 자격 요건 확인 중 (0/4 체크됨)
+                </div>
+            </div>
+        </section>
+
             <!-- Process Steps (Exactly from index.html) -->
             <section id="process-steps" class="section" style="background: var(--bg-secondary);">
             <div class="container">
@@ -598,41 +634,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </section>
-
-            <!-- Checklist Section (Exactly from index.html) -->
-            <section id="check" class="section"
-            style="background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);">
-            <div class="container">
-                <div class="section-title">
-                    <h2>우리 가게도 신청 가능할까?</h2>
-                    <p>아래 자가진단 항목을 하나씩 선택해보세요. 네 가지 조건이 모두 부합하면 신청 가능 대상자 입니다.</p>
-                </div>
-
-                <div class="check-list-container">
-                    <div class="check-card">
-                        <input type="checkbox" id="check-1">
-                        <div class="check-card-text">경기도 내 창업 3년 이상 영업중인 소상공인 입니다.</div>
-                    </div>
-                    <div class="check-card">
-                        <input type="checkbox" id="check-2">
-                        <div class="check-card-text">매장 간판이 낡았거나, 탈색 및 파손되어 교체가 시급한 노후 상태입니다.</div>
-                    </div>
-                    <div class="check-card">
-                        <input type="checkbox" id="check-3">
-                        <div class="check-card-text">최근 3년 동안 경기도 내 지자체 보조 지원 사업을 받아 본 이력이 없습니다.</div>
-                    </div>
-                    <div class="check-card">
-                        <input type="checkbox" id="check-4">
-                        <div class="check-card-text">소상공인 기준(상시근로자 5인 or 10인 미만)을 충족합니다.</div>
-                    </div>
-                </div>
-
-                <!-- Dynamic Eligibility badge -->
-                <div id="eligibility-status" class="eligibility-status-box locked">
-                    <i class="fa-solid fa-lock"></i> 자격 요건 확인 중 (0/4 체크됨)
                 </div>
             </div>
         </section>
