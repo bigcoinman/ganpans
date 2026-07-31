@@ -257,48 +257,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Gallery Arrow Buttons Injector ---
-    const galleryControls = document.querySelector('#view-home .gallery-controls');
-    if (galleryControls) {
-        // Create arrow container
-        const arrowsDiv = document.createElement('div');
-        arrowsDiv.className = 'gallery-nav-arrows';
-        arrowsDiv.innerHTML = `
-            <button class="nav-arrow-btn prev-btn" id="gallery-prev-btn" title="이전 간판"><i class="fa-solid fa-chevron-left"></i></button>
-            <button class="nav-arrow-btn next-btn" id="gallery-next-btn" title="다음 간판"><i class="fa-solid fa-chevron-right"></i></button>
-        `;
-        
-        // Insert it between control-info and toggle-group
-        const toggleGroup = galleryControls.querySelector('.toggle-group');
-        if (toggleGroup) {
-            galleryControls.insertBefore(arrowsDiv, toggleGroup);
-        } else {
-            galleryControls.appendChild(arrowsDiv);
-        }
+    const wrapper = document.querySelector('#view-home .building-gallery-wrapper');
+    const viewport = document.querySelector('#view-home .building-scroll-viewport');
+    
+    if (wrapper && viewport) {
+        // Set wrapper position relative
+        wrapper.style.position = 'relative';
+
+        // Create left arrow button
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'gallery-floating-arrow prev-arrow';
+        prevBtn.id = 'gallery-prev-btn';
+        prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+        prevBtn.setAttribute('title', '이전 간판');
+
+        // Create right arrow button
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'gallery-floating-arrow next-arrow';
+        nextBtn.id = 'gallery-next-btn';
+        nextBtn.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+        nextBtn.setAttribute('title', '다음 간판');
+
+        // Append buttons to the wrapper
+        wrapper.appendChild(prevBtn);
+        wrapper.appendChild(nextBtn);
 
         // Bind events
-        const prevBtn = document.getElementById('gallery-prev-btn');
-        const nextBtn = document.getElementById('gallery-next-btn');
-        const viewport = document.querySelector('#view-home .building-scroll-viewport');
+        prevBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const itemWidth = viewport.clientWidth;
+            viewport.scrollBy({ left: -itemWidth, behavior: 'smooth' });
+        });
 
-        if (prevBtn && viewport) {
-            prevBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // Scroll left by 1 item width
-                const itemWidth = viewport.clientWidth;
-                viewport.scrollBy({ left: -itemWidth, behavior: 'smooth' });
-            });
-        }
-
-        if (nextBtn && viewport) {
-            nextBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // Scroll right by 1 item width
-                const itemWidth = viewport.clientWidth;
-                viewport.scrollBy({ left: itemWidth, behavior: 'smooth' });
-            });
-        }
+        nextBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const itemWidth = viewport.clientWidth;
+            viewport.scrollBy({ left: itemWidth, behavior: 'smooth' });
+        });
     }
 
     // --- Dashboard Status Render Logic ---

@@ -530,32 +530,38 @@ body.mobile-app-body {
     margin-bottom: 12px !important;
 }
 
-.gallery-nav-arrows {
-    display: flex !important;
-    gap: 6px !important;
-    align-items: center !important;
-}
-
-.nav-arrow-btn {
-    width: 28px !important;
-    height: 28px !important;
+.gallery-floating-arrow {
+    position: absolute !important;
+    top: calc(50% + 24px) !important;
+    transform: translateY(-50%) !important;
+    width: 38px !important;
+    height: 38px !important;
     border-radius: 50% !important;
-    border: 1px solid var(--border-color) !important;
-    background: #ffffff !important;
+    border: 1px solid rgba(0, 102, 255, 0.25) !important;
+    background: rgba(255, 255, 255, 0.9) !important;
     color: var(--accent-primary) !important;
-    display: inline-flex !important;
+    display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
-    font-size: 0.7rem !important;
-    box-shadow: var(--shadow-sm) !important;
+    font-size: 0.95rem !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 99 !important;
     transition: all 0.2s ease !important;
     padding: 0 !important;
 }
 
-.nav-arrow-btn:active {
-    transform: scale(0.9) !important;
-    background: #f1f5f9 !important;
+.gallery-floating-arrow.prev-arrow {
+    left: 2px !important;
+}
+
+.gallery-floating-arrow.next-arrow {
+    right: 2px !important;
+}
+
+.gallery-floating-arrow:active {
+    transform: translateY(-50%) scale(0.85) !important;
+    background: var(--bg-secondary) !important;
 }
 
 #view-home .building-scroll-viewport {
