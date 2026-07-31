@@ -166,15 +166,16 @@ body.mobile-app-body {
 
 /* 2. App Header */
 .app-header {
-    height: 56px;
-    background-color: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    z-index: 1000;
-    flex-shrink: 0;
+    position: relative !important;
+    height: 56px !important;
+    background-color: var(--bg-secondary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 16px !important;
+    z-index: 1000 !important;
+    flex-shrink: 0 !important;
 }
 
 .header-brand {
