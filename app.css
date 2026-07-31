@@ -65,21 +65,27 @@ body.mobile-app-body {
 
 #view-home .hero-content h1 {
     font-size: 1.8rem !important;
-    line-height: 1.25 !important;
+    line-height: 1.4 !important;
     margin-bottom: 16px !important;
     color: var(--accent-primary) !important;
+    padding-top: 10px !important;
 }
 
 #view-home .hero-content h1 span {
     display: block !important;
+    line-height: 1.4 !important;
     color: var(--accent-primary) !important;
     -webkit-text-fill-color: var(--accent-primary) !important;
+    -webkit-background-clip: border-box !important;
+    background-clip: border-box !important;
     background: none !important;
 }
 
 #view-home .hero-content h1 .gradient-text {
     color: var(--accent-secondary) !important;
     -webkit-text-fill-color: var(--accent-secondary) !important;
+    -webkit-background-clip: border-box !important;
+    background-clip: border-box !important;
     background: none !important;
 }
 
