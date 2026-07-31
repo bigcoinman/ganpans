@@ -1183,6 +1183,10 @@ body.mobile-app-body {
     display: none;
     align-items: center !important;
     justify-content: center !important;
+    /* Reset PC transitions and opacity styles */
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transition: none !important;
 }
 
 .auth-modal.active, .review-modal-overlay.active, .success-modal.active, .install-modal-overlay.active {
@@ -1196,7 +1200,11 @@ body.mobile-app-body {
     border-radius: 16px !important;
     box-shadow: var(--shadow-md) !important;
     position: relative !important;
-    animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    /* Reset PC card animations, opacity, and translate transitions */
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
 }
 
 @keyframes modalSlideUp {
