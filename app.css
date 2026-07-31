@@ -1174,3 +1174,22 @@ body.mobile-app-body {
         opacity: 1;
     }
 }
+
+/* 12. Intro Poster Image for Mobile App Feed */
+.intro-poster-container {
+    padding: 24px 16px 10px 16px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background: #ffffff !important;
+}
+
+.intro-poster-img {
+    width: 100% !important;
+    max-width: 340px !important;
+    height: auto !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid var(--border-color) !important;
+    display: block !important;
+}
