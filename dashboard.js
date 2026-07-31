@@ -254,7 +254,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const renderBusinessDashboard = () => {
     if (!bizItemsList) return;
     bizItemsList.innerHTML = '';
-    const items = activeUser.items || [];
+    
+    // 동기화: 신청서(applications) 데이터와 영업자의 items 매핑 상태 업데이트
+    let items = activeUser.items || [];
+    const apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let itemsUpdated = false;
+
+    items = items.map(item => {
+      // GP-로 시작하는 신청건인 경우, applications의 최신 심사 결과를 반영
+      if (typeof item.id === 'string' && item.id.startsWith('GP-')) {
+        const matchingApp = apps.find(app => app.id === item.id);
+        if (matchingApp) {
+          let updatedProgress = item.progressStatus;
+          if (matchingApp.status === 'approved') {
+            updatedProgress = '승인 완료';
+          } else if (matchingApp.status === 'rejected') {
+            updatedProgress = '반려됨';
+          } else {
+            updatedProgress = '심사 대기';
+          }
+
+          if (item.progressStatus !== updatedProgress) {
+            item.progressStatus = updatedProgress;
+            itemsUpdated = true;
+          }
+        }
+      }
+      return item;
+    });
+
+    if (itemsUpdated) {
+      activeUser.items = items;
+      users = users.map(u => u.id === activeUser.id ? { ...u, items } : u);
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('activeUser', JSON.stringify(activeUser));
+    }
 
     if (items.length === 0) {
       bizItemsList.innerHTML = `
@@ -295,6 +329,83 @@ document.addEventListener('DOMContentLoaded', () => {
       bizItemsList.appendChild(card);
     });
   };
+
+  // --- Manual Application Linking (방안 B) ---
+  const initManualAppLinking = () => {
+    const btnLinkApp = document.getElementById('btn-link-app');
+    const linkAppIdInput = document.getElementById('link-app-id');
+
+    if (!btnLinkApp || !linkAppIdInput) return;
+
+    btnLinkApp.addEventListener('click', () => {
+      const appId = linkAppIdInput.value.trim();
+      if (!appId) {
+        alert('연동할 고객의 간판 신청 고유 접수 번호를 입력해 주세요.');
+        return;
+      }
+
+      // Check if format is valid (GP-YYYYMMDD-XXXX)
+      const idPattern = /^GP-\d{8}-\d{4}$/;
+      if (!idPattern.test(appId)) {
+        alert('올바른 신청번호 형식이 아닙니다.\n형식: GP-YYYYMMDD-XXXX (예: GP-20260731-1234)');
+        return;
+      }
+
+      // Fetch applications from localStorage
+      const apps = JSON.parse(localStorage.getItem('applications')) || [];
+      const targetApp = apps.find(app => app.id === appId);
+
+      if (!targetApp) {
+        alert('입력하신 신청번호에 해당하는 간판 지원 신청 내역을 찾을 수 없습니다.');
+        return;
+      }
+
+      // Check if already linked
+      activeUser.items = activeUser.items || [];
+      if (activeUser.items.some(item => item.id === appId)) {
+        alert('이미 연동되어 내 영업물건 목록에 등록된 신청 건입니다.');
+        return;
+      }
+
+      // Create new business item object mapped to the application
+      const newLinkedItem = {
+        id: targetApp.id, // Keep the same ID for synchronization
+        name: targetApp.storeName,
+        address: targetApp.storeAddress,
+        photosCount: targetApp.fileName && targetApp.fileName !== '업로드 파일 없음' ? 1 : 0,
+        receiptStatus: '접수 완료 (간판지원단)',
+        progressStatus: targetApp.status === 'approved' ? '승인 완료' : (targetApp.status === 'rejected' ? '반려됨' : '심사 대기'),
+        photos: targetApp.fileData ? [targetApp.fileData] : []
+      };
+
+      // Push to business items list
+      activeUser.items.push(newLinkedItem);
+
+      // Update in users array
+      users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+      // Also update the application with this business user's ID and referrerCode if not set
+      const updatedApps = apps.map(app => {
+        if (app.id === appId) {
+          return {
+            ...app,
+            referrerCode: activeUser.bizCode
+          };
+        }
+        return app;
+      });
+      localStorage.setItem('applications', JSON.stringify(updatedApps));
+
+      alert(`성공적으로 고객 신청서 [${targetApp.storeName}] 건을 내 영업물건으로 연동하였습니다!`);
+      linkAppIdInput.value = '';
+      updateSessionUI();
+    });
+  };
+
+  // Call manual app linking initialization
+  initManualAppLinking();
 
   // --- Mobile Upload Simulator ---
   if (mobileFileZone) {

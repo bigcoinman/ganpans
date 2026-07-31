@@ -1024,6 +1024,14 @@ function initWizard() {
 
   if (steps.length === 0) return;
 
+  // URL ref param parsing (auto referrer code fill)
+  const urlParams = new URLSearchParams(window.location.search);
+  const refCode = urlParams.get('ref');
+  const referrerInput = document.getElementById('referrer-code');
+  if (refCode && referrerInput) {
+    referrerInput.value = refCode.trim();
+  }
+
   let currentStep = 0;
   let uploadedFileBase64 = '';
 
@@ -1136,6 +1144,7 @@ function initWizard() {
     const storeAddress = document.getElementById('store-address')?.value || '-';
     const signType = document.getElementById('app-sign-type')?.value || '-';
     const fileUploaded = uploadInput.files.length > 0 ? uploadInput.files[0].name : '업로드 파일 없음';
+    const referrerVal = document.getElementById('referrer-code')?.value.trim() || '-';
 
     // Set preview values
     document.getElementById('sum-owner-name').textContent = ownerName;
@@ -1144,6 +1153,7 @@ function initWizard() {
     document.getElementById('sum-store-address').textContent = storeAddress;
     document.getElementById('sum-sign-type').textContent = signType;
     document.getElementById('sum-file-name').textContent = fileUploaded;
+    document.getElementById('sum-referrer-code').textContent = referrerVal;
   }
 
   function validateStep(step) {
@@ -1193,13 +1203,21 @@ function initWizard() {
     const storeAddress = document.getElementById('store-address')?.value.trim() || '';
     const signType = document.getElementById('app-sign-type')?.value || '';
     const fileName = uploadInput && uploadInput.files.length > 0 ? uploadInput.files[0].name : '업로드 파일 없음';
+    const referrerCode = document.getElementById('referrer-code')?.value.trim() || '';
 
     const activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
     const userId = activeUser ? activeUser.id : 'guest';
 
+    // 고유 접수 번호 생성 (GP-YYYYMMDD-XXXX)
+    const padZero = (n) => String(n).padStart(2, '0');
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${padZero(now.getMonth() + 1)}${padZero(now.getDate())}`;
+    const randVal = Math.floor(1000 + Math.random() * 9000);
+    const customId = `GP-${dateStr}-${randVal}`;
+
     const apps = JSON.parse(localStorage.getItem('applications')) || [];
     const newApp = {
-      id: Date.now(),
+      id: customId,
       userId,
       ownerName,
       ownerPhone,
@@ -1208,12 +1226,59 @@ function initWizard() {
       signType,
       fileName,
       fileData: uploadedFileBase64, // Save base64 string
-      appliedAt: new Date().toISOString(),
-      status: 'pending' // pending, approved, rejected
+      appliedAt: now.toISOString(),
+      status: 'pending', // pending, approved, rejected
+      referrerCode
     };
 
     apps.push(newApp);
     localStorage.setItem('applications', JSON.stringify(apps));
+
+    // 추천 코드 자동 연동 (방안 A)
+    if (referrerCode) {
+      let users = JSON.parse(localStorage.getItem('users')) || [];
+      let bizUserFound = false;
+
+      const newBizItem = {
+        id: customId, // 접수 번호와 동일하게 맞추어 동기화가 용이하도록 구성
+        name: storeName,
+        address: storeAddress,
+        photosCount: uploadInput.files.length > 0 ? 1 : 0,
+        receiptStatus: '접수 완료 (간판지원단)',
+        progressStatus: '심사 대기',
+        photos: uploadedFileBase64 ? [uploadedFileBase64] : []
+      };
+
+      users = users.map(u => {
+        if (u.role === 'business' && u.bizCode === referrerCode) {
+          u.items = u.items || [];
+          if (!u.items.some(item => item.id === customId)) {
+            u.items.push(newBizItem);
+            bizUserFound = true;
+          }
+        }
+        return u;
+      });
+
+      if (bizUserFound) {
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        // 현재 로그인한 사용자가 추천 코드를 발급한 영업자 본인일 경우 세션 정보도 실시간 업데이트
+        if (activeUser && activeUser.role === 'business' && activeUser.bizCode === referrerCode) {
+          activeUser.items = activeUser.items || [];
+          if (!activeUser.items.some(item => item.id === customId)) {
+            activeUser.items.push(newBizItem);
+            localStorage.setItem('activeUser', JSON.stringify(activeUser));
+          }
+        }
+      }
+    }
+
+    // 성공 팝업에 고유 접수 번호 삽입
+    const appIdContainer = document.getElementById('success-app-id-container');
+    if (appIdContainer) {
+      appIdContainer.textContent = customId;
+    }
 
     // Show success dialog
     if (successModal) {
@@ -1233,6 +1298,9 @@ function initWizard() {
       document.getElementById('owner-phone').value = '';
       document.getElementById('app-shop-name').value = '';
       document.getElementById('store-address').value = '';
+      if (document.getElementById('referrer-code')) {
+        document.getElementById('referrer-code').value = '';
+      }
       uploadInput.value = '';
       uploadedFileBase64 = '';
       if (fileNameDisplay) {

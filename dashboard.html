@@ -114,6 +114,20 @@
                                         <p>등록된 영업물건이 없습니다. 우측 모바일 업로드기에서 첫 물건을 등록해 보세요.</p>
                                     </div>
                                 </div>
+
+                                <!-- 신청 번호 수동 연동 패널 -->
+                                <div class="biz-link-panel" style="margin-top: 25px; padding: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); border-radius: 12px;">
+                                    <h4 style="margin-bottom: 12px; color: var(--accent-primary); display: flex; align-items: center; gap: 8px; font-size: 1.05rem;">
+                                        <i class="fa-solid fa-link"></i> 고객 신청서 수동 연동 (신청번호 조회)
+                                    </h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 15px; line-height: 1.4;">
+                                        클라이언트가 직접 신청하여 발급받은 <strong>신청번호(GP-YYYYMMDD-XXXX)</strong>를 공유받았다면, 아래에 입력하여 내 영업물건으로 등록할 수 있습니다.
+                                    </p>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" id="link-app-id" placeholder="예: GP-20260731-1234" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: rgba(0, 0, 0, 0.2); color: var(--text-primary); font-size: 0.85rem;">
+                                        <button id="btn-link-app" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px; cursor: pointer;">연동하기</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Right column: Mobile App Simulator -->
