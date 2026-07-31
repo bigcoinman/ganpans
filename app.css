@@ -537,15 +537,15 @@ body.mobile-app-body {
     width: 38px !important;
     height: 38px !important;
     border-radius: 50% !important;
-    border: 1px solid rgba(0, 102, 255, 0.25) !important;
-    background: rgba(255, 255, 255, 0.9) !important;
-    color: var(--accent-primary) !important;
+    border: none !important;
+    background: #0056cc !important; /* Solid Gyeonggi Blue */
+    color: #ffffff !important; /* High-contrast white icon */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
-    font-size: 0.95rem !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    font-size: 1rem !important;
+    box-shadow: 0 4px 12px rgba(0, 86, 204, 0.35) !important;
     z-index: 99 !important;
     transition: all 0.2s ease !important;
     padding: 0 !important;
@@ -561,7 +561,7 @@ body.mobile-app-body {
 
 .gallery-floating-arrow:active {
     transform: translateY(-50%) scale(0.85) !important;
-    background: var(--bg-secondary) !important;
+    background: #0040aa !important; /* Darker blue on tap */
 }
 
 #view-home .building-scroll-viewport {
