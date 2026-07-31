@@ -51,10 +51,10 @@
             <button class="drawer-close-btn" id="app-drawer-close">&times;</button>
         </div>
         <nav class="drawer-nav">
-            <a href="#" onclick="switchTab('home'); closeDrawer();"><i class="fa-solid fa-house"></i> 홈 화면</a>
-            <a href="#" onclick="switchTab('simulator'); closeDrawer();"><i class="fa-solid fa-palette"></i> 간판 시뮬레이터</a>
-            <a href="#" onclick="switchTab('status'); closeDrawer();"><i class="fa-solid fa-list-check"></i> 신청/영업 현황</a>
-            <a href="#" onclick="switchTab('apply'); closeDrawer();"><i class="fa-solid fa-file-signature"></i> 지원사업 간편 신청</a>
+            <a href="#" onclick="switchTab('home'); closeDrawer(); return false;"><i class="fa-solid fa-house"></i> 홈 화면</a>
+            <a href="#" onclick="switchTab('simulator'); closeDrawer(); return false;"><i class="fa-solid fa-palette"></i> 간판 시뮬레이터</a>
+            <a href="#" onclick="switchTab('status'); closeDrawer(); return false;"><i class="fa-solid fa-list-check"></i> 신청/영업 현황</a>
+            <a href="#" onclick="switchTab('apply'); closeDrawer(); return false;"><i class="fa-solid fa-file-signature"></i> 지원사업 간편 신청</a>
             <div class="drawer-divider"></div>
             <!-- Dynamic Auth Links -->
             <div id="drawer-auth-links">

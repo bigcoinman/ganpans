@@ -33,12 +33,13 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDrawerProfile();
     }
 
-    window.closeDrawer = function() {
+    function closeDrawer() {
         if (drawer && drawerOverlay) {
             drawer.classList.remove('active');
             drawerOverlay.classList.remove('active');
         }
-    };
+    }
+    window.closeDrawer = closeDrawer;
 
     function updateDrawerProfile() {
         activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
@@ -69,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Tab Switching Logic ---
-    window.switchTab = function(tabId) {
+    function switchTab(tabId) {
         if (tabId === 'apply') {
             // Highlight the home navigation button
             navItems.forEach(btn => {
@@ -127,7 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeTab) {
             activeTab.scrollTop = 0;
         }
-    };
+    }
+    window.switchTab = switchTab;
 
     // Link "로그인 / 회원가입" links in drawer and status tab to PC Auth Modal
     const loginLink = document.getElementById('drawer-login-link');
