@@ -530,13 +530,42 @@ body.mobile-app-body {
     margin-bottom: 12px !important;
 }
 
+.gallery-nav-arrows {
+    display: flex !important;
+    gap: 6px !important;
+    align-items: center !important;
+}
+
+.nav-arrow-btn {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 50% !important;
+    border: 1px solid var(--border-color) !important;
+    background: #ffffff !important;
+    color: var(--accent-primary) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    font-size: 0.7rem !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: all 0.2s ease !important;
+    padding: 0 !important;
+}
+
+.nav-arrow-btn:active {
+    transform: scale(0.9) !important;
+    background: #f1f5f9 !important;
+}
+
 #view-home .building-scroll-viewport {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
-    overflow-x: auto !important;
+    overflow-x: scroll !important;
     overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x !important;
     scroll-snap-type: x mandatory !important;
     gap: 0 !important;
     padding: 16px 0 !important;
