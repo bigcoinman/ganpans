@@ -4,7 +4,7 @@
   "description": "간판지원단 모바일 앱 빌드 및 패키징 설정",
   "main": "index.html",
   "scripts": {
-    "package": "powershell -Command \"Compress-Archive -Path index.html, dashboard.html, style.css, script.js, dashboard.js, manifest.json, sw.js, '*간판*.png', '*이미지*.png', '*로고*.png' -DestinationPath 간판지원단_모바일앱.zip -Force\"",
+    "package": "powershell -Command \"Compress-Archive -Path index.html, dashboard.html, app.html, style.css, app.css, script.js, dashboard.js, app.js, manifest.json, sw.js, '*간판*.png', '*이미지*.png', '*로고*.png' -DestinationPath 간판지원단_모바일앱.zip -Force\"",
     "cap:init": "npx cap init 간판지원단 com.ganpan.support --web-dir=.",
     "cap:add": "npx cap add android",
     "cap:sync": "npx cap sync",
