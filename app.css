@@ -1262,3 +1262,8 @@ body.mobile-app-body {
 .app-install-btn-header i {
     font-size: 0.9rem !important;
 }
+
+/* 14. Mobile App Install Modal QR Display Override */
+.install-qr-section {
+    display: flex !important;
+}

@@ -273,10 +273,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(currentUrl)}`;
             }
 
-            // Hide QR section on mobile since they are already on mobile
+            // Always show QR section in mobile app modal so users can scan it on PC/devices
             const qrSection = document.getElementById('install-qr-section');
             if (qrSection) {
-                qrSection.style.display = 'none';
+                qrSection.style.display = 'flex';
             }
 
             mobileInstallModal.classList.add('active');
