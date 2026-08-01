@@ -536,23 +536,26 @@ body.mobile-app-body {
 
 .gallery-floating-arrow {
     position: absolute !important;
-    top: calc(50% + 24px) !important;
+    top: 50% !important;
     transform: translateY(-50%) !important;
-    width: 56px !important; /* Enlarge by 50% (from 38px) */
-    height: 56px !important;
+    width: 28px !important; /* 50% smaller than 56px */
+    height: 28px !important;
     border-radius: 50% !important;
-    border: 3px solid #ffffff !important; /* Strong white border to separate from background */
+    border: 1.5px solid #ffffff !important; /* Thinner border to match smaller button */
     background: #0056cc !important; /* Solid Gyeonggi Blue */
     color: #ffffff !important; /* Pure White Icon */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
-    font-size: 1.5rem !important; /* Enlarge icon size by 50% */
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important; /* Darker shadow for high contrast */
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25) !important;
     z-index: 99 !important;
     transition: all 0.2s ease !important;
     padding: 0 !important;
+}
+
+.gallery-floating-arrow i {
+    font-size: 0.75rem !important; /* Thinner and smaller chevron icon to fit in 28px circle */
 }
 
 .gallery-floating-arrow.prev-arrow {

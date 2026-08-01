@@ -288,8 +288,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewport = document.querySelector('#view-home .building-scroll-viewport');
     
     if (wrapper && viewport) {
-        // Set wrapper position relative
-        wrapper.style.position = 'relative';
+        // Create a relative container for the viewport to align arrows perfectly
+        const container = document.createElement('div');
+        container.className = 'building-scroll-container';
+        container.style.position = 'relative';
+        container.style.width = '100%';
+
+        // Insert container and nest viewport inside it
+        viewport.parentNode.insertBefore(container, viewport);
+        container.appendChild(viewport);
 
         // Create left arrow button
         const prevBtn = document.createElement('button');
@@ -305,9 +312,9 @@ document.addEventListener('DOMContentLoaded', () => {
         nextBtn.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
         nextBtn.setAttribute('title', '다음 간판');
 
-        // Append buttons to the wrapper
-        wrapper.appendChild(prevBtn);
-        wrapper.appendChild(nextBtn);
+        // Append buttons to the container (not wrapper) so they align to the viewport only
+        container.appendChild(prevBtn);
+        container.appendChild(nextBtn);
 
         // Bind events
         prevBtn.addEventListener('click', (e) => {
