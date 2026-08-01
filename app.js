@@ -617,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mobPhotosInputMob.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 const files = Array.from(e.target.files);
-                selectedPhotosMob = selectedPhotosMob.concat(files).slice(0, 10);
+                selectedPhotosMob = selectedPhotosMob.concat(files).slice(0, 20);
                 renderMobilePhotoPreviewsMob();
             }
         });
@@ -633,7 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mobPhotoPreviewsMob.appendChild(img);
         });
 
-        mobPhotoCountMob.textContent = `선택된 사진: ${selectedPhotosMob.length} / 10장`;
+        mobPhotoCountMob.textContent = `선택된 사진: ${selectedPhotosMob.length} / 20장`;
     }
 
     const formBizUploadMob = document.getElementById('mobile-upload-form-mob');

@@ -511,8 +511,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const handleMobilePhotosSelect = async (files) => {
     if (!files.length) return;
 
-    if (selectedPhotos.length + files.length > 10) {
-      alert('영업 물건 현장 사진은 최대 10장 까지만 업로드 할 수 있습니다.');
+    if (selectedPhotos.length + files.length > 20) {
+      alert('영업 물건 현장 사진은 최대 20장 까지만 업로드 할 수 있습니다.');
       return;
     }
 
@@ -560,7 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
       mobPhotoPreviews.appendChild(wrapper);
     });
 
-    mobPhotoCount.textContent = `선택된 사진: ${selectedPhotos.length} / 10장`;
+    mobPhotoCount.textContent = `선택된 사진: ${selectedPhotos.length} / 20장`;
   };
 
   // --- Live Camera Capture Feature ---
@@ -627,8 +627,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      if (selectedPhotos.length >= 10) {
-        alert('현장 사진은 최대 10장 까지만 등록할 수 있습니다.');
+      if (selectedPhotos.length >= 20) {
+        alert('현장 사진은 최대 20장 까지만 등록할 수 있습니다.');
         return;
       }
 
