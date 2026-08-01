@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const mobPhotoCount = document.getElementById('mob-photo-count');
   const mobileUploadForm = document.getElementById('mobile-upload-form');
   const mobItemName = document.getElementById('mob-item-name');
+  const mobItemPhone = document.getElementById('mob-item-phone');
   const mobItemAddress = document.getElementById('mob-item-address');
 
   // Manager Panel Elements
@@ -318,6 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div>
             <h4 class="biz-item-name">${escapeHtml(item.name)}</h4>
             <p class="biz-item-addr"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.address)}</p>
+            ${item.phone ? `<p class="biz-item-phone" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-phone" style="color: var(--accent-primary);"></i> ${escapeHtml(item.phone)}</p>` : ''}
           </div>
           <div class="biz-item-badges">
             <span class="badge-receipt">${escapeHtml(item.receiptStatus)}</span>
@@ -663,10 +665,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!activeUser || activeUser.role !== 'business') return;
 
       const nameVal = mobItemName.value.trim();
+      const phoneVal = mobItemPhone ? mobItemPhone.value.trim() : '';
       const addrVal = mobItemAddress.value.trim();
 
-      if (!nameVal || !addrVal) {
-        alert('상호명과 설치 주소를 모두 입력해 주세요.');
+      if (!nameVal || !phoneVal || !addrVal) {
+        alert('상호명, 전화번호, 설치 주소를 모두 입력해 주세요.');
         return;
       }
 
@@ -675,6 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const newItem = {
         id: Date.now(),
         name: nameVal,
+        phone: phoneVal,
         address: addrVal,
         photosCount: selectedPhotos.length,
         receiptStatus: '접수 완료 (경기도시장상권진흥원)',
@@ -773,6 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
           row.innerHTML = `
             <div class="manager-item-row-title">${item.name} (${u.name} 영업자)</div>
             <div style="font-size: 0.8rem; color: var(--text-secondary); text-align: left;">주소: ${item.address}</div>
+            ${item.phone ? `<div style="font-size: 0.8rem; color: var(--text-secondary); text-align: left;">연락처: ${item.phone}</div>` : ''}
             
             <div class="status-select-wrapper">
               <label style="font-size: 0.75rem; font-weight: 700;">접수:</label>
