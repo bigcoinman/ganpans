@@ -1464,6 +1464,17 @@
             <div class="success-icon-anim">
                 <i class="fa-solid fa-circle-check"></i>
             </div>
+            <h3>지원사업 접수 신청 완료!</h3>
+            <p>경기도 소상공인 경영환경개선사업(간판 교체) 신청서가 임시 접수되었습니다.<br>
+            상태 조회 및 영업자 연동을 위한 <strong>간판 지원 고유 접수 번호</strong>는 다음과 같습니다.</p>
+            <div id="success-app-id-container" style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--accent-success); border-radius: 8px; padding: 12px; margin: 15px 0; font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 800; color: var(--accent-success); letter-spacing: 1px; text-align: center;">
+                -
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px;">이 번호를 복사하여 담당 영업자에게 전달해 주시면 더욱 빠르게 연동 및 실시간 진행 상태 확인이 가능합니다.</p>
+            <button class="btn btn-primary btn-success" id="success-confirm"
+                style="background: var(--accent-success);">확인</button>
+        </div>
+    </div>
     <div class="review-modal-overlay" id="review-modal">
         <div class="review-write-card glass-panel">
             <button class="auth-close-btn" id="review-close-btn"
@@ -1490,6 +1501,43 @@
                         <i class="fa-solid fa-star star-select-item active" data-value="4" style="color: #fbbf24;"></i>
                         <i class="fa-solid fa-star star-select-item active" data-value="5" style="color: #fbbf24;"></i>
                     </div>
+                    <input type="hidden" id="review-rating-val" value="5">
+                </div>
+
+                <!-- 작성자 아이디 -->
+                <div class="form-group-auth">
+                    <label for="review-author-name"
+                        style="display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.85rem; color: var(--text-primary); text-align: left;">아이디</label>
+                    <input type="text" id="review-author-name" class="form-input-auth" placeholder="아이디를 입력하세요" required
+                        style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 0.9rem;">
+                </div>
+
+                <!-- 지역 및 상호명 -->
+                <div class="form-group-auth">
+                    <label for="review-shop-name"
+                        style="display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.85rem; color: var(--text-primary); text-align: left;">지역
+                        및 상호명</label>
+                    <input type="text" id="review-shop-name" class="form-input-auth" placeholder="예: 수원시 · 늘봄분식 운영"
+                        required
+                        style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 0.9rem;">
+                </div>
+
+                <!-- 후기 내용 -->
+                <div class="form-group-auth">
+                    <label for="review-content"
+                        style="display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.85rem; color: var(--text-primary); text-align: left;">상세
+                        경험담</label>
+                    <textarea id="review-content" class="form-input-auth"
+                        placeholder="간판 교체 후의 변화와 사업에 대한 만족도 등을 자세히 남겨주세요." required
+                        style="width: 100%; height: 120px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 0.9rem; resize: none; font-family: inherit; line-height: 1.5;"></textarea>
+                </div>
+
+                <!-- 등록 버튼 -->
+                <button type="submit" class="phone-submit-btn"
+                    style="margin-top: 10px; font-size: 1rem; padding: 14px;">후기 등록 완료</button>
+            </form>
+        </div>
+    </div>
     <div class="auth-modal" id="auth-modal">
         <div class="auth-card glass-panel">
             <button class="auth-close-btn" id="auth-close-btn">&times;</button>
@@ -1497,6 +1545,200 @@
                 <button class="auth-tab-btn active" id="tab-login-btn">로그인</button>
                 <button class="auth-tab-btn" id="tab-signup-btn">회원가입</button>
             </div>
+
+            <!-- Login Form Pane -->
+            <div class="auth-pane active" id="login-pane">
+                <form id="login-form" onsubmit="event.preventDefault();">
+                    <div class="form-group-auth">
+                        <label for="login-id">아이디</label>
+                        <input type="text" id="login-id" class="form-input-auth" placeholder="아이디를 입력하세요" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="login-pw">비밀번호</label>
+                        <div class="pw-wrapper">
+                            <input type="password" id="login-pw" class="form-input-auth" placeholder="비밀번호를 입력하세요"
+                                required>
+                            <button type="button" class="pw-toggle-btn" data-target="login-pw" aria-label="비밀번호 보기/숨기기"
+                                tabindex="-1">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full" style="margin-top: 15px;"><i
+                            class="fa-solid fa-right-to-bracket"></i> 로그인</button>
+                    <div class="find-links">
+                        <button type="button" class="find-link-btn" id="btn-find-id">아이디 찾기</button>
+                        <span class="find-link-sep">|</span>
+                        <button type="button" class="find-link-btn" id="btn-find-pw">비밀번호 찾기</button>
+                    </div>
+                </form>
+                <div class="auth-divider"><span>또는 간편 로그인</span></div>
+                <div class="sns-login-buttons">
+                    <button type="button" class="btn btn-google" id="btn-google-login">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
+                            alt="Google" class="sns-logo-icon"> 구글 ID 로그인
+                    </button>
+                    <button type="button" class="btn btn-kakao" id="btn-kakao-login">
+                        <i class="fa-solid fa-comment"></i> 카카오톡 로그인
+                    </button>
+                </div>
+            </div>
+
+            <!-- Find ID Pane -->
+            <div class="auth-pane" id="find-id-pane">
+                <div class="find-pane-header">
+                    <button type="button" class="find-back-btn" id="btn-back-from-find-id">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <h3 class="find-pane-title"><i class="fa-solid fa-magnifying-glass"></i> 아이디 찾기</h3>
+                </div>
+                <p class="find-pane-desc">가입 시 등록한 이름과 휴대폰 번호를 입력해 주세요.</p>
+                <form id="find-id-form" onsubmit="event.preventDefault();">
+                    <div class="form-group-auth">
+                        <label for="find-id-name">이름</label>
+                        <input type="text" id="find-id-name" class="form-input-auth" placeholder="이름을 입력하세요" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="find-id-phone">휴대폰 번호</label>
+                        <input type="tel" id="find-id-phone" class="form-input-auth" placeholder="010-1234-5678"
+                            required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fa-solid fa-magnifying-glass"></i> 아이디 찾기
+                    </button>
+                </form>
+                <div id="find-id-result" class="find-result-box" style="display:none;"></div>
+            </div>
+
+            <!-- Find Password Pane -->
+            <div class="auth-pane" id="find-pw-pane">
+                <div class="find-pane-header">
+                    <button type="button" class="find-back-btn" id="btn-back-from-find-pw">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <h3 class="find-pane-title"><i class="fa-solid fa-key"></i> 비밀번호 찾기</h3>
+                </div>
+                <p class="find-pane-desc">가입한 아이디와 휴대폰 번호를 입력해 주세요.</p>
+                <form id="find-pw-form" onsubmit="event.preventDefault();">
+                    <div class="form-group-auth">
+                        <label for="find-pw-id">아이디</label>
+                        <input type="text" id="find-pw-id" class="form-input-auth" placeholder="아이디를 입력하세요" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="find-pw-phone">휴대폰 번호</label>
+                        <input type="tel" id="find-pw-phone" class="form-input-auth" placeholder="010-1234-5678"
+                            required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fa-solid fa-magnifying-glass"></i> 계정 확인
+                    </button>
+                </form>
+                <!-- New password reset form (shown after account verified) -->
+                <div id="find-pw-reset-group" style="display:none;">
+                    <p class="find-pane-desc" style="margin-top: 20px;">새로운 비밀번호를 설정해 주세요.</p>
+                    <div class="form-group-auth">
+                        <label for="find-pw-new">새 비밀번호</label>
+                        <div class="pw-wrapper">
+                            <input type="password" id="find-pw-new" class="form-input-auth"
+                                placeholder="영문, 숫자, 특수문자 조합 8자리 이상">
+                            <button type="button" class="pw-toggle-btn" data-target="find-pw-new"
+                                aria-label="비밀번호 보기/숨기기" tabindex="-1">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <span class="form-helper" id="find-pw-new-msg"></span>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-full" id="btn-reset-pw">
+                        <i class="fa-solid fa-lock"></i> 비밀번호 변경
+                    </button>
+                </div>
+                <div id="find-pw-result" class="find-result-box" style="display:none;"></div>
+            </div>
+
+            <!-- Signup Form Pane -->
+            <div class="auth-pane" id="signup-pane">
+                <form id="signup-form" onsubmit="event.preventDefault();">
+                    <div class="form-group-auth">
+                        <label for="signup-id">아이디</label>
+                        <div class="input-with-btn">
+                            <input type="text" id="signup-id" class="form-input-auth" placeholder="아이디를 입력하세요" required>
+                            <button type="button" class="btn btn-secondary btn-inline" id="btn-check-id">아이디 사용 가능
+                                검색</button>
+                        </div>
+                        <span class="form-helper" id="id-check-msg"></span>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-pw">비밀번호</label>
+                        <div class="pw-wrapper">
+                            <input type="password" id="signup-pw" class="form-input-auth" placeholder="비밀번호를 입력하세요"
+                                required>
+                            <button type="button" class="pw-toggle-btn" data-target="signup-pw" aria-label="비밀번호 보기/숨기기"
+                                tabindex="-1">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <span class="form-helper-text"
+                            style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">영문,
+                            숫자, 특수문자 조합으로 8자리 이상 입력해 주세요.</span>
+                        <span class="form-helper" id="pw-check-msg"></span>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-pw-confirm">비밀번호 확인</label>
+                        <div class="pw-wrapper">
+                            <input type="password" id="signup-pw-confirm" class="form-input-auth"
+                                placeholder="비밀번호를 다시 입력하세요" required>
+                            <button type="button" class="pw-toggle-btn" data-target="signup-pw-confirm"
+                                aria-label="비밀번호 확인 보기/숨기기" tabindex="-1">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <span class="form-helper" id="pw-confirm-msg"></span>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-name">이름</label>
+                        <input type="text" id="signup-name" class="form-input-auth" placeholder="이름을 입력하세요" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-address">주소</label>
+                        <input type="text" id="signup-address" class="form-input-auth" placeholder="주소를 입력하세요" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-email">이메일 주소</label>
+                        <input type="email" id="signup-email" class="form-input-auth"
+                            placeholder="representative@domain.com" required>
+                    </div>
+                    <div class="form-group-auth">
+                        <label for="signup-phone">휴대폰 번호</label>
+                        <div class="input-with-btn">
+                            <input type="tel" id="signup-phone" class="form-input-auth" placeholder="010-1234-5678"
+                                required>
+                            <button type="button" class="btn btn-secondary btn-inline" id="btn-sms-auth">인증 문자</button>
+                        </div>
+                        <span class="form-helper" id="phone-check-msg"></span>
+                        <div id="sms-auth-group" style="display: none; margin-top: 10px;">
+                            <div class="input-with-btn">
+                                <input type="text" id="sms-auth-code" class="form-input-auth" placeholder="인증번호 6자리 입력">
+                                <button type="button" class="btn btn-primary btn-inline" id="btn-verify-sms">확인</button>
+                            </div>
+                            <span class="form-helper" id="sms-timer">남은 시간 3:00</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full" id="btn-complete-signup"
+                        style="margin-top: 15px;"><i class="fa-solid fa-user-plus"></i> 가입완료</button>
+                </form>
+                <div class="auth-divider"><span>또는 간편 회원가입</span></div>
+                <div class="sns-login-buttons">
+                    <button type="button" class="btn btn-google" id="btn-google-signup">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
+                            alt="Google" class="sns-logo-icon"> 구글 ID 가입
+                    </button>
+                    <button type="button" class="btn btn-kakao" id="btn-kakao-signup">
+                        <i class="fa-solid fa-comment"></i> 카카오톡 가입
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="install-modal" class="install-modal-overlay">
         <div class="install-card">
             <button class="install-close-x" id="install-modal-close"><i class="fa-solid fa-xmark"></i></button>
@@ -1504,6 +1746,59 @@
                 <h3><i class="fa-solid fa-mobile-screen-button"></i> 간판지원단 모바일 앱</h3>
                 <p>스마트폰에 앱으로 설치하여 언제 어디서든 편리하게 시뮬레이터와 간편 신청을 이용해 보세요.</p>
             </div>
+
+            <!-- QR Code Section (visible on PC) -->
+            <div class="install-qr-section" id="install-qr-section">
+                <div class="install-qr-frame">
+                    <img id="install-qr-img" src="" alt="설치 QR 코드">
+                </div>
+                <div class="install-qr-text">
+                    <i class="fa-solid fa-qrcode"></i> 스마트폰 카메라로 QR 코드를 스캔하세요.
+                </div>
+            </div>
+
+            <!-- Install Instructions Tabs -->
+            <div class="install-guide-tabs">
+                <button class="install-tab-btn active" id="btn-tab-android">안드로이드 (Android)</button>
+                <button class="install-tab-btn" id="btn-tab-ios">아이폰 (iOS)</button>
+            </div>
+
+            <!-- Android Instructions -->
+            <div id="install-guide-android" class="install-tab-content active">
+                <ul class="install-steps">
+                    <li data-step="1">스캔기기 카메라로 QR 코드를 인식하여 모바일 웹 브라우저(크롬 권장)로 접속합니다.</li>
+                    <li data-step="2" class="highlight-step">화면 아래에 나타나는 <strong>'홈 화면에 간판지원단 추가'</strong> 또는 <strong>'앱
+                            설치'</strong> 배너를 탭합니다.</li>
+                    <li data-step="3">배너가 보이지 않는 경우, 크롬 주소창 옆 메뉴(더보기 `⋮`)에서 <strong>'앱 설치'</strong> 또는 <strong>'홈 화면에
+                            추가'</strong>를 선택하세요.</li>
+                </ul>
+            </div>
+
+            <!-- iOS Instructions -->
+            <div id="install-guide-ios" class="install-tab-content">
+                <ul class="install-steps">
+                    <li data-step="1">스캔기기 카메라로 QR 코드를 인식하여 Safari 브라우저로 접속합니다.</li>
+                    <li data-step="2" class="highlight-step">Safari 하단 툴바의 <strong>공유 버튼 <i
+                                class="fa-solid fa-share-nodes"></i></strong> (화살표 모양)을 누릅니다.</li>
+                    <li data-step="3">메뉴에서 <strong>'홈 화면에 추가 <i class="fa-solid fa-square-plus"></i>'</strong>를 선택한 후
+                        추가를 누릅니다.</li>
+                </ul>
+            </div>
+
+            <!-- Direct PWA Install Button (visible on supported mobile browsers) -->
+            <div class="install-actions">
+                <button id="pwa-install-btn" class="install-primary-btn" style="display: none;">
+                    <i class="fa-solid fa-download"></i> 스마트폰에 즉시 설치하기
+                </button>
+                <button id="pwa-share-btn" class="install-secondary-btn">
+                    <i class="fa-solid fa-share-nodes"></i> 모바일 앱 공유하기
+                </button>
+                <a href="간판지원단_모바일앱.zip" download class="install-secondary-btn" id="zip-download-btn">
+                    <i class="fa-solid fa-file-zipper"></i> 모바일 앱 패키지 다운로드 (.zip)
+                </a>
+            </div>
+        </div>
+    </div>
 
     <!-- Hidden triggers for PC script integration -->
     <button id="logout-btn" style="display: none;"></button>

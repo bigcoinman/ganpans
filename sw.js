@@ -1,14 +1,18 @@
-const CACHE_NAME = 'ganpan-support-v1';
+const CACHE_NAME = 'ganpan-support-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './dashboard.html',
+  './app.html',
   './style.css',
+  './app.css',
   './script.js',
   './dashboard.js',
+  './app.js',
   './manifest.json',
   './간판지원단 로고-3.png',
-  './간판지원단 로고-2.png'
+  './간판지원단 로고-2.png',
+  './소상공인_고민해결_이미지.png'
 ];
 
 // Install Service Worker and cache core assets
