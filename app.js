@@ -534,6 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
                 <div class="biz-card-addr"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.address)}</div>
+                ${item.phone ? `<div class="biz-card-phone" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-phone" style="color: var(--accent-primary);"></i> ${escapeHtml(item.phone)}</div>` : ''}
                 ${photosHtml}
             `;
             bizItemsList.appendChild(card);
@@ -640,10 +641,11 @@ document.addEventListener('DOMContentLoaded', () => {
         formBizUploadMob.addEventListener('submit', (e) => {
             e.preventDefault();
             const nameVal = document.getElementById('mob-item-name-mob')?.value.trim();
+            const phoneVal = document.getElementById('mob-item-phone-mob')?.value.trim() || '';
             const addressVal = document.getElementById('mob-item-address-mob')?.value.trim();
 
-            if (!nameVal || !addressVal) {
-                alert('상호명과 설치 주소를 모두 입력해 주세요.');
+            if (!nameVal || !phoneVal || !addressVal) {
+                alert('상호명, 전화번호, 설치 주소를 모두 입력해 주세요.');
                 return;
             }
 
@@ -651,6 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newItem = {
                     id: Date.now(),
                     name: nameVal,
+                    phone: phoneVal,
                     address: addressVal,
                     photosCount: selectedPhotosMob.length,
                     receiptStatus: '접수 완료 (간판지원단)',
