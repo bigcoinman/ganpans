@@ -609,16 +609,107 @@ document.addEventListener('DOMContentLoaded', () => {
     const mobPhotoCountMob = document.getElementById('mob-photo-count-mob');
     let selectedPhotosMob = [];
 
+    const resizeImageToLimit = (file, maxSizeBytes = 3 * 1024 * 1024) => {
+        return new Promise((resolve) => {
+            if (file.size <= maxSizeBytes) {
+                resolve(file);
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Resize long edge to max 1600px
+                    const max_size = 1600;
+                    if (width > max_size || height > max_size) {
+                        if (width > height) {
+                            height *= max_size / width;
+                            width = max_size;
+                        } else {
+                            width *= max_size / height;
+                            height = max_size;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    let quality = 0.9;
+                    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    let size = Math.round((dataUrl.length - 22) * 3 / 4);
+
+                    while (size > maxSizeBytes && quality > 0.1) {
+                        quality -= 0.1;
+                        dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        size = Math.round((dataUrl.length - 22) * 3 / 4);
+                    }
+
+                    try {
+                        const byteString = atob(dataUrl.split(',')[1]);
+                        const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+                        const ab = new ArrayBuffer(byteString.length);
+                        const ia = new Uint8Array(ab);
+                        for (let i = 0; i < byteString.length; i++) {
+                            ia[i] = byteString.charCodeAt(i);
+                        }
+                        const blob = new Blob([ab], {type: mimeString});
+                        const resizedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {type: 'image/jpeg', lastModified: Date.now()});
+                        resolve(resizedFile);
+                    } catch (err) {
+                        resolve(file);
+                    }
+                };
+                img.onerror = () => resolve(file);
+                img.src = e.target.result;
+            };
+            reader.onerror = () => resolve(file);
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleMobilePhotosSelectMob = async (files) => {
+        if (!files.length) return;
+
+        if (selectedPhotosMob.length + files.length > 20) {
+            alert('영업 물건 현장 사진은 최대 20장 까지만 업로드 할 수 있습니다.');
+            return;
+        }
+
+        const limit = 3 * 1024 * 1024; // 3MB Limit
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            let processedFile = file;
+
+            if (file.size > limit) {
+                processedFile = await resizeImageToLimit(file, limit);
+                if (processedFile.size > limit) {
+                    alert(`용량 제한 초과: [${file.name}]의 용량이 압축 후에도 3MB를 초과하여 제외되었습니다.`);
+                    continue;
+                } else {
+                    console.log(`[압축 완료] ${file.name}: ${(file.size / 1024 / 1024).toFixed(2)}MB -> ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`);
+                }
+            }
+            selectedPhotosMob.push(processedFile);
+        }
+        renderMobilePhotoPreviewsMob();
+    };
+
     if (mobFileZoneMob && mobPhotosInputMob) {
         mobFileZoneMob.addEventListener('click', () => {
             mobPhotosInputMob.click();
         });
 
-        mobPhotosInputMob.addEventListener('change', (e) => {
+        mobPhotosInputMob.addEventListener('change', async (e) => {
             if (e.target.files.length > 0) {
                 const files = Array.from(e.target.files);
-                selectedPhotosMob = selectedPhotosMob.concat(files).slice(0, 20);
-                renderMobilePhotoPreviewsMob();
+                await handleMobilePhotosSelectMob(files);
             }
         });
     }

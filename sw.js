@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ganpan-support-v10';
+const CACHE_NAME = 'ganpan-support-v11';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
