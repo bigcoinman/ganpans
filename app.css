@@ -174,6 +174,10 @@ body.mobile-app-body {
     cursor: pointer;
 }
 
+.header-brand img {
+    height: 29px !important;
+}
+
 .brand-icon {
     font-size: 1.3rem;
     color: var(--accent-primary);
