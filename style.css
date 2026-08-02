@@ -4911,13 +4911,13 @@ footer {
     z-index: 15000 !important;
     display: flex !important;
     align-items: center !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     opacity: 0 !important;
     pointer-events: none !important;
     transition: opacity 0.3s ease !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
-    padding: 24px 12px !important;
+    padding: 24px 5% !important;
 }
 
 @media (max-height: 650px) {
@@ -4932,15 +4932,15 @@ footer {
 }
 
 .inquiry-card {
-    width: 92% !important;
-    max-width: 400px !important;
+    width: 90% !important;
+    max-width: 320px !important;
     background-color: #ffffff !important;
     border-radius: 20px !important;
     padding: 20px !important;
     border: 1px solid rgba(0, 0, 0, 0.08) !important;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
     position: relative !important;
-    transform: translate(-20%, 20px) !important;
+    transform: translateY(20px) !important;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     box-sizing: border-box !important;
     max-height: calc(100vh - 48px) !important;
@@ -4949,7 +4949,7 @@ footer {
 }
 
 .inquiry-modal-overlay.active .inquiry-card {
-    transform: translate(-20%, 0) !important;
+    transform: translateY(0) !important;
 }
 
 .inquiry-close-x {
@@ -4968,6 +4968,7 @@ footer {
     color: var(--text-secondary) !important;
     cursor: pointer !important;
     z-index: 20000 !important;
+    pointer-events: auto !important;
     opacity: 0.7 !important;
     transition: all 0.2s ease !important;
     -webkit-tap-highlight-color: transparent !important;
