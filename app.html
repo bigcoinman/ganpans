@@ -31,8 +31,9 @@
             <button class="app-install-btn-header" id="mobile-header-install-btn">
                 <i class="fa-solid fa-mobile-screen-button"></i> 앱 설치
             </button>
-            <button class="header-menu-btn" id="app-menu-trigger">
-                <i class="fa-solid fa-bars"></i>
+            <button class="app-header-auth-btn" id="app-header-auth-btn">
+                <i class="fa-regular fa-user"></i>
+                <span id="app-header-auth-text">로그인</span>
             </button>
         </div>
     </header>
@@ -52,15 +53,22 @@
         </div>
         <nav class="drawer-nav">
             <a href="#" onclick="switchTab('home'); closeDrawer(); return false;"><i class="fa-solid fa-house"></i> 홈 화면</a>
-            <a href="#" onclick="switchTab('simulator'); closeDrawer(); return false;"><i class="fa-solid fa-palette"></i> 간판 시뮬레이터</a>
             <a href="#" onclick="switchTab('status'); closeDrawer(); return false;"><i class="fa-solid fa-list-check"></i> 신청/영업 현황</a>
+            <a href="#" onclick="switchTab('simulator'); closeDrawer(); return false;"><i class="fa-solid fa-palette"></i> 간판 시뮬레이터</a>
             <a href="#" onclick="switchTab('apply'); closeDrawer(); return false;"><i class="fa-solid fa-file-signature"></i> 지원사업 간편 신청</a>
+            <a href="#" onclick="openInquiryModal(); closeDrawer(); return false;"><i class="fa-solid fa-circle-question"></i> 비회원 간편 문의하기</a>
             <div class="drawer-divider"></div>
             <!-- Dynamic Auth Links -->
             <div id="drawer-auth-links">
                 <a href="#" id="drawer-login-link"><i class="fa-solid fa-right-to-bracket"></i> 로그인 / 회원가입</a>
             </div>
             <div id="drawer-logout-links" style="display: none;">
+                <!-- 전환 신청 버튼 영역 신설 -->
+                <div id="drawer-conversion-links" style="display: none; flex-direction: column; gap: 4px; margin: 8px 0;">
+                    <a href="#" id="drawer-btn-conversion" class="drawer-btn-blue"><i class="fa-solid fa-arrows-spin"></i> 영업자 회원으로 전환 신청</a>
+                    <a href="#" id="drawer-btn-constructor" class="drawer-btn-green"><i class="fa-solid fa-screwdriver-wrench"></i> 시공업체 회원으로 전환 신청</a>
+                </div>
+                <div class="drawer-divider"></div>
                 <a href="#" id="drawer-logout-btn"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</a>
                 <a href="#" id="drawer-delete-account-btn" style="color: #ef4444;"><i class="fa-solid fa-user-slash"></i> 회원 탈퇴</a>
             </div>
@@ -1105,6 +1113,274 @@
 
             </div>
         </section>
+
+        <!-- Mobile App Footer -->
+        <footer class="app-mobile-footer">
+            <div class="footer-customer-center">
+                <h3>고객센터</h3>
+                <p class="customer-hours">운영시간: 평일 09:00 - 18:00 (주말/공휴일 휴무)</p>
+                <button class="footer-btn-inquiry" id="mob-footer-btn-inquiry">문의하기</button>
+            </div>
+            
+            <div class="footer-links">
+                <div class="links-row">
+                    <a href="#" id="link-policy-privacy">개인정보 처리방침</a>
+                    <span class="link-divider">|</span>
+                    <a href="#" id="link-policy-terms">서비스 이용약관</a>
+                    <span class="link-divider">|</span>
+                    <a href="#" id="link-policy-consent">개인정보 수집 및 이용 동의</a>
+                </div>
+            </div>
+            
+            <div class="footer-business-accordion">
+                <details>
+                    <summary>사업자 정보 <i class="fa-solid fa-chevron-down"></i></summary>
+                    <div class="business-details">
+                        <p><strong>상호명:</strong> (주)가야애드</p>
+                        <p><strong>대표이사:</strong> 서수열 | <strong>사업자등록번호:</strong> 128-86-14150</p>
+                        <p><strong>주소:</strong> 경기도 고양시 일산동구 성현로93번길 13-20</p>
+                        <p><strong>이메일:</strong> nubine22@naver.com | <strong>대표번호:</strong> 010-7266-2499</p>
+                    </div>
+                </details>
+            </div>
+            
+            <div class="footer-bottom-brand">
+                <div class="footer-brand-logo">
+                    <img src="간판지원단 로고-3.png" alt="간판지원단">
+                    <span class="brand-subtext">Ganpan Support</span>
+                </div>
+                <p class="footer-copyright">© 2026 Ganpan Support. All rights reserved.</p>
+                
+                <div class="footer-sns-icons">
+                    <a href="#" class="sns-icon" onclick="return false;"><i class="fa-solid fa-globe"></i></a>
+                    <a href="#" class="sns-icon" onclick="return false;"><i class="fa-regular fa-envelope"></i></a>
+                    <a href="#" class="sns-icon" onclick="return false;"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#" class="sns-icon" onclick="return false;"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="#" class="sns-icon" onclick="return false;"><i class="fa-brands fa-youtube"></i></a>
+                </div>
+            </div>
+        </footer>
+        </section>
+
+        <!-- 3. STATUS & DASHBOARD VIEW (Status / My Page dashboard logic) -->
+        <section id="view-status" class="app-view">
+            <!-- If logged out -->
+            <div id="status-logged-out" class="auth-required-panel">
+                <i class="fa-solid fa-lock" style="font-size: 3rem; color: var(--accent-primary); margin-bottom: 15px;"></i>
+                <h3>로그인이 필요한 서비스입니다</h3>
+                <p>간판 지원사업 신청 내역을 확인하거나 영업 활동을 시작하시려면 로그인해 주세요.</p>
+                <div style="display: flex; gap: 10px; width: 100%; margin-top: 20px; justify-content: center;">
+                    <button class="btn btn-primary" id="btn-login-mob-redirect" style="flex: 1; max-width: 160px;"><i class="fa-solid fa-right-to-bracket"></i> 로그인 / 회원가입</button>
+                </div>
+            </div>
+
+            <!-- If logged in -->
+            <div id="status-logged-in" style="display: none;">
+                <!-- Profile Card -->
+                <div class="user-profile-card">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <i class="fa-solid fa-circle-user" style="font-size: 2.8rem; color: rgba(255,255,255,0.9);"></i>
+                        <div>
+                            <h4 id="status-user-name" style="color: white; font-size: 1.1rem;">홍길동님</h4>
+                            <span id="status-user-role-badge" class="badge-role-pill">일반 회원</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1) Normal User View -->
+                <div id="status-normal-container" style="display: none;">
+                    <!-- Apply converter block -->
+                    <div class="conversion-panel" id="mobile-conversion-panel">
+                        <h4><i class="fa-solid fa-briefcase"></i> 영업자 회원 전환 신청</h4>
+                        <p>지역 내 상점들의 간판 개선을 보조하는 영업 파트너 계정으로 전환해 영업물건을 등록할 수 있습니다.</p>
+                        <button class="btn btn-primary btn-sm" id="btn-request-conversion-mob" style="margin-top: 12px; width: 100%;">영업자 전환 신청하기</button>
+                        <div id="conversion-pending-msg-mob" class="info-msg-box warning" style="display: none; margin-top: 12px;">
+                            <i class="fa-solid fa-clock"></i> 매니저 승인 대기 중입니다.
+                        </div>
+                    </div>
+
+                    <!-- Client's own applications list -->
+                    <div class="app-section">
+                        <h4 class="section-title"><i class="fa-solid fa-list-check"></i> 나의 간판 지원 신청 내역</h4>
+                        <div class="application-mobile-list" id="my-apps-list-mobile">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2) Business Rep View -->
+                <div id="status-business-container" style="display: none;">
+                    <!-- Manual app link widget -->
+                    <div class="biz-link-panel-mob" style="background: rgba(30, 58, 138, 0.05); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+                        <h4 style="color: var(--accent-primary); display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.95rem;">
+                            <i class="fa-solid fa-link"></i> 고객 신청서 수동 연동
+                        </h4>
+                        <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
+                            고객이 직접 제출한 <strong>신청번호(GP-YYYYMMDD-XXXX)</strong>를 입력하여 내 영업물건 목록에 편입합니다.
+                        </p>
+                        <div style="display: flex; gap: 6px;">
+                            <input type="text" id="link-app-id-mob" placeholder="GP-YYYYMMDD-XXXX" style="flex: 1; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem;">
+                            <button id="btn-link-app-mob" class="btn btn-primary" style="padding: 8px 14px; font-size: 0.8rem;">연동</button>
+                        </div>
+                    </div>
+
+                    <!-- Mobile Simulator (Field photo uploads) inside app -->
+                    <div class="app-section">
+                        <h4 class="section-title"><i class="fa-solid fa-camera"></i> 신규 현장 영업물건 카메라 접수</h4>
+                        <form id="mobile-upload-form-mob" onsubmit="event.preventDefault();" style="background: white; padding: 15px; border-radius: 10px; border: 1px solid var(--border-color);">
+                            <div class="phone-form-group">
+                                <label for="mob-item-name-mob">상호명</label>
+                                <input type="text" id="mob-item-name-mob" placeholder="상호명을 입력해 주세요" required class="form-input" style="padding: 8px;">
+                            </div>
+                            <div class="phone-form-group">
+                                <label for="mob-item-phone-mob">전화번호</label>
+                                <input type="tel" id="mob-item-phone-mob" placeholder="전화번호를 입력해 주세요" required class="form-input" style="padding: 8px;">
+                            </div>
+                            <div class="phone-form-group">
+                                <label for="mob-item-address-mob">설치 주소</label>
+                                <input type="text" id="mob-item-address-mob" placeholder="설치 주소를 입력해 주세요" required class="form-input" style="padding: 8px;">
+                            </div>
+                            <div class="phone-form-group">
+                                <label>현장 사진 업로드 <span style="font-weight: normal; font-size: 0.7rem; color: var(--text-muted);">(최대 20장)</span></label>
+                                <div class="mobile-file-zone" id="mobile-file-zone-mob" style="border: 2px dashed var(--accent-primary); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer;">
+                                    <i class="fa-solid fa-camera" style="font-size: 1.8rem; color: var(--accent-primary); margin-bottom: 6px;"></i>
+                                    <p style="font-size: 0.75rem; color: var(--text-secondary);">사진 촬영 또는 갤러리 선택</p>
+                                    <input type="file" id="mob-photos-input-mob" accept="image/*" multiple style="display: none;">
+                                    <input type="file" id="mob-camera-input-mob" accept="image/*" capture="environment" style="display: none;">
+                                </div>
+                                <div id="mob-photo-previews-mob" class="mob-photo-previews" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;"></div>
+                                <div id="mob-photo-count-mob" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">선택된 사진: 0 / 20장</div>
+                            </div>
+                            <button type="submit" id="btn-submit-biz-item-mob" class="btn btn-primary" style="width: 100%; margin-top: 10px;">현장 물건으로 등록</button>
+                        </form>
+                    </div>
+
+                    <!-- Business Items (영업물건 리스트) -->
+                    <div class="app-section" style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px;">
+                        <h4 class="section-title"><i class="fa-solid fa-folder-closed"></i> 내 관리 영업물건 현황 및 진행상황</h4>
+                        <div id="biz-items-list-mobile" class="biz-mobile-list">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3) Admin View -->
+                <div id="status-admin-container" style="display: none;">
+                    <h4 style="color: var(--accent-primary); border-bottom: 2px solid var(--accent-primary); padding-bottom: 8px; margin-bottom: 15px;"><i class="fa-solid fa-shield-halved"></i> 최고관리자 제어판</h4>
+                    
+                    <!-- Stats widget -->
+                    <div class="admin-stats-mob" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                        <div class="stat-card-mob" style="background: #f1f5f9; padding: 12px; border-radius: 8px; text-align: center;">
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">총 접수 건수</span>
+                            <h4 id="admin-stat-total-mob" style="font-size: 1.4rem; color: var(--accent-primary); margin-top: 4px;">0건</h4>
+                        </div>
+                        <div class="stat-card-mob" style="background: #f1f5f9; padding: 12px; border-radius: 8px; text-align: center;">
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">오늘 방문자</span>
+                            <h4 id="admin-stat-visitors-mob" style="font-size: 1.4rem; color: var(--accent-secondary); margin-top: 4px;">0명</h4>
+                        </div>
+                    </div>
+
+                    <!-- Tab panels inside Admin View (Requests & Online Apps) -->
+                    <div class="admin-tab-controls-mob">
+                        <button class="admin-tab-btn-mob active" onclick="switchAdminTab('requests')"><i class="fa-solid fa-user-tie"></i> 영업자 승인</button>
+                        <button class="admin-tab-btn-mob" onclick="switchAdminTab('constructors')"><i class="fa-solid fa-trowel-bricks"></i> 시공사 승인</button>
+                        <button class="admin-tab-btn-mob" onclick="switchAdminTab('apps')"><i class="fa-solid fa-file-signature"></i> 신청서&공사</button>
+                        <button class="admin-tab-btn-mob" onclick="switchAdminTab('items')"><i class="fa-solid fa-store"></i> 영업물건 관리</button>
+                        <button class="admin-tab-btn-mob" onclick="switchAdminTab('popups')"><i class="fa-solid fa-window-restore"></i> 팝업 관리</button>
+                    </div>
+
+                    <div id="admin-panel-requests-mob" class="admin-panel-view-mob">
+                        <div id="admin-requests-list-mob">
+                            <!-- Requests populate dynamically -->
+                        </div>
+                    </div>
+
+                    <div id="admin-panel-constructors-mob" class="admin-panel-view-mob" style="display: none;">
+                        <div id="admin-constructors-list-mob">
+                            <!-- Constructor requests populate dynamically -->
+                        </div>
+                    </div>
+
+                    <div id="admin-panel-apps-mob" class="admin-panel-view-mob" style="display: none;">
+                        <div id="admin-apps-list-mob" style="display: flex; flex-direction: column; gap: 12px;">
+                            <!-- Applications populate dynamically -->
+                        </div>
+                    </div>
+
+                    <div id="admin-panel-items-mob" class="admin-panel-view-mob" style="display: none;">
+                        <div id="admin-items-list-mob" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Items populate dynamically -->
+                        </div>
+                    </div>
+
+                    <div id="admin-panel-popups-mob" class="admin-panel-view-mob" style="display: none;">
+                        <!-- Popup Form -->
+                        <div class="glass-panel" style="padding: 15px; margin-bottom: 15px; text-align: left; background: var(--bg-card); border-radius: 8px;">
+                            <h5 id="mob-popup-form-title" style="margin-bottom: 10px; color: var(--accent-primary);"><i class="fa-solid fa-plus"></i> 신규 팝업창 등록</h5>
+                            <form id="mob-popup-form" onsubmit="event.preventDefault();">
+                                <input type="hidden" id="mob-popup-id">
+                                <div class="phone-form-group" style="margin-bottom: 8px;">
+                                    <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">팝업 제목</label>
+                                    <input type="text" id="mob-popup-title" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" required placeholder="예: 사업 공고">
+                                </div>
+                                <div class="phone-form-group" style="margin-bottom: 8px;">
+                                    <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">팝업 내용</label>
+                                    <textarea id="mob-popup-content" class="form-input-auth" style="font-size: 0.75rem; padding: 6px; min-height: 60px;" required placeholder="팝업 상세내용"></textarea>
+                                </div>
+                                <div class="phone-form-group" style="margin-bottom: 8px;">
+                                    <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">이미지 URL</label>
+                                    <input type="text" id="mob-popup-image" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" placeholder="https://picsum.photos/id/101/400/200">
+                                </div>
+                                <div class="phone-form-group" style="margin-bottom: 8px;">
+                                    <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">링크 URL</label>
+                                    <input type="text" id="mob-popup-link" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" placeholder="#apply-section">
+                                </div>
+                                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                                    <div style="flex: 1;">
+                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">시작일</label>
+                                        <input type="date" id="mob-popup-start" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" required>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">종료일</label>
+                                        <input type="date" id="mob-popup-end" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" required>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 40%;">
+                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">가로 크기 (px)</label>
+                                        <input type="number" id="mob-popup-width" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" value="380">
+                                    </div>
+                                    <div style="flex: 1; min-width: 40%;">
+                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">세로 크기 (px)</label>
+                                        <input type="number" id="mob-popup-height" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" value="480">
+                                    </div>
+                                    <div style="flex: 1; min-width: 40%;">
+                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">상단 위치 (px)</label>
+                                        <input type="number" id="mob-popup-top" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" value="120">
+                                    </div>
+                                    <div style="flex: 1; min-width: 40%;">
+                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">좌측 위치 (px)</label>
+                                        <input type="number" id="mob-popup-left" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" value="100">
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                    <input type="checkbox" id="mob-popup-active" checked style="width: 16px; height: 16px;">
+                                    <label for="mob-popup-active" style="font-size: 0.75rem; font-weight: 700; cursor: pointer;">팝업 활성화 상태로 등록</label>
+                                </div>
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <button type="button" id="btn-mob-popup-reset" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;">초기화</button>
+                                    <button type="submit" class="btn btn-primary" style="padding: 6px 16px; font-size: 0.75rem;">저장하기</button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Popups List -->
+                        <div id="admin-popups-list-mob" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Popups populate dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- 2. SIMULATOR VIEW (Full Detailed Simulator from index.html) -->
@@ -1249,23 +1525,24 @@
                             <!-- Shop Building Structure -->
                             <div class="shop-building">
 
+                                <!-- Sign Lights (Moved out to prevent Flexbox displacement) -->
+                                <div class="sign-lights">
+                                    <div class="sign-light">
+                                        <div class="light-fixture"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="sign-light">
+                                        <div class="light-fixture"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="sign-light">
+                                        <div class="light-fixture"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                </div>
+
                                 <!-- Mounting Sign Frame -->
                                 <div class="sign-mounting-bracket">
-                                    <!-- Sign Lights -->
-                                    <div class="sign-lights">
-                                        <div class="sign-light">
-                                            <div class="light-fixture"></div>
-                                            <div class="light-glow"></div>
-                                        </div>
-                                        <div class="sign-light">
-                                            <div class="light-fixture"></div>
-                                            <div class="light-glow"></div>
-                                        </div>
-                                        <div class="sign-light">
-                                            <div class="light-fixture"></div>
-                                            <div class="light-glow"></div>
-                                        </div>
-                                    </div>
                                     <div id="live-signboard" class="live-signboard">
                                         <span id="live-sign-text" class="live-sign-text">청춘카페</span>
                                     </div>
@@ -1295,144 +1572,6 @@
         </section>
         </section>
 
-        <!-- 3. STATUS & DASHBOARD VIEW (Status / My Page dashboard logic) -->
-        <section id="view-status" class="app-view">
-            <!-- If logged out -->
-            <div id="status-logged-out" class="auth-required-panel">
-                <i class="fa-solid fa-lock" style="font-size: 3rem; color: var(--accent-primary); margin-bottom: 15px;"></i>
-                <h3>로그인이 필요한 서비스입니다</h3>
-                <p>간판 지원사업 신청 내역을 확인하거나 영업 활동을 시작하시려면 로그인해 주세요.</p>
-                <div style="display: flex; gap: 10px; width: 100%; margin-top: 20px; justify-content: center;">
-                    <button class="btn btn-primary" id="btn-login-mob-redirect" style="flex: 1; max-width: 160px;"><i class="fa-solid fa-right-to-bracket"></i> 로그인 / 회원가입</button>
-                </div>
-            </div>
-
-            <!-- If logged in -->
-            <div id="status-logged-in" style="display: none;">
-                <!-- Profile Card -->
-                <div class="user-profile-card">
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <i class="fa-solid fa-circle-user" style="font-size: 2.8rem; color: rgba(255,255,255,0.9);"></i>
-                        <div>
-                            <h4 id="status-user-name" style="color: white; font-size: 1.1rem;">홍길동님</h4>
-                            <span id="status-user-role-badge" class="badge-role-pill">일반 회원</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 1) Normal User View -->
-                <div id="status-normal-container" style="display: none;">
-                    <!-- Apply converter block -->
-                    <div class="conversion-panel" id="mobile-conversion-panel">
-                        <h4><i class="fa-solid fa-briefcase"></i> 영업자 회원 전환 신청</h4>
-                        <p>지역 내 상점들의 간판 개선을 보조하는 영업 파트너 계정으로 전환해 영업물건을 등록할 수 있습니다.</p>
-                        <button class="btn btn-primary btn-sm" id="btn-request-conversion-mob" style="margin-top: 12px; width: 100%;">영업자 전환 신청하기</button>
-                        <div id="conversion-pending-msg-mob" class="info-msg-box warning" style="display: none; margin-top: 12px;">
-                            <i class="fa-solid fa-clock"></i> 매니저 승인 대기 중입니다.
-                        </div>
-                    </div>
-
-                    <!-- Client's own applications list -->
-                    <div class="app-section">
-                        <h4 class="section-title"><i class="fa-solid fa-list-check"></i> 나의 간판 지원 신청 내역</h4>
-                        <div class="application-mobile-list" id="my-apps-list-mobile">
-                            <!-- Populated dynamically -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2) Business Rep View -->
-                <div id="status-business-container" style="display: none;">
-                    <!-- Manual app link widget -->
-                    <div class="biz-link-panel-mob" style="background: rgba(30, 58, 138, 0.05); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
-                        <h4 style="color: var(--accent-primary); display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.95rem;">
-                            <i class="fa-solid fa-link"></i> 고객 신청서 수동 연동
-                        </h4>
-                        <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
-                            고객이 직접 제출한 <strong>신청번호(GP-YYYYMMDD-XXXX)</strong>를 입력하여 내 영업물건 목록에 편입합니다.
-                        </p>
-                        <div style="display: flex; gap: 6px;">
-                            <input type="text" id="link-app-id-mob" placeholder="GP-YYYYMMDD-XXXX" style="flex: 1; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem;">
-                            <button id="btn-link-app-mob" class="btn btn-primary" style="padding: 8px 14px; font-size: 0.8rem;">연동</button>
-                        </div>
-                    </div>
-
-                    <!-- Mobile Simulator (Field photo uploads) inside app -->
-                    <div class="app-section">
-                        <h4 class="section-title"><i class="fa-solid fa-camera"></i> 신규 현장 영업물건 카메라 접수</h4>
-                        <form id="mobile-upload-form-mob" onsubmit="event.preventDefault();" style="background: white; padding: 15px; border-radius: 10px; border: 1px solid var(--border-color);">
-                            <div class="phone-form-group">
-                                <label for="mob-item-name-mob">상호명</label>
-                                <input type="text" id="mob-item-name-mob" placeholder="상호명을 입력해 주세요" required class="form-input" style="padding: 8px;">
-                            </div>
-                            <div class="phone-form-group">
-                                <label for="mob-item-phone-mob">전화번호</label>
-                                <input type="tel" id="mob-item-phone-mob" placeholder="전화번호를 입력해 주세요" required class="form-input" style="padding: 8px;">
-                            </div>
-                            <div class="phone-form-group">
-                                <label for="mob-item-address-mob">설치 주소</label>
-                                <input type="text" id="mob-item-address-mob" placeholder="설치 주소를 입력해 주세요" required class="form-input" style="padding: 8px;">
-                            </div>
-                            <div class="phone-form-group">
-                                <label>현장 사진 업로드 <span style="font-weight: normal; font-size: 0.7rem; color: var(--text-muted);">(최대 20장)</span></label>
-                                <div class="mobile-file-zone" id="mobile-file-zone-mob" style="border: 2px dashed var(--accent-primary); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer;">
-                                    <i class="fa-solid fa-camera" style="font-size: 1.8rem; color: var(--accent-primary); margin-bottom: 6px;"></i>
-                                    <p style="font-size: 0.75rem; color: var(--text-secondary);">사진 촬영 또는 갤러리 선택</p>
-                                    <input type="file" id="mob-photos-input-mob" accept="image/*" multiple style="display: none;">
-                                </div>
-                                <div id="mob-photo-previews-mob" class="mob-photo-previews" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;"></div>
-                                <div id="mob-photo-count-mob" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">선택된 사진: 0 / 20장</div>
-                            </div>
-                            <button type="submit" id="btn-submit-biz-item-mob" class="btn btn-primary" style="width: 100%; margin-top: 10px;">현장 물건으로 등록</button>
-                        </form>
-                    </div>
-
-                    <!-- Business Items (영업물건 리스트) -->
-                    <div class="app-section" style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px;">
-                        <h4 class="section-title"><i class="fa-solid fa-folder-closed"></i> 내 관리 영업물건 현황 및 진행상황</h4>
-                        <div id="biz-items-list-mobile" class="biz-mobile-list">
-                            <!-- Populated dynamically -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3) Admin View -->
-                <div id="status-admin-container" style="display: none;">
-                    <h4 style="color: var(--accent-primary); border-bottom: 2px solid var(--accent-primary); padding-bottom: 8px; margin-bottom: 15px;"><i class="fa-solid fa-shield-halved"></i> 최고관리자 제어판</h4>
-                    
-                    <!-- Stats widget -->
-                    <div class="admin-stats-mob" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
-                        <div class="stat-card-mob" style="background: #f1f5f9; padding: 12px; border-radius: 8px; text-align: center;">
-                            <span style="font-size: 0.75rem; color: var(--text-secondary);">총 접수 건수</span>
-                            <h4 id="admin-stat-total-mob" style="font-size: 1.4rem; color: var(--accent-primary); margin-top: 4px;">0건</h4>
-                        </div>
-                        <div class="stat-card-mob" style="background: #f1f5f9; padding: 12px; border-radius: 8px; text-align: center;">
-                            <span style="font-size: 0.75rem; color: var(--text-secondary);">오늘 방문자</span>
-                            <h4 id="admin-stat-visitors-mob" style="font-size: 1.4rem; color: var(--accent-secondary); margin-top: 4px;">0명</h4>
-                        </div>
-                    </div>
-
-                    <!-- Tab panels inside Admin View (Requests & Online Apps) -->
-                    <div class="admin-tab-controls-mob" style="display: flex; background: #e2e8f0; border-radius: 6px; padding: 2px; margin-bottom: 15px;">
-                        <button class="admin-tab-btn-mob active" onclick="switchAdminTab('requests')" style="flex: 1; padding: 8px; font-size: 0.75rem; border: none; background: transparent; border-radius: 4px; font-weight: bold; cursor: pointer;">영업자 승인요청</button>
-                        <button class="admin-tab-btn-mob" onclick="switchAdminTab('apps')" style="flex: 1; padding: 8px; font-size: 0.75rem; border: none; background: transparent; border-radius: 4px; font-weight: bold; cursor: pointer;">온라인 신청서 관리</button>
-                    </div>
-
-                    <div id="admin-panel-requests-mob" class="admin-panel-view-mob">
-                        <div id="admin-requests-list-mob">
-                            <!-- Requests populate dynamically -->
-                        </div>
-                    </div>
-
-                    <div id="admin-panel-apps-mob" class="admin-panel-view-mob" style="display: none;">
-                        <div id="admin-apps-list-mob" style="display: flex; flex-direction: column; gap: 12px;">
-                            <!-- Applications populate dynamically -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <!-- 4. SIMPLE APPLICATION FORM VIEW (Placeholder - Redirected to Home inline form) -->
         <section id="view-apply" class="app-view"></section>
 
@@ -1444,13 +1583,13 @@
             <i class="fa-solid fa-house nav-icon"></i>
             <span class="nav-label">홈</span>
         </button>
-        <button class="nav-item" onclick="switchTab('simulator')" id="tab-btn-simulator">
-            <i class="fa-solid fa-palette nav-icon"></i>
-            <span class="nav-label">시뮬레이터</span>
-        </button>
         <button class="nav-item" onclick="switchTab('status')" id="tab-btn-status">
             <i class="fa-solid fa-list-check nav-icon"></i>
             <span class="nav-label">현황</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('simulator')" id="tab-btn-simulator">
+            <i class="fa-solid fa-palette nav-icon"></i>
+            <span class="nav-label">시뮬레이터</span>
         </button>
         <button class="nav-item nav-fab" onclick="switchTab('apply')" id="tab-btn-apply">
             <div class="fab-circle">
@@ -1544,11 +1683,12 @@
     </div>
     <div class="auth-modal" id="auth-modal">
         <div class="auth-card glass-panel">
-            <button class="auth-close-btn" id="auth-close-btn">&times;</button>
-            <div class="auth-tabs">
-                <button class="auth-tab-btn active" id="tab-login-btn">로그인</button>
-                <button class="auth-tab-btn" id="tab-signup-btn">회원가입</button>
-            </div>
+            <button class="auth-close-btn" id="auth-close-btn" onclick="document.getElementById('auth-modal').classList.remove('active');">&times;</button>
+            <div class="auth-scroll-container">
+                <div class="auth-tabs">
+                    <button class="auth-tab-btn active" id="tab-login-btn">로그인</button>
+                    <button class="auth-tab-btn" id="tab-signup-btn">회원가입</button>
+                </div>
 
             <!-- Login Form Pane -->
             <div class="auth-pane active" id="login-pane">
@@ -1700,7 +1840,7 @@
                     </div>
                     <div class="form-group-auth">
                         <label for="signup-name">이름</label>
-                        <input type="text" id="signup-name" class="form-input-auth" placeholder="이름을 입력하세요" required>
+                        <input type="text" id="signup-name" class="form-input-auth" minlength="2" maxlength="20" placeholder="이름을 입력하세요" required>
                     </div>
                     <div class="form-group-auth">
                         <label for="signup-address">주소</label>
@@ -1714,7 +1854,7 @@
                     <div class="form-group-auth">
                         <label for="signup-phone">휴대폰 번호</label>
                         <div class="input-with-btn">
-                            <input type="tel" id="signup-phone" class="form-input-auth" placeholder="010-1234-5678"
+                            <input type="tel" id="signup-phone" class="form-input-auth" minlength="9" maxlength="15" pattern="[0-9+\s-]*" placeholder="010-1234-5678"
                                 required>
                             <button type="button" class="btn btn-secondary btn-inline" id="btn-sms-auth">인증 문자</button>
                         </div>
@@ -1741,11 +1881,12 @@
                     </button>
                 </div>
             </div>
+            </div>
         </div>
     </div>
     <div id="install-modal" class="install-modal-overlay">
         <div class="install-card">
-            <button class="install-close-x" id="install-modal-close"><i class="fa-solid fa-xmark"></i></button>
+            <button class="install-close-x" id="install-modal-close" onclick="document.getElementById('install-modal').classList.remove('active');"><i class="fa-solid fa-xmark"></i></button>
             <div class="install-title-area">
                 <h3><i class="fa-solid fa-mobile-screen-button"></i> 간판지원단 모바일 앱</h3>
                 <p>스마트폰에 앱으로 설치하여 언제 어디서든 편리하게 시뮬레이터와 간편 신청을 이용해 보세요.</p>
@@ -1806,6 +1947,128 @@
 
     <!-- Hidden triggers for PC script integration -->
     <button id="logout-btn" style="display: none;"></button>
+
+    <!-- AI Assistant Floating Button -->
+    <div id="ai-assistant-trigger" class="ai-trigger-bubble">
+        <i class="fa-solid fa-robot"></i>
+        <span class="ai-trigger-badge">AI</span>
+    </div>
+
+    <!-- AI Assistant Chat Window -->
+    <div id="ai-chat-window" class="ai-chat-container">
+        <div class="ai-chat-header">
+            <div class="ai-chat-title">
+                <i class="fa-solid fa-robot"></i>
+                <div>
+                    <h4>간판지원단 AI비서</h4>
+                    <span class="ai-status-online">실시간 응답 가능</span>
+                </div>
+            </div>
+            <button id="ai-chat-close" class="ai-close-btn">&times;</button>
+        </div>
+        
+        <div id="ai-chat-messages" class="ai-chat-body">
+            <div class="chat-bubble bot-message">
+                안녕하세요! 소상공인 간판지원단 AI 비서입니다. 💡<br>궁금한 점을 아래 퀵 메뉴에서 선택하시거나 직접 입력해 주세요!
+            </div>
+            
+            <div class="ai-quick-replies">
+                <button class="quick-reply-btn" data-faq="target">💡 지원 대상 기준</button>
+                <button class="quick-reply-btn" data-faq="documents">📄 신청 필수 서류</button>
+                <button class="quick-reply-btn" data-faq="simulator">🎨 시뮬레이터 사용법</button>
+                <button class="quick-reply-btn" data-faq="contact">📞 고객센터 운영시간</button>
+            </div>
+        </div>
+        
+        <div class="ai-chat-footer">
+            <input type="text" id="ai-chat-input" placeholder="질문 내용을 입력하세요..." />
+            <button id="ai-chat-send"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- Bottom Sheet for Photo Source Selection -->
+    <div class="bottom-sheet-overlay" id="photo-choice-overlay">
+        <div class="bottom-sheet-container" id="photo-choice-sheet">
+            <div class="bottom-sheet-handle"></div>
+            <div class="bottom-sheet-header">
+                <h4>사진 추가 방식 선택</h4>
+                <p>현장 사진 등록 방식을 선택해 주세요</p>
+            </div>
+            <div class="bottom-sheet-options">
+                <button class="sheet-option-btn" id="btn-choice-camera">
+                    <div class="option-icon camera-bg">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <div class="option-info">
+                        <span class="option-title">실시간 촬영</span>
+                        <span class="option-desc">카메라로 현장 사진을 직접 촬영합니다.</span>
+                    </div>
+                </button>
+                <button class="sheet-option-btn" id="btn-choice-gallery">
+                    <div class="option-icon gallery-bg">
+                        <i class="fa-solid fa-images"></i>
+                    </div>
+                    <div class="option-info">
+                        <span class="option-title">갤러리 선택</span>
+                        <span class="option-desc">앨범에서 저장된 사진들을 다중 선택합니다.</span>
+                    </div>
+                </button>
+            </div>
+            <button class="bottom-sheet-close-btn" id="btn-choice-cancel">취소</button>
+        </div>
+    </div>
+
+    <!-- 비회원 간편 문의 모달 -->
+    <div id="inquiry-modal" class="inquiry-modal-overlay">
+        <div class="inquiry-card glass-panel">
+            <button class="inquiry-close-x" id="inquiry-modal-close">&times;</button>
+            <div class="inquiry-title-area">
+                <h3><i class="fa-solid fa-paper-plane"></i> 3초 간편 문의 접수</h3>
+                <p>로그인 없이 성함과 연락처만으로 빠르게 문의하실 수 있습니다. 담당자가 확인 후 연락드리겠습니다.</p>
+            </div>
+            <form id="inquiry-form" onsubmit="event.preventDefault();">
+                <div class="inquiry-form-group">
+                    <label for="inquiry-name">성함 *</label>
+                    <input type="text" id="inquiry-name" minlength="2" maxlength="20" placeholder="성함을 입력해 주세요" required>
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="inquiry-phone">연락처 *</label>
+                    <input type="tel" id="inquiry-phone" minlength="9" maxlength="15" pattern="[0-9+\s-]*" placeholder="예: 010-1234-5678" required>
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="inquiry-type">문의 유형 *</label>
+                    <select id="inquiry-type" required>
+                        <option value="">-- 선택해 주세요 --</option>
+                        <option value="eligibility">지원 대상 및 자격 문의</option>
+                        <option value="documents">제출 서류 및 신청 관련</option>
+                        <option value="simulator">간판 시뮬레이터 사용법</option>
+                        <option value="constructor">시공업체 제휴 문의</option>
+                        <option value="other">기타 일반 문의사항</option>
+                    </select>
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="inquiry-message">문의 내용 *</label>
+                    <textarea id="inquiry-message" rows="3" maxlength="300" placeholder="문의하실 내용을 입력해 주세요" required></textarea>
+                    <div style="text-align: right; font-size: 0.72rem; color: #64748b; margin-top: 2px;"><span id="inquiry-char-count">0</span> / 300자</div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" style="margin-top: 15px;"><i class="fa-solid fa-check"></i> 문의 등록하기</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 약관 전문 모달 -->
+    <div id="policy-modal" class="inquiry-modal-overlay">
+        <div class="inquiry-card glass-panel" style="max-width: 650px; width: 95%;">
+            <button class="inquiry-close-x" id="policy-modal-close">&times;</button>
+            <div class="inquiry-title-area">
+                <h3 id="policy-modal-title"><i class="fa-solid fa-file-shield"></i> 약관 및 정책</h3>
+            </div>
+            <div id="policy-modal-body" style="max-height: 400px; overflow-y: auto; font-size: 0.8rem; line-height: 1.6; color: var(--text-secondary); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; background-color: #f8fafc; text-align: left; white-space: pre-wrap; word-break: break-all;">
+                <!-- 약관 전문이 동적으로 로드되는 영역 -->
+            </div>
+            <button class="btn btn-primary btn-full" id="btn-policy-confirm" style="margin-top: 15px;"><i class="fa-solid fa-check"></i> 확인</button>
+        </div>
+    </div>
 
     <!-- Security utilities & Core App logic -->
     <script src="security-utils.js"></script>

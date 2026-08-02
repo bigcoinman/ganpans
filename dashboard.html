@@ -74,14 +74,20 @@
                         <div class="dashboard-user-actions" id="conversion-area">
                             <button id="btn-request-conversion" class="btn btn-primary"><i
                                     class="fa-solid fa-arrows-spin"></i> 영업자 회원으로 전환 신청</button>
+                            <button id="btn-request-constructor" class="btn btn-secondary" style="margin-left: 8px; border-color: var(--accent-success); color: var(--accent-success);"><i
+                                    class="fa-solid fa-screwdriver-wrench"></i> 시공업체 회원으로 전환 신청</button>
                             <div id="conversion-restricted-msg"
                                 style="display: none; color: var(--accent-secondary); font-weight: 600; font-size: 0.9rem; text-align: right; background: rgba(217, 119, 6, 0.08); padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(217, 119, 6, 0.2);">
-                                <i class="fa-solid fa-triangle-exclamation"></i> SNS(구글/카카오) 가입자는 영업자 전환이 불가능합니다. (ID/PW
+                                <i class="fa-solid fa-triangle-exclamation"></i> SNS(구글/카카오) 가입자는 영업자/시공사 전환이 불가능합니다. (ID/PW
                                 가입 필요)
                             </div>
                             <div id="conversion-pending-msg"
                                 style="display: none; color: var(--accent-secondary); font-weight: 600; font-size: 0.9rem; text-align: right; background: rgba(30, 58, 138, 0.05); padding: 8px 16px; border-radius: 8px; border: 1px dashed rgba(30, 58, 138, 0.2);">
                                 <i class="fa-solid fa-clock"></i> 영업자 전환 심사 대기 중 (간판지원단 매니저 확인중)
+                            </div>
+                            <div id="conversion-constructor-pending-msg"
+                                style="display: none; color: var(--accent-secondary); font-weight: 600; font-size: 0.9rem; text-align: right; background: rgba(16, 185, 129, 0.05); padding: 8px 16px; border-radius: 8px; border: 1px dashed rgba(16, 185, 129, 0.2);">
+                                <i class="fa-solid fa-clock"></i> 시공업체 전환 심사 대기 중 (간판지원단 매니저 확인중)
                             </div>
                         </div>
                     </div>
@@ -103,20 +109,8 @@
                         <div class="biz-dashboard-layout">
                             <!-- Left column: Registered business items status -->
                             <div class="biz-status-panel">
-                                <h3
-                                    style="margin-bottom: 20px; color: var(--accent-primary); display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
-                                    <i class="fa-solid fa-list-check"></i> 내 영업물건 현황 및 진행상황
-                                </h3>
-                                <div class="biz-items-list" id="biz-items-list">
-                                    <div class="empty-list-msg">
-                                        <i class="fa-solid fa-folder-open"
-                                            style="font-size: 2.5rem; margin-bottom: 15px; opacity: 0.5;"></i>
-                                        <p>등록된 영업물건이 없습니다. 우측 모바일 업로드기에서 첫 물건을 등록해 보세요.</p>
-                                    </div>
-                                </div>
-
                                 <!-- 신청 번호 수동 연동 패널 -->
-                                <div class="biz-link-panel" style="margin-top: 25px; padding: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); border-radius: 12px;">
+                                <div class="biz-link-panel" style="margin-bottom: 25px; padding: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); border-radius: 12px;">
                                     <h4 style="margin-bottom: 12px; color: var(--accent-primary); display: flex; align-items: center; gap: 8px; font-size: 1.05rem;">
                                         <i class="fa-solid fa-link"></i> 고객 신청서 수동 연동 (신청번호 조회)
                                     </h4>
@@ -126,6 +120,18 @@
                                     <div style="display: flex; gap: 8px;">
                                         <input type="text" id="link-app-id" placeholder="예: GP-20260731-1234" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: rgba(0, 0, 0, 0.2); color: var(--text-primary); font-size: 0.85rem;">
                                         <button id="btn-link-app" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 6px; cursor: pointer;">연동하기</button>
+                                    </div>
+                                </div>
+
+                                <h3
+                                    style="margin-bottom: 20px; color: var(--accent-primary); display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
+                                    <i class="fa-solid fa-list-check"></i> 내 영업물건 현황 및 진행상황
+                                </h3>
+                                <div class="biz-items-list" id="biz-items-list">
+                                    <div class="empty-list-msg">
+                                        <i class="fa-solid fa-folder-open"
+                                            style="font-size: 2.5rem; margin-bottom: 15px; opacity: 0.5;"></i>
+                                        <p>등록된 영업물건이 없습니다. 우측 모바일 업로드기에서 첫 물건을 등록해 보세요.</p>
                                     </div>
                                 </div>
                             </div>
@@ -222,6 +228,37 @@
                                     </div>
                                     <div class="phone-home-bar"></div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3) Constructor Partner View -->
+                    <div id="dashboard-constructor-view" style="display: none; margin-bottom: 30px;">
+                        <div class="glass-panel" style="padding: 25px;">
+                            <h3 style="margin-bottom: 20px; color: var(--accent-success); display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
+                                <i class="fa-solid fa-screwdriver-wrench"></i> 내 시공 배정 현황 및 진행상황
+                            </h3>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">
+                                최고 관리자로부터 시공업체로 배정받은 소상공인 점포 목록입니다. 각 점포의 시공 전/후 사진과 세금계산서 증빙을 등록하여 시공 완료 보고를 진행해 주세요.
+                            </p>
+                            <div class="manager-table-container" style="overflow-x: auto; background: rgba(255,255,255,0.75); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03); backdrop-filter: blur(5px);">
+                                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 800px;">
+                                    <thead>
+                                        <tr style="background: rgba(241, 245, 249, 0.9); border-bottom: 1px solid #cbd5e1; color: var(--text-primary); font-weight: 700;">
+                                            <th style="padding: 12px 16px; width: 140px;">배정 일시</th>
+                                            <th style="padding: 12px 16px; width: 150px;">상호명 (연락처)</th>
+                                            <th style="padding: 12px 16px;">설치 주소</th>
+                                            <th style="padding: 12px 16px; width: 120px;">신청 간판종류</th>
+                                            <th style="padding: 12px 16px; width: 110px;">시공 진행상태</th>
+                                            <th style="padding: 12px 16px; text-align: center; width: 280px;">증빙 업로드 및 보고</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="constructor-jobs-table-body">
+                                        <tr>
+                                            <td colspan="6" class="text-muted" style="text-align: center; padding: 30px 0;">배정된 시공 물건이 없습니다.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -497,6 +534,120 @@
             <span>마이페이지</span>
         </a>
     </nav>
+
+    <!-- Constructor Request Modal -->
+    <div id="constructor-modal" class="install-modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px);">
+        <div class="glass-panel" style="width: 90%; max-width: 450px; padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 20px 40px rgba(0,0,0,0.15); background: rgba(255,255,255,0.85); position: relative; text-align: left;">
+            <button id="constructor-modal-close" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.2rem; color: var(--text-secondary); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="color: var(--accent-success); margin-bottom: 12px; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-screwdriver-wrench"></i> 시공업체 전환 신청
+            </h3>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.4;">
+                시공 파트너로 활동하시려면 업체 상호명과 사업자등록번호를 기재하여 등록 신청해 주세요. 관리자 승인 단계를 거쳐 시공 코드가 부여됩니다.
+            </p>
+            <form id="constructor-request-form" onsubmit="event.preventDefault();">
+                <div class="phone-form-group" style="margin-bottom: 12px;">
+                    <label for="const-business-name" style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; display: block;">업체 상호명</label>
+                    <input type="text" id="const-business-name" placeholder="예: (주)경기가온시공" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.85rem;" required>
+                </div>
+                <div class="phone-form-group" style="margin-bottom: 20px;">
+                    <label for="const-license-number" style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; display: block;">사업자등록번호</label>
+                    <input type="text" id="const-license-number" placeholder="예: 120-81-12345" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.85rem;" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; background: var(--accent-success); border: none; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; color: white;">시공업체 신청서 제출</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- AI Assistant Floating Button -->
+    <div id="ai-assistant-trigger" class="ai-trigger-bubble">
+        <i class="fa-solid fa-robot"></i>
+        <span class="ai-trigger-badge">AI</span>
+    </div>
+
+    <!-- AI Assistant Chat Window -->
+    <div id="ai-chat-window" class="ai-chat-container">
+        <div class="ai-chat-header">
+            <div class="ai-chat-title">
+                <i class="fa-solid fa-robot"></i>
+                <div>
+                    <h4>간판지원단 AI비서</h4>
+                    <span class="ai-status-online">실시간 응답 가능</span>
+                </div>
+            </div>
+            <button id="ai-chat-close" class="ai-close-btn">&times;</button>
+        </div>
+        
+        <div id="ai-chat-messages" class="ai-chat-body">
+            <div class="chat-bubble bot-message">
+                안녕하세요! 소상공인 간판지원단 AI 비서입니다. 💡<br>궁금한 점을 아래 퀵 메뉴에서 선택하시거나 직접 입력해 주세요!
+            </div>
+            
+            <div class="ai-quick-replies">
+                <button class="quick-reply-btn" data-faq="target">💡 지원 대상 기준</button>
+                <button class="quick-reply-btn" data-faq="documents">📄 신청 필수 서류</button>
+                <button class="quick-reply-btn" data-faq="simulator">🎨 시뮬레이터 사용법</button>
+                <button class="quick-reply-btn" data-faq="contact">📞 고객센터 운영시간</button>
+            </div>
+        </div>
+        
+        <div class="ai-chat-footer">
+            <input type="text" id="ai-chat-input" placeholder="질문 내용을 입력하세요..." />
+            <button id="ai-chat-send"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- 비회원 간편 문의 모달 -->
+    <div id="inquiry-modal" class="inquiry-modal-overlay">
+        <div class="inquiry-card glass-panel">
+            <button class="inquiry-close-x" id="inquiry-modal-close">&times;</button>
+            <div class="inquiry-title-area">
+                <h3><i class="fa-solid fa-paper-plane"></i> 3초 간편 문의 접수</h3>
+                <p>로그인 없이 성함과 연락처만으로 빠르게 문의하실 수 있습니다. 담당자가 확인 후 연락드리겠습니다.</p>
+            </div>
+            <form id="inquiry-form" onsubmit="event.preventDefault();">
+                <div class="inquiry-form-group">
+                    <label for="inquiry-name">성함 *</label>
+                    <input type="text" id="inquiry-name" minlength="2" maxlength="20" placeholder="성함을 입력해 주세요" required>
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="inquiry-phone">연락처 *</label>
+                    <input type="tel" id="inquiry-phone" minlength="9" maxlength="15" pattern="[0-9+\s-]*" placeholder="예: 010-1234-5678" required>
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="inquiry-type">문의 유형 *</label>
+                    <select id="inquiry-type" required>
+                        <option value="">-- 선택해 주세요 --</option>
+                        <option value="eligibility">지원 대상 및 자격 문의</option>
+                        <option value="documents">제출 서류 및 신청 관련</option>
+                        <option value="simulator">간판 시뮬레이터 사용법</option>
+                        <option value="constructor">시공업체 제휴 문의</option>
+                        <option value="other">기타 일반 문의사항</option>
+                    </select>
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="inquiry-message">문의 내용 *</label>
+                    <textarea id="inquiry-message" rows="3" maxlength="300" placeholder="문의하실 내용을 입력해 주세요" required></textarea>
+                    <div style="text-align: right; font-size: 0.72rem; color: #64748b; margin-top: 2px;"><span id="inquiry-char-count">0</span> / 300자</div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" style="margin-top: 15px;"><i class="fa-solid fa-check"></i> 문의 등록하기</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 약관 전문 모달 -->
+    <div id="policy-modal" class="inquiry-modal-overlay">
+        <div class="inquiry-card glass-panel" style="max-width: 650px; width: 95%;">
+            <button class="inquiry-close-x" id="policy-modal-close">&times;</button>
+            <div class="inquiry-title-area">
+                <h3 id="policy-modal-title"><i class="fa-solid fa-file-shield"></i> 약관 및 정책</h3>
+            </div>
+            <div id="policy-modal-body" style="max-height: 400px; overflow-y: auto; font-size: 0.8rem; line-height: 1.6; color: var(--text-secondary); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; background-color: #f8fafc; text-align: left; white-space: pre-wrap; word-break: break-all;">
+                <!-- 약관 전문이 동적으로 로드되는 영역 -->
+            </div>
+            <button class="btn btn-primary btn-full" id="btn-policy-confirm" style="margin-top: 15px;"><i class="fa-solid fa-check"></i> 확인</button>
+        </div>
+    </div>
 
     <!-- Dashboard Core Script -->
     <script src="security-utils.js"></script>

@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- 9. Mobile Bottom Navigation ---
   initMobileBottomNav();
+
+  // --- 10. PWA Initialization ---
+  initPWA();
 });
 
 // ==========================================
@@ -1443,6 +1446,22 @@ function initAuthAndDashboard() {
         bizCode: null,
         conversionStatus: 'none',
         items: []
+      },
+      {
+        id: 'constuser',
+        pw: 'const123!', // Will be auto-hashed by migration script below
+        name: '박시공',
+        address: '경기도 수원시 권선구 권선로 301',
+        email: 'park@naver.com',
+        phone: '010-5555-4444',
+        role: 'constructor',
+        isSNS: false,
+        bizCode: null,
+        constCode: 'CO-2026-9090',
+        businessName: '(주)경기가온시공',
+        licenseNumber: '120-81-12345',
+        conversionStatus: 'approved',
+        items: []
       }
     ];
     localStorage.setItem('users', JSON.stringify(defaultUsers));
@@ -1464,6 +1483,27 @@ function initAuthAndDashboard() {
       isSNS: false,
       bizCode: null,
       conversionStatus: 'none',
+      items: []
+    });
+    localStorage.setItem('users', JSON.stringify(users));
+  }
+
+  // Ensure constructor user exists in existing localStorage users database
+  if (users && !users.some(u => u.id === 'constuser')) {
+    users.push({
+      id: 'constuser',
+      pw: sha256('const123!'),
+      name: '박시공',
+      address: '경기도 수원시 권선구 권선로 301',
+      email: 'park@naver.com',
+      phone: '010-5555-4444',
+      role: 'constructor',
+      isSNS: false,
+      bizCode: null,
+      constCode: 'CO-2026-9090',
+      businessName: '(주)경기가온시공',
+      licenseNumber: '120-81-12345',
+      conversionStatus: 'approved',
       items: []
     });
     localStorage.setItem('users', JSON.stringify(users));
@@ -1687,25 +1727,29 @@ function initAuthAndDashboard() {
         localStorage.setItem('activeUser', JSON.stringify(activeUser));
       }
 
-      authBtn.style.display = 'none';
-      userInfoArea.style.display = 'flex';
+      if (authBtn) authBtn.style.display = 'none';
+      if (userInfoArea) userInfoArea.style.display = 'flex';
       let roleText = '일반';
       if (activeUser.role === 'business') {
         roleText = '영업자';
+      } else if (activeUser.role === 'constructor') {
+        roleText = '시공업체';
       } else if (activeUser.role === 'admin') {
         roleText = '관리자';
       }
-      headerUserName.textContent = `${activeUser.name}님 (${roleText})`;
-      if (activeUser.role === 'admin') {
-        navDashboard.textContent = '관리자 대시보드';
-      } else {
-        navDashboard.textContent = '마이페이지';
+      if (headerUserName) headerUserName.textContent = `${activeUser.name}님 (${roleText})`;
+      if (navDashboard) {
+        if (activeUser.role === 'admin') {
+          navDashboard.textContent = '관리자 대시보드';
+        } else {
+          navDashboard.textContent = '마이페이지';
+        }
+        navDashboard.style.display = 'block';
       }
-      navDashboard.style.display = 'block';
     } else {
-      authBtn.style.display = 'inline-flex';
-      userInfoArea.style.display = 'none';
-      navDashboard.style.display = 'none';
+      if (authBtn) authBtn.style.display = 'inline-flex';
+      if (userInfoArea) userInfoArea.style.display = 'none';
+      if (navDashboard) navDashboard.style.display = 'none';
     }
   };
 
@@ -1892,6 +1936,25 @@ function initAuthAndDashboard() {
 
     if (!isIdChecked || !isIdAvailable) {
       alert('아이디 중복 확인(사용 가능 검색)을 완료해 주세요.');
+      return;
+    }
+
+    // 이름 유효성 검사 (최소 2자 ~ 최대 20자)
+    if (nameVal.length < 2 || nameVal.length > 20) {
+      alert('이름은 최소 2자에서 최대 20자까지 입력해 주세요.');
+      return;
+    }
+
+    // 휴대폰 번호 유효성 검사 (최소 9자 ~ 최대 15자)
+    if (phoneVal.length < 9 || phoneVal.length > 15) {
+      alert('휴대폰 번호는 최소 9자에서 최대 15자까지 입력해 주세요.');
+      return;
+    }
+
+    // 휴대폰 번호 형식 정규식 검증
+    const phoneRegex = /^[0-9+\s-]+$/;
+    if (!phoneRegex.test(phoneVal)) {
+      alert('휴대폰 번호에는 숫자, 대시(-), 플러스(+) 및 공백만 입력할 수 있습니다.');
       return;
     }
 
@@ -2404,6 +2467,394 @@ function initMobileBottomNav() {
           alert('로그인이 필요한 페이지입니다. 로그인 화면으로 이동합니다.');
         }
       }
+    });
+  }
+
+  // --- Initialize AI Assistant ---
+  initAIAssistant();
+
+  function initAIAssistant() {
+    const trigger = document.getElementById('ai-assistant-trigger');
+    const chatWindow = document.getElementById('ai-chat-window');
+    const closeBtn = document.getElementById('ai-chat-close');
+    const sendBtn = document.getElementById('ai-chat-send');
+    const chatInput = document.getElementById('ai-chat-input');
+    const chatMessages = document.getElementById('ai-chat-messages');
+
+    if (!trigger || !chatWindow) return;
+
+    // Toggle Chat Window
+    trigger.addEventListener('click', () => {
+      chatWindow.classList.add('active');
+      trigger.style.display = 'none';
+      chatInput.focus();
+    });
+
+    closeBtn.addEventListener('click', () => {
+      chatWindow.classList.remove('active');
+      trigger.style.display = 'flex';
+    });
+
+    // Handle Quick Reply Clicks
+    chatMessages.addEventListener('click', (e) => {
+      const btn = e.target.closest('.quick-reply-btn');
+      if (btn) {
+        const faqType = btn.getAttribute('data-faq');
+        const question = btn.innerText;
+        handleUserMessage(question, faqType);
+      }
+    });
+
+    // Send Message
+    function sendMessage() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      chatInput.value = '';
+      handleUserMessage(text);
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    const faqDatabase = {
+      target: "💡 <strong>지원 대상 기준 안내</strong><br><br>경기도 내에 사업장을 두고 영업 중인 소상공인(영업 정지 상태 제외)을 대상으로 합니다.<br>단, 대기업 프랜차이즈 직영점 및 불법 사행성 업종 등은 제외될 수 있으니 사전에 상세 자격 검토를 신청하시는 것이 좋습니다.",
+      documents: "📄 <strong>신청 필수 서류 안내</strong><br><br>1. 사업자등록증 사본 1부<br>2. 부가가치세과세표준증명원(최근 1년)<br>3. 임대차계약서 사본(임차 매장인 경우)<br>4. 기존 간판 현장 사진 및 설치할 정면 벽면 사진",
+      simulator: "🎨 <strong>간판 시뮬레이터 사용법</strong><br><br>1. 메인 홈페이지의 [시뮬레이터] 메뉴로 이동합니다.<br>2. 제공되는 건물 facade 이미지 혹은 직접 촬영한 점포 사진을 로드합니다.<br>3. 원하는 간판 디자인 형태와 조명 타입을 선택하여 가상으로 간판을 얹어 확인하실 수 있습니다.",
+      contact: "📞 <strong>고객센터 안내</strong><br><br>• 대표전화: 1588-0000<br>• 이메일: support@ganpan.go.kr<br>• 운영시간: 평일 09:00 - 18:00 (토/일요일 및 공휴일 휴무)<br>• 점심시간: 12:00 - 13:00"
+    };
+
+    function handleUserMessage(messageText, faqType = null) {
+      // 1. Add User Message
+      appendMessage(messageText, 'user');
+
+      // Remove quick replies section if present to avoid screen cluttering
+      const quickReplies = chatMessages.querySelector('.ai-quick-replies');
+      if (quickReplies) {
+        quickReplies.remove();
+      }
+
+      // 2. Add Loading Indicator
+      const loadingId = appendLoading();
+
+      // 3. Simulate Thinking & Respond
+      setTimeout(() => {
+        removeLoading(loadingId);
+        
+        let response = "";
+        if (faqType && faqDatabase[faqType]) {
+          response = faqDatabase[faqType];
+        } else {
+          // Keyword match logic
+          const cleaned = messageText.toLowerCase();
+          if (cleaned.includes('대상') || cleaned.includes('조건') || cleaned.includes('자격')) {
+            response = faqDatabase.target;
+          } else if (cleaned.includes('서류') || cleaned.includes('준비') || cleaned.includes('증명원')) {
+            response = faqDatabase.documents;
+          } else if (cleaned.includes('시뮬') || cleaned.includes('사용') || cleaned.includes('디자인')) {
+            response = faqDatabase.simulator;
+          } else if (cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('운영') || cleaned.includes('번호')) {
+            response = faqDatabase.contact;
+          } else if (cleaned.includes('안녕')) {
+            response = "안녕하세요! 무엇이든 물어보세요. 😊<br>예: '지원 대상', '필수 서류', '시뮬레이터 사용법' 등";
+          } else {
+            response = "죄송합니다. 1단계 간이 AI 비서 모델에서는 인식하지 못하는 질문입니다. 😢<br><br>아래 핵심 키워드를 참고해 질문해 주세요!<br>• <strong>'지원 대상'</strong><br>• <strong>'필수 서류'</strong><br>• <strong>'시뮬레이터 사용법'</strong><br>• <strong>'고객센터'</strong>";
+          }
+        }
+
+        appendMessage(response, 'bot');
+        
+        // Re-append quick replies at the bottom so user can click other options
+        appendQuickReplies();
+        
+      }, 800);
+    }
+
+    function appendMessage(text, sender) {
+      const bubble = document.createElement('div');
+      bubble.className = `chat-bubble ${sender}-message`;
+      bubble.innerHTML = text;
+      chatMessages.appendChild(bubble);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function appendLoading() {
+      const loading = document.createElement('div');
+      const id = 'loading-' + Date.now();
+      loading.id = id;
+      loading.className = 'chat-bubble bot-message chat-loading';
+      loading.innerHTML = '<span></span><span></span><span></span>';
+      chatMessages.appendChild(loading);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return id;
+    }
+
+    function removeLoading(id) {
+      const elem = document.getElementById(id);
+      if (elem) elem.remove();
+    }
+
+    function appendQuickReplies() {
+      const div = document.createElement('div');
+      div.className = 'ai-quick-replies';
+      div.innerHTML = `
+        <button class="quick-reply-btn" data-faq="target">💡 지원 대상 기준</button>
+        <button class="quick-reply-btn" data-faq="documents">📄 신청 필수 서류</button>
+        <button class="quick-reply-btn" data-faq="simulator">🎨 시뮬레이터 사용법</button>
+        <button class="quick-reply-btn" data-faq="contact">📞 고객센터 운영시간</button>
+      `;
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  }
+
+  // --- 비회원 간편 문의 모달 연동 ---
+  const inquiryModal = document.getElementById('inquiry-modal');
+  const inquiryModalClose = document.getElementById('inquiry-modal-close');
+  const inquiryForm = document.getElementById('inquiry-form');
+
+  function closeInquiryModal() {
+    if (inquiryModal) {
+      inquiryModal.classList.remove('active');
+      if (inquiryForm) inquiryForm.reset();
+      const cnt = document.getElementById('inquiry-char-count');
+      if (cnt) cnt.textContent = '0';
+    }
+  }
+
+  window.openInquiryModal = function(e) {
+    if (e) e.preventDefault();
+    if (inquiryModal) {
+      inquiryModal.classList.add('active');
+    }
+  };
+
+  if (inquiryModalClose) {
+    inquiryModalClose.addEventListener('click', closeInquiryModal);
+  }
+
+  if (inquiryModal) {
+    inquiryModal.addEventListener('click', (e) => {
+      if (e.target === inquiryModal) {
+        closeInquiryModal();
+      }
+    });
+  }
+
+  if (inquiryForm) {
+    inquiryForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('inquiry-name').value.trim();
+      const phone = document.getElementById('inquiry-phone').value.trim();
+      const type = document.getElementById('inquiry-type').value;
+      const message = document.getElementById('inquiry-message').value.trim();
+
+      if (!name || !phone || !type || !message) {
+        alert('필수 입력 항목을 모두 작성해 주세요.');
+        return;
+      }
+
+      // 성함 유효성 검사 (최소 2자 ~ 최대 20자)
+      if (name.length < 2 || name.length > 20) {
+        alert('성함은 최소 2자에서 최대 20자까지 입력해 주세요.');
+        return;
+      }
+
+      // 연락처 유효성 검사 (최소 9자 ~ 최대 15자)
+      if (phone.length < 9 || phone.length > 15) {
+        alert('연락처는 최소 9자에서 최대 15자까지 입력해 주세요.');
+        return;
+      }
+
+      // 연락처 형식 정규식 검증
+      const phoneRegex = /^[0-9+\s-]+$/;
+      if (!phoneRegex.test(phone)) {
+        alert('연락처에는 숫자, 대시(-), 플러스(+) 및 공백만 입력할 수 있습니다.');
+        return;
+      }
+
+      // 문의내용 글자수 유효성 검사 (최대 300자)
+      if (message.length > 300) {
+        alert('문의 내용은 최대 300자까지 입력해 주세요.');
+        return;
+      }
+
+      const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+      const newInquiry = {
+        id: 'INQ-' + Date.now(),
+        name,
+        phone,
+        type,
+        message,
+        submittedAt: new Date().toISOString()
+      };
+      inquiries.push(newInquiry);
+      localStorage.setItem('inquiries', JSON.stringify(inquiries));
+
+      alert('간편 문의 접수가 정상 완료되었습니다.\n담당자가 확인 후 연락처로 신속히 연락드리겠습니다.');
+      closeInquiryModal();
+    });
+  }
+
+  // 실시간 글자수 계산 및 동적 카운터 업데이트
+  const inquiryMessage = document.getElementById('inquiry-message');
+  const inquiryCharCount = document.getElementById('inquiry-char-count');
+  if (inquiryMessage && inquiryCharCount) {
+    inquiryMessage.addEventListener('input', function() {
+      const len = this.value.length;
+      inquiryCharCount.textContent = len;
+      if (len >= 300) {
+        inquiryCharCount.style.color = '#ef4444';
+      } else {
+        inquiryCharCount.style.color = '#64748b';
+      }
+    });
+  }
+
+  const pcFooterInquiryBtn = document.getElementById('pc-footer-btn-inquiry');
+  if (pcFooterInquiryBtn) {
+    pcFooterInquiryBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.openInquiryModal();
+    });
+  }
+
+  // --- 약관 전문 데이터 정의 및 모달 제어 ---
+  const LEGAL_POLICIES = {
+    terms: `제1조 (목적)
+본 약관은 경기도 소상공인 간판지원단(이하 "지원단")과 지원단의 위탁운영사 주식회사 가야애드(이하 "회사")가 공동으로 제공하는 온라인 서비스(이하 "서비스")의 이용조건, 절차 및 회원과 회사 간의 권리와 의무 등 필요한 사항을 규정함을 목적으로 합니다.
+
+제2조 (용어의 정의)
+1. "서비스"란 회사가 자체 웹/앱 플랫폼을 통해 제공하는 간판 디자인 시뮬레이터 툴, 경영환경개선 간판지원사업 간편 대행 접수 시스템 및 관련 부가 서비스를 의미합니다.
+2. "회원"이란 본 약관에 동의하고 서비스에 회원등록을 완료하여 계정을 부여받은 자를 뜻하며, 이용 권한에 따라 '일반고객 회원', '영업자 회원', '시공업체 회원', '관리자'로 구분됩니다.
+
+제3조 (약관의 효력 및 개정)
+1. 본 약관은 서비스를 이용하고자 하는 모든 회원에 대하여 효력을 발생합니다.
+2. 회사는 관계법령을 위배하지 않는 범위 내에서 본 약관을 개정할 수 있으며, 개정 시 서비스 화면에 최소 7일 전부터 공지합니다.
+
+제4조 (회원가입 및 회원등급 승인)
+1. 이용자는 회사가 제시한 가입 양식에 실명 정보를 기입하고 본 약관에 동의함으로써 회원가입을 신청합니다.
+2. '영업자 회원' 및 '시공업체 회원' 등 특수 등급은 가입 후 마이페이지를 통해 사업자등록증 등 증빙 서류를 제출하여 관리자의 검토 및 승인을 거쳐 최종 전환 완료됩니다.
+
+제5조 (서비스의 제공 및 제한)
+1. 회사는 회원에게 간판 디자인 시뮬레이션 및 간편 간판교체 대행 신청 서비스를 제공합니다.
+2. 회사는 설비 점검, 통신 장애 또는 천재지변 발생 시 서비스의 전부 또는 일부를 일시 중지할 수 있습니다.
+
+제6조 (회원의 의무 및 면책)
+1. 회원은 타인의 명의를 도용하거나 허위 사실을 기재하여 서비스를 이용하여서는 안 됩니다.
+2. 회사는 시뮬레이터를 통해 시각화된 시안과 실제 시공 결과물 간의 물리적 오차 및 시공 과정에서의 분쟁에 대해 책임을 지지 않습니다.`,
+
+    privacy: `주식회사 가야애드(이하 "회사")는 경기도 소상공인 간판지원단 플랫폼을 운영함에 있어 정보주체의 개인정보를 보호하고 이와 관련된 고충을 신속하게 처리할 수 있도록 다음과 같이 개인정보 처리방침을 수립·공개합니다.
+
+제1조 (개인정보의 수집 및 이용 목적)
+회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
+1. 회원 가입 및 관리: 회원 식별, 가입 의사 확인, 회원자격 유지·관리, 부정이용 방지
+2. 서비스 제공 및 민원 처리: 간판 디자인 시뮬레이터 이용, 비회원 3초 간편 접수 상담 서비스 제공, 경영환경개선사업 대행 접수, 각종 고충 처리
+
+제2조 (수집하는 개인정보의 항목)
+회사는 서비스 제공을 위해 아래와 같은 필수 개인정보를 수집하고 있습니다.
+1. 회원가입 시: 아이디, 비밀번호, 성명, 주소, 이메일, 휴대폰 번호, (영업자/시공사 전환 신청 시) 상호명, 사업자등록번호
+2. 비회원 간편 문의 시: 성명, 연락처, 문의 유형, 문의 내용
+
+제3조 (개인정보의 보유 및 이용 기간)
+1. 회사는 회원 탈퇴 시 혹은 동의 철회 시까지 정보주체의 개인정보를 보유 및 이용합니다.
+2. 단, 관계 법령(전자상거래 등에서의 소비자보호에 관한 법령 등)의 규정에 의하여 보존할 필요가 있는 경우, 해당 법령에서 정한 일정 기간(예: 소비자의 불만 또는 분쟁처리에 관한 기록 3년) 동안 보존합니다.
+
+제4조 (개인정보의 파기절차 및 방법)
+회사는 개인정보 보유기간의 경과, 처리목적 달성 등 개인정보가 불필요하게 되었을 때에는 지체 없이 해당 개인정보를 파기합니다. 전자적 파일 형태는 기록을 재생할 수 없는 기술적 방법을 사용하며, 종이 문서는 분쇄기로 분쇄하여 파기합니다.
+
+제5조 (개인정보 보호책임자 및 고충 처리)
+* 개인정보 보호책임자: 주식회사 가야애드 대표이사
+* 연락처: 010-7266-2499 / nubine22@naver.com`,
+
+    consent: `주식회사 가야애드(이하 "회사")는 경기도 소상공인 간판지원단 플랫폼의 비회원 간편 문의 및 서비스 회원가입 단계에서 개인정보보호법에 의거하여 다음과 같이 개인정보를 수집·이용하고자 합니다.
+
+1. 개인정보를 수집하는 자: 주식회사 가야애드
+2. 수집 및 이용 목적:
+   - 비회원 3초 간편 문의 서비스 접수 및 본인 확인
+   - 문의 사항에 대한 상담 및 답변(해피콜 연락) 제공
+   - 환경개선 지원사업 신청 안내
+3. 수집하는 개인정보의 항목:
+   - 필수 항목: 성명(성함/이름), 연락처(휴대폰 번호/전화번호)
+4. 개인정보의 보유 및 이용 기간:
+   - 문의 접수 및 상담 처리가 완료된 날로부터 1년 보관 후 파기 (정보주체의 파기 요청 시 지체 없이 파기)
+5. 동의 거부 권리 및 불이익 고지:
+   - 귀하는 개인정보 수집 및 이용 동의를 거부할 권리가 있습니다.
+   - 단, 필수 항목 동의를 거부하실 경우 3초 간편 문의 접수 서비스 이용이 제한됩니다.`
+  };
+
+  const policyModal = document.getElementById('policy-modal');
+  const policyModalClose = document.getElementById('policy-modal-close');
+  const btnPolicyConfirm = document.getElementById('btn-policy-confirm');
+  const policyModalTitle = document.getElementById('policy-modal-title');
+  const policyModalBody = document.getElementById('policy-modal-body');
+
+  function closePolicyModal() {
+    if (policyModal) {
+      policyModal.classList.remove('active');
+    }
+  }
+
+  window.openPolicyModal = function(type) {
+    if (!policyModal || !policyModalTitle || !policyModalBody) return;
+    
+    let title = '';
+    let content = '';
+
+    if (type === 'privacy') {
+      title = '개인정보 처리방침';
+      content = LEGAL_POLICIES.privacy;
+    } else if (type === 'terms') {
+      title = '서비스 이용약관';
+      content = LEGAL_POLICIES.terms;
+    } else if (type === 'consent') {
+      title = '개인정보 수집 및 이용 동의';
+      content = LEGAL_POLICIES.consent;
+    }
+
+    policyModalTitle.innerHTML = `<i class="fa-solid fa-file-shield"></i> ${title}`;
+    policyModalBody.textContent = content;
+    policyModal.classList.add('active');
+  };
+
+  if (policyModalClose) {
+    policyModalClose.addEventListener('click', closePolicyModal);
+  }
+  if (btnPolicyConfirm) {
+    btnPolicyConfirm.addEventListener('click', closePolicyModal);
+  }
+  if (policyModal) {
+    policyModal.addEventListener('click', (e) => {
+      if (e.target === policyModal) {
+        closePolicyModal();
+      }
+    });
+  }
+
+  // 푸터 약관 링크 클릭 리스너 연결
+  const linkPrivacy = document.getElementById('link-policy-privacy');
+  const linkTerms = document.getElementById('link-policy-terms');
+  const linkConsent = document.getElementById('link-policy-consent');
+
+  if (linkPrivacy) {
+    linkPrivacy.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.openPolicyModal('privacy');
+    });
+  }
+  if (linkTerms) {
+    linkTerms.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.openPolicyModal('terms');
+    });
+  }
+  if (linkConsent) {
+    linkConsent.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.openPolicyModal('consent');
     });
   }
 }

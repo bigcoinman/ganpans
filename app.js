@@ -21,9 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('.nav-item');
 
     // --- Initialize Drawer Event Listeners ---
-    if (menuTrigger && drawer && drawerOverlay) {
+    if (menuTrigger) {
         menuTrigger.addEventListener('click', openDrawer);
+    }
+    if (drawerClose) {
         drawerClose.addEventListener('click', closeDrawer);
+    }
+    if (drawerOverlay) {
         drawerOverlay.addEventListener('click', closeDrawer);
     }
 
@@ -53,6 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawerUserRole.textContent = `영업자 (${activeUser.bizCode})`;
                 drawerUserRole.style.background = 'var(--accent-secondary)';
                 drawerUserRole.style.color = '#fff';
+            } else if (activeUser.role === 'constructor') {
+                drawerUserRole.textContent = `시공사 (${activeUser.constCode})`;
+                drawerUserRole.style.background = 'var(--accent-success)';
+                drawerUserRole.style.color = '#fff';
             } else {
                 drawerUserRole.textContent = '일반 회원';
                 drawerUserRole.style.background = 'var(--accent-primary)';
@@ -60,13 +68,87 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             drawerAuthLinks.style.display = 'none';
             drawerLogoutLinks.style.display = 'block';
+
+            // 전환 신청 상태 갱신 로직 추가
+            const conversionLinks = document.getElementById('drawer-conversion-links');
+            if (conversionLinks) {
+                conversionLinks.style.display = 'flex';
+                
+                const btnConv = document.getElementById('drawer-btn-conversion');
+                const btnConst = document.getElementById('drawer-btn-constructor');
+                
+                if (activeUser.conversionStatus === 'pending') {
+                    if (btnConv) {
+                        btnConv.innerHTML = '<i class="fa-solid fa-clock"></i> 영업자 승인 대기 중';
+                        btnConv.style.opacity = '0.7';
+                        btnConv.style.pointerEvents = 'none';
+                    }
+                    if (btnConst) {
+                        btnConst.style.opacity = '0.5';
+                        btnConst.style.pointerEvents = 'none';
+                    }
+                } else if (activeUser.conversionStatus === 'pending_constructor') {
+                    if (btnConv) {
+                        btnConv.style.opacity = '0.5';
+                        btnConv.style.pointerEvents = 'none';
+                    }
+                    if (btnConst) {
+                        btnConst.innerHTML = '<i class="fa-solid fa-clock"></i> 시공업체 승인 대기 중';
+                        btnConst.style.opacity = '0.7';
+                        btnConst.style.pointerEvents = 'none';
+                    }
+                } else {
+                    if (btnConv) {
+                        btnConv.innerHTML = '<i class="fa-solid fa-arrows-spin"></i> 영업자 회원으로 전환 신청';
+                        btnConv.style.opacity = '1';
+                        btnConv.style.pointerEvents = 'auto';
+                    }
+                    if (btnConst) {
+                        btnConst.innerHTML = '<i class="fa-solid fa-screwdriver-wrench"></i> 시공업체 회원으로 전환 신청';
+                        btnConst.style.opacity = '1';
+                        btnConst.style.pointerEvents = 'auto';
+                    }
+                }
+            }
         } else {
             drawerUserName.textContent = '게스트님';
             drawerUserRole.textContent = '비회원';
             drawerUserRole.style.background = 'var(--text-muted)';
             drawerAuthLinks.style.display = 'block';
             drawerLogoutLinks.style.display = 'none';
+            const conversionLinks = document.getElementById('drawer-conversion-links');
+            if (conversionLinks) conversionLinks.style.display = 'none';
         }
+    }
+
+    function updateHeaderAuthButton() {
+        const appHeaderAuthBtn = document.getElementById('app-header-auth-btn');
+        const appHeaderAuthText = document.getElementById('app-header-auth-text');
+        if (!appHeaderAuthBtn || !appHeaderAuthText) return;
+
+        const user = JSON.parse(localStorage.getItem('activeUser')) || null;
+        if (user) {
+            appHeaderAuthText.textContent = '마이페이지';
+        } else {
+            appHeaderAuthText.textContent = '로그인';
+        }
+    }
+
+    // Initialize Header Auth Button
+    updateHeaderAuthButton();
+
+    // Click Listener for Header Auth Button
+    const appHeaderAuthBtn = document.getElementById('app-header-auth-btn');
+    if (appHeaderAuthBtn) {
+        appHeaderAuthBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const user = JSON.parse(localStorage.getItem('activeUser')) || null;
+            if (user) {
+                openDrawer();
+            } else {
+                openAuthModal();
+            }
+        });
     }
 
     // --- Tab Switching Logic ---
@@ -156,6 +238,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- Mobile Auth Modal Close Interceptor (Supports Touch & Click) ---
+    const authCloseBtn = document.getElementById('auth-close-btn');
+    if (authCloseBtn) {
+        const handleCloseAuth = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const authModal = document.getElementById('auth-modal');
+            if (authModal) {
+                authModal.classList.remove('active');
+            }
+        };
+        authCloseBtn.addEventListener('click', handleCloseAuth);
+        authCloseBtn.addEventListener('touchend', handleCloseAuth);
+    }
+
     // --- Sync PC Auth submissions to mobile status page ---
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
@@ -166,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             renderStatusTab();
             updateDrawerProfile();
+            updateHeaderAuthButton();
         }, 150);
     };
 
@@ -179,14 +277,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (drawerLogoutBtn) {
         drawerLogoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            // Trigger hidden PC logout button
+            
+            // Core Session Clean First
+            localStorage.removeItem('activeUser');
+            alert('로그아웃 되었습니다.');
+            
+            // Trigger hidden PC logout button for legacy compatibility
             const pcLogoutBtn = document.getElementById('logout-btn');
             if (pcLogoutBtn) {
                 pcLogoutBtn.click();
-            } else {
-                // Fallback clean
-                localStorage.removeItem('activeUser');
             }
+            
             closeDrawer();
             handleSessionRefresh();
         });
@@ -358,25 +459,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const normalContainer = document.getElementById('status-normal-container');
         const businessContainer = document.getElementById('status-business-container');
         const adminContainer = document.getElementById('status-admin-container');
+        const constructorContainer = document.getElementById('status-constructor-container');
         
-        normalContainer.style.display = 'none';
-        businessContainer.style.display = 'none';
-        adminContainer.style.display = 'none';
+        if (normalContainer) normalContainer.style.display = 'none';
+        if (businessContainer) businessContainer.style.display = 'none';
+        if (adminContainer) adminContainer.style.display = 'none';
+        if (constructorContainer) constructorContainer.style.display = 'none';
 
         if (activeUser.role === 'admin') {
             roleBadge.textContent = '최고관리자';
             roleBadge.style.background = 'var(--grad-primary)';
-            adminContainer.style.display = 'block';
+            if (adminContainer) adminContainer.style.display = 'block';
             renderAdminDashboardMob();
         } else if (activeUser.role === 'business') {
             roleBadge.textContent = `영업자 코드: ${activeUser.bizCode}`;
             roleBadge.style.background = 'var(--accent-secondary)';
-            businessContainer.style.display = 'block';
+            if (businessContainer) businessContainer.style.display = 'block';
             renderBusinessDashboardMob();
+        } else if (activeUser.role === 'constructor') {
+            roleBadge.textContent = `시공사 코드: ${activeUser.constCode}`;
+            roleBadge.style.background = 'var(--accent-success)';
+            if (constructorContainer) constructorContainer.style.display = 'block';
+            renderConstructorDashboardMob();
         } else {
             roleBadge.textContent = '일반 회원';
             roleBadge.style.background = 'var(--accent-primary)';
-            normalContainer.style.display = 'block';
+            if (normalContainer) normalContainer.style.display = 'block';
             renderNormalDashboardMob();
         }
     }
@@ -385,14 +493,28 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderNormalDashboardMob() {
         const myAppsList = document.getElementById('my-apps-list-mobile');
         const conversionPendingMsg = document.getElementById('conversion-pending-msg-mob');
+        const conversionConstructorPendingMsg = document.getElementById('conversion-constructor-pending-msg-mob');
         const btnRequestConversion = document.getElementById('btn-request-conversion-mob');
+        const btnRequestConstructor = document.getElementById('btn-request-constructor-mob');
+        const constructorFormCard = document.getElementById('mobile-constructor-form-card');
+
+        if (constructorFormCard) constructorFormCard.style.display = 'none';
 
         if (activeUser.conversionStatus === 'pending') {
-            btnRequestConversion.style.display = 'none';
-            conversionPendingMsg.style.display = 'block';
+            if (btnRequestConversion) btnRequestConversion.style.display = 'none';
+            if (btnRequestConstructor) btnRequestConstructor.style.display = 'none';
+            if (conversionPendingMsg) conversionPendingMsg.style.display = 'block';
+            if (conversionConstructorPendingMsg) conversionConstructorPendingMsg.style.display = 'none';
+        } else if (activeUser.conversionStatus === 'pending_constructor') {
+            if (btnRequestConversion) btnRequestConversion.style.display = 'none';
+            if (btnRequestConstructor) btnRequestConstructor.style.display = 'none';
+            if (conversionPendingMsg) conversionPendingMsg.style.display = 'none';
+            if (conversionConstructorPendingMsg) conversionConstructorPendingMsg.style.display = 'block';
         } else {
-            btnRequestConversion.style.display = 'block';
-            conversionPendingMsg.style.display = 'none';
+            if (btnRequestConversion) btnRequestConversion.style.display = 'block';
+            if (btnRequestConstructor) btnRequestConstructor.style.display = 'block';
+            if (conversionPendingMsg) conversionPendingMsg.style.display = 'none';
+            if (conversionConstructorPendingMsg) conversionConstructorPendingMsg.style.display = 'none';
         }
 
         const myApps = applications.filter(app => app.userId === activeUser.id);
@@ -460,6 +582,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('회원 전환 신청이 접수되었습니다. 최고관리자(admin) 계정 로그인 승인 후 영업코드가 정상 발급됩니다.');
                 renderStatusTab();
             }
+        });
+    }
+
+    // Constructor transition request
+    const btnRequestConstructorMob = document.getElementById('btn-request-constructor-mob');
+    const btnCancelConstructorMob = document.getElementById('btn-cancel-constructor-mob');
+    const constructorFormCard = document.getElementById('mobile-constructor-form-card');
+    const constructorRequestFormMob = document.getElementById('constructor-request-form-mob');
+    const constBusinessNameMob = document.getElementById('const-business-name-mob');
+    const constLicenseNumberMob = document.getElementById('const-license-number-mob');
+
+    if (btnRequestConstructorMob && constructorFormCard) {
+        btnRequestConstructorMob.addEventListener('click', () => {
+            constructorFormCard.style.display = 'block';
+            btnRequestConstructorMob.style.display = 'none';
+            const btnRequestConversion = document.getElementById('btn-request-conversion-mob');
+            if (btnRequestConversion) btnRequestConversion.style.display = 'none';
+        });
+    }
+
+    if (btnCancelConstructorMob && constructorFormCard) {
+        btnCancelConstructorMob.addEventListener('click', () => {
+            constructorFormCard.style.display = 'none';
+            const btnRequestConversion = document.getElementById('btn-request-conversion-mob');
+            if (btnRequestConversion) btnRequestConversion.style.display = 'block';
+            if (btnRequestConstructorMob) btnRequestConstructorMob.style.display = 'block';
+        });
+    }
+
+    if (constructorRequestFormMob) {
+        constructorRequestFormMob.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const bName = constBusinessNameMob.value.trim();
+            const lNum = constLicenseNumberMob.value.trim();
+            if (!bName || !lNum) {
+                alert('업체 상호명과 사업자등록번호를 입력해 주세요.');
+                return;
+            }
+
+            activeUser.conversionStatus = 'pending_constructor';
+            activeUser.pendingBusinessName = bName;
+            activeUser.pendingLicenseNumber = lNum;
+
+            users = users.map(u => u.id === activeUser.id ? {
+                ...u,
+                conversionStatus: 'pending_constructor',
+                pendingBusinessName: bName,
+                pendingLicenseNumber: lNum
+            } : u);
+
+            localStorage.setItem('users', JSON.stringify(users));
+            localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+            alert('시공업체 가입 신청이 정상 완료되었습니다.\n최고관리자 승인 시 정식 코드가 부여됩니다.');
+            renderStatusTab();
         });
     }
 
@@ -605,8 +782,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Photo uploads inside representative dashboard
     const mobFileZoneMob = document.getElementById('mobile-file-zone-mob');
     const mobPhotosInputMob = document.getElementById('mob-photos-input-mob');
+    const mobCameraInputMob = document.getElementById('mob-camera-input-mob');
     const mobPhotoPreviewsMob = document.getElementById('mob-photo-previews-mob');
     const mobPhotoCountMob = document.getElementById('mob-photo-count-mob');
+    const photoChoiceOverlay = document.getElementById('photo-choice-overlay');
+    const btnChoiceCamera = document.getElementById('btn-choice-camera');
+    const btnChoiceGallery = document.getElementById('btn-choice-gallery');
+    const btnChoiceCancel = document.getElementById('btn-choice-cancel');
     let selectedPhotosMob = [];
 
     const resizeImageToLimit = (file, maxSizeBytes = 3 * 1024 * 1024) => {
@@ -701,15 +883,64 @@ document.addEventListener('DOMContentLoaded', () => {
         renderMobilePhotoPreviewsMob();
     };
 
-    if (mobFileZoneMob && mobPhotosInputMob) {
+    if (mobFileZoneMob) {
         mobFileZoneMob.addEventListener('click', () => {
-            mobPhotosInputMob.click();
+            if (photoChoiceOverlay) {
+                photoChoiceOverlay.classList.add('active');
+            } else if (mobPhotosInputMob) {
+                mobPhotosInputMob.click();
+            }
+        });
+    }
+
+    if (photoChoiceOverlay) {
+        // Close bottom sheet when clicking overlay background
+        photoChoiceOverlay.addEventListener('click', (e) => {
+            if (e.target === photoChoiceOverlay) {
+                photoChoiceOverlay.classList.remove('active');
+            }
         });
 
+        // Close button
+        if (btnChoiceCancel) {
+            btnChoiceCancel.addEventListener('click', () => {
+                photoChoiceOverlay.classList.remove('active');
+            });
+        }
+
+        // Camera option
+        if (btnChoiceCamera && mobCameraInputMob) {
+            btnChoiceCamera.addEventListener('click', () => {
+                photoChoiceOverlay.classList.remove('active');
+                mobCameraInputMob.click();
+            });
+        }
+
+        // Gallery option
+        if (btnChoiceGallery && mobPhotosInputMob) {
+            btnChoiceGallery.addEventListener('click', () => {
+                photoChoiceOverlay.classList.remove('active');
+                mobPhotosInputMob.click();
+            });
+        }
+    }
+
+    if (mobPhotosInputMob) {
         mobPhotosInputMob.addEventListener('change', async (e) => {
             if (e.target.files.length > 0) {
                 const files = Array.from(e.target.files);
                 await handleMobilePhotosSelectMob(files);
+                mobPhotosInputMob.value = ''; // Reset value to trigger change on same file if needed
+            }
+        });
+    }
+
+    if (mobCameraInputMob) {
+        mobCameraInputMob.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                const files = Array.from(e.target.files);
+                await handleMobilePhotosSelectMob(files);
+                mobCameraInputMob.value = ''; // Reset value to trigger change on next capture
             }
         });
     }
@@ -718,10 +949,51 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!mobPhotoPreviewsMob || !mobPhotoCountMob) return;
         mobPhotoPreviewsMob.innerHTML = '';
         
-        selectedPhotosMob.forEach(file => {
+        selectedPhotosMob.forEach((file, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mob-preview-wrapper';
+            wrapper.style.position = 'relative';
+            wrapper.style.display = 'inline-block';
+            wrapper.style.margin = '4px';
+            
             const img = document.createElement('img');
             img.src = URL.createObjectURL(file);
-            mobPhotoPreviewsMob.appendChild(img);
+            img.style.width = '70px';
+            img.style.height = '70px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '8px';
+            img.style.display = 'block';
+            
+            const delBtn = document.createElement('button');
+            delBtn.className = 'mob-preview-del';
+            delBtn.innerHTML = '&times;';
+            delBtn.style.position = 'absolute';
+            delBtn.style.top = '-6px';
+            delBtn.style.right = '-6px';
+            delBtn.style.width = '20px';
+            delBtn.style.height = '20px';
+            delBtn.style.borderRadius = '50%';
+            delBtn.style.backgroundColor = '#ef4444';
+            delBtn.style.color = '#ffffff';
+            delBtn.style.border = 'none';
+            delBtn.style.display = 'flex';
+            delBtn.style.alignItems = 'center';
+            delBtn.style.justifyContent = 'center';
+            delBtn.style.fontSize = '12px';
+            delBtn.style.fontWeight = 'bold';
+            delBtn.style.cursor = 'pointer';
+            delBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+            delBtn.style.zIndex = '10';
+            
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectedPhotosMob.splice(index, 1);
+                renderMobilePhotoPreviewsMob();
+            });
+            
+            wrapper.appendChild(img);
+            wrapper.appendChild(delBtn);
+            mobPhotoPreviewsMob.appendChild(wrapper);
         });
 
         mobPhotoCountMob.textContent = `선택된 사진: ${selectedPhotosMob.length} / 20장`;
@@ -791,43 +1063,56 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        const reqPanel = document.getElementById('admin-panel-requests-mob');
-        const appsPanel = document.getElementById('admin-panel-apps-mob');
+        const panels = {
+            requests: document.getElementById('admin-panel-requests-mob'),
+            constructors: document.getElementById('admin-panel-constructors-mob'),
+            apps: document.getElementById('admin-panel-apps-mob'),
+            items: document.getElementById('admin-panel-items-mob'),
+            popups: document.getElementById('admin-panel-popups-mob')
+        };
 
-        if (tabName === 'requests') {
-            reqPanel.style.display = 'block';
-            appsPanel.style.display = 'none';
-        } else {
-            reqPanel.style.display = 'none';
-            appsPanel.style.display = 'block';
-        }
+        Object.keys(panels).forEach(key => {
+            if (panels[key]) {
+                panels[key].style.display = (key === tabName) ? 'block' : 'none';
+            }
+        });
+
+        renderAdminDashboardMob();
     };
 
     function renderAdminDashboardMob() {
         const totalStat = document.getElementById('admin-stat-total-mob');
         const visitorsStat = document.getElementById('admin-stat-visitors-mob');
         
+        // Reload global variables to ensure data sync
+        applications = JSON.parse(localStorage.getItem('applications')) || [];
+        users = JSON.parse(localStorage.getItem('users')) || [];
+        
         if (totalStat) totalStat.textContent = `${applications.length}건`;
         if (visitorsStat) visitorsStat.textContent = `${localStorage.getItem('visitor_today') || '34'}명`;
 
-        // 1) Render Salesperson Requests
+        // 1) Render Salesperson Requests (conversionStatus === 'pending')
         const requestsList = document.getElementById('admin-requests-list-mob');
         if (requestsList) {
             const pendingUsers = users.filter(u => u.conversionStatus === 'pending');
             if (pendingUsers.length === 0) {
-                requestsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">승인 대기 중인 회원 전환 신청건이 없습니다.</p>';
+                requestsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">승인 대기 중인 영업자 회원 신청건이 없습니다.</p>';
             } else {
                 requestsList.innerHTML = '';
                 pendingUsers.forEach(u => {
                     const card = document.createElement('div');
                     card.className = 'admin-req-card-mob';
                     card.style.marginBottom = '10px';
+                    card.style.background = '#f8fafc';
+                    card.style.padding = '12px';
+                    card.style.borderRadius = '8px';
+                    card.style.border = '1px solid var(--border-color)';
                     card.innerHTML = `
                         <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">아이디: ${u.id} (${u.name})</div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary);">연락처: ${u.phone}</div>
-                        <div class="admin-action-row-mob">
-                            <button class="btn btn-primary btn-sm btn-approve-user-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-check"></i> 승인</button>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 8px;">연락처: ${u.phone} / 주소: ${u.address}</div>
+                        <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end;">
                             <button class="btn btn-secondary btn-sm btn-reject-user-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem;"><i class="fa-solid fa-xmark"></i> 반려</button>
+                            <button class="btn btn-primary btn-sm btn-approve-user-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-check"></i> 승인</button>
                         </div>
                     `;
                     requestsList.appendChild(card);
@@ -848,7 +1133,51 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 2) Render Applications list
+        // 2) Render Constructor Requests (conversionStatus === 'pending_constructor')
+        const constructorsList = document.getElementById('admin-constructors-list-mob');
+        if (constructorsList) {
+            const pendingConst = users.filter(u => u.conversionStatus === 'pending_constructor');
+            if (pendingConst.length === 0) {
+                constructorsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">승인 대기 중인 시공업체 회원 신청건이 없습니다.</p>';
+            } else {
+                constructorsList.innerHTML = '';
+                pendingConst.forEach(u => {
+                    const card = document.createElement('div');
+                    card.className = 'admin-req-card-mob';
+                    card.style.marginBottom = '10px';
+                    card.style.background = '#f8fafc';
+                    card.style.padding = '12px';
+                    card.style.borderRadius = '8px';
+                    card.style.border = '1px solid var(--border-color)';
+                    card.innerHTML = `
+                        <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">아이디: ${u.id} (${u.name})</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary);">업체명: ${escapeHtml(u.pendingBusinessName)}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary);">등록번호: ${escapeHtml(u.pendingLicenseNumber)}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 8px;">연락처: ${u.phone} / 주소: ${u.address}</div>
+                        <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end;">
+                            <button class="btn btn-secondary btn-sm btn-reject-const-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem;"><i class="fa-solid fa-xmark"></i> 반려</button>
+                            <button class="btn btn-primary btn-sm btn-approve-const-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-check"></i> 승인</button>
+                        </div>
+                    `;
+                    constructorsList.appendChild(card);
+                });
+
+                constructorsList.querySelectorAll('.btn-approve-const-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const uid = e.target.closest('button').dataset.uid;
+                        approveConstructorConversionMob(uid);
+                    });
+                });
+                constructorsList.querySelectorAll('.btn-reject-const-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const uid = e.target.closest('button').dataset.uid;
+                        rejectUserConversionMob(uid);
+                    });
+                });
+            }
+        }
+
+        // 3) Render Applications list
         const appsList = document.getElementById('admin-apps-list-mob');
         if (appsList) {
             if (applications.length === 0) {
@@ -859,6 +1188,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 sortedApps.forEach(app => {
                     const card = document.createElement('div');
                     card.className = 'admin-app-card-mob';
+                    card.style.background = '#ffffff';
+                    card.style.padding = '12px';
+                    card.style.borderRadius = '8px';
+                    card.style.border = '1px solid var(--border-color)';
+                    card.style.marginBottom = '10px';
                     
                     let statusBadge = '<span class="badge-status pending">대기 중</span>';
                     if (app.status === 'approved') statusBadge = '<span class="badge-status approved">승인됨</span>';
@@ -867,19 +1201,67 @@ document.addEventListener('DOMContentLoaded', () => {
                     let actionsHtml = '';
                     if (app.status === 'pending') {
                         actionsHtml = `
-                            <div class="admin-action-row-mob">
-                                <button class="btn btn-primary btn-sm btn-approve-app-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-check"></i> 승인</button>
+                            <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
                                 <button class="btn btn-secondary btn-sm btn-reject-app-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem;"><i class="fa-solid fa-xmark"></i> 반려</button>
+                                <button class="btn btn-primary btn-sm btn-approve-app-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-check"></i> 승인</button>
                             </div>
                         `;
+                    } else if (app.status === 'approved') {
+                        if (app.assignedConstructorId) {
+                            let constStatusText = '시공 전';
+                            if (app.constructionStatus === 'in_construction') constStatusText = '시공 진행 중';
+                            else if (app.constructionStatus === 'after_construction') constStatusText = '시공 완료 보고됨';
+                            else if (app.constructionStatus === 'completed') constStatusText = '정산 종결';
+
+                            actionsHtml = `
+                                <div style="margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px; text-align: left;">
+                                    <div style="font-size: 0.72rem; font-weight: bold; color: var(--accent-success);"><i class="fa-solid fa-screwdriver-wrench"></i> 배정 시공사: ${escapeHtml(app.assignedConstructorName)}</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 2px;">시공 현황: <strong>${constStatusText}</strong></div>
+                                </div>
+                            `;
+
+                            if (app.constructionStatus === 'after_construction') {
+                                actionsHtml += `
+                                    <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end;">
+                                        <button class="btn btn-primary btn-sm btn-approve-settlement-mob" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.68rem; background: var(--accent-primary); border: none; color: white;"><i class="fa-solid fa-file-invoice-dollar"></i> 증빙확인/정산완료</button>
+                                    </div>
+                                `;
+                            }
+                        } else {
+                            // Assign Constructor Dropdown
+                            const constructors = users.filter(u => u.role === 'constructor');
+                            let optionsHtml = '<option value="">시공사 선택...</option>';
+                            constructors.forEach(c => {
+                                optionsHtml += `<option value="${c.id}">${escapeHtml(c.businessName)}</option>`;
+                            });
+                            
+                            actionsHtml = `
+                                <div style="margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; text-align: left;">
+                                    <label style="font-size: 0.7rem; font-weight: bold;">시공사 미배정 - 배정 진행</label>
+                                    <div style="display: flex; gap: 6px;">
+                                        <select class="status-select-mob select-constructor-assign-mob" data-id="${app.id}" style="flex: 1; padding: 4px; font-size: 0.7rem; height: auto; min-height: auto; width: auto; background: white; border: 1px solid var(--border-color); border-radius: 4px;">
+                                            ${optionsHtml}
+                                        </select>
+                                        <button class="btn btn-primary btn-sm btn-assign-constructor-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-link"></i> 배정</button>
+                                    </div>
+                                </div>
+                            `;
+                        }
                     }
+
+                    // Add Delete application button (always shown in management)
+                    actionsHtml += `
+                        <div style="display: flex; justify-content: flex-start; margin-top: 8px;">
+                            <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem; border-color: rgba(239, 68, 68, 0.3); color: rgba(239, 68, 68, 0.8); background: transparent;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+                        </div>
+                    `;
 
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
                             <strong style="font-size: 0.85rem;">${escapeHtml(app.shopName || app.storeName)}</strong>
                             ${statusBadge}
                         </div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; text-align: left;">
                             <div>신청번호: ${app.id}</div>
                             <div>대표자: ${app.ownerName} (${app.ownerPhone})</div>
                             <div>주소: ${app.storeAddress}</div>
@@ -903,8 +1285,184 @@ document.addEventListener('DOMContentLoaded', () => {
                         updateApplicationStatusMob(id, 'rejected');
                     });
                 });
+                appsList.querySelectorAll('.btn-delete-app-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = e.target.closest('button').dataset.id;
+                        deleteApplicationMob(id);
+                    });
+                });
+                appsList.querySelectorAll('.btn-assign-constructor-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = e.target.closest('button').dataset.id;
+                        const container = e.target.closest('div');
+                        const select = container.querySelector('.select-constructor-assign-mob');
+                        const constId = select.value;
+                        if (!constId) {
+                            alert('배정할 시공사를 선택해 주세요.');
+                            return;
+                        }
+                        assignConstructorMob(id, constId);
+                    });
+                });
+                appsList.querySelectorAll('.btn-approve-settlement-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = e.target.closest('button').dataset.id;
+                        approveSettlementMob(id);
+                    });
+                });
             }
         }
+
+        // 4) Render Items list (Sales objects)
+        const itemsList = document.getElementById('admin-items-list-mob');
+        if (itemsList) {
+            itemsList.innerHTML = '';
+            let hasItems = false;
+            users.forEach(u => {
+                if (u.role === 'business' && u.items && u.items.length > 0) {
+                    u.items.forEach(item => {
+                        hasItems = true;
+                        const card = document.createElement('div');
+                        card.className = 'admin-req-card-mob';
+                        card.style.background = '#f8fafc';
+                        card.style.padding = '12px';
+                        card.style.borderRadius = '8px';
+                        card.style.border = '1px solid var(--border-color)';
+                        card.style.marginBottom = '8px';
+                        card.style.textAlign = 'left';
+                        
+                        card.innerHTML = `
+                            <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">${escapeHtml(item.name)} (${u.name} 영업자)</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);">주소: ${escapeHtml(item.address)}</div>
+                            ${item.phone ? `<div style="font-size: 0.7rem; color: var(--text-secondary);">연락처: ${escapeHtml(item.phone)}</div>` : ''}
+                            
+                            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+                                <div style="display:flex; align-items:center; gap: 4px;">
+                                    <span style="font-size: 0.7rem; font-weight: 700; width: 45px;">접수:</span>
+                                    <select class="status-select-mob select-receipt-mob" data-uid="${u.id}" data-itemid="${item.id}" style="padding: 4px; font-size: 0.7rem; border-radius: 4px; border: 1px solid var(--border-color); background: white; flex: 1;">
+                                        <option value="접수 대기" ${item.receiptStatus === '접수 대기' ? 'selected' : ''}>접수 대기</option>
+                                        <option value="접수 완료 (경기도시장상권진흥원)" ${item.receiptStatus === '접수 완료 (경기도시장상권진흥원)' ? 'selected' : ''}>접수 완료</option>
+                                    </select>
+                                </div>
+                                <div style="display:flex; align-items:center; gap: 4px;">
+                                    <span style="font-size: 0.7rem; font-weight: 700; width: 45px;">진행:</span>
+                                    <select class="status-select-mob select-progress-mob" data-uid="${u.id}" data-itemid="${item.id}" style="padding: 4px; font-size: 0.7rem; border-radius: 4px; border: 1px solid var(--border-color); background: white; flex: 1;">
+                                        <option value="심사 대기" ${item.progressStatus === '심사 대기' ? 'selected' : ''}>심사 대기</option>
+                                        <option value="서류 보완 필요" ${item.progressStatus === '서류 보완 필요' ? 'selected' : ''}>서류 보완 필요</option>
+                                        <option value="서류 심사 통과" ${item.progressStatus === '서류 심사 통과' ? 'selected' : ''}>서류 심사 통과</option>
+                                        <option value="현장 실사 중" ${item.progressStatus === '현장 실사 중' ? 'selected' : ''}>현장 실사 중</option>
+                                        <option value="지원금 최종 승인" ${item.progressStatus === '지원금 최종 승인' ? 'selected' : ''}>지원금 최종 승인</option>
+                                        <option value="간판 시공 중" ${item.progressStatus === '간판 시공 중' ? 'selected' : ''}>간판 시공 중</option>
+                                        <option value="시공 완료" ${item.progressStatus === '시공 완료' ? 'selected' : ''}>시공 완료</option>
+                                    </select>
+                                </div>
+                            </div>
+                        `;
+                        itemsList.appendChild(card);
+                    });
+                }
+            });
+
+            if (!hasItems) {
+                itemsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">등록된 영업물건이 없습니다.</p>';
+            } else {
+                itemsList.querySelectorAll('.select-receipt-mob').forEach(select => {
+                    select.addEventListener('change', (e) => {
+                        const uid = e.target.dataset.uid;
+                        const itemId = parseInt(e.target.dataset.itemid);
+                        const val = e.target.value;
+                        updateItemStatusMob(uid, itemId, 'receipt', val);
+                    });
+                });
+                itemsList.querySelectorAll('.select-progress-mob').forEach(select => {
+                    select.addEventListener('change', (e) => {
+                        const uid = e.target.dataset.uid;
+                        const itemId = parseInt(e.target.dataset.itemid);
+                        const val = e.target.value;
+                        updateItemStatusMob(uid, itemId, 'progress', val);
+                    });
+                });
+            }
+        }
+
+        // 5) Render Popups list
+        const popupsList = document.getElementById('admin-popups-list-mob');
+        if (popupsList) {
+            const popups = JSON.parse(localStorage.getItem('popups')) || [];
+            popupsList.innerHTML = '';
+            if (popups.length === 0) {
+                popupsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">등록된 팝업창이 없습니다.</p>';
+            } else {
+                popups.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'admin-req-card-mob';
+                    card.style.background = '#f8fafc';
+                    card.style.padding = '12px';
+                    card.style.borderRadius = '8px';
+                    card.style.border = '1px solid var(--border-color)';
+                    card.style.marginBottom = '8px';
+                    card.style.textAlign = 'left';
+
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                            <strong style="font-size: 0.8rem;">${escapeHtml(p.title)}</strong>
+                            <span style="font-size: 0.65rem; padding: 2px 6px; border-radius: 50px; background: ${p.isActive ? 'var(--accent-primary)' : '#64748b'}; color: white;">
+                                ${p.isActive ? '활성화' : '비활성'}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 8px;">
+                            기간: ${p.startDate} ~ ${p.endDate}
+                        </div>
+                        <div class="admin-action-row-mob" style="display:flex; gap: 6px; justify-content: flex-end;">
+                            <button class="btn btn-secondary btn-sm btn-toggle-popup-mob" data-id="${p.id}" style="padding: 4px 6px; font-size: 0.65rem;">토글</button>
+                            <button class="btn btn-secondary btn-sm btn-edit-popup-mob" data-id="${p.id}" style="padding: 4px 6px; font-size: 0.65rem; color: var(--accent-primary); border-color: rgba(0,102,255,0.2);"><i class="fa-solid fa-pen"></i> 수정</button>
+                            <button class="btn btn-secondary btn-sm btn-delete-popup-mob" data-id="${p.id}" style="padding: 4px 6px; font-size: 0.65rem; color: rgba(239, 68, 68, 0.8); border-color: rgba(239, 68, 68, 0.2);"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+                        </div>
+                    `;
+                    popupsList.appendChild(card);
+                });
+
+                popupsList.querySelectorAll('.btn-toggle-popup-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const pid = parseInt(e.target.closest('button').dataset.id);
+                        togglePopupActiveMob(pid);
+                    });
+                });
+                popupsList.querySelectorAll('.btn-edit-popup-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const pid = parseInt(e.target.closest('button').dataset.id);
+                        editPopupMob(pid);
+                    });
+                });
+                popupsList.querySelectorAll('.btn-delete-popup-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const pid = parseInt(e.target.closest('button').dataset.id);
+                        deletePopupMob(pid);
+                    });
+                });
+            }
+        }
+    }
+
+    // --- Sub handlers for Admin Mob ---
+    function approveConstructorConversionMob(uid) {
+        const code = `CO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+        users = users.map(u => {
+            if (u.id === uid) {
+                return {
+                    ...u,
+                    role: 'constructor',
+                    constCode: code,
+                    businessName: u.pendingBusinessName || '(주)새로운시공',
+                    licenseNumber: u.pendingLicenseNumber || '000-00-00000',
+                    conversionStatus: 'approved'
+                };
+            }
+            return u;
+        });
+        localStorage.setItem('users', JSON.stringify(users));
+        alert(`시공업체 회원 승인이 정상 완료되었습니다! (발급된 시공코드: ${code})`);
+        renderStatusTab();
     }
 
     function approveUserConversionMob(uid) {
@@ -923,12 +1481,67 @@ document.addEventListener('DOMContentLoaded', () => {
     function rejectUserConversionMob(uid) {
         users = users.map(u => {
             if (u.id === uid) {
-                return { ...u, conversionStatus: 'none' };
+                const cleanUser = { ...u, conversionStatus: 'none' };
+                if ('pendingBusinessName' in cleanUser) delete cleanUser.pendingBusinessName;
+                if ('pendingLicenseNumber' in cleanUser) delete cleanUser.pendingLicenseNumber;
+                return cleanUser;
             }
             return u;
         });
         localStorage.setItem('users', JSON.stringify(users));
         alert('신청이 반려되었습니다.');
+        renderStatusTab();
+    }
+
+    function assignConstructorMob(appId, constructorId) {
+        const constUser = users.find(u => u.id === constructorId);
+        if (!constUser) return;
+
+        applications = applications.map(app => {
+            if (app.id === appId) {
+                return {
+                    ...app,
+                    assignedConstructorId: constructorId,
+                    assignedConstructorName: constUser.businessName,
+                    constructionStatus: 'before_construction'
+                };
+            }
+            return app;
+        });
+
+        localStorage.setItem('applications', JSON.stringify(applications));
+        alert(`시공업체 [${constUser.businessName}]가 성공적으로 배정되었습니다.`);
+        renderStatusTab();
+    }
+
+    function approveSettlementMob(id) {
+        const app = applications.find(a => a.id === id);
+        if (!app) return;
+
+        let proofText = `[시공 완료 보고 증빙 검수 (모바일)]\n\n`;
+        proofText += `상호명: ${app.storeName}\n`;
+        proofText += `시공사: ${app.assignedConstructorName}\n`;
+        proofText += `업로드된 시공 사진 수: ${app.constructionPhotos ? app.constructionPhotos.length : 0}장\n`;
+        proofText += `업로드된 세금계산서 수: ${app.invoicePhotos ? app.invoicePhotos.length : 0}장\n\n`;
+        proofText += `해당 시공 증빙을 검수하고 최종 정산을 종결하시겠습니까?`;
+
+        if (confirm(proofText)) {
+            applications = applications.map(a => {
+                if (a.id === id) {
+                    return { ...a, constructionStatus: 'completed' };
+                }
+                return a;
+            });
+            localStorage.setItem('applications', JSON.stringify(applications));
+            alert('공사 증빙 검수가 통과되어 최종 정산 종결 처리되었습니다.');
+            renderStatusTab();
+        }
+    }
+
+    function deleteApplicationMob(id) {
+        if (!confirm('정말로 이 지원 신청 접수 건을 삭제하시겠습니까?')) return;
+        applications = applications.filter(app => app.id !== id);
+        localStorage.setItem('applications', JSON.stringify(applications));
         renderStatusTab();
     }
 
@@ -944,6 +1557,366 @@ document.addEventListener('DOMContentLoaded', () => {
         renderStatusTab();
     }
 
+    function updateItemStatusMob(uid, itemId, type, value) {
+        users = users.map(u => {
+            if (u.id === uid) {
+                const updatedItems = u.items.map(item => {
+                    if (item.id === itemId) {
+                        if (type === 'receipt') {
+                            return { ...item, receiptStatus: value };
+                        } else {
+                            return { ...item, progressStatus: value };
+                        }
+                    }
+                    return item;
+                });
+                return { ...u, items: updatedItems };
+            }
+            return u;
+        });
+
+        localStorage.setItem('users', JSON.stringify(users));
+        renderStatusTab();
+    }
+
+    // Popup management helpers for Mob
+    const mobPopupForm = document.getElementById('mob-popup-form');
+    if (mobPopupForm) {
+        mobPopupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const pid = document.getElementById('mob-popup-id').value;
+            const titleVal = document.getElementById('mob-popup-title').value.trim();
+            const contentVal = document.getElementById('mob-popup-content').value.trim();
+            const imageVal = document.getElementById('mob-popup-image').value.trim() || 'https://picsum.photos/id/101/400/200';
+            const linkVal = document.getElementById('mob-popup-link').value.trim() || '#apply-section';
+            const startVal = document.getElementById('mob-popup-start').value;
+            const endVal = document.getElementById('mob-popup-end').value;
+            const widthVal = parseInt(document.getElementById('mob-popup-width').value) || 380;
+            const heightVal = parseInt(document.getElementById('mob-popup-height').value) || 480;
+            const topVal = parseInt(document.getElementById('mob-popup-top').value) || 120;
+            const leftVal = parseInt(document.getElementById('mob-popup-left').value) || 100;
+            const activeVal = document.getElementById('mob-popup-active').checked;
+
+            let popups = JSON.parse(localStorage.getItem('popups')) || [];
+
+            if (pid) {
+                // Update
+                popups = popups.map(p => {
+                    if (p.id === parseInt(pid)) {
+                        return {
+                            ...p,
+                            title: titleVal,
+                            content: contentVal,
+                            imageUrl: imageVal,
+                            linkUrl: linkVal,
+                            startDate: startVal,
+                            endDate: endVal,
+                            width: widthVal,
+                            height: heightVal,
+                            positionTop: topVal,
+                            positionLeft: leftVal,
+                            isActive: activeVal
+                        };
+                    }
+                    return p;
+                });
+                alert('팝업창 정보가 수정되었습니다.');
+            } else {
+                // Insert
+                const newPopup = {
+                    id: Date.now(),
+                    title: titleVal,
+                    content: contentVal,
+                    imageUrl: imageVal,
+                    linkUrl: linkVal,
+                    startDate: startVal,
+                    endDate: endVal,
+                    width: widthVal,
+                    height: heightVal,
+                    positionTop: topVal,
+                    positionLeft: leftVal,
+                    isActive: activeVal
+                };
+                popups.push(newPopup);
+                alert('신규 팝업창이 등록되었습니다.');
+            }
+
+            localStorage.setItem('popups', JSON.stringify(popups));
+            resetMobPopupForm();
+            renderStatusTab();
+        });
+    }
+
+    const btnMobPopupReset = document.getElementById('btn-mob-popup-reset');
+    if (btnMobPopupReset) {
+        btnMobPopupReset.addEventListener('click', () => {
+            resetMobPopupForm();
+        });
+    }
+
+    function resetMobPopupForm() {
+        if (mobPopupForm) mobPopupForm.reset();
+        document.getElementById('mob-popup-id').value = '';
+        const titleText = document.getElementById('mob-popup-form-title');
+        if (titleText) titleText.innerHTML = '<i class="fa-solid fa-plus"></i> 신규 팝업창 등록';
+    }
+
+    function editPopupMob(pid) {
+        const popups = JSON.parse(localStorage.getItem('popups')) || [];
+        const p = popups.find(item => item.id === pid);
+        if (!p) return;
+
+        document.getElementById('mob-popup-id').value = p.id;
+        document.getElementById('mob-popup-title').value = p.title;
+        document.getElementById('mob-popup-content').value = p.content;
+        document.getElementById('mob-popup-image').value = p.imageUrl || '';
+        document.getElementById('mob-popup-link').value = p.linkUrl || '';
+        document.getElementById('mob-popup-start').value = p.startDate || '2026-07-01';
+        document.getElementById('mob-popup-end').value = p.endDate || '2026-08-31';
+        document.getElementById('mob-popup-width').value = p.width || 380;
+        document.getElementById('mob-popup-height').value = p.height || 480;
+        document.getElementById('mob-popup-top').value = p.positionTop || 120;
+        document.getElementById('mob-popup-left').value = p.positionLeft || 100;
+        document.getElementById('mob-popup-active').checked = p.isActive;
+
+        const titleText = document.getElementById('mob-popup-form-title');
+        if (titleText) titleText.innerHTML = '<i class="fa-solid fa-pen"></i> 팝업창 수정 모드';
+        
+        // Scroll to form
+        const formTitle = document.getElementById('mob-popup-form-title');
+        if (formTitle) formTitle.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function togglePopupActiveMob(pid) {
+        let popups = JSON.parse(localStorage.getItem('popups')) || [];
+        popups = popups.map(p => {
+            if (p.id === pid) {
+                return { ...p, isActive: !p.isActive };
+            }
+            return p;
+        });
+        localStorage.setItem('popups', JSON.stringify(popups));
+        renderStatusTab();
+    }
+
+    function deletePopupMob(pid) {
+        if (!confirm('정말로 이 팝업창을 삭제하시겠습니까?')) return;
+        let popups = JSON.parse(localStorage.getItem('popups')) || [];
+        popups = popups.filter(p => p.id !== pid);
+        localStorage.setItem('popups', JSON.stringify(popups));
+        
+        const currentEditId = document.getElementById('mob-popup-id').value;
+        if (currentEditId && parseInt(currentEditId) === pid) {
+            resetMobPopupForm();
+        }
+        
+        renderStatusTab();
+    }
+
+    // --- Constructor Dashboard ---
+    function renderConstructorDashboardMob() {
+        const jobsList = document.getElementById('constructor-jobs-list-mobile');
+        if (!jobsList) return;
+
+        const apps = JSON.parse(localStorage.getItem('applications')) || [];
+        const myJobs = apps.filter(job => job.assignedConstructorId === activeUser.id && job.status === 'approved');
+
+        if (myJobs.length === 0) {
+            jobsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.8rem;">배정된 시공 물건이 없습니다.</p>';
+            return;
+        }
+
+        jobsList.innerHTML = '';
+        myJobs.forEach(job => {
+            const card = document.createElement('div');
+            card.className = 'app-card-mob';
+            card.style.borderLeft = '4px solid var(--accent-success)';
+
+            let statusLabel = '시공 전';
+            let statusClass = 'pending';
+            if (job.constructionStatus === 'in_construction') {
+                statusLabel = '시공 진행 중';
+                statusClass = 'warning';
+            } else if (job.constructionStatus === 'after_construction') {
+                statusLabel = '시공 완료 보고됨';
+                statusClass = 'approved';
+            } else if (job.constructionStatus === 'completed') {
+                statusLabel = '정산 종결';
+                statusClass = 'info';
+            }
+
+            let uploadSectionHtml = '';
+            if (job.constructionStatus !== 'completed') {
+                uploadSectionHtml = `
+                    <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px; text-align: left;">
+                        <div class="phone-form-group" style="margin-bottom: 8px;">
+                            <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">시공 현장 사진 (${job.constructionPhotos ? job.constructionPhotos.length : 0}/20)</label>
+                            <input type="file" class="const-photo-input-mob" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.7rem; width: 100%;">
+                        </div>
+                        <div class="phone-form-group" style="margin-bottom: 10px;">
+                            <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">정산용 세금계산서/증빙</label>
+                            <input type="file" class="const-invoice-input-mob" data-id="${job.id}" accept="image/*,application/pdf" style="font-size: 0.7rem; width: 100%;">
+                        </div>
+                        
+                        <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+                            <select class="status-select-mob select-const-status-mob" data-id="${job.id}" style="padding: 4px; font-size: 0.7rem; border-radius: 4px; border: 1px solid var(--border-color); background: white; height: auto; min-height: auto; width: auto;">
+                                <option value="before_construction" ${job.constructionStatus === 'before_construction' ? 'selected' : ''}>시공 전</option>
+                                <option value="in_construction" ${job.constructionStatus === 'in_construction' ? 'selected' : ''}>시공 중</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm btn-report-job-complete-mob" data-id="${job.id}" style="padding: 5px 8px; font-size: 0.7rem; background: var(--accent-success); border: none; height: auto; line-height: 1;">완료보고</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                uploadSectionHtml = `
+                    <div style="border-top: 1px dashed var(--border-color); padding-top: 8px; margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary); text-align: left;">
+                        <i class="fa-solid fa-circle-check" style="color: var(--accent-success);"></i> 공사 검수가 완료되어 최종 정산 처리가 종료되었습니다.
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="app-card-header">
+                    <span class="app-card-title">${escapeHtml(job.storeName)}</span>
+                    <span class="app-card-date" style="font-size: 0.7rem;"><i class="fa-solid fa-phone"></i> ${escapeHtml(job.ownerPhone)}</span>
+                </div>
+                <div class="app-card-body-row">설치주소: ${escapeHtml(job.storeAddress)}</div>
+                <div class="app-card-body-row">간판종류: <strong>${escapeHtml(job.signType === 'NEON' || job.signType === 'neon' || !job.signType ? '플렉스' : job.signType)}</strong></div>
+                <div class="app-card-footer" style="flex-direction: column; align-items: stretch; gap: 8px; margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="badge-status ${statusClass}" style="padding: 3px 8px; font-size: 0.7rem;">${statusLabel}</span>
+                    </div>
+                    ${uploadSectionHtml}
+                </div>
+            `;
+            jobsList.appendChild(card);
+        });
+
+        // Event listeners
+        jobsList.querySelectorAll('.select-const-status-mob').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const id = parseInt(e.target.dataset.id);
+                const val = e.target.value;
+                updateJobConstructionStatusMob(id, val);
+            });
+        });
+
+        jobsList.querySelectorAll('.btn-report-job-complete-mob').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = parseInt(e.target.closest('button').dataset.id);
+                reportJobCompletionMob(id);
+            });
+        });
+
+        jobsList.querySelectorAll('.const-photo-input-mob').forEach(input => {
+            input.addEventListener('change', async (e) => {
+                const id = parseInt(e.target.dataset.id);
+                const files = Array.from(e.target.files);
+                if (files.length > 0) {
+                    await handleJobPhotoUploadMob(id, files);
+                }
+            });
+        });
+
+        jobsList.querySelectorAll('.const-invoice-input-mob').forEach(input => {
+            input.addEventListener('change', async (e) => {
+                const id = parseInt(e.target.dataset.id);
+                const file = e.target.files[0];
+                if (file) {
+                    await handleJobInvoiceUploadMob(id, file);
+                }
+            });
+        });
+    }
+
+    function updateJobConstructionStatusMob(id, val) {
+        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+        apps = apps.map(app => {
+            if (app.id === id) {
+                return { ...app, constructionStatus: val };
+            }
+            return app;
+        });
+        localStorage.setItem('applications', JSON.stringify(apps));
+        renderConstructorDashboardMob();
+    }
+
+    async function handleJobPhotoUploadMob(id, files) {
+        const limit = 3 * 1024 * 1024;
+        const uploadedUrls = [];
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            let processedFile = file;
+            if (file.size > limit) {
+                processedFile = await resizeImageToLimit(file, limit);
+            }
+            uploadedUrls.push(URL.createObjectURL(processedFile));
+        }
+
+        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+        apps = apps.map(app => {
+            if (app.id === id) {
+                const existing = app.constructionPhotos || [];
+                const merged = existing.concat(uploadedUrls).slice(0, 20);
+                return { ...app, constructionPhotos: merged };
+            }
+            return app;
+        });
+        localStorage.setItem('applications', JSON.stringify(apps));
+        alert('시공 현장 사진이 모바일에 업로드되었습니다.');
+        renderConstructorDashboardMob();
+    }
+
+    async function handleJobInvoiceUploadMob(id, file) {
+        const limit = 3 * 1024 * 1024;
+        let processedFile = file;
+        if (file.size > limit) {
+            processedFile = await resizeImageToLimit(file, limit);
+        }
+        const url = URL.createObjectURL(processedFile);
+
+        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+        apps = apps.map(app => {
+            if (app.id === id) {
+                const existing = app.invoicePhotos || [];
+                existing.push(url);
+                return { ...app, invoicePhotos: existing };
+            }
+            return app;
+        });
+        localStorage.setItem('applications', JSON.stringify(apps));
+        alert('정산 증빙서류가 업로드되었습니다.');
+        renderConstructorDashboardMob();
+    }
+
+    function reportJobCompletionMob(id) {
+        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+        const app = apps.find(a => a.id === id);
+
+        if (!app.constructionPhotos || app.constructionPhotos.length === 0) {
+            alert('최소 1장 이상의 시공 현장 사진을 등록해 주세요.');
+            return;
+        }
+        if (!app.invoicePhotos || app.invoicePhotos.length === 0) {
+            alert('세금계산서 또는 지출 증빙 서류를 등록해 주세요.');
+            return;
+        }
+
+        apps = apps.map(a => {
+            if (a.id === id) {
+                return { 
+                    ...a, 
+                    constructionStatus: 'after_construction',
+                    constructionCompletedAt: Date.now()
+                };
+            }
+            return a;
+        });
+        localStorage.setItem('applications', JSON.stringify(apps));
+        alert('시공 완료 보고와 정산 청구가 정상 접수되었습니다!\n최고 관리자 최종 승인 시 정산이 종결됩니다.');
+        renderConstructorDashboardMob();
+    }
+
     // --- Helper Utilities ---
     function escapeHtml(str) {
         if (!str) return '';
@@ -957,4 +1930,470 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize display states
     updateDrawerProfile();
+
+    // --- Realtime synchronization via storage event ---
+    window.addEventListener('storage', (e) => {
+        if (['applications', 'users', 'popups', 'activeUser'].includes(e.key)) {
+            applications = JSON.parse(localStorage.getItem('applications')) || [];
+            users = JSON.parse(localStorage.getItem('users')) || [];
+            activeUser = JSON.parse(localStorage.getItem('activeUser'));
+            
+            updateDrawerProfile();
+            if (typeof renderStatusTab === 'function') renderStatusTab();
+        }
+    });
+
+    // --- Initialize AI Assistant ---
+    initAIAssistant();
+
+    function initAIAssistant() {
+        const trigger = document.getElementById('ai-assistant-trigger');
+        const chatWindow = document.getElementById('ai-chat-window');
+        const closeBtn = document.getElementById('ai-chat-close');
+        const sendBtn = document.getElementById('ai-chat-send');
+        const chatInput = document.getElementById('ai-chat-input');
+        const chatMessages = document.getElementById('ai-chat-messages');
+
+        if (!trigger || !chatWindow) return;
+
+        // Toggle Chat Window
+        trigger.addEventListener('click', () => {
+            chatWindow.classList.add('active');
+            trigger.style.display = 'none';
+            chatInput.focus();
+        });
+
+        closeBtn.addEventListener('click', () => {
+            chatWindow.classList.remove('active');
+            trigger.style.display = 'flex';
+        });
+
+        // Handle Quick Reply Clicks
+        chatMessages.addEventListener('click', (e) => {
+            const btn = e.target.closest('.quick-reply-btn');
+            if (btn) {
+                const faqType = btn.getAttribute('data-faq');
+                const question = btn.innerText;
+                handleUserMessage(question, faqType);
+            }
+        });
+
+        // Send Message
+        function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            chatInput.value = '';
+            handleUserMessage(text);
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        const faqDatabase = {
+            target: "💡 <strong>지원 대상 기준 안내</strong><br><br>경기도 내에 사업장을 두고 영업 중인 소상공인(영업 정지 상태 제외)을 대상으로 합니다.<br>단, 대기업 프랜차이즈 직영점 및 불법 사행성 업종 등은 제외될 수 있으니 사전에 상세 자격 검토를 신청하시는 것이 좋습니다.",
+            documents: "📄 <strong>신청 필수 서류 안내</strong><br><br>1. 사업자등록증 사본 1부<br>2. 부가가치세과세표준증명원(최근 1년)<br>3. 임대차계약서 사본(임차 매장인 경우)<br>4. 기존 간판 현장 사진 및 설치할 정면 벽면 사진",
+            simulator: "🎨 <strong>간판 시뮬레이터 사용법</strong><br><br>1. 하단 탭의 [시뮬레이터] 메뉴로 이동합니다.<br>2. 제공되는 건물 facade 이미지 혹은 직접 촬영한 점포 사진을 로드합니다.<br>3. 원하는 간판 디자인 형태와 조명 타입을 선택하여 가상으로 간판을 얹어 확인하실 수 있습니다.",
+            contact: "📞 <strong>고객센터 안내</strong><br><br>• 대표전화: 1588-0000<br>• 이메일: support@ganpan.go.kr<br>• 운영시간: 평일 09:00 - 18:00 (토/일요일 및 공휴일 휴무)<br>• 점심시간: 12:00 - 13:00"
+        };
+
+        function handleUserMessage(messageText, faqType = null) {
+            // 1. Add User Message
+            appendMessage(messageText, 'user');
+
+            // Remove quick replies section if present to avoid screen cluttering
+            const quickReplies = chatMessages.querySelector('.ai-quick-replies');
+            if (quickReplies) {
+                quickReplies.remove();
+            }
+
+            // 2. Add Loading Indicator
+            const loadingId = appendLoading();
+
+            // 3. Simulate Thinking & Respond
+            setTimeout(() => {
+                removeLoading(loadingId);
+                
+                let response = "";
+                if (faqType && faqDatabase[faqType]) {
+                    response = faqDatabase[faqType];
+                } else {
+                    // Keyword match logic
+                    const cleaned = messageText.toLowerCase();
+                    if (cleaned.includes('대상') || cleaned.includes('조건') || cleaned.includes('자격')) {
+                        response = faqDatabase.target;
+                    } else if (cleaned.includes('서류') || cleaned.includes('준비') || cleaned.includes('증명원')) {
+                        response = faqDatabase.documents;
+                    } else if (cleaned.includes('시뮬') || cleaned.includes('사용') || cleaned.includes('디자인')) {
+                        response = faqDatabase.simulator;
+                    } else if (cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('운영') || cleaned.includes('번호')) {
+                        response = faqDatabase.contact;
+                    } else if (cleaned.includes('안녕')) {
+                        response = "안녕하세요! 무엇이든 물어보세요. 😊<br>예: '지원 대상', '필수 서류', '시뮬레이터 사용법' 등";
+                    } else {
+                        response = "죄송합니다. 1단계 간이 AI 비서 모델에서는 인식하지 못하는 질문입니다. 😢<br><br>아래 핵심 키워드를 참고해 질문해 주세요!<br>• <strong>'지원 대상'</strong><br>• <strong>'필수 서류'</strong><br>• <strong>'시뮬레이터 사용법'</strong><br>• <strong>'고객센터'</strong>";
+                    }
+                }
+
+                appendMessage(response, 'bot');
+                
+                // Re-append quick replies at the bottom so user can click other options
+                appendQuickReplies();
+                
+            }, 800);
+        }
+
+        function appendMessage(text, sender) {
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${sender}-message`;
+            bubble.innerHTML = text;
+            chatMessages.appendChild(bubble);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function appendLoading() {
+            const loading = document.createElement('div');
+            const id = 'loading-' + Date.now();
+            loading.id = id;
+            loading.className = 'chat-bubble bot-message chat-loading';
+            loading.innerHTML = '<span></span><span></span><span></span>';
+            chatMessages.appendChild(loading);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return id;
+        }
+
+        function removeLoading(id) {
+            const elem = document.getElementById(id);
+            if (elem) elem.remove();
+        }
+
+        function appendQuickReplies() {
+            const div = document.createElement('div');
+            div.className = 'ai-quick-replies';
+            div.innerHTML = `
+                <button class="quick-reply-btn" data-faq="target">💡 지원 대상 기준</button>
+                <button class="quick-reply-btn" data-faq="documents">📄 신청 필수 서류</button>
+                <button class="quick-reply-btn" data-faq="simulator">🎨 시뮬레이터 사용법</button>
+                <button class="quick-reply-btn" data-faq="contact">📞 고객센터 운영시간</button>
+            `;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    }
+
+    // Drawer transition request handlers
+    const drawerBtnConversion = document.getElementById('drawer-btn-conversion');
+    if (drawerBtnConversion) {
+        drawerBtnConversion.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeDrawer();
+            switchTab('status');
+            setTimeout(() => {
+                const pcBtn = document.getElementById('btn-request-conversion-mob');
+                if (pcBtn && pcBtn.style.display !== 'none' && document.getElementById('status-normal-container').style.display !== 'none') {
+                    pcBtn.click();
+                } else {
+                    if (confirm('영업자 회원으로 전환을 신청하시겠습니까? 신청 후 최고관리자 승인을 통해 영업코드가 발급됩니다.')) {
+                        activeUser.conversionStatus = 'pending';
+                        users = users.map(u => u.id === activeUser.id ? { ...u, conversionStatus: 'pending' } : u);
+                        localStorage.setItem('users', JSON.stringify(users));
+                        localStorage.setItem('activeUser', JSON.stringify(activeUser));
+                        
+                        alert('회원 전환 신청이 접수되었습니다. 최고관리자(admin) 계정 로그인 승인 후 영업코드가 정상 발급됩니다.');
+                        renderStatusTab();
+                        updateDrawerProfile();
+                    }
+                }
+            }, 150);
+        });
+    }
+
+    const drawerBtnConstructor = document.getElementById('drawer-btn-constructor');
+    if (drawerBtnConstructor) {
+        drawerBtnConstructor.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeDrawer();
+            switchTab('status');
+            setTimeout(() => {
+                const pcBtn = document.getElementById('btn-request-constructor-mob');
+                const formCard = document.getElementById('mobile-constructor-form-card');
+                if (pcBtn && pcBtn.style.display !== 'none' && document.getElementById('status-normal-container').style.display !== 'none') {
+                    pcBtn.click();
+                } else {
+                    const bName = prompt('시공업체 상호명을 입력해 주세요:');
+                    if (!bName) return;
+                    const lNum = prompt('사업자등록번호를 입력해 주세요:');
+                    if (!lNum) return;
+                    
+                    activeUser.conversionStatus = 'pending_constructor';
+                    activeUser.pendingBusinessName = bName;
+                    activeUser.pendingLicenseNumber = lNum;
+
+                    users = users.map(u => u.id === activeUser.id ? {
+                        ...u,
+                        conversionStatus: 'pending_constructor',
+                        pendingBusinessName: bName,
+                        pendingLicenseNumber: lNum
+                    } : u);
+
+                    localStorage.setItem('users', JSON.stringify(users));
+                    localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+                    alert('시공업체 가입 신청이 정상 완료되었습니다.\n최고관리자 승인 시 정식 코드가 부여됩니다.');
+                    renderStatusTab();
+                    updateDrawerProfile();
+                }
+            }, 150);
+        });
+    }
+
+    // --- 비회원 간편 문의 모달 연동 ---
+    const inquiryModal = document.getElementById('inquiry-modal');
+    const inquiryModalClose = document.getElementById('inquiry-modal-close');
+    const inquiryForm = document.getElementById('inquiry-form');
+
+    function closeInquiryModal() {
+        if (inquiryModal) {
+            inquiryModal.classList.remove('active');
+            if (inquiryForm) inquiryForm.reset();
+            const cnt = document.getElementById('inquiry-char-count');
+            if (cnt) cnt.textContent = '0';
+        }
+    }
+
+    window.openInquiryModal = function(e) {
+        if (e) e.preventDefault();
+        if (inquiryModal) {
+            inquiryModal.classList.add('active');
+        }
+    };
+
+    if (inquiryModalClose) {
+        inquiryModalClose.addEventListener('click', closeInquiryModal);
+    }
+
+    if (inquiryModal) {
+        inquiryModal.addEventListener('click', (e) => {
+            if (e.target === inquiryModal) {
+                closeInquiryModal();
+            }
+        });
+    }
+
+    if (inquiryForm) {
+        inquiryForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('inquiry-name').value.trim();
+            const phone = document.getElementById('inquiry-phone').value.trim();
+            const type = document.getElementById('inquiry-type').value;
+            const message = document.getElementById('inquiry-message').value.trim();
+
+            if (!name || !phone || !type || !message) {
+                alert('필수 입력 항목을 모두 작성해 주세요.');
+                return;
+            }
+
+            // 성함 유효성 검사 (최소 2자 ~ 최대 20자)
+            if (name.length < 2 || name.length > 20) {
+                alert('성함은 최소 2자에서 최대 20자까지 입력해 주세요.');
+                return;
+            }
+
+            // 연락처 유효성 검사 (최소 9자 ~ 최대 15자)
+            if (phone.length < 9 || phone.length > 15) {
+                alert('연락처는 최소 9자에서 최대 15자까지 입력해 주세요.');
+                return;
+            }
+
+            // 연락처 형식 정규식 검증
+            const phoneRegex = /^[0-9+\s-]+$/;
+            if (!phoneRegex.test(phone)) {
+                alert('연락처에는 숫자, 대시(-), 플러스(+) 및 공백만 입력할 수 있습니다.');
+                return;
+            }
+
+            // 문의내용 글자수 유효성 검사 (최대 300자)
+            if (message.length > 300) {
+                alert('문의 내용은 최대 300자까지 입력해 주세요.');
+                return;
+            }
+
+            const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+            const newInquiry = {
+                id: 'INQ-' + Date.now(),
+                name,
+                phone,
+                type,
+                message,
+                submittedAt: new Date().toISOString()
+            };
+            inquiries.push(newInquiry);
+            localStorage.setItem('inquiries', JSON.stringify(inquiries));
+
+            alert('간편 문의 접수가 정상 완료되었습니다.\n담당자가 확인 후 연락처로 신속히 연락드리겠습니다.');
+            closeInquiryModal();
+        });
+    }
+
+    // 실시간 글자수 계산 및 동적 카운터 업데이트
+    const inquiryMessage = document.getElementById('inquiry-message');
+    const inquiryCharCount = document.getElementById('inquiry-char-count');
+    if (inquiryMessage && inquiryCharCount) {
+        inquiryMessage.addEventListener('input', function() {
+            const len = this.value.length;
+            inquiryCharCount.textContent = len;
+            if (len >= 300) {
+                inquiryCharCount.style.color = '#ef4444';
+            } else {
+                inquiryCharCount.style.color = '#64748b';
+            }
+        });
+    }
+
+    const mobFooterInquiryBtn = document.getElementById('mob-footer-btn-inquiry');
+    if (mobFooterInquiryBtn) {
+        mobFooterInquiryBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.openInquiryModal();
+        });
+    }
+
+    // --- 약관 전문 데이터 정의 및 모달 제어 ---
+    const LEGAL_POLICIES = {
+        terms: `제1조 (목적)
+본 약관은 경기도 소상공인 간판지원단(이하 "지원단")과 지원단의 위탁운영사 주식회사 가야애드(이하 "회사")가 공동으로 제공하는 온라인 서비스(이하 "서비스")의 이용조건, 절차 및 회원과 회사 간의 권리와 의무 등 필요한 사항을 규정함을 목적으로 합니다.
+
+제2조 (용어의 정의)
+1. "서비스"란 회사가 자체 웹/앱 플랫폼을 통해 제공하는 간판 디자인 시뮬레이터 툴, 경영환경개선 간판지원사업 간편 대행 접수 시스템 및 관련 부가 서비스를 의미합니다.
+2. "회원"이란 본 약관에 동의하고 서비스에 회원등록을 완료하여 계정을 부여받은 자를 뜻하며, 이용 권한에 따라 '일반고객 회원', '영업자 회원', '시공업체 회원', '관리자'로 구분됩니다.
+
+제3조 (약관의 효력 및 개정)
+1. 본 약관은 서비스를 이용하고자 하는 모든 회원에 대하여 효력을 발생합니다.
+2. 회사는 관계법령을 위배하지 않는 범위 내에서 본 약관을 개정할 수 있으며, 개정 시 서비스 화면에 최소 7일 전부터 공지합니다.
+
+제4조 (회원가입 및 회원등급 승인)
+1. 이용자는 회사가 제시한 가입 양식에 실명 정보를 기입하고 본 약관에 동의함으로써 회원가입을 신청합니다.
+2. '영업자 회원' 및 '시공업체 회원' 등 특수 등급은 가입 후 마이페이지를 통해 사업자등록증 등 증빙 서류를 제출하여 관리자의 검토 및 승인을 거쳐 최종 전환 완료됩니다.
+
+제5조 (서비스의 제공 및 제한)
+1. 회사는 회원에게 간판 디자인 시뮬레이션 및 간편 간판교체 대행 신청 서비스를 제공합니다.
+2. 회사는 설비 점검, 통신 장애 또는 천재지변 발생 시 서비스의 전부 또는 일부를 일시 중지할 수 있습니다.
+
+제6조 (회원의 의무 및 면책)
+1. 회원은 타인의 명의를 도용하거나 허위 사실을 기재하여 서비스를 이용하여서는 안 됩니다.
+2. 회사는 시뮬레이터를 통해 시각화된 시안과 실제 시공 결과물 간의 물리적 오차 및 시공 과정에서의 분쟁에 대해 책임을 지지 않습니다.`,
+
+        privacy: `주식회사 가야애드(이하 "회사")는 경기도 소상공인 간판지원단 플랫폼을 운영함에 있어 정보주체의 개인정보를 보호하고 이와 관련된 고충을 신속하게 처리할 수 있도록 다음과 같이 개인정보 처리방침을 수립·공개합니다.
+
+제1조 (개인정보의 수집 및 이용 목적)
+회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
+1. 회원 가입 및 관리: 회원 식별, 가입 의사 확인, 회원자격 유지·관리, 부정이용 방지
+2. 서비스 제공 및 민원 처리: 간판 디자인 시뮬레이터 이용, 비회원 3초 간편 접수 상담 서비스 제공, 경영환경개선사업 대행 접수, 각종 고충 처리
+
+제2조 (수집하는 개인정보의 항목)
+회사는 서비스 제공을 위해 아래와 같은 필수 개인정보를 수집하고 있습니다.
+1. 회원가입 시: 아이디, 비밀번호, 성명, 주소, 이메일, 휴대폰 번호, (영업자/시공사 전환 신청 시) 상호명, 사업자등록번호
+2. 비회원 간편 문의 시: 성명, 연락처, 문의 유형, 문의 내용
+
+제3조 (개인정보의 보유 및 이용 기간)
+1. 회사는 회원 탈퇴 시 혹은 동의 철회 시까지 정보주체의 개인정보를 보유 및 이용합니다.
+2. 단, 관계 법령(전자상거래 등에서의 소비자보호에 관한 법령 등)의 규정에 의하여 보존할 필요가 있는 경우, 해당 법령에서 정한 일정 기간(예: 소비자의 불만 또는 분쟁처리에 관한 기록 3년) 동안 보존합니다.
+
+제4조 (개인정보의 파기절차 및 방법)
+회사는 개인정보 보유기간의 경과, 처리목적 달성 등 개인정보가 불필요하게 되었을 때에는 지체 없이 해당 개인정보를 파기합니다. 전자적 파일 형태는 기록을 재생할 수 없는 기술적 방법을 사용하며, 종이 문서는 분쇄기로 분쇄하여 파기합니다.
+
+제5조 (개인정보 보호책임자 및 고충 처리)
+* 개인정보 보호책임자: 주식회사 가야애드 대표이사
+* 연락처: 010-7266-2499 / nubine22@naver.com`,
+
+        consent: `주식회사 가야애드(이하 "회사")는 경기도 소상공인 간판지원단 플랫폼의 비회원 간편 문의 및 서비스 회원가입 단계에서 개인정보보호법에 의거하여 다음과 같이 개인정보를 수집·이용하고자 합니다.
+
+1. 개인정보를 수집하는 자: 주식회사 가야애드
+2. 수집 및 이용 목적:
+   - 비회원 3초 간편 문의 서비스 접수 및 본인 확인
+   - 문의 사항에 대한 상담 및 답변(해피콜 연락) 제공
+   - 환경개선 지원사업 신청 안내
+3. 수집하는 개인정보의 항목:
+   - 필수 항목: 성명(성함/이름), 연락처(휴대폰 번호/전화번호)
+4. 개인정보의 보유 및 이용 기간:
+   - 문의 접수 및 상담 처리가 완료된 날로부터 1년 보관 후 파기 (정보주체의 파기 요청 시 지체 없이 파기)
+5. 동의 거부 권리 및 불이익 고지:
+   - 귀하는 개인정보 수집 및 이용 동의를 거부할 권리가 있습니다.
+   - 단, 필수 항목 동의를 거부하실 경우 3초 간편 문의 접수 서비스 이용이 제한됩니다.`
+    };
+
+    const policyModal = document.getElementById('policy-modal');
+    const policyModalClose = document.getElementById('policy-modal-close');
+    const btnPolicyConfirm = document.getElementById('btn-policy-confirm');
+    const policyModalTitle = document.getElementById('policy-modal-title');
+    const policyModalBody = document.getElementById('policy-modal-body');
+
+    function closePolicyModal() {
+        if (policyModal) {
+            policyModal.classList.remove('active');
+        }
+    }
+
+    window.openPolicyModal = function(type) {
+        if (!policyModal || !policyModalTitle || !policyModalBody) return;
+        
+        let title = '';
+        let content = '';
+
+        if (type === 'privacy') {
+            title = '개인정보 처리방침';
+            content = LEGAL_POLICIES.privacy;
+        } else if (type === 'terms') {
+            title = '서비스 이용약관';
+            content = LEGAL_POLICIES.terms;
+        } else if (type === 'consent') {
+            title = '개인정보 수집 및 이용 동의';
+            content = LEGAL_POLICIES.consent;
+        }
+
+        policyModalTitle.innerHTML = `<i class="fa-solid fa-file-shield"></i> ${title}`;
+        policyModalBody.textContent = content;
+        policyModal.classList.add('active');
+    };
+
+    if (policyModalClose) {
+        policyModalClose.addEventListener('click', closePolicyModal);
+    }
+    if (btnPolicyConfirm) {
+        btnPolicyConfirm.addEventListener('click', closePolicyModal);
+    }
+    if (policyModal) {
+        policyModal.addEventListener('click', (e) => {
+            if (e.target === policyModal) {
+                closePolicyModal();
+            }
+        });
+    }
+
+    // 푸터 약관 링크 클릭 리스너 연결
+    const linkPrivacy = document.getElementById('link-policy-privacy');
+    const linkTerms = document.getElementById('link-policy-terms');
+    const linkConsent = document.getElementById('link-policy-consent');
+
+    if (linkPrivacy) {
+        linkPrivacy.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.openPolicyModal('privacy');
+        });
+    }
+    if (linkTerms) {
+        linkTerms.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.openPolicyModal('terms');
+        });
+    }
+    if (linkConsent) {
+        linkConsent.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.openPolicyModal('consent');
+        });
+    }
 });

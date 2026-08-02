@@ -745,23 +745,24 @@
                             <!-- Shop Building Structure -->
                             <div class="shop-building">
 
+                                <!-- Sign Lights (Moved out to prevent Flexbox displacement) -->
+                                <div class="sign-lights">
+                                    <div class="sign-light">
+                                        <div class="light-fixture"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="sign-light">
+                                        <div class="light-fixture"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="sign-light">
+                                        <div class="light-fixture"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                </div>
+
                                 <!-- Mounting Sign Frame -->
                                 <div class="sign-mounting-bracket">
-                                    <!-- Sign Lights -->
-                                    <div class="sign-lights">
-                                        <div class="sign-light">
-                                            <div class="light-fixture"></div>
-                                            <div class="light-glow"></div>
-                                        </div>
-                                        <div class="sign-light">
-                                            <div class="light-fixture"></div>
-                                            <div class="light-glow"></div>
-                                        </div>
-                                        <div class="sign-light">
-                                            <div class="light-fixture"></div>
-                                            <div class="light-glow"></div>
-                                        </div>
-                                    </div>
                                     <div id="live-signboard" class="live-signboard">
                                         <span id="live-sign-text" class="live-sign-text">청춘카페</span>
                                     </div>
@@ -1377,11 +1378,12 @@
     <!-- Auth Modal (로그인 / 회원가입) -->
     <div class="auth-modal" id="auth-modal">
         <div class="auth-card glass-panel">
-            <button class="auth-close-btn" id="auth-close-btn">&times;</button>
-            <div class="auth-tabs">
-                <button class="auth-tab-btn active" id="tab-login-btn">로그인</button>
-                <button class="auth-tab-btn" id="tab-signup-btn">회원가입</button>
-            </div>
+            <button class="auth-close-btn" id="auth-close-btn" onclick="document.getElementById('auth-modal').classList.remove('active');">&times;</button>
+            <div class="auth-scroll-container">
+                <div class="auth-tabs">
+                    <button class="auth-tab-btn active" id="tab-login-btn">로그인</button>
+                    <button class="auth-tab-btn" id="tab-signup-btn">회원가입</button>
+                </div>
 
             <!-- Login Form Pane -->
             <div class="auth-pane active" id="login-pane">
@@ -1533,7 +1535,7 @@
                     </div>
                     <div class="form-group-auth">
                         <label for="signup-name">이름</label>
-                        <input type="text" id="signup-name" class="form-input-auth" placeholder="이름을 입력하세요" required>
+                        <input type="text" id="signup-name" class="form-input-auth" minlength="2" maxlength="20" placeholder="이름을 입력하세요" required>
                     </div>
                     <div class="form-group-auth">
                         <label for="signup-address">주소</label>
@@ -1547,7 +1549,7 @@
                     <div class="form-group-auth">
                         <label for="signup-phone">휴대폰 번호</label>
                         <div class="input-with-btn">
-                            <input type="tel" id="signup-phone" class="form-input-auth" placeholder="010-1234-5678"
+                            <input type="tel" id="signup-phone" class="form-input-auth" minlength="9" maxlength="15" pattern="[0-9+\s-]*" placeholder="010-1234-5678"
                                 required>
                             <button type="button" class="btn btn-secondary btn-inline" id="btn-sms-auth">인증 문자</button>
                         </div>
@@ -1574,51 +1576,71 @@
                     </button>
                 </div>
             </div>
+            </div>
         </div>
     </div>
 
     <!-- Footer -->
-    <footer>
+    <footer class="pc-footer">
         <div class="container footer-grid">
             <div class="footer-brand">
-                <a href="#home" class="logo">
-                    <img src="간판지원단 로고-3.png" alt="간판지원단 로고" class="logo-img">
-                </a>
-                <p>경기도 소상공인 경영환경개선사업 및 거리 미관 조성을 돕는 통합 소상공인 간판개선 지원단입니다.</p>
+                <div class="footer-brand-logo">
+                    <img src="간판지원단 로고-3.png" alt="간판지원단">
+                    <span class="brand-subtext">Ganpan Support</span>
+                </div>
+                <div class="footer-brand-description">
+                    <p>경기도 소상공인 경영환경개선사업 및 거리 미관 조성</p>
+                    <p>을 돕는 통합 소상공인 간판개선 지원단입니다.</p>
+                    <p>경기도 소상공인 업주님을 힘차게 응원합니다.</p>
+                </div>
             </div>
-            <div class="footer-links">
+            
+            <div class="footer-links-col">
                 <h4>바로가기</h4>
                 <ul>
                     <li><a href="#intro">사업 소개</a></li>
-                    <li><a href="#check">자가진단 신청자격</a></li>
                     <li><a href="#simulator">디자인 시뮬레이터</a></li>
+                    <li><a href="#check">자가진단 신청자격</a></li>
                     <li><a href="#apply-section">온라인 간편 신청</a></li>
-                    <li><a href="#" id="footer-install-app"><i class="fa-solid fa-mobile-screen-button"></i> 모바일 앱
-                            설치</a></li>
+                    <li><a href="#" id="footer-install-app"><i class="fa-solid fa-mobile-screen-button"></i> 모바일 앱 설치</a></li>
                 </ul>
             </div>
-            <div class="footer-links">
+            
+            <div class="footer-customer-col">
                 <h4>고객 센터</h4>
-                <ul>
-                    <li><span style="color: var(--text-secondary); font-size: 0.9rem;"><i class="fa-solid fa-phone"></i>
-                            문의전화: 010-5687-2499</span></li>
-                    <li><span style="color: var(--text-secondary); font-size: 0.9rem;"><i
-                                class="fa-solid fa-envelope"></i> nubiny@naver.com</span></li>
-                    <li><span style="color: var(--text-secondary); font-size: 0.9rem;"><i
-                                class="fa-solid fa-address"></i>
-                            Add: 경기 고양시 일산동구 성현로93번길13-20</span></li>
-                    <li><span style="color: var(--text-muted); font-size: 0.8rem;">운영시간: 평일 09:00 - 18:00 (주말/공휴일
-                            휴무)</span></li>
-                </ul>
+                <p class="customer-hours">운영시간: 평일 09:00 - 18:00 (주말/공휴일 휴무)</p>
+                <button class="footer-btn-inquiry" id="pc-footer-btn-inquiry">문의하기</button>
+                
+                <div class="footer-policy-links">
+                    <a href="#" id="link-policy-privacy">개인정보 처리방침</a>
+                    <span class="link-divider">|</span>
+                    <a href="#" id="link-policy-terms">서비스 이용약관</a>
+                    <span class="link-divider">|</span>
+                    <a href="#" id="link-policy-consent">개인정보 수집 및 이용 동의</a>
+                </div>
+                
+                <div class="footer-business-accordion">
+                    <details>
+                        <summary>사업자 정보 <i class="fa-solid fa-chevron-down"></i></summary>
+                        <div class="business-details">
+                            <p><strong>상호명:</strong> (주)가야애드</p>
+                            <p><strong>대표이사:</strong> 서수열 | <strong>사업자등록번호:</strong> 128-86-14150</p>
+                            <p><strong>주소:</strong> 경기도 고양시 일산동구 성현로93번길 13-20</p>
+                            <p><strong>이메일:</strong> nubine22@naver.com | <strong>대표번호:</strong> 010-7266-2499</p>
+                        </div>
+                    </details>
+                </div>
             </div>
         </div>
 
         <div class="container footer-bottom">
-            <p>&copy; 2026 간판지원단. 경기도 소상공인을 힘차게 응원합니다.</p>
-            <div class="social-links">
-                <a href="#" class="social-link"><i class="fa-brands fa-facebook-f"></i></a>
-                <a href="#" class="social-link"><i class="fa-brands fa-instagram"></i></a>
-                <a href="#" class="social-link"><i class="fa-brands fa-youtube"></i></a>
+            <p class="footer-copyright">© 2026 Ganpan Support. All rights reserved.</p>
+            <div class="footer-sns-icons">
+                <a href="#" class="sns-icon" onclick="return false;"><i class="fa-solid fa-globe"></i></a>
+                <a href="#" class="sns-icon" onclick="return false;"><i class="fa-regular fa-envelope"></i></a>
+                <a href="#" class="sns-icon" onclick="return false;"><i class="fa-brands fa-facebook-f"></i></a>
+                <a href="#" class="sns-icon" onclick="return false;"><i class="fa-brands fa-instagram"></i></a>
+                <a href="#" class="sns-icon" onclick="return false;"><i class="fa-brands fa-youtube"></i></a>
             </div>
         </div>
     </footer>
@@ -1626,7 +1648,7 @@
     <!-- Mobile App Installation Modal -->
     <div id="install-modal" class="install-modal-overlay">
         <div class="install-card">
-            <button class="install-close-x" id="install-modal-close"><i class="fa-solid fa-xmark"></i></button>
+            <button class="install-close-x" id="install-modal-close" onclick="document.getElementById('install-modal').classList.remove('active');"><i class="fa-solid fa-xmark"></i></button>
             <div class="install-title-area">
                 <h3><i class="fa-solid fa-mobile-screen-button"></i> 간판지원단 모바일 앱</h3>
                 <p>스마트폰에 앱으로 설치하여 언제 어디서든 편리하게 시뮬레이터와 간편 신청을 이용해 보세요.</p>
@@ -1704,6 +1726,96 @@
             <span>마이페이지</span>
         </a>
     </nav>
+
+    <!-- AI Assistant Floating Button -->
+    <div id="ai-assistant-trigger" class="ai-trigger-bubble">
+        <i class="fa-solid fa-robot"></i>
+        <span class="ai-trigger-badge">AI</span>
+    </div>
+
+    <!-- AI Assistant Chat Window -->
+    <div id="ai-chat-window" class="ai-chat-container">
+        <div class="ai-chat-header">
+            <div class="ai-chat-title">
+                <i class="fa-solid fa-robot"></i>
+                <div>
+                    <h4>간판지원단 AI비서</h4>
+                    <span class="ai-status-online">실시간 응답 가능</span>
+                </div>
+            </div>
+            <button id="ai-chat-close" class="ai-close-btn">&times;</button>
+        </div>
+        
+        <div id="ai-chat-messages" class="ai-chat-body">
+            <div class="chat-bubble bot-message">
+                안녕하세요! 소상공인 간판지원단 AI 비서입니다. 💡<br>궁금한 점을 아래 퀵 메뉴에서 선택하시거나 직접 입력해 주세요!
+            </div>
+            
+            <div class="ai-quick-replies">
+                <button class="quick-reply-btn" data-faq="target">💡 지원 대상 기준</button>
+                <button class="quick-reply-btn" data-faq="documents">📄 신청 필수 서류</button>
+                <button class="quick-reply-btn" data-faq="simulator">🎨 시뮬레이터 사용법</button>
+                <button class="quick-reply-btn" data-faq="contact">📞 고객센터 운영시간</button>
+            </div>
+        </div>
+        
+        <div class="ai-chat-footer">
+            <input type="text" id="ai-chat-input" placeholder="질문 내용을 입력하세요..." />
+            <button id="ai-chat-send"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- 비회원 간편 문의 모달 -->
+    <div id="inquiry-modal" class="inquiry-modal-overlay">
+        <div class="inquiry-card glass-panel">
+            <button class="inquiry-close-x" id="inquiry-modal-close">&times;</button>
+            <div class="inquiry-title-area">
+                <h3><i class="fa-solid fa-paper-plane"></i> 3초 간편 문의 접수</h3>
+                <p>로그인 없이 성함과 연락처만으로 빠르게 문의하실 수 있습니다. 담당자가 확인 후 연락드리겠습니다.</p>
+            </div>
+            <form id="inquiry-form" onsubmit="event.preventDefault();">
+                <div class="inquiry-form-group">
+                    <label for="inquiry-name">성함 *</label>
+                    <input type="text" id="inquiry-name" minlength="2" maxlength="20" placeholder="성함을 입력해 주세요" required>
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="inquiry-phone">연락처 *</label>
+                    <input type="tel" id="inquiry-phone" minlength="9" maxlength="15" pattern="[0-9+\s-]*" placeholder="예: 010-1234-5678" required>
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="inquiry-type">문의 유형 *</label>
+                    <select id="inquiry-type" required>
+                        <option value="">-- 선택해 주세요 --</option>
+                        <option value="eligibility">지원 대상 및 자격 문의</option>
+                        <option value="documents">제출 서류 및 신청 관련</option>
+                        <option value="simulator">간판 시뮬레이터 사용법</option>
+                        <option value="constructor">시공업체 제휴 문의</option>
+                        <option value="other">기타 일반 문의사항</option>
+                    </select>
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="inquiry-message">문의 내용 *</label>
+                    <textarea id="inquiry-message" rows="3" maxlength="300" placeholder="문의하실 내용을 입력해 주세요" required></textarea>
+                    <div style="text-align: right; font-size: 0.72rem; color: #64748b; margin-top: 2px;"><span id="inquiry-char-count">0</span> / 300자</div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" style="margin-top: 15px;"><i class="fa-solid fa-check"></i> 문의 등록하기</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 약관 전문 모달 -->
+    <div id="policy-modal" class="inquiry-modal-overlay">
+        <div class="inquiry-card glass-panel" style="max-width: 650px; width: 95%;">
+            <button class="inquiry-close-x" id="policy-modal-close">&times;</button>
+            <div class="inquiry-title-area">
+                <h3 id="policy-modal-title"><i class="fa-solid fa-file-shield"></i> 약관 및 정책</h3>
+            </div>
+            <div id="policy-modal-body" style="max-height: 400px; overflow-y: auto; font-size: 0.8rem; line-height: 1.6; color: var(--text-secondary); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; background-color: #f8fafc; text-align: left; white-space: pre-wrap; word-break: break-all;">
+                <!-- 약관 전문이 동적으로 로드되는 영역 -->
+            </div>
+            <button class="btn btn-primary btn-full" id="btn-policy-confirm" style="margin-top: 15px;"><i class="fa-solid fa-check"></i> 확인</button>
+        </div>
+    </div>
 
     <!-- Main script -->
     <script src="security-utils.js"></script>
