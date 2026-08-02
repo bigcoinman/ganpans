@@ -2127,6 +2127,14 @@ body.mobile-app-body {
     opacity: 0 !important;
     pointer-events: none !important;
     transition: opacity 0.3s ease !important;
+    overflow-y: auto !important;
+    padding: 20px 10px !important;
+}
+
+@media (max-height: 650px) {
+    .inquiry-modal-overlay {
+        align-items: flex-start !important;
+    }
 }
 
 .inquiry-modal-overlay.active {
@@ -2146,6 +2154,8 @@ body.mobile-app-body {
     transform: translateY(20px) !important;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     box-sizing: border-box !important;
+    max-height: calc(100vh - 40px) !important;
+    overflow-y: auto !important;
 }
 
 .inquiry-modal-overlay.active .inquiry-card {
