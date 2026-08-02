@@ -2173,11 +2173,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (inquiryModalClose) {
         inquiryModalClose.addEventListener('click', closeInquiryModal);
+        inquiryModalClose.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            closeInquiryModal();
+        });
     }
 
     if (inquiryModal) {
         inquiryModal.addEventListener('click', (e) => {
             if (e.target === inquiryModal) {
+                closeInquiryModal();
+            }
+        });
+        inquiryModal.addEventListener('touchstart', (e) => {
+            if (e.target === inquiryModal) {
+                e.preventDefault();
                 closeInquiryModal();
             }
         });
@@ -2361,13 +2371,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (policyModalClose) {
         policyModalClose.addEventListener('click', closePolicyModal);
+        policyModalClose.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            closePolicyModal();
+        });
     }
     if (btnPolicyConfirm) {
         btnPolicyConfirm.addEventListener('click', closePolicyModal);
+        btnPolicyConfirm.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            closePolicyModal();
+        });
     }
     if (policyModal) {
         policyModal.addEventListener('click', (e) => {
             if (e.target === policyModal) {
+                closePolicyModal();
+            }
+        });
+        policyModal.addEventListener('touchstart', (e) => {
+            if (e.target === policyModal) {
+                e.preventDefault();
                 closePolicyModal();
             }
         });
