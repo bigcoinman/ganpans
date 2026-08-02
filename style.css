@@ -4916,7 +4916,8 @@ footer {
     pointer-events: none !important;
     transition: opacity 0.3s ease !important;
     overflow-y: auto !important;
-    padding: 20px 10px !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 24px 12px !important;
 }
 
 @media (max-height: 650px) {
@@ -4931,19 +4932,20 @@ footer {
 }
 
 .inquiry-card {
-    width: 90% !important;
-    max-width: 420px !important;
+    width: 92% !important;
+    max-width: 400px !important;
     background-color: #ffffff !important;
     border-radius: 20px !important;
-    padding: 24px !important;
+    padding: 20px !important;
     border: 1px solid rgba(0, 0, 0, 0.08) !important;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
     position: relative !important;
     transform: translateY(20px) !important;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     box-sizing: border-box !important;
-    max-height: calc(100vh - 40px) !important;
+    max-height: calc(100vh - 48px) !important;
     overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
 }
 
 .inquiry-modal-overlay.active .inquiry-card {
@@ -4952,19 +4954,28 @@ footer {
 
 .inquiry-close-x {
     position: absolute !important;
-    top: 16px !important;
-    right: 20px !important;
-    background: none !important;
+    top: 10px !important;
+    right: 12px !important;
+    width: 44px !important;
+    height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-radius: 50% !important;
     border: none !important;
-    font-size: 1.8rem !important;
+    font-size: 1.5rem !important;
     color: var(--text-secondary) !important;
     cursor: pointer !important;
+    z-index: 20000 !important;
     opacity: 0.7 !important;
-    transition: opacity 0.2s ease !important;
+    transition: all 0.2s ease !important;
+    -webkit-tap-highlight-color: transparent !important;
 }
 
 .inquiry-close-x:hover {
     opacity: 1 !important;
+    background: rgba(0, 0, 0, 0.1) !important;
 }
 
 .inquiry-title-area {
