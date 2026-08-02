@@ -4940,7 +4940,7 @@ footer {
     border: 1px solid rgba(0, 0, 0, 0.08) !important;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
     position: relative !important;
-    transform: translateY(20px) !important;
+    transform: translate(-20%, 20px) !important;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     box-sizing: border-box !important;
     max-height: calc(100vh - 48px) !important;
@@ -4949,7 +4949,7 @@ footer {
 }
 
 .inquiry-modal-overlay.active .inquiry-card {
-    transform: translateY(0) !important;
+    transform: translate(-20%, 0) !important;
 }
 
 .inquiry-close-x {
