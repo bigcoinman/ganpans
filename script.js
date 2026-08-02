@@ -1929,10 +1929,10 @@ function initAuthAndDashboard() {
   signupForm.addEventListener('submit', () => {
     const idVal = signupIdInput.value.trim();
     const pwVal = signupPwInput.value;
-    const nameVal = signupNameInput.value.trim();
-    const addressVal = signupAddressInput.value.trim();
-    const emailVal = signupEmailInput.value.trim();
-    const phoneVal = signupPhoneInput.value.trim();
+    const nameVal = escapeHtml(signupNameInput.value.trim());
+    const addressVal = escapeHtml(signupAddressInput.value.trim());
+    const emailVal = escapeHtml(signupEmailInput.value.trim());
+    const phoneVal = escapeHtml(signupPhoneInput.value.trim());
 
     if (!isIdChecked || !isIdAvailable) {
       alert('아이디 중복 확인(사용 가능 검색)을 완료해 주세요.');
@@ -2647,10 +2647,10 @@ function initMobileBottomNav() {
   if (inquiryForm) {
     inquiryForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const name = document.getElementById('inquiry-name').value.trim();
-      const phone = document.getElementById('inquiry-phone').value.trim();
+      const name = escapeHtml(document.getElementById('inquiry-name').value.trim());
+      const phone = escapeHtml(document.getElementById('inquiry-phone').value.trim());
       const type = document.getElementById('inquiry-type').value;
-      const message = document.getElementById('inquiry-message').value.trim();
+      const message = escapeHtml(document.getElementById('inquiry-message').value.trim());
 
       if (!name || !phone || !type || !message) {
         alert('필수 입력 항목을 모두 작성해 주세요.');

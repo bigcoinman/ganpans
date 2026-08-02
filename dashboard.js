@@ -2186,10 +2186,10 @@ function initAIAssistant() {
   if (inquiryForm) {
     inquiryForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const name = document.getElementById('inquiry-name').value.trim();
-      const phone = document.getElementById('inquiry-phone').value.trim();
+      const name = escapeHtml(document.getElementById('inquiry-name').value.trim());
+      const phone = escapeHtml(document.getElementById('inquiry-phone').value.trim());
       const type = document.getElementById('inquiry-type').value;
-      const message = document.getElementById('inquiry-message').value.trim();
+      const message = escapeHtml(document.getElementById('inquiry-message').value.trim());
 
       if (!name || !phone || !type || !message) {
         alert('필수 입력 항목을 모두 작성해 주세요.');
