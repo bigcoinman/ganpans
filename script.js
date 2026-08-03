@@ -861,6 +861,12 @@ function initReviews() {
       contentInput.value = '';
       resetStarRating();
 
+      // 글자수 카운터 초기값 갱신
+      const shopCounter = document.getElementById('review-shop-char-count');
+      const contentCounter = document.getElementById('review-content-char-count');
+      if (shopCounter) shopCounter.textContent = shopNameInput.value.length;
+      if (contentCounter) contentCounter.textContent = '0';
+
       // Show modal
       reviewModal.classList.add('active');
     });
@@ -1005,6 +1011,24 @@ function initReviews() {
       if (reviewsSection) {
         reviewsSection.scrollIntoView({ behavior: 'smooth' });
       }
+    });
+  }
+
+  // 후기 지역/상호명 및 경험담 글자수 실시간 계산 연동
+  const shopNameInput = document.getElementById('review-shop-name');
+  const shopCounter = document.getElementById('review-shop-char-count');
+  const contentInput = document.getElementById('review-content');
+  const contentCounter = document.getElementById('review-content-char-count');
+
+  if (shopNameInput && shopCounter) {
+    shopNameInput.addEventListener('input', () => {
+      shopCounter.textContent = shopNameInput.value.length;
+    });
+  }
+
+  if (contentInput && contentCounter) {
+    contentInput.addEventListener('input', () => {
+      contentCounter.textContent = contentInput.value.length;
     });
   }
 }

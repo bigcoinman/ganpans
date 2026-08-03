@@ -23,7 +23,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Core stylesheet -->
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=8">
 
     <meta name="description" content="경기도 소상공인의 경영환경개선을 위한 노후 간판 교체 및 정비 지원 사업 포털입니다. 실시간 간판 시뮬레이터로 나만의 간판을 디자인해보세요.">
     <meta property="og:title" content="간판 지원단 - 경기도 소상공인 경영환경개선사업">
@@ -1354,8 +1354,9 @@
                         style="display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.85rem; color: var(--text-primary); text-align: left;">지역
                         및 상호명</label>
                     <input type="text" id="review-shop-name" class="form-input-auth" placeholder="예: 수원시 · 늘봄분식 운영"
-                        required
+                        required maxlength="25"
                         style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 0.9rem;">
+                    <div style="text-align: right; font-size: 0.72rem; color: #64748b; margin-top: 2px;"><span id="review-shop-char-count">0</span> / 25자</div>
                 </div>
 
                 <!-- 후기 내용 -->
@@ -1364,8 +1365,9 @@
                         style="display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.85rem; color: var(--text-primary); text-align: left;">상세
                         경험담</label>
                     <textarea id="review-content" class="form-input-auth"
-                        placeholder="간판 교체 후의 변화와 사업에 대한 만족도 등을 자세히 남겨주세요." required
+                        placeholder="간판 교체 후의 변화와 사업에 대한 만족도 등을 자세히 남겨주세요." required maxlength="200"
                         style="width: 100%; height: 120px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 0.9rem; resize: none; font-family: inherit; line-height: 1.5;"></textarea>
+                    <div style="text-align: right; font-size: 0.72rem; color: #64748b; margin-top: 2px;"><span id="review-content-char-count">0</span> / 200자</div>
                 </div>
 
                 <!-- 등록 버튼 -->
@@ -1819,8 +1821,8 @@
     </div>
 
     <!-- Main script -->
-    <script src="security-utils.js?v=7"></script>
-    <script src="script.js?v=7"></script>
+    <script src="security-utils.js?v=8"></script>
+    <script src="script.js?v=8"></script>
 </body>
 
 </html>
