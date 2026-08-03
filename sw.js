@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ganpan-support-v29';
+const CACHE_NAME = 'ganpan-support-v30';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const ASSETS_TO_CACHE = [
   './script.js',
   './dashboard.js',
   './app.js',
+  './supabase-config.js',
   './manifest.json',
   './간판지원단 로고-3.png',
   './간판지원단 로고-2.png',
