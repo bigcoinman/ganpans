@@ -5093,3 +5093,37 @@ footer {
         align-items: flex-start !important;
     }
 }
+
+/* SNS 로그인/회원가입 세로 2줄 레이아웃 개편 */
+.sns-login-buttons {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+}
+
+.sns-login-buttons .btn-google,
+.sns-login-buttons .btn-kakao {
+    width: 100% !important;
+    height: 48px !important;
+    border-radius: 12px !important;
+    font-size: 0.92rem !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    transform: none !important;
+    padding: 0 16px !important;
+}
+
+.sns-login-buttons .sns-logo-icon,
+.sns-login-buttons i {
+    font-size: 1.1rem !important;
+    margin-right: 0 !important;
+    width: 18px !important;
+    height: 18px !important;
+}
