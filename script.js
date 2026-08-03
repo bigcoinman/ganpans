@@ -2636,6 +2636,12 @@ function initMobileBottomNav() {
     inquiryModalClose.addEventListener('click', closeInquiryModal);
   }
 
+  // 하단 닫기 단추들도 클릭 핸들러 연동
+  const extraInquiryCloseBtns = document.querySelectorAll('.inquiry-close-x-btn');
+  extraInquiryCloseBtns.forEach(btn => {
+    btn.addEventListener('click', closeInquiryModal);
+  });
+
   if (inquiryModal) {
     inquiryModal.addEventListener('click', (e) => {
       if (e.target === inquiryModal) {

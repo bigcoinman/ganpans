@@ -2173,21 +2173,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (inquiryModalClose) {
         inquiryModalClose.addEventListener('click', closeInquiryModal);
-        inquiryModalClose.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            closeInquiryModal();
-        });
     }
+
+    // 하단 닫기 단추들도 클릭 핸들러 연동
+    const extraInquiryCloseBtns = document.querySelectorAll('.inquiry-close-x-btn');
+    extraInquiryCloseBtns.forEach(btn => {
+        btn.addEventListener('click', closeInquiryModal);
+    });
 
     if (inquiryModal) {
         inquiryModal.addEventListener('click', (e) => {
             if (e.target === inquiryModal) {
-                closeInquiryModal();
-            }
-        });
-        inquiryModal.addEventListener('touchstart', (e) => {
-            if (e.target === inquiryModal) {
-                e.preventDefault();
                 closeInquiryModal();
             }
         });
@@ -2371,27 +2367,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (policyModalClose) {
         policyModalClose.addEventListener('click', closePolicyModal);
-        policyModalClose.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            closePolicyModal();
-        });
     }
     if (btnPolicyConfirm) {
         btnPolicyConfirm.addEventListener('click', closePolicyModal);
-        btnPolicyConfirm.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            closePolicyModal();
-        });
     }
     if (policyModal) {
         policyModal.addEventListener('click', (e) => {
             if (e.target === policyModal) {
-                closePolicyModal();
-            }
-        });
-        policyModal.addEventListener('touchstart', (e) => {
-            if (e.target === policyModal) {
-                e.preventDefault();
                 closePolicyModal();
             }
         });
