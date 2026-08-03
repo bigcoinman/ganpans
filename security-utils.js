@@ -137,11 +137,11 @@ function clearActiveUser() {
   sessionStorage.removeItem('activeUser');
 }
 
-// 6. Supabase 클라이언트 초기화
-const SUPABASE_URL = "https://nfexylsehsucctoefwdz.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh";
+// 6. Supabase 클라이언트 초기화 (전역 설정 파일 supabase-config.js 를 참조합니다)
+const dbUrl = typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '';
+const dbKey = typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : '';
 let supabase = null;
 
-if (typeof window !== 'undefined' && window.supabase) {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (dbUrl && dbKey && typeof window !== 'undefined' && window.supabase) {
+  supabase = window.supabase.createClient(dbUrl, dbKey);
 }
