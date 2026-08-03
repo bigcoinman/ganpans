@@ -140,8 +140,8 @@ function clearActiveUser() {
 // 6. Supabase 클라이언트 초기화 (전역 설정 파일 supabase-config.js 를 참조합니다)
 const dbUrl = typeof window.SUPABASE_URL !== 'undefined' ? window.SUPABASE_URL : '';
 const dbKey = typeof window.SUPABASE_ANON_KEY !== 'undefined' ? window.SUPABASE_ANON_KEY : '';
-let supabase = null;
+window.supabaseClient = null;
 
 if (dbUrl && dbKey && typeof window !== 'undefined' && window.supabase) {
-  supabase = window.supabase.createClient(dbUrl, dbKey);
+  window.supabaseClient = window.supabase.createClient(dbUrl, dbKey);
 }

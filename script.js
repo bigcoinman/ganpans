@@ -743,9 +743,9 @@ function initReviews() {
 
   // 1.5. Supabase에서 후기 목록 비동기 조회
   async function fetchSupabaseReviews() {
-    if (window.supabase && supabase) {
+    if (window.supabaseClient) {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await window.supabaseClient
           .from('reviews')
           .select('*')
           .order('created_at', { ascending: false });
@@ -1051,9 +1051,9 @@ function initReviews() {
       localStorage.setItem('reviews', JSON.stringify(reviewsList));
 
       // Supabase Sync
-      if (window.supabase && supabase) {
+      if (window.supabaseClient) {
         const activeUser = getActiveUser();
-        supabase.from('reviews').insert([{
+        window.supabaseClient.from('reviews').insert([{
           author_id: activeUser ? activeUser.id : null,
           author_name: maskedName,
           shop_name: shop,
@@ -1327,8 +1327,8 @@ function initWizard() {
     localStorage.setItem('applications', JSON.stringify(apps));
 
     // Supabase Sync
-    if (window.supabase && supabase) {
-      supabase.from('applications').insert([{
+    if (window.supabaseClient) {
+      window.supabaseClient.from('applications').insert([{
         id: customId,
         user_id: userId,
         owner_name: ownerName,
@@ -1908,9 +1908,9 @@ function initAuthAndDashboard() {
     }
 
     let exists = false;
-    if (window.supabase && supabase) {
+    if (window.supabaseClient) {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await window.supabaseClient
           .from('users')
           .select('id')
           .eq('id', idVal)
@@ -2124,8 +2124,8 @@ function initAuthAndDashboard() {
     localStorage.setItem('users', JSON.stringify(users));
 
     // Supabase Sync
-    if (window.supabase && supabase) {
-      supabase.from('users').insert([{
+    if (window.supabaseClient) {
+      window.supabaseClient.from('users').insert([{
         id: idVal,
         name: nameVal,
         email: emailVal,
@@ -2160,9 +2160,9 @@ function initAuthAndDashboard() {
     let user = null;
 
     // 1. Supabase 실물 DB 로그인 조회
-    if (window.supabase && supabase) {
+    if (window.supabaseClient) {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await window.supabaseClient
           .from('users')
           .select('*')
           .eq('id', idVal)
