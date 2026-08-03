@@ -2282,3 +2282,24 @@ body.mobile-app-body {
         padding: 40px 10px !important;
     }
 }
+
+/* 모바일 화면 후기 작성 팝업 대응 */
+@media (max-width: 768px) {
+    .review-modal-overlay {
+        align-items: flex-start !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 30px 10px !important;
+    }
+    .review-write-card {
+        padding: 20px !important;
+        max-height: calc(100vh - 60px) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+}
+@media (max-height: 650px) {
+    .review-modal-overlay {
+        align-items: flex-start !important;
+    }
+}
