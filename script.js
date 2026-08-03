@@ -2545,10 +2545,42 @@ function initMobileBottomNav() {
     });
 
     const faqDatabase = {
-      target: "💡 <strong>지원 대상 기준 안내</strong><br><br>경기도 내에 사업장을 두고 영업 중인 소상공인(영업 정지 상태 제외)을 대상으로 합니다.<br>단, 대기업 프랜차이즈 직영점 및 불법 사행성 업종 등은 제외될 수 있으니 사전에 상세 자격 검토를 신청하시는 것이 좋습니다.",
-      documents: "📄 <strong>신청 필수 서류 안내</strong><br><br>1. 사업자등록증 사본 1부<br>2. 부가가치세과세표준증명원(최근 1년)<br>3. 임대차계약서 사본(임차 매장인 경우)<br>4. 기존 간판 현장 사진 및 설치할 정면 벽면 사진",
-      simulator: "🎨 <strong>간판 시뮬레이터 사용법</strong><br><br>1. 메인 홈페이지의 [시뮬레이터] 메뉴로 이동합니다.<br>2. 제공되는 건물 facade 이미지 혹은 직접 촬영한 점포 사진을 로드합니다.<br>3. 원하는 간판 디자인 형태와 조명 타입을 선택하여 가상으로 간판을 얹어 확인하실 수 있습니다.",
-      contact: "📞 <strong>고객센터 안내</strong><br><br>• 대표전화: 1588-0000<br>• 이메일: support@ganpan.go.kr<br>• 운영시간: 평일 09:00 - 18:00 (토/일요일 및 공휴일 휴무)<br>• 점심시간: 12:00 - 13:00"
+      target: "💡 <strong>지원 대상 및 자격 기준</strong><br><br>" +
+          "• <strong>대상자</strong>: 공고일 현재 경기도 내에 사업장을 두고 영업 중인 <strong>창업 3년 이상</strong>(사업자등록 기준) 소상공인 사업자입니다.<br>" +
+          "• <strong>소상공인 상시 근로자 기준</strong>:<br>" +
+          "  - 도소매업, 음식점, 숙박업, 서비스업: 5인 미만<br>" +
+          "  - 광업, 제조업, 건설업, 운수업: 10인 미만<br>" +
+          "• <strong>지원 제외 대상</strong>: 대기업 프랜차이즈 직영점, 사치향락 업종(유흥주점 등), 무등록/휴폐업자, 지방세 체납자, 최근 3년 이내 경기도 및 시·군 유사 지원사업 수혜자는 신청할 수 없습니다.",
+      amount: "💰 <strong>지원 금액 및 품목 안내</strong><br><br>" +
+          "• <strong>지원 한도</strong>: 업체당 <strong>최대 200만원 한도</strong> (공급가의 100% 지원, 부가세 10% 및 200만원 초과 금액은 본인 부담)<br>" +
+          "  * 예: 견적서 공급가액이 220만원인 경우, 지원금 200만원 + 본인부담 20만원 + 부가세 별도 납부<br>" +
+          "• <strong>지원 품목</strong>: 간판(불법 간판 제외), 썬팅, 투광기 중 <strong>최대 2개 품목 이하</strong> 선택 가능<br>" +
+          "• <strong>시공 주의사항</strong>: 반드시 <strong>선정 후 견적서 승인</strong>을 먼저 받은 다음 시공을 진행해야 합니다. 승인 전 <strong>사전 시공 시 지원 대상에서 제외(선정 취소)</strong>되므로 절대 주의 바랍니다.",
+      documents: "📄 <strong>제출 서류 안내</strong><br><br>" +
+          "• <strong>필수 기본 서류</strong>:<br>" +
+          "  1. 신청서 및 추진계획서 (점포 사진 첨부 필수)<br>" +
+          "  2. 개인신용정보 제공 동의서<br>" +
+          "  3. 시공계획서<br>" +
+          "• <strong>증빙 서류 (※ 경기바로 공공마이데이터 간편 신청 동의 시 제출 생략 가능)</strong>:<br>" +
+          "  4. 사업자등록증 사본 1부<br>" +
+          "  5. 최근 2개년 부가세 과세표준증명원(또는 면세사업자 수입금액증명원)<br>" +
+          "  6. 소득금액증명원 (직전년도 기준)<br>" +
+          "• <strong>가점 증빙 (해당자만 제출)</strong>: 표창장(도지사 등), 자영업아카데미 수료증, 취약계층 증명서 등",
+      schedule: "📅 <strong>접수 일정 및 방법 안내</strong><br><br>" +
+          "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong> (공고는 3. 18 발표)<br>" +
+          "• <strong>신청 방법</strong>:<br>" +
+          "  - <strong>온라인 신청</strong>: 경기바로 홈페이지(www.ggbaro.kr)에서 공공마이데이터 연동 접수<br>" +
+          "  - <strong>방문 신청</strong>: 경기도시장상권진흥원(경상원) 각 지역센터 영업시간 내 방문 접수 (제출 서류 상담 가능)<br>" +
+          "  - <strong>※ 주의</strong>: 우편 신청 및 온/오프라인 중복 신청은 불가능합니다. 1인 1건만 신청 가능합니다.",
+      contact: "📞 <strong>문의처 및 접수 지역센터</strong><br><br>" +
+          "• <strong>경상원 종합상담 콜센터</strong>: <strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
+          "• <strong>지역센터별 관할 구역</strong>:<br>" +
+          "  - 남부센터(수원 소재): 수원, 용인, 군포, 의왕, 과천<br>" +
+          "  - 남부센터(화성 소재): 화성, 오산, 평택, 안성<br>" +
+          "  - 남동센터(광주 소재): 광주, 성남, 여주, 이천<br>" +
+          "  - 남서센터(시흥 소재): 시흥, 안양, 안산, 광명, 부천<br>" +
+          "  - 북부센터(남양주 소재): 남양주, 의정부, 포천, 구리, 가평, 하남, 양평<br>" +
+          "  - 북서센터(파주 소재): 파주, 고양, 양주, 동두천, 연천, 김포"
     };
 
     function handleUserMessage(messageText, faqType = null) {
@@ -2573,19 +2605,21 @@ function initMobileBottomNav() {
           response = faqDatabase[faqType];
         } else {
           // Keyword match logic
-          const cleaned = messageText.toLowerCase();
-          if (cleaned.includes('대상') || cleaned.includes('조건') || cleaned.includes('자격')) {
+          const cleaned = messageText.toLowerCase().replace(/\s+/g, '');
+          if (cleaned.includes('대상') || cleaned.includes('조건') || cleaned.includes('자격') || cleaned.includes('제한') || cleaned.includes('제외') || cleaned.includes('누가') || cleaned.includes('기준')) {
             response = faqDatabase.target;
-          } else if (cleaned.includes('서류') || cleaned.includes('준비') || cleaned.includes('증명원')) {
+          } else if (cleaned.includes('금액') || cleaned.includes('한도') || cleaned.includes('비용') || cleaned.includes('얼마') || cleaned.includes('지원금') || cleaned.includes('썬팅') || cleaned.includes('투광기') || cleaned.includes('인테리어')) {
+            response = faqDatabase.amount;
+          } else if (cleaned.includes('서류') || cleaned.includes('준비') || cleaned.includes('제출') || cleaned.includes('증명원') || cleaned.includes('동의서')) {
             response = faqDatabase.documents;
-          } else if (cleaned.includes('시뮬') || cleaned.includes('사용') || cleaned.includes('디자인')) {
-            response = faqDatabase.simulator;
-          } else if (cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('운영') || cleaned.includes('번호')) {
+          } else if (cleaned.includes('일정') || cleaned.includes('기간') || cleaned.includes('날짜') || cleaned.includes('언제') || cleaned.includes('방법') || cleaned.includes('접수') || cleaned.includes('신청')) {
+            response = faqDatabase.schedule;
+          } else if (cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('콜센터') || cleaned.includes('번호') || cleaned.includes('문의') || cleaned.includes('주소') || cleaned.includes('경상원')) {
             response = faqDatabase.contact;
           } else if (cleaned.includes('안녕')) {
-            response = "안녕하세요! 무엇이든 물어보세요. 😊<br>예: '지원 대상', '필수 서류', '시뮬레이터 사용법' 등";
+            response = "안녕하세요! 경기도 소상공인 경영환경개선사업 AI비서입니다. 😊 무엇이든 물어보세요.<br><br>💡 <strong>예시 질문 키워드</strong>:<br>• '지원 자격', '제외 대상'<br>• '지원 금액', '신청 비용'<br>• '필수 서류', '공공마이데이터'<br>• '신청 일정', '접수 방법'<br>• '고객센터', '지역센터 전화번호'";
           } else {
-            response = "죄송합니다. 1단계 간이 AI 비서 모델에서는 인식하지 못하는 질문입니다. 😢<br><br>아래 핵심 키워드를 참고해 질문해 주세요!<br>• <strong>'지원 대상'</strong><br>• <strong>'필수 서류'</strong><br>• <strong>'시뮬레이터 사용법'</strong><br>• <strong>'고객센터'</strong>";
+            response = "죄송합니다. 질문하신 내용에 대한 정확한 정보를 찾지 못했습니다. 😢<br><br>아래 주요 지원사업 키워드를 참고하여 간략히 질문해 주시면 상세히 답변해 드릴 수 있습니다!<br><br>• <strong>'지원 자격'</strong> (창업 3년 이상 소상공인 여부)<br>• <strong>'지원 금액'</strong> (최대 200만원 한도 및 품목)<br>• <strong>'필수 서류'</strong> (제출 생략 가능 서류 등)<br>• <strong>'신청 일정'</strong> (3월 31일 ~ 4월 13일 일정)<br>• <strong>'고객센터'</strong> (대표번호 1600-8001 및 지역센터)";
           }
         }
 
@@ -2625,10 +2659,11 @@ function initMobileBottomNav() {
       const div = document.createElement('div');
       div.className = 'ai-quick-replies';
       div.innerHTML = `
-        <button class="quick-reply-btn" data-faq="target">💡 지원 대상 기준</button>
-        <button class="quick-reply-btn" data-faq="documents">📄 신청 필수 서류</button>
-        <button class="quick-reply-btn" data-faq="simulator">🎨 시뮬레이터 사용법</button>
-        <button class="quick-reply-btn" data-faq="contact">📞 고객센터 운영시간</button>
+        <button class="quick-reply-btn" data-faq="target">💡 지원 자격 및 대상</button>
+        <button class="quick-reply-btn" data-faq="amount">💰 지원 금액 및 품목</button>
+        <button class="quick-reply-btn" data-faq="documents">📄 필수 제출 서류</button>
+        <button class="quick-reply-btn" data-faq="schedule">📅 신청 일정 및 방법</button>
+        <button class="quick-reply-btn" data-faq="contact">📞 고객센터 및 문의처</button>
       `;
       chatMessages.appendChild(div);
       chatMessages.scrollTop = chatMessages.scrollHeight;
