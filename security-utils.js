@@ -136,3 +136,12 @@ function clearActiveUser() {
   localStorage.removeItem('activeUser');
   sessionStorage.removeItem('activeUser');
 }
+
+// 6. Supabase 클라이언트 초기화
+const SUPABASE_URL = "https://nfexylsehsucctoefwdz.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh";
+let supabase = null;
+
+if (typeof window !== 'undefined' && window.supabase) {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}

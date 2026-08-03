@@ -999,6 +999,20 @@ function initReviews() {
       reviewsList.unshift(newReview);
       localStorage.setItem('reviews', JSON.stringify(reviewsList));
 
+      // Supabase Sync
+      if (window.supabase && supabase) {
+        const activeUser = getActiveUser();
+        supabase.from('reviews').insert([{
+          author_id: activeUser ? activeUser.id : null,
+          author_name: maskedName,
+          shop_name: shop,
+          content: text,
+          rating: rating
+        }]).then(({ error }) => {
+          if (error) console.error('Supabase Sync Error:', error.message);
+        });
+      }
+
       // Close modal & Render
       reviewModal.classList.remove('active');
       renderReviews();
@@ -1260,6 +1274,24 @@ function initWizard() {
 
     apps.push(newApp);
     localStorage.setItem('applications', JSON.stringify(apps));
+
+    // Supabase Sync
+    if (window.supabase && supabase) {
+      supabase.from('applications').insert([{
+        id: customId,
+        user_id: userId,
+        owner_name: ownerName,
+        phone: ownerPhone,
+        store_name: storeName,
+        store_address: storeAddress,
+        sign_type: signType,
+        image_url: null,
+        referrer_code: referrerCode,
+        status: 'pending'
+      }]).then(({ error }) => {
+        if (error) console.error('Supabase Sync Error:', error.message);
+      });
+    }
 
     // 추천 코드 자동 연동 (방안 A)
     if (referrerCode) {
@@ -2017,6 +2049,21 @@ function initAuthAndDashboard() {
 
     users.push(newUser);
     localStorage.setItem('users', JSON.stringify(users));
+
+    // Supabase Sync
+    if (window.supabase && supabase) {
+      supabase.from('users').insert([{
+        id: idVal,
+        name: nameVal,
+        email: emailVal,
+        phone: phoneVal,
+        role: 'normal',
+        biz_code: null,
+        conversion_status: 'none'
+      }]).then(({ error }) => {
+        if (error) console.error('Supabase Sync Error:', error.message);
+      });
+    }
 
     // Auto Login
     localStorage.setItem('activeUser', JSON.stringify(sanitizeUser(newUser)));
