@@ -741,6 +741,57 @@ function initReviews() {
   let reviewsList = JSON.parse(localStorage.getItem('reviews'));
   let isExpanded = false;
 
+  // 1.5. Supabase에서 후기 목록 비동기 조회
+  async function fetchSupabaseReviews() {
+    if (window.supabase && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('reviews')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Supabase fetch reviews error:', error.message);
+        } else if (data && data.length > 0) {
+          const mapped = data.map(r => {
+            const d = new Date(r.created_at);
+            const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+            
+            let avatar = 'fa-store';
+            if (r.shop_name.includes('카페') || r.shop_name.includes('커피') || r.shop_name.includes('디저트')) avatar = 'fa-mug-hot';
+            else if (r.shop_name.includes('헤어') || r.shop_name.includes('미용')) avatar = 'fa-scissors';
+            else if (r.shop_name.includes('국밥') || r.shop_name.includes('음식') || r.shop_name.includes('식당') || r.shop_name.includes('식사')) avatar = 'fa-bowl-food';
+            else if (r.shop_name.includes('옷') || r.shop_name.includes('의류') || r.shop_name.includes('패션')) avatar = 'fa-shirt';
+            
+            return {
+              stars: r.rating || 5,
+              date: dateStr,
+              text: r.content,
+              avatar: avatar,
+              name: r.author_name,
+              shop: r.shop_name
+            };
+          });
+
+          const localAndDb = [...mapped, ...reviewsList];
+          const seen = new Set();
+          reviewsList = localAndDb.filter(el => {
+            const key = el.shop + '|' + el.text;
+            const duplicate = seen.has(key);
+            seen.add(key);
+            return !duplicate;
+          });
+          
+          renderReviews();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
+
+  fetchSupabaseReviews();
+
   // 2. Render reviews from database
   function renderReviews() {
     reviewsGrid.innerHTML = '';
@@ -1849,14 +1900,36 @@ function initAuthAndDashboard() {
     idCheckMsg.textContent = '';
   });
 
-  btnCheckId.addEventListener('click', () => {
+  btnCheckId.addEventListener('click', async () => {
     const idVal = signupIdInput.value.trim();
     if (!idVal) {
       alert('아이디를 입력해 주세요.');
       return;
     }
 
-    const exists = users.some(u => u.id === idVal);
+    let exists = false;
+    if (window.supabase && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', idVal)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Supabase query error:', error.message);
+          exists = users.some(u => u.id === idVal);
+        } else if (data) {
+          exists = true;
+        }
+      } catch (e) {
+        console.error(e);
+        exists = users.some(u => u.id === idVal);
+      }
+    } else {
+      exists = users.some(u => u.id === idVal);
+    }
+
     isIdChecked = true;
     if (exists) {
       isIdAvailable = false;
@@ -2059,7 +2132,8 @@ function initAuthAndDashboard() {
         phone: phoneVal,
         role: 'normal',
         biz_code: null,
-        conversion_status: 'none'
+        conversion_status: 'none',
+        password_hash: sha256(pwVal)
       }]).then(({ error }) => {
         if (error) console.error('Supabase Sync Error:', error.message);
       });
@@ -2075,19 +2149,58 @@ function initAuthAndDashboard() {
   });
 
   // --- Login Logic ---
-  loginForm.addEventListener('submit', () => {
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault(); // prevent default form submission to handle async flow
+
     const idVal = document.getElementById('login-id').value.trim();
     const pwVal = document.getElementById('login-pw').value;
     const rememberMe = document.getElementById('login-remember-me') ? document.getElementById('login-remember-me').checked : false;
 
     const hashedPassword = sha256(pwVal);
-    const user = users.find(u => u.id === idVal && u.pw === hashedPassword);
+    let user = null;
+
+    // 1. Supabase 실물 DB 로그인 조회
+    if (window.supabase && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', idVal)
+          .eq('password_hash', hashedPassword)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Supabase login error:', error.message);
+          // DB 실패 시 로컬 스토리지 대조
+          const localUser = users.find(u => u.id === idVal && u.pw === hashedPassword);
+          if (localUser) user = sanitizeUser(localUser);
+        } else if (data) {
+          user = {
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            role: data.role || 'normal',
+            bizCode: data.biz_code,
+            conversionStatus: data.conversion_status || 'none'
+          };
+        }
+      } catch (err) {
+        console.error(err);
+        const localUser = users.find(u => u.id === idVal && u.pw === hashedPassword);
+        if (localUser) user = sanitizeUser(localUser);
+      }
+    } else {
+      // 2. 로컬 스토리지 로그인
+      const localUser = users.find(u => u.id === idVal && u.pw === hashedPassword);
+      if (localUser) user = sanitizeUser(localUser);
+    }
+
     if (user) {
-      const sanitized = sanitizeUser(user);
       if (rememberMe) {
-        localStorage.setItem('activeUser', JSON.stringify(sanitized));
+        localStorage.setItem('activeUser', JSON.stringify(user));
       } else {
-        sessionStorage.setItem('activeUser', JSON.stringify(sanitized));
+        sessionStorage.setItem('activeUser', JSON.stringify(user));
       }
       alert(`${user.name}님, 반갑습니다!`);
       authModal.classList.remove('active');
