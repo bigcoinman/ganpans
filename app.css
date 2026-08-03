@@ -2337,3 +2337,29 @@ body.mobile-app-body {
     width: 18px !important;
     height: 18px !important;
 }
+
+.remember-me-group {
+  display: flex !important;
+  align-items: center !important;
+  margin-top: -10px !important;
+  margin-bottom: 20px !important;
+  padding: 0 4px !important;
+}
+
+.remember-me-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  color: var(--text-secondary) !important;
+}
+
+.remember-me-label input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+  accent-color: var(--accent-primary) !important;
+  cursor: pointer !important;
+}

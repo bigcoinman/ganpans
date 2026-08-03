@@ -3,7 +3,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- State Variables ---
     let users = JSON.parse(localStorage.getItem('users')) || [];
-    let activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
+    let activeUser = getActiveUser() || null;
     let applications = JSON.parse(localStorage.getItem('applications')) || [];
 
     // --- Drawer Menu Selectors ---
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.closeDrawer = closeDrawer;
 
     function updateDrawerProfile() {
-        activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
+        activeUser = getActiveUser() || null;
         if (activeUser) {
             drawerUserName.textContent = `${activeUser.name}님`;
             if (activeUser.role === 'admin') {
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const appHeaderAuthText = document.getElementById('app-header-auth-text');
         if (!appHeaderAuthBtn || !appHeaderAuthText) return;
 
-        const user = JSON.parse(localStorage.getItem('activeUser')) || null;
+        const user = getActiveUser() || null;
         if (user) {
             appHeaderAuthText.textContent = '마이페이지';
         } else {
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (appHeaderAuthBtn) {
         appHeaderAuthBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            const user = JSON.parse(localStorage.getItem('activeUser')) || null;
+            const user = getActiveUser() || null;
             if (user) {
                 openDrawer();
             } else {
@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             
             // Core Session Clean First
-            localStorage.removeItem('activeUser');
+            clearActiveUser();
             alert('로그아웃 되었습니다.');
             
             // Trigger hidden PC logout button for legacy compatibility
@@ -301,11 +301,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirm('정말로 계정을 탈퇴하시겠습니까?\n등록된 모든 영업물건과 이력이 완전 소멸하며 복구할 수 없습니다.')) {
                 if (confirm('탈퇴 동의 최종 확인')) {
                     users = JSON.parse(localStorage.getItem('users')) || [];
-                    activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
+                    activeUser = getActiveUser() || null;
                     if (activeUser) {
                         users = users.filter(u => u.id !== activeUser.id);
                         localStorage.setItem('users', JSON.stringify(users));
-                        localStorage.removeItem('activeUser');
+                        clearActiveUser();
                         activeUser = null;
                         
                         alert('회원 탈퇴 완료되었습니다. 초기 화면으로 이동합니다.');
@@ -436,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Dashboard Status Render Logic ---
     function renderStatusTab() {
         users = JSON.parse(localStorage.getItem('users')) || [];
-        activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
+        activeUser = getActiveUser() || null;
         applications = JSON.parse(localStorage.getItem('applications')) || [];
 
         const statusLoggedOut = document.getElementById('status-logged-out');
@@ -1936,7 +1936,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (['applications', 'users', 'popups', 'activeUser'].includes(e.key)) {
             applications = JSON.parse(localStorage.getItem('applications')) || [];
             users = JSON.parse(localStorage.getItem('users')) || [];
-            activeUser = JSON.parse(localStorage.getItem('activeUser'));
+            activeUser = getActiveUser();
             
             updateDrawerProfile();
             if (typeof renderStatusTab === 'function') renderStatusTab();

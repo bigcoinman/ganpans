@@ -118,3 +118,21 @@ function sanitizeUrl(url) {
   }
   return escapeHtml(trimmed);
 }
+
+// 5. 로그인 상태 유지를 연동한 세션 조회 및 삭제 헬퍼 함수
+function getActiveUser() {
+  const localUser = localStorage.getItem('activeUser');
+  if (localUser) {
+    try { return JSON.parse(localUser); } catch(e) { return null; }
+  }
+  const sessionUser = sessionStorage.getItem('activeUser');
+  if (sessionUser) {
+    try { return JSON.parse(sessionUser); } catch(e) { return null; }
+  }
+  return null;
+}
+
+function clearActiveUser() {
+  localStorage.removeItem('activeUser');
+  sessionStorage.removeItem('activeUser');
+}

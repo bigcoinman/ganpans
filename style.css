@@ -2731,6 +2731,31 @@ footer {
   margin-bottom: 20px;
 }
 
+.remember-me-group {
+  display: flex;
+  align-items: center;
+  margin-top: -10px;
+  margin-bottom: 20px;
+}
+
+.remember-me-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  color: var(--text-secondary);
+}
+
+.remember-me-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
 .form-group-auth label {
   font-size: 0.9rem;
   font-weight: 600;

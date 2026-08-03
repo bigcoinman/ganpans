@@ -17,8 +17,8 @@
     <!-- FontAwesome Icons & Outfit Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Load PC styles first, then mobile overrides -->
-    <link rel="stylesheet" href="style.css?v=11">
-    <link rel="stylesheet" href="app.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="app.css?v=12">
 </head>
 
 <body class="mobile-app-body">
@@ -1710,7 +1710,13 @@
                             </button>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-full" style="margin-top: 15px;"><i
+                    <div class="remember-me-group">
+                        <label class="remember-me-label">
+                            <input type="checkbox" id="login-remember-me">
+                            <span>로그인 상태 유지</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full" style="margin-top: 5px;"><i
                             class="fa-solid fa-right-to-bracket"></i> 로그인</button>
                     <div class="find-links">
                         <button type="button" class="find-link-btn" id="btn-find-id">아이디 찾기</button>
@@ -2074,11 +2080,11 @@
     </div>
 
     <!-- Security utilities & Core App logic -->
-    <script src="security-utils.js?v=11"></script>
+    <script src="security-utils.js?v=12"></script>
     <!-- Load PC JavaScript first to run interactive components -->
-    <script src="script.js?v=11"></script>
+    <script src="script.js?v=12"></script>
     <!-- Load mobile drawer, tab, dashboard scripts -->
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=12"></script>
 </body>
 
 </html>

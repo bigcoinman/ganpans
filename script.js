@@ -825,7 +825,7 @@ function initReviews() {
   if (writeBtn && reviewModal) {
     writeBtn.addEventListener('click', () => {
       // Pre-fill user data if logged in
-      const activeUser = JSON.parse(localStorage.getItem('activeUser'));
+      const activeUser = getActiveUser();
       const authorNameInput = document.getElementById('review-author-name');
       const shopNameInput = document.getElementById('review-shop-name');
       const contentInput = document.getElementById('review-content');
@@ -1232,7 +1232,7 @@ function initWizard() {
     const fileName = uploadInput && uploadInput.files.length > 0 ? uploadInput.files[0].name : '업로드 파일 없음';
     const referrerCode = document.getElementById('referrer-code')?.value.trim() || '';
 
-    const activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
+    const activeUser = getActiveUser() || null;
     const userId = activeUser ? activeUser.id : 'guest';
 
     // 고유 접수 번호 생성 (GP-YYYYMMDD-XXXX)
@@ -1533,7 +1533,7 @@ function initAuthAndDashboard() {
     localStorage.setItem('users', JSON.stringify(users));
   }
 
-  let activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
+  let activeUser = getActiveUser() || null;
 
   // DOM Elements
   const authBtn = document.getElementById('auth-btn');
@@ -1741,7 +1741,7 @@ function initAuthAndDashboard() {
   // --- Session Management & Login UI ---
   const updateSessionUI = () => {
     users = JSON.parse(localStorage.getItem('users'));
-    activeUser = JSON.parse(localStorage.getItem('activeUser'));
+    activeUser = getActiveUser();
 
     if (activeUser) {
       // Find latest status of active user from DB
@@ -2031,11 +2031,17 @@ function initAuthAndDashboard() {
   loginForm.addEventListener('submit', () => {
     const idVal = document.getElementById('login-id').value.trim();
     const pwVal = document.getElementById('login-pw').value;
+    const rememberMe = document.getElementById('login-remember-me') ? document.getElementById('login-remember-me').checked : false;
 
     const hashedPassword = sha256(pwVal);
     const user = users.find(u => u.id === idVal && u.pw === hashedPassword);
     if (user) {
-      localStorage.setItem('activeUser', JSON.stringify(sanitizeUser(user)));
+      const sanitized = sanitizeUser(user);
+      if (rememberMe) {
+        localStorage.setItem('activeUser', JSON.stringify(sanitized));
+      } else {
+        sessionStorage.setItem('activeUser', JSON.stringify(sanitized));
+      }
       alert(`${user.name}님, 반갑습니다!`);
       authModal.classList.remove('active');
       loginForm.reset();
@@ -2082,7 +2088,7 @@ function initAuthAndDashboard() {
   // --- Logout Logic ---
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-      localStorage.removeItem('activeUser');
+      clearActiveUser();
       alert('로그아웃 되었습니다.');
       updateSessionUI();
     });
@@ -2482,7 +2488,7 @@ function initMobileBottomNav() {
   // 2. Click behaviors to check auth for dashboard/mypage tab
   if (mNavItems.dashboard) {
     mNavItems.dashboard.addEventListener('click', (e) => {
-      const activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
+      const activeUser = getActiveUser() || null;
       if (!activeUser) {
         e.preventDefault();
         const authModal = document.getElementById('auth-modal');

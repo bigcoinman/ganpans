@@ -3,7 +3,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   // Load State from LocalStorage
   let users = JSON.parse(localStorage.getItem('users')) || [];
-  let activeUser = JSON.parse(localStorage.getItem('activeUser')) || null;
+  let activeUser = getActiveUser() || null;
 
   // 1. Guard for unauthorized access
   if (!activeUser) {
@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Logout ---
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-      localStorage.removeItem('activeUser');
+      clearActiveUser();
       alert('로그아웃 되었습니다.');
       window.location.href = 'index.html';
     });
@@ -1023,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('users', JSON.stringify(users));
 
       // Clear Session
-      localStorage.removeItem('activeUser');
+      clearActiveUser();
 
       alert('회원탈퇴가 성공적으로 완료되었습니다. 이용해 주셔서 감사합니다.');
       window.location.href = 'index.html';
