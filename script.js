@@ -1127,7 +1127,78 @@ function initWizard() {
   let currentStep = 0;
   let uploadedFileBase64 = '';
 
-  // File Upload Handlers
+  // =================================================
+  // 신청서 1단계: 신청인 본인인증 로직
+  // =================================================
+  let isOwnerPhoneVerified = false;
+  let ownerSimulatedSmsCode = '';
+  let ownerSmsTimerInterval = null;
+
+  const btnOwnerSmsAuth = document.getElementById('btn-owner-sms-auth');
+  const ownerSmsAuthGroup = document.getElementById('owner-sms-auth-group');
+  const ownerSmsAuthCode = document.getElementById('owner-sms-auth-code');
+  const btnOwnerVerifySms = document.getElementById('btn-owner-verify-sms');
+  const ownerSmsTimer = document.getElementById('owner-sms-timer');
+  const ownerPhoneCheckMsg = document.getElementById('owner-phone-check-msg');
+
+  if (btnOwnerSmsAuth) {
+    btnOwnerSmsAuth.addEventListener('click', () => {
+      const ownerPhone = document.getElementById('owner-phone')?.value.trim();
+      if (!ownerPhone) {
+        alert('휴대전화 번호를 먼저 입력해 주세요.');
+        return;
+      }
+      // 인증코드 생성 및 발송 시뮬레이션
+      ownerSimulatedSmsCode = Math.floor(100000 + Math.random() * 900000).toString();
+      alert(`[본인인증 문자 발송]\n\n입력하신 번호(${ownerPhone})로\n인증번호 [${ownerSimulatedSmsCode}]가 발송되었습니다.\n\n(실제 서비스에서는 실제 문자가 전송됩니다.)`);
+
+      if (ownerSmsAuthGroup) ownerSmsAuthGroup.style.display = 'block';
+      if (ownerSmsAuthCode) { ownerSmsAuthCode.value = ''; ownerSmsAuthCode.focus(); }
+
+      let timeLeft = 180;
+      if (ownerSmsTimerInterval) clearInterval(ownerSmsTimerInterval);
+
+      const updateOwnerTimer = () => {
+        const min = Math.floor(timeLeft / 60);
+        const sec = timeLeft % 60;
+        if (ownerSmsTimer) ownerSmsTimer.textContent = `남은 시간 ${min}:${sec < 10 ? '0' : ''}${sec}`;
+      };
+      updateOwnerTimer();
+
+      ownerSmsTimerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+          clearInterval(ownerSmsTimerInterval);
+          if (ownerSmsAuthGroup) ownerSmsAuthGroup.style.display = 'none';
+          alert('인증 시간이 초과되었습니다. 다시 인증해 주세요.');
+        } else {
+          updateOwnerTimer();
+        }
+      }, 1000);
+    });
+  }
+
+  if (btnOwnerVerifySms) {
+    btnOwnerVerifySms.addEventListener('click', () => {
+      const entered = ownerSmsAuthCode?.value.trim();
+      if (entered === ownerSimulatedSmsCode) {
+        clearInterval(ownerSmsTimerInterval);
+        isOwnerPhoneVerified = true;
+        if (ownerSmsAuthGroup) ownerSmsAuthGroup.style.display = 'none';
+        const ownerPhoneInput = document.getElementById('owner-phone');
+        if (ownerPhoneInput) ownerPhoneInput.disabled = true;
+        if (btnOwnerSmsAuth) btnOwnerSmsAuth.disabled = true;
+        if (ownerPhoneCheckMsg) {
+          ownerPhoneCheckMsg.className = 'form-helper success';
+          ownerPhoneCheckMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> 본인인증이 완료되었습니다.';
+        }
+      } else {
+        alert('인증번호가 일치하지 않습니다. 다시 확인해 주세요.');
+      }
+    });
+  }
+
+
   if (uploadArea && uploadInput) {
     ['dragenter', 'dragover'].forEach(eventName => {
       uploadArea.addEventListener(eventName, (e) => {
@@ -1254,6 +1325,11 @@ function initWizard() {
       const phone = document.getElementById('owner-phone')?.value.trim();
       if (!name || !phone) {
         alert('신청자 이름과 연락처를 모두 입력해 주세요.');
+        return false;
+      }
+      // 본인인증 필수 체크 (인증 버튼이 존재하는 경우에만 강제)
+      if (btnOwnerSmsAuth && !isOwnerPhoneVerified) {
+        alert('휴대전화 본인인증을 완료해 주세요.\n"인증 문자" 버튼을 눌러 인증번호를 받아 입력해 주세요.');
         return false;
       }
     } else if (step === 1) {
@@ -1404,8 +1480,10 @@ function initWizard() {
 
       // Reset Wizard and fields
       currentStep = 0;
-      document.getElementById('owner-name').value = '';
-      document.getElementById('owner-phone').value = '';
+      const ownerNameEl = document.getElementById('owner-name');
+      const ownerPhoneEl = document.getElementById('owner-phone');
+      if (ownerNameEl) ownerNameEl.value = '';
+      if (ownerPhoneEl) { ownerPhoneEl.value = ''; ownerPhoneEl.disabled = false; }
       document.getElementById('app-shop-name').value = '';
       document.getElementById('store-address').value = '';
       if (document.getElementById('referrer-code')) {
@@ -1416,6 +1494,14 @@ function initWizard() {
       if (fileNameDisplay) {
         fileNameDisplay.style.display = 'none';
       }
+
+      // 본인인증 상태 초기화
+      isOwnerPhoneVerified = false;
+      ownerSimulatedSmsCode = '';
+      if (ownerSmsTimerInterval) clearInterval(ownerSmsTimerInterval);
+      if (ownerSmsAuthGroup) ownerSmsAuthGroup.style.display = 'none';
+      if (btnOwnerSmsAuth) btnOwnerSmsAuth.disabled = false;
+      if (ownerPhoneCheckMsg) { ownerPhoneCheckMsg.textContent = ''; ownerPhoneCheckMsg.className = 'form-helper'; }
 
       renderWizard();
 
@@ -1649,25 +1735,16 @@ function initAuthAndDashboard() {
   // Signup Helpers & Validation Status
   let isIdChecked = false;
   let isIdAvailable = false;
-  let isPhoneVerified = false;
-  let simulatedSmsCode = '';
-  let smsTimerInterval = null;
+  // isPhoneVerified 는 회원가입에서 제거 → 신청 시 본인인증(isOwnerPhoneVerified)으로 이동
 
   const idCheckMsg = document.getElementById('id-check-msg');
   const pwCheckMsg = document.getElementById('pw-check-msg');
   const pwConfirmMsg = document.getElementById('pw-confirm-msg');
   const phoneCheckMsg = document.getElementById('phone-check-msg');
   const btnCheckId = document.getElementById('btn-check-id');
-  const btnSmsAuth = document.getElementById('btn-sms-auth');
-  const smsAuthGroup = document.getElementById('sms-auth-group');
-  const smsAuthCode = document.getElementById('sms-auth-code');
-  const btnVerifySms = document.getElementById('btn-verify-sms');
-  const smsTimer = document.getElementById('sms-timer');
 
-  // SNS Buttons
-  const btnGoogleLogin = document.getElementById('btn-google-login');
+  // SNS Buttons (카카오만 유지)
   const btnKakaoLogin = document.getElementById('btn-kakao-login');
-  const btnGoogleSignup = document.getElementById('btn-google-signup');
   const btnKakaoSignup = document.getElementById('btn-kakao-signup');
 
   // --- Password Visibility Toggle ---
@@ -1984,74 +2061,16 @@ function initAuthAndDashboard() {
     if (signupPwConfirmInput.value) checkPwConfirm();
   });
 
-  // SMS Authentication
-  btnSmsAuth.addEventListener('click', () => {
-    const phoneVal = signupPhoneInput.value.trim();
-    if (!phoneVal) {
-      alert('휴대폰 번호를 입력해 주세요.');
-      return;
-    }
-
-    // Generate 6-digit random code
-    simulatedSmsCode = Math.floor(100000 + Math.random() * 900000).toString();
-    alert(`[인증 문자 발송 시뮬레이션]\n\n입력하신 번호(${phoneVal})로 인증번호 [${simulatedSmsCode}]가 발송되었습니다.`);
-
-    // Show verification UI and start timer
-    smsAuthGroup.style.display = 'block';
-    smsAuthCode.value = '';
-    smsAuthCode.focus();
-
-    let timeLeft = 180; // 3 minutes
-    if (smsTimerInterval) clearInterval(smsTimerInterval);
-
-    const updateTimerText = () => {
-      const min = Math.floor(timeLeft / 60);
-      const sec = timeLeft % 60;
-      smsTimer.textContent = `남은 시간 ${min}:${sec < 10 ? '0' : ''}${sec}`;
-    };
-
-    updateTimerText();
-
-    smsTimerInterval = setInterval(() => {
-      timeLeft--;
-      if (timeLeft <= 0) {
-        clearInterval(smsTimerInterval);
-        smsAuthGroup.style.display = 'none';
-        alert('인증 시간이 초과되었습니다. 다시 인증해 주세요.');
-      } else {
-        updateTimerText();
-      }
-    }, 1000);
-  });
-
-  btnVerifySms.addEventListener('click', () => {
-    const entered = smsAuthCode.value.trim();
-    if (entered === simulatedSmsCode) {
-      clearInterval(smsTimerInterval);
-      isPhoneVerified = true;
-      smsAuthGroup.style.display = 'none';
-      signupPhoneInput.disabled = true;
-      btnSmsAuth.disabled = true;
-      phoneCheckMsg.className = 'form-helper success';
-      phoneCheckMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> 휴대폰 본인인증이 완료되었습니다.';
-    } else {
-      alert('인증번호가 일치하지 않습니다. 다시 확인해 주세요.');
-    }
-  });
 
   const resetSignupState = () => {
     signupForm.reset();
     isIdChecked = false;
     isIdAvailable = false;
-    isPhoneVerified = false;
     signupPhoneInput.disabled = false;
-    btnSmsAuth.disabled = false;
     idCheckMsg.textContent = '';
     pwCheckMsg.textContent = '';
     pwConfirmMsg.textContent = '';
     phoneCheckMsg.textContent = '';
-    smsAuthGroup.style.display = 'none';
-    if (smsTimerInterval) clearInterval(smsTimerInterval);
   };
 
   // Signup Submit
@@ -2097,11 +2116,6 @@ function initAuthAndDashboard() {
     if (pwVal !== pwConfirmVal) {
       alert('비밀번호 확인이 일치하지 않습니다. 다시 확인해 주세요.');
       signupPwConfirmInput.focus();
-      return;
-    }
-
-    if (!isPhoneVerified) {
-      alert('휴대폰 본인인증을 완료해 주세요.');
       return;
     }
 
@@ -2240,10 +2254,8 @@ function initAuthAndDashboard() {
     updateSessionUI();
   };
 
-  btnGoogleLogin.addEventListener('click', () => handleSNSLogin('google'));
-  btnKakaoLogin.addEventListener('click', () => handleSNSLogin('kakao'));
-  btnGoogleSignup.addEventListener('click', () => handleSNSLogin('google'));
-  btnKakaoSignup.addEventListener('click', () => handleSNSLogin('kakao'));
+  if (btnKakaoLogin) btnKakaoLogin.addEventListener('click', () => handleSNSLogin('kakao'));
+  if (btnKakaoSignup) btnKakaoSignup.addEventListener('click', () => handleSNSLogin('kakao'));
 
   // --- Logout Logic ---
   if (logoutBtn) {

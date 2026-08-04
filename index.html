@@ -858,9 +858,19 @@
                                     <input type="text" id="owner-name" class="form-input" placeholder="홍길동" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="owner-phone">휴대전화 번호</label>
-                                    <input type="tel" id="owner-phone" class="form-input" placeholder="010-1234-5678"
-                                        required>
+                                    <label for="owner-phone">휴대전화 번호 <span style="font-size:0.78rem; color: var(--accent-secondary); font-weight:700;">* 본인인증 필수</span></label>
+                                    <div class="input-with-btn">
+                                        <input type="tel" id="owner-phone" class="form-input" placeholder="010-1234-5678" required>
+                                        <button type="button" class="btn btn-secondary btn-inline" id="btn-owner-sms-auth">인증 문자</button>
+                                    </div>
+                                    <span class="form-helper" id="owner-phone-check-msg"></span>
+                                    <div id="owner-sms-auth-group" style="display: none; margin-top: 10px;">
+                                        <div class="input-with-btn">
+                                            <input type="text" id="owner-sms-auth-code" class="form-input" placeholder="인증번호 6자리 입력">
+                                            <button type="button" class="btn btn-primary btn-inline" id="btn-owner-verify-sms">확인</button>
+                                        </div>
+                                        <span class="form-helper" id="owner-sms-timer">남은 시간 3:00</span>
+                                    </div>
                                 </div>
                                 <div class="form-group form-grid-full">
                                     <label for="owner-email">대표 이메일 주소 (선택)</label>
@@ -1421,10 +1431,6 @@
                 </form>
                 <div class="auth-divider"><span>또는 간편 로그인</span></div>
                 <div class="sns-login-buttons">
-                    <button type="button" class="btn btn-google" id="btn-google-login">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
-                            alt="Google" class="sns-logo-icon"> 구글 ID 로그인
-                    </button>
                     <button type="button" class="btn btn-kakao" id="btn-kakao-login">
                         <i class="fa-solid fa-comment"></i> 카카오톡 로그인
                     </button>
@@ -1555,30 +1561,16 @@
                             placeholder="representative@domain.com" required>
                     </div>
                     <div class="form-group-auth">
-                        <label for="signup-phone">휴대폰 번호</label>
-                        <div class="input-with-btn">
-                            <input type="tel" id="signup-phone" class="form-input-auth" minlength="9" maxlength="15" pattern="[0-9+\s-]*" placeholder="010-1234-5678"
-                                required>
-                            <button type="button" class="btn btn-secondary btn-inline" id="btn-sms-auth">인증 문자</button>
-                        </div>
+                        <label for="signup-phone">휴대폰 번호 (연락처)</label>
+                        <input type="tel" id="signup-phone" class="form-input-auth" minlength="9" maxlength="15" pattern="[0-9+\s-]*" placeholder="010-1234-5678" required>
+                        <span class="form-helper-text" style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">지원 신청 시 본인인증에 사용됩니다.</span>
                         <span class="form-helper" id="phone-check-msg"></span>
-                        <div id="sms-auth-group" style="display: none; margin-top: 10px;">
-                            <div class="input-with-btn">
-                                <input type="text" id="sms-auth-code" class="form-input-auth" placeholder="인증번호 6자리 입력">
-                                <button type="button" class="btn btn-primary btn-inline" id="btn-verify-sms">확인</button>
-                            </div>
-                            <span class="form-helper" id="sms-timer">남은 시간 3:00</span>
-                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary btn-full" id="btn-complete-signup"
                         style="margin-top: 15px;"><i class="fa-solid fa-user-plus"></i> 가입완료</button>
                 </form>
                 <div class="auth-divider"><span>또는 간편 회원가입</span></div>
                 <div class="sns-login-buttons">
-                    <button type="button" class="btn btn-google" id="btn-google-signup">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
-                            alt="Google" class="sns-logo-icon"> 구글 ID 가입
-                    </button>
                     <button type="button" class="btn btn-kakao" id="btn-kakao-signup">
                         <i class="fa-solid fa-comment"></i> 카카오톡 가입
                     </button>
