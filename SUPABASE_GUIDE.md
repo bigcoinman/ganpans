@@ -62,11 +62,11 @@ CREATE TABLE public.reviews (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- 4. 보안 정책 (Row Level Security - RLS) 기본 해제
--- 프로토타입 단계에서의 원활한 조작을 위해 RLS를 해제하거나 전체 허용합니다.
-ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.applications DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.reviews DISABLE ROW LEVEL SECURITY;
+-- 4. 보안 정책 (Row Level Security - RLS) 적용
+-- 상세한 보안 정책 및 권한 제어는 SUPABASE_SECURITY.sql 을 참조하세요.
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 ```
 
 ---
