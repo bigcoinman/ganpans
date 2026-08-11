@@ -2473,33 +2473,24 @@ function initPWA() {
   const btnFooter = document.getElementById('footer-install-app');
   const qrImg = document.getElementById('install-qr-img');
   const qrSection = document.getElementById('install-qr-section');
-  const btnTabAndroid = document.getElementById('btn-tab-android');
-  const btnTabIos = document.getElementById('btn-tab-ios');
-  const guideAndroid = document.getElementById('install-guide-android');
-  const guideIos = document.getElementById('install-guide-ios');
   const pwaInstallBtn = document.getElementById('pwa-install-btn');
   const pwaShareBtn = document.getElementById('pwa-share-btn');
+  const pwaShortcutBtn = document.getElementById('pwa-shortcut-btn');
 
   if (!installModal) return;
 
   // Open Modal Logic
   const openModal = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
-    // Set QR code URL dynamically based on the current domain/IP
+    // Generate fresh QR code pointing directly to mobile clean app URL
     if (qrImg) {
-      const currentUrl = window.location.href;
-      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(currentUrl)}`;
+      const appTargetUrl = window.location.origin + '/app';
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(appTargetUrl)}`;
     }
 
-    // Hide QR section on mobile devices
     if (qrSection) {
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (isMobile) {
-        qrSection.style.display = 'none';
-      } else {
-        qrSection.style.display = 'flex';
-      }
+      qrSection.style.display = 'flex';
     }
 
     installModal.classList.add('active');
@@ -2518,20 +2509,25 @@ function initPWA() {
     if (e.target === installModal) closeModal();
   });
 
-  // Tab Switching Logic
-  if (btnTabAndroid && btnTabIos && guideAndroid && guideIos) {
-    btnTabAndroid.addEventListener('click', () => {
-      btnTabAndroid.classList.add('active');
-      btnTabIos.classList.remove('active');
-      guideAndroid.classList.add('active');
-      guideIos.classList.remove('active');
-    });
-
-    btnTabIos.addEventListener('click', () => {
-      btnTabIos.classList.add('active');
-      btnTabAndroid.classList.remove('active');
-      guideIos.classList.add('active');
-      guideAndroid.classList.remove('active');
+  // Shortcut button (홈 화면 바로가기 버튼 만들기)
+  if (pwaShortcutBtn) {
+    pwaShortcutBtn.addEventListener('click', () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted PWA install prompt');
+          }
+          deferredPrompt = null;
+        });
+      } else {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+          alert("Safari 하단 공유 버튼(공유 아이콘)을 누른 후 '홈 화면에 추가'를 선택해 주세요.");
+        } else {
+          alert("크롬/웨일 우측 메뉴(더보기 ⋮)에서 '앱 설치' 또는 '홈 화면에 추가'를 선택하시면 홈 화면 바로가기 버튼이 생성됩니다.");
+        }
+      }
     });
   }
 
@@ -2553,8 +2549,6 @@ function initPWA() {
       deferredPrompt.userChoice.then((choiceResult) => {
         if (choiceResult.outcome === 'accepted') {
           console.log('PWA installation accepted by user');
-        } else {
-          console.log('PWA installation dismissed by user');
         }
         deferredPrompt = null;
         pwaInstallBtn.style.display = 'none';
@@ -2567,9 +2561,9 @@ function initPWA() {
   if (pwaShareBtn) {
     pwaShareBtn.addEventListener('click', () => {
       const shareData = {
-        title: '간판지원단 모바일 앱',
-        text: '경기도 소상공인 경영환경개선사업 간판지원단 모바일 앱 설치 링크입니다. 스마트폰에 홈 화면 앱으로 설치해 간편하게 이용하세요!',
-        url: window.location.href.replace('dashboard.html', 'index.html')
+        title: '간판지원단 앱',
+        text: '스마트폰 앱으로 언제 어디서든 편리하게 시뮬레이터와 간편 신청을 이용해 보세요.',
+        url: window.location.origin + '/app'
       };
 
       if (navigator.share) {
@@ -2577,11 +2571,10 @@ function initPWA() {
           .then(() => console.log('PWA link shared successfully'))
           .catch((err) => console.log('Error sharing PWA link:', err));
       } else {
-        // Fallback: Copy to clipboard
         const shareUrl = shareData.url;
         navigator.clipboard.writeText(shareUrl)
           .then(() => {
-            alert('모바일 앱 설치 링크가 클립보드에 복사되었습니다.\n카카오톡이나 문자메시지 등에 붙여넣어 공유해보세요!');
+            alert('간판지원단 앱 공유 링크가 클립보드에 복사되었습니다.\n카카오톡이나 문자메시지 등에 붙여넣어 공유해보세요!');
           })
           .catch((err) => {
             console.error('Failed to copy share link:', err);

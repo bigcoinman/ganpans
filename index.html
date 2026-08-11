@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Core stylesheet -->
-    <link rel="stylesheet" href="style.css?v=21">
+    <link rel="stylesheet" href="style.css?v=22">
 
     <link rel="canonical" href="https://ganpans.com/">
     <meta name="description" content="경기도 소상공인의 경영환경개선을 위한 노후 간판 교체 및 정비 지원 사업 포털입니다. 실시간 간판 시뮬레이터로 나만의 간판을 디자인해보세요.">
@@ -1653,59 +1653,31 @@
         <div class="install-card">
             <button class="install-close-x" id="install-modal-close" onclick="document.getElementById('install-modal').classList.remove('active');"><i class="fa-solid fa-xmark"></i></button>
             <div class="install-title-area">
-                <h3><i class="fa-solid fa-mobile-screen-button"></i> 간판지원단 모바일 앱</h3>
-                <p>스마트폰에 앱으로 설치하여 언제 어디서든 편리하게 시뮬레이터와 간편 신청을 이용해 보세요.</p>
+                <h3><i class="fa-solid fa-mobile-screen-button"></i> 간판지원단 앱</h3>
+                <p>스마트폰 앱으로 언제 어디서든 편리하게 시뮬레이터와<br>간편 신청을 이용해 보세요.</p>
             </div>
 
-            <!-- QR Code Section (visible on PC) -->
+            <!-- QR Code Section -->
             <div class="install-qr-section" id="install-qr-section">
                 <div class="install-qr-frame">
                     <img id="install-qr-img" src="" alt="설치 QR 코드">
                 </div>
                 <div class="install-qr-text">
-                    <i class="fa-solid fa-qrcode"></i> 스마트폰 카메라로 QR 코드를 스캔하세요.
+                    <i class="fa-solid fa-qrcode"></i> 스마트폰 카메라로 QR 코드를 스캔하여 앱 열기
                 </div>
             </div>
 
-            <!-- Install Instructions Tabs -->
-            <div class="install-guide-tabs">
-                <button class="install-tab-btn active" id="btn-tab-android">안드로이드 (Android)</button>
-                <button class="install-tab-btn" id="btn-tab-ios">아이폰 (iOS)</button>
-            </div>
-
-            <!-- Android Instructions -->
-            <div id="install-guide-android" class="install-tab-content active">
-                <ul class="install-steps">
-                    <li data-step="1">스캔기기 카메라로 QR 코드를 인식하여 모바일 웹 브라우저(크롬 권장)로 접속합니다.</li>
-                    <li data-step="2" class="highlight-step">화면 아래에 나타나는 <strong>'홈 화면에 간판지원단 추가'</strong> 또는 <strong>'앱
-                            설치'</strong> 배너를 탭합니다.</li>
-                    <li data-step="3">배너가 보이지 않는 경우, 크롬 주소창 옆 메뉴(더보기 `⋮`)에서 <strong>'앱 설치'</strong> 또는 <strong>'홈 화면에
-                            추가'</strong>를 선택하세요.</li>
-                </ul>
-            </div>
-
-            <!-- iOS Instructions -->
-            <div id="install-guide-ios" class="install-tab-content">
-                <ul class="install-steps">
-                    <li data-step="1">스캔기기 카메라로 QR 코드를 인식하여 Safari 브라우저로 접속합니다.</li>
-                    <li data-step="2" class="highlight-step">Safari 하단 툴바의 <strong>공유 버튼 <i
-                                class="fa-solid fa-share-nodes"></i></strong> (화살표 모양)을 누릅니다.</li>
-                    <li data-step="3">메뉴에서 <strong>'홈 화면에 추가 <i class="fa-solid fa-square-plus"></i>'</strong>를 선택한 후
-                        추가를 누릅니다.</li>
-                </ul>
-            </div>
-
-            <!-- Direct PWA Install Button (visible on supported mobile browsers) -->
+            <!-- Action Buttons -->
             <div class="install-actions">
-                <button id="pwa-install-btn" class="install-primary-btn" style="display: none;">
-                    <i class="fa-solid fa-download"></i> 스마트폰에 즉시 설치하기
-                </button>
                 <button id="pwa-share-btn" class="install-secondary-btn">
                     <i class="fa-solid fa-share-nodes"></i> 모바일 앱 공유하기
                 </button>
-                <a href="간판지원단_모바일앱.zip" download class="install-secondary-btn" id="zip-download-btn">
-                    <i class="fa-solid fa-file-zipper"></i> 모바일 앱 패키지 다운로드 (.zip)
-                </a>
+                <button id="pwa-shortcut-btn" class="install-secondary-btn">
+                    <i class="fa-solid fa-qrcode"></i> 홈 화면 바로가기 버튼 만들기
+                </button>
+                <button id="pwa-install-btn" class="install-primary-btn" style="display: none;">
+                    <i class="fa-solid fa-download"></i> 스마트폰에 즉시 설치하기
+                </button>
             </div>
         </div>
     </div>
@@ -1825,8 +1797,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Main script -->
     <script src="supabase-config.js"></script>
-    <script src="security-utils.js?v=21"></script>
-    <script src="script.js?v=21"></script>
+    <script src="security-utils.js?v=22"></script>
+    <script src="script.js?v=22"></script>
 </body>
 
 </html>

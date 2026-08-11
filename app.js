@@ -370,11 +370,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Set QR code URL dynamically
             const qrImg = document.getElementById('install-qr-img');
             if (qrImg) {
-                const currentUrl = window.location.href;
-                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(currentUrl)}`;
+                const appTargetUrl = window.location.origin + '/app';
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(appTargetUrl)}`;
             }
 
-            // Always show QR section in mobile app modal so users can scan it on PC/devices
+            // Always show QR section in modal
             const qrSection = document.getElementById('install-qr-section');
             if (qrSection) {
                 qrSection.style.display = 'flex';
