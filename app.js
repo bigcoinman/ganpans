@@ -791,7 +791,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnChoiceCancel = document.getElementById('btn-choice-cancel');
     let selectedPhotosMob = [];
 
-    const resizeImageToLimit = (file, maxSizeBytes = 3 * 1024 * 1024) => {
+    const resizeImageToLimit = (file, maxSizeBytes = 2 * 1024 * 1024) => {
         return new Promise((resolve) => {
             if (file.size <= maxSizeBytes) {
                 resolve(file);
@@ -1039,11 +1039,9 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             if (selectedPhotosMob.length > 0) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    processRegistration(event.target.result);
-                };
-                reader.readAsDataURL(selectedPhotosMob[0]);
+                compressImageToBase64(selectedPhotosMob[0], 2 * 1024 * 1024).then(base64 => {
+                    processRegistration(base64);
+                });
             } else {
                 processRegistration('');
             }

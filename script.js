@@ -1236,14 +1236,12 @@ function initWizard() {
       fileNameDisplay.style.display = 'block';
     }
     
-    // Read file and convert to base64
+    // Read file and convert to base64 with 2MB forced compression
     if (uploadInput && uploadInput.files.length > 0) {
       const file = uploadInput.files[0];
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        uploadedFileBase64 = event.target.result;
-      };
-      reader.readAsDataURL(file);
+      compressImageToBase64(file, 2 * 1024 * 1024).then(base64 => {
+        uploadedFileBase64 = base64;
+      });
     } else {
       uploadedFileBase64 = '';
     }

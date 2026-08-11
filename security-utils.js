@@ -145,3 +145,85 @@ window.supabaseClient = null;
 if (dbUrl && dbKey && typeof window !== 'undefined' && window.supabase) {
   window.supabaseClient = window.supabase.createClient(dbUrl, dbKey);
 }
+
+// 7. 실시간 사진 촬영본 및 이미지 파일 2MB 이하 강제 자동 축소/압축 유틸리티
+function compressImageFile(file, maxSizeBytes = 2 * 1024 * 1024) {
+  return new Promise((resolve) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      resolve(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // 해상도 최적화 (긴 변 기준 최대 1600px)
+        const max_size = 1600;
+        if (width > max_size || height > max_size) {
+          if (width > height) {
+            height = Math.round(height * (max_size / width));
+            width = max_size;
+          } else {
+            width = Math.round(width * (max_size / height));
+            height = max_size;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        let quality = 0.85;
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+        let approximateSize = Math.round((dataUrl.length - 22) * 3 / 4);
+
+        // 2MB 이하가 될 때까지 화질 품질(quality)을 단계적으로 축소
+        while (approximateSize > maxSizeBytes && quality > 0.1) {
+          quality -= 0.1;
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+          approximateSize = Math.round((dataUrl.length - 22) * 3 / 4);
+        }
+
+        try {
+          const byteString = atob(dataUrl.split(',')[1]);
+          const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+          }
+          const blob = new Blob([ab], { type: mimeString });
+          const compressedFile = new File([blob], file.name || 'photo.jpg', { type: mimeString });
+          compressedFile.dataUrl = dataUrl;
+          resolve(compressedFile);
+        } catch (err) {
+          file.dataUrl = dataUrl;
+          resolve(file);
+        }
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
+function compressImageToBase64(file, maxSizeBytes = 2 * 1024 * 1024) {
+  return compressImageFile(file, maxSizeBytes).then((compressedFile) => {
+    if (compressedFile && compressedFile.dataUrl) {
+      return compressedFile.dataUrl;
+    }
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(compressedFile || file);
+    });
+  });
+}

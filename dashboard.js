@@ -526,8 +526,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Image Resize & Compression (3MB Limit Guarantee) ---
-  const resizeImageToLimit = (file, maxSizeBytes = 3 * 1024 * 1024) => {
+  // --- Image Resize & Compression (2MB Limit Guarantee) ---
+  const resizeImageToLimit = (file, maxSizeBytes = 2 * 1024 * 1024) => {
     return new Promise((resolve) => {
       if (file.size <= maxSizeBytes) {
         resolve(file);
