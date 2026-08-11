@@ -1890,7 +1890,10 @@ function initPWA() {
   // Service Worker Registration
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
-      .then((reg) => console.log('Service Worker registered successfully:', reg.scope))
+      .then((reg) => {
+        reg.update();
+        console.log('Service Worker registered and updated:', reg.scope);
+      })
       .catch((err) => console.warn('Service Worker registration failed:', err));
   }
 
@@ -1937,8 +1940,7 @@ function initPWA() {
       }
     } else {
       if (qrImg) {
-        const appTargetUrl = 'https://ganpans.com/app';
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(appTargetUrl)}`;
+        qrImg.src = '/ganpan-app-qr.png?v=50';
       }
       if (qrSection) {
         qrSection.style.display = 'flex';

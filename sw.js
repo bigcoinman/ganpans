@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ganpan-support-v37';
+const CACHE_NAME = 'ganpan-support-v50-purge';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,16 +11,12 @@ const ASSETS_TO_CACHE = [
   './dashboard.js',
   './app.js',
   './manifest.json',
+  './ganpan-app-qr.png',
   './ganpan-favicon-v30.ico',
   './ganpan-favicon-v30.png',
   './ganpan-icon-192-v30.png',
   './ganpan-icon-512-v30.png',
   './ganpan-apple-icon-v30.png',
-  './ganpan-favicon-v28.ico',
-  './ganpan-favicon-v28.png',
-  './ganpan-icon-192-v28.png',
-  './ganpan-icon-512-v28.png',
-  './ganpan-apple-icon-v28.png',
   './favicon.ico',
   './favicon.png',
   './icon-192.png',
@@ -32,82 +28,71 @@ const ASSETS_TO_CACHE = [
   './소상공인_고민해결_이미지.png'
 ];
 
-// Install Service Worker and cache core assets
+// Install Service Worker and skip waiting
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Pre-caching core offline assets');
+      console.log('[Service Worker] Pre-caching core assets');
       return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
-// Activate Service Worker and clean up old caches
+// Activate Service Worker and FORCE PURGE ALL OLD CACHES
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] Removing old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
+          console.log('[Service Worker] Forcibly purging old cache:', cacheName);
+          return caches.delete(cacheName);
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      return self.clients.claim();
+    })
   );
 });
 
-// Fetch event: Serve cached assets when offline, otherwise fetch and cache dynamically
+// Fetch event: Network-First for HTML navigation, Stale-While-Revalidate for static assets
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests and local assets (or public CDN files)
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
 
-  // Exclude third-party APIs (like QR server or fonts if desired, or handle them gracefully)
-  if (url.origin !== self.location.origin && !url.href.includes('cdnjs.cloudflare.com') && !url.href.includes('fonts.googleapis.com')) {
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Stale-while-revalidate for local static assets
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-            }
-          })
-          .catch(() => {/* Ignore network errors during background sync */ });
-
-        return cachedResponse;
-      }
-
-      // Fetch from network if not in cache, and cache it dynamically
-      return fetch(event.request)
+  // Network-First strategy for HTML documents (always get fresh HTML from server)
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html') || url.pathname.endsWith('.html') || url.pathname === '/app') {
+    event.respondWith(
+      fetch(event.request)
         .then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-            return networkResponse;
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
           }
-
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
           return networkResponse;
         })
         .catch(() => {
-          // If offline and request is for an HTML page, return index.html or dashboard.html
-          if (event.request.mode === 'navigate') {
-            if (event.request.url.includes('dashboard.html')) {
-              return caches.match('./dashboard.html');
-            }
-            return caches.match('./index.html');
+          // If offline, serve cached HTML
+          return caches.match(event.request).then((cached) => cached || caches.match('./app.html'));
+        })
+    );
+    return;
+  }
+
+  // Stale-While-Revalidate for static assets (images, css, js)
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
           }
-        });
+          return networkResponse;
+        })
+        .catch(() => cachedResponse);
+
+      return cachedResponse || fetchPromise;
     })
   );
 });
