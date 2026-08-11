@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ganpan-support-v34';
+const CACHE_NAME = 'ganpan-support-v35';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,6 +11,8 @@ const ASSETS_TO_CACHE = [
   './dashboard.js',
   './app.js',
   './manifest.json',
+  './favicon.ico',
+  './favicon.png',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
