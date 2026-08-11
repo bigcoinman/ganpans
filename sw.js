@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ganpan-support-v36';
+const CACHE_NAME = 'ganpan-support-v37';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,6 +11,11 @@ const ASSETS_TO_CACHE = [
   './dashboard.js',
   './app.js',
   './manifest.json',
+  './ganpan-favicon-v30.ico',
+  './ganpan-favicon-v30.png',
+  './ganpan-icon-192-v30.png',
+  './ganpan-icon-512-v30.png',
+  './ganpan-apple-icon-v30.png',
   './ganpan-favicon-v28.ico',
   './ganpan-favicon-v28.png',
   './ganpan-icon-192-v28.png',
