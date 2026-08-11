@@ -1921,8 +1921,7 @@ function initPWA() {
       qrImg.src = '/ganpan-app-qr.png?v=20260812';
     }
     if (qrSection) {
-      const isMobile = window.innerWidth <= 768;
-      qrSection.style.display = isMobile ? 'none' : 'flex';
+      qrSection.style.display = 'flex';
     }
 
     installModal.classList.add('active');

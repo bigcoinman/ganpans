@@ -374,8 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const qrSection = document.getElementById('install-qr-section');
             if (qrSection) {
-                const isMobile = window.innerWidth <= 768;
-                qrSection.style.display = isMobile ? 'none' : 'flex';
+                qrSection.style.display = 'flex';
             }
 
             mobileInstallModal.classList.add('active');
