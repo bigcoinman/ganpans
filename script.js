@@ -2498,44 +2498,23 @@ function initPWA() {
 
   if (!installModal) return;
 
-  // Open Modal / Direct Mobile Share Logic
-  const handleAppShareOrModal = (e) => {
+  // Open Modal Logic (Website Custom Modal)
+  const openModal = (e) => {
     if (e) e.preventDefault();
-
-    const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     
-    if (isMobile) {
-      const shareData = {
-        title: '간판지원단 - 경기도 소상공인 지원사업 모바일 앱',
-        text: '스마트폰 앱으로 언제 어디서든 편리하게 간판 시뮬레이터와 간편 지원금 신청을 이용해 보세요.',
-        url: 'https://ganpans.com/app'
-      };
-
-      if (navigator.share) {
-        navigator.share(shareData).catch((err) => console.log('Share canceled:', err));
-      } else {
-        const shareUrl = 'https://ganpans.com/app';
-        navigator.clipboard.writeText(shareUrl)
-          .then(() => {
-            alert('간판지원단 모바일 앱 공유 링크(https://ganpans.com/app)가 복사되었습니다.\n카카오톡이나 문자메시지로 붙여넣어 전송해 보세요!');
-          })
-          .catch(() => {
-            alert('공유 링크: https://ganpans.com/app');
-          });
-      }
-    } else {
-      if (qrImg) {
-        qrImg.src = '/ganpan-app-qr.png?v=50';
-      }
-      if (qrSection) {
-        qrSection.style.display = 'flex';
-      }
-      installModal.classList.add('active');
+    if (qrImg) {
+      qrImg.src = '/ganpan-app-qr.png?v=50';
     }
+    if (qrSection) {
+      const isMobile = window.innerWidth <= 768;
+      qrSection.style.display = isMobile ? 'none' : 'flex';
+    }
+
+    installModal.classList.add('active');
   };
 
-  if (btnNav) btnNav.addEventListener('click', handleAppShareOrModal);
-  if (btnFooter) btnFooter.addEventListener('click', handleAppShareOrModal);
+  if (btnNav) btnNav.addEventListener('click', openModal);
+  if (btnFooter) btnFooter.addEventListener('click', openModal);
 
   // Close Modal Logic
   const closeModal = () => {
