@@ -1882,6 +1882,8 @@ function initPWA() {
       .catch((err) => console.warn('Service Worker registration failed:', err));
   }
 
+  let deferredPrompt = null;
+
   // UI Elements
   const installModal = document.getElementById('install-modal');
   const btnClose = document.getElementById('install-modal-close');
@@ -1891,6 +1893,14 @@ function initPWA() {
   const pwaInstallBtn = document.getElementById('pwa-install-btn');
   const pwaShareBtn = document.getElementById('pwa-share-btn');
   const pwaShortcutBtn = document.getElementById('pwa-shortcut-btn');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (pwaInstallBtn) {
+      pwaInstallBtn.style.display = 'flex';
+    }
+  });
 
   if (!installModal) return;
 
@@ -1922,34 +1932,26 @@ function initPWA() {
   });
 
   if (pwaShortcutBtn) {
-    pwaShortcutBtn.addEventListener('click', () => {
+    pwaShortcutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       if (deferredPrompt) {
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
           if (choiceResult.outcome === 'accepted') {
-            console.log('User accepted PWA install prompt');
+            alert('홈 화면에 간판지원단 앱 바로가기가 추가되었습니다!');
           }
           deferredPrompt = null;
         });
       } else {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         if (isIOS) {
-          alert("Safari 하단 공유 버튼(공유 아이콘)을 누른 후 '홈 화면에 추가'를 선택해 주세요.");
+          alert("📲 [아이폰 홈 화면 앱 추가 방법]\n\n1. Safari 하단 중앙 '공유' 아이콘(네모+화살표) 클릭\n2. '홈 화면에 추가 (+)' 메뉴 터치\n3. 우측 상단 '추가'를 터치하면 바탕화면에 간판지원단 앱 바로가기 버튼이 생성됩니다!");
         } else {
-          alert("크롬/웨일 우측 메뉴(더보기 ⋮)에서 '앱 설치' 또는 '홈 화면에 추가'를 선택하시면 홈 화면 바로가기 버튼이 생성됩니다.");
+          alert("📲 [스마트폰 홈 화면 앱 추가 방법]\n\n1. 브라우저 우측 상단 메뉴(더보기 ⋮ 또는 ☰) 클릭\n2. '홈 화면에 추가' 또는 '앱 설치' 메뉴 터치\n3. '추가'를 터치하면 바탕화면에 간판지원단 앱 바로가기 버튼이 생성됩니다!");
         }
       }
     });
   }
-
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    if (pwaInstallBtn) {
-      pwaInstallBtn.style.display = 'flex';
-    }
-  });
 
   if (pwaInstallBtn) {
     pwaInstallBtn.addEventListener('click', () => {
