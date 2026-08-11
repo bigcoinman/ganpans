@@ -1187,17 +1187,18 @@ body.mobile-app-body {
     background: rgba(0,0,0,0.5) !important;
     backdrop-filter: blur(4px) !important;
     z-index: 9999 !important;
-    display: none;
+    display: none !important;
     align-items: center !important;
     justify-content: center !important;
-    /* Reset PC transitions and opacity styles */
-    opacity: 1 !important;
-    pointer-events: auto !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
     transition: none !important;
 }
 
 .auth-modal.active, .review-modal-overlay.active, .success-modal.active, .install-modal-overlay.active {
     display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }
 
 .auth-card, .review-write-card, .success-card, .install-card {
