@@ -2099,6 +2099,18 @@ function initAuthAndDashboard() {
       return;
     }
 
+    // 주소 글자 수 검사 (선택 항목, 입력 시 최대 100자)
+    if (addressVal.length > 100) {
+      alert('주소는 최대 100자까지 입력할 수 있습니다.');
+      return;
+    }
+
+    // 이메일 주소 글자 수 검사 (선택 항목, 입력 시 최대 50자)
+    if (emailVal.length > 50) {
+      alert('이메일 주소는 최대 50자까지 입력할 수 있습니다.');
+      return;
+    }
+
     // 휴대폰 번호 형식 정규식 검증
     const phoneRegex = /^[0-9+\s-]+$/;
     if (!phoneRegex.test(phoneVal)) {
