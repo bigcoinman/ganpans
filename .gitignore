@@ -15,6 +15,7 @@ desktop.ini
 
 # Large archives or backups
 *.zip
+!간판지원단_모바일앱.zip
 *.tar.gz
 *.rar
 
