@@ -1874,6 +1874,18 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // PWA & Mobile App Installation Logic
 // ==========================================
+let globalDashDeferredPrompt = null;
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    globalDashDeferredPrompt = e;
+    const pwaInstallBtn = document.getElementById('pwa-install-btn');
+    if (pwaInstallBtn) {
+      pwaInstallBtn.style.display = 'flex';
+    }
+  });
+}
+
 function initPWA() {
   // Service Worker Registration
   if ('serviceWorker' in navigator) {
@@ -1881,8 +1893,6 @@ function initPWA() {
       .then((reg) => console.log('Service Worker registered successfully:', reg.scope))
       .catch((err) => console.warn('Service Worker registration failed:', err));
   }
-
-  let deferredPrompt = null;
 
   // UI Elements
   const installModal = document.getElementById('install-modal');
@@ -1894,13 +1904,9 @@ function initPWA() {
   const pwaShareBtn = document.getElementById('pwa-share-btn');
   const pwaShortcutBtn = document.getElementById('pwa-shortcut-btn');
 
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    if (pwaInstallBtn) {
-      pwaInstallBtn.style.display = 'flex';
-    }
-  });
+  if (globalDashDeferredPrompt && pwaInstallBtn) {
+    pwaInstallBtn.style.display = 'flex';
+  }
 
   if (!installModal) return;
 
@@ -1934,20 +1940,30 @@ function initPWA() {
   if (pwaShortcutBtn) {
     pwaShortcutBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
+      
+      if (globalDashDeferredPrompt) {
+        globalDashDeferredPrompt.prompt();
+        globalDashDeferredPrompt.userChoice.then((choiceResult) => {
           if (choiceResult.outcome === 'accepted') {
-            alert('홈 화면에 간판지원단 앱 바로가기가 추가되었습니다!');
+            alert('🎉 간판지원단 홈 화면 바로가기 버튼이 바탕화면에 추가되었습니다!');
           }
-          deferredPrompt = null;
+          globalDashDeferredPrompt = null;
         });
       } else {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const userAgent = navigator.userAgent || '';
+        const isKakao = /KAKAOTALK/i.test(userAgent);
+        const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+
+        if (isKakao) {
+          const currentUrl = window.location.origin + '/app';
+          location.href = 'intent://' + currentUrl.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;end';
+          return;
+        }
+
         if (isIOS) {
-          alert("📲 [아이폰 홈 화면 앱 추가 방법]\n\n1. Safari 하단 중앙 '공유' 아이콘(네모+화살표) 클릭\n2. '홈 화면에 추가 (+)' 메뉴 터치\n3. 우측 상단 '추가'를 터치하면 바탕화면에 간판지원단 앱 바로가기 버튼이 생성됩니다!");
+          alert("📲 [아이폰 홈 화면 버튼 생성 방법]\n\n하단 중앙 '공유' 버튼(네모+화살표) ➡️ '홈 화면에 추가 (+)' ➡️ 오른쪽 위 [추가]를 누르시면 바탕화면에 바로 버튼이 만들어집니다!");
         } else {
-          alert("📲 [스마트폰 홈 화면 앱 추가 방법]\n\n1. 브라우저 우측 상단 메뉴(더보기 ⋮ 또는 ☰) 클릭\n2. '홈 화면에 추가' 또는 '앱 설치' 메뉴 터치\n3. '추가'를 터치하면 바탕화면에 간판지원단 앱 바로가기 버튼이 생성됩니다!");
+          alert("📲 [스마트폰 홈 화면 버튼 생성 방법]\n\n화면 오른쪽 위 점3개(⋮) 메뉴 ➡️ '홈 화면에 추가' 또는 '앱 설치' ➡️ [추가]를 누르시면 바탕화면에 바로 버튼이 만들어집니다!");
         }
       }
     });
@@ -1955,14 +1971,14 @@ function initPWA() {
 
   if (pwaInstallBtn) {
     pwaInstallBtn.addEventListener('click', () => {
-      if (!deferredPrompt) return;
+      if (!globalDashDeferredPrompt) return;
       pwaInstallBtn.disabled = true;
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult) => {
+      globalDashDeferredPrompt.prompt();
+      globalDashDeferredPrompt.userChoice.then((choiceResult) => {
         if (choiceResult.outcome === 'accepted') {
           console.log('PWA installation accepted by user');
         }
-        deferredPrompt = null;
+        globalDashDeferredPrompt = null;
         pwaInstallBtn.style.display = 'none';
         pwaInstallBtn.disabled = false;
       });
