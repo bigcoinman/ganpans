@@ -5091,10 +5091,49 @@ footer {
 /* 모바일 화면 앱 설치 안내 팝업 대응 */
 @media (max-width: 768px) {
     .install-modal-overlay {
-        align-items: flex-start !important;
-        overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        padding: 40px 10px !important;
+        align-items: center !important;
+        padding: 20px 12px !important;
+    }
+    .install-qr-section {
+        display: none !important;
+    }
+    .install-card {
+        padding: 26px 20px !important;
+        border-radius: 20px !important;
+    }
+    .install-title-area {
+        margin-bottom: 20px !important;
+    }
+    .install-title-area h3 {
+        font-size: 1.25rem !important;
+    }
+    .install-actions {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    #pwa-shortcut-btn {
+        order: 1 !important;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        padding: 14px 18px !important;
+        border-radius: 14px !important;
+        border: none !important;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+        font-size: 0.95rem !important;
+        width: 100% !important;
+    }
+    #pwa-share-btn {
+        order: 2 !important;
+        background: #f8fafc !important;
+        color: #334155 !important;
+        border: 1px solid #cbd5e1 !important;
+        font-weight: 600 !important;
+        padding: 12px 18px !important;
+        border-radius: 14px !important;
+        font-size: 0.9rem !important;
+        width: 100% !important;
     }
 }
 

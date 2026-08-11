@@ -367,17 +367,18 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             e.stopPropagation();
 
-            // Set QR code URL dynamically
+            // Set QR code URL dynamically to canonical production domain
             const qrImg = document.getElementById('install-qr-img');
             if (qrImg) {
-                const appTargetUrl = window.location.origin + '/app';
+                const appTargetUrl = 'https://ganpans.com/app';
                 qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(appTargetUrl)}`;
             }
 
-            // Always show QR section in modal
+            // Hide QR section on mobile screens for clean UI
             const qrSection = document.getElementById('install-qr-section');
             if (qrSection) {
-                qrSection.style.display = 'flex';
+                const isMobile = window.innerWidth <= 768;
+                qrSection.style.display = isMobile ? 'none' : 'flex';
             }
 
             mobileInstallModal.classList.add('active');
