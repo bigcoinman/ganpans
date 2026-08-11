@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ganpan-support-v33';
+const CACHE_NAME = 'ganpan-support-v34';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,6 +11,10 @@ const ASSETS_TO_CACHE = [
   './dashboard.js',
   './app.js',
   './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './apple-touch-icon.png',
+  './app-icon.png',
   './간판지원단 로고-3.png',
   './간판지원단 로고-2.png',
   './소상공인_고민해결_이미지.png'

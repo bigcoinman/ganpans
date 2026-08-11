@@ -8,18 +8,20 @@
     <title>간판지원단 모바일 앱</title>
 
     <!-- PWA Manifest & Mobile Capability -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=25">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="간판지원단">
-    <link rel="apple-touch-icon" href="간판지원단 로고-3.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=25">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=25">
+    <link rel="shortcut icon" href="apple-touch-icon.png?v=25">
     <meta name="theme-color" content="#1e3a8a">
 
     <!-- FontAwesome Icons & Outfit Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Load PC styles first, then mobile overrides -->
-    <link rel="stylesheet" href="style.css?v=24">
-    <link rel="stylesheet" href="app.css?v=24">
+    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="stylesheet" href="app.css?v=25">
 </head>
 
 <body class="mobile-app-body">
@@ -2038,11 +2040,11 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Security utilities & Core App logic -->
     <script src="supabase-config.js"></script>
-    <script src="security-utils.js?v=24"></script>
+    <script src="security-utils.js?v=25"></script>
     <!-- Load PC JavaScript first to run interactive components -->
-    <script src="script.js?v=24"></script>
+    <script src="script.js?v=25"></script>
     <!-- Load mobile drawer, tab, dashboard scripts -->
-    <script src="app.js?v=24"></script>
+    <script src="app.js?v=25"></script>
 </body>
 
 </html>
