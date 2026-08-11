@@ -3,9 +3,9 @@
 
 <head>
     <script>
-        // 모바일 디바이스 또는 Capacitor 네이티브 앱 환경 감지 시 모바일 전용 페이지(app.html)로 이동
+        // 모바일 디바이스 또는 Capacitor 네이티브 앱 환경 감지 시 모바일 전용 페이지(app)로 이동
         if (window.Capacitor || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768) {
-            window.location.href = 'app.html' + window.location.search;
+            window.location.href = 'app' + window.location.search;
         }
     </script>
     <meta charset="UTF-8">
