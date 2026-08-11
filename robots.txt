@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ganpans.vercel.app/sitemap.xml
+Sitemap: https://ganpans.com/sitemap.xml
