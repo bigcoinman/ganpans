@@ -32,7 +32,16 @@
       ]
     },
     {
-      "source": "/(.*).(png|jpg|jpeg|webp|gif|svg|ico|css|js)",
+      "source": "/(.*).(ico|png)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).(jpg|jpeg|webp|gif|svg|css|js)",
       "headers": [
         {
           "key": "Cache-Control",
