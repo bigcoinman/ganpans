@@ -2503,7 +2503,7 @@ function initPWA() {
     if (e) e.preventDefault();
     
     if (qrImg) {
-      qrImg.src = '/ganpan-app-qr.png?v=50';
+      qrImg.src = '/ganpan-app-qr.png?v=20260812';
     }
     if (qrSection) {
       const isMobile = window.innerWidth <= 768;

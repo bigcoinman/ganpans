@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const qrImg = document.getElementById('install-qr-img');
             if (qrImg) {
-                qrImg.src = '/ganpan-app-qr.png?v=50';
+                qrImg.src = '/ganpan-app-qr.png?v=20260812';
             }
 
             const qrSection = document.getElementById('install-qr-section');
