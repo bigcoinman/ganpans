@@ -855,18 +855,85 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // --- Admin Section Pagination States (10 items per page) ---
+  let reqCurrentPage = 1;
+  const reqPerPage = 10;
+
+  let itemsCurrentPage = 1;
+  const itemsPerPage = 10;
+
+  let appsCurrentPage = 1;
+  const appsPerPage = 10;
+
+  function renderPaginationControls(totalCount, perPage, currentPage, callbackFnName) {
+    if (totalCount <= perPage) return '';
+    const totalPages = Math.ceil(totalCount / perPage);
+    let html = '';
+
+    if (currentPage > 1) {
+      html += `<button type="button" onclick="${callbackFnName}(${currentPage - 1}); return false;" style="padding: 4px 10px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; font-size: 0.75rem; cursor: pointer; color: #475569; font-weight: 600; transition: all 0.2s;">&lt; 이전</button>`;
+    } else {
+      html += `<button type="button" disabled style="padding: 4px 10px; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 6px; font-size: 0.75rem; color: #cbd5e1; cursor: not-allowed;">&lt; 이전</button>`;
+    }
+
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) {
+      startPage = Math.max(1, endPage - 4);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      if (i === currentPage) {
+        html += `<button type="button" style="padding: 4px 10px; border: 1px solid var(--accent-primary); background: var(--accent-primary); color: #fff; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">${i}</button>`;
+      } else {
+        html += `<button type="button" onclick="${callbackFnName}(${i}); return false;" style="padding: 4px 10px; border: 1px solid #cbd5e1; background: #fff; color: #475569; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">${i}</button>`;
+      }
+    }
+
+    if (currentPage < totalPages) {
+      html += `<button type="button" onclick="${callbackFnName}(${currentPage + 1}); return false;" style="padding: 4px 10px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; font-size: 0.75rem; cursor: pointer; color: #475569; font-weight: 600; transition: all 0.2s;">다음 &gt;</button>`;
+    } else {
+      html += `<button type="button" disabled style="padding: 4px 10px; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 6px; font-size: 0.75rem; color: #cbd5e1; cursor: not-allowed;">다음 &gt;</button>`;
+    }
+
+    return html;
+  }
+
+  window.changeReqPage = (p) => {
+    reqCurrentPage = p;
+    renderManagerPanel();
+  };
+  window.changeItemsPage = (p) => {
+    itemsCurrentPage = p;
+    renderManagerPanel();
+  };
+  window.changeAppsPage = (p) => {
+    appsCurrentPage = p;
+    renderApplicationsList();
+  };
+
   const renderManagerPanel = () => {
     if (activeUser.role !== 'admin') return;
     if (!managerRequestsList || !managerItemsList) return;
 
-    // 1. Render Requests
+    // 1. Render Requests (with pagination)
     managerRequestsList.innerHTML = '';
     const pendingUsers = users.filter(u => u.conversionStatus === 'pending' || u.conversionStatus === 'pending_constructor');
+    const paginationRequestsContainer = document.getElementById('pagination-manager-requests');
 
     if (pendingUsers.length === 0) {
       managerRequestsList.innerHTML = `<p class="text-muted" style="text-align: center; padding: 30px 0;">대기 중인 승인 신청이 없습니다.</p>`;
+      if (paginationRequestsContainer) paginationRequestsContainer.innerHTML = '';
     } else {
-      pendingUsers.forEach(u => {
+      const totalReq = pendingUsers.length;
+      const totalReqPages = Math.ceil(totalReq / reqPerPage);
+      if (reqCurrentPage > totalReqPages) reqCurrentPage = totalReqPages;
+      if (reqCurrentPage < 1) reqCurrentPage = 1;
+
+      const startIndex = (reqCurrentPage - 1) * reqPerPage;
+      const paginatedRequests = pendingUsers.slice(startIndex, startIndex + reqPerPage);
+
+      paginatedRequests.forEach(u => {
         const isConstructor = u.conversionStatus === 'pending_constructor';
         const typeText = isConstructor ? '시공업체' : '영업자';
         const typeBadgeColor = isConstructor ? 'var(--accent-success)' : 'var(--accent-secondary)';
@@ -911,72 +978,97 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         managerRequestsList.appendChild(row);
       });
+
+      if (paginationRequestsContainer) {
+        paginationRequestsContainer.innerHTML = renderPaginationControls(totalReq, reqPerPage, reqCurrentPage, 'window.changeReqPage');
+      }
     }
 
-    // 2. Render Business Items
+    // 2. Render Business Items (with pagination)
     managerItemsList.innerHTML = '';
-    let hasItems = false;
+    const allBusinessItems = [];
 
     users.forEach(u => {
       if (u.role === 'business' && u.items && u.items.length > 0) {
         u.items.forEach(item => {
-          hasItems = true;
-          const row = document.createElement('div');
-          row.className = 'manager-item-row';
-          row.style.display = 'flex';
-          row.style.flexDirection = 'column';
-          row.style.gap = '8px';
-          row.style.background = '#ffffff';
-          row.style.padding = '14px 18px';
-          row.style.borderRadius = '10px';
-          row.style.border = '1px solid #e2e8f0';
-          row.style.marginBottom = '10px';
-
-          row.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-              <div class="manager-item-row-title" style="font-weight: 700; font-size: 0.98rem; color: var(--text-primary);">
-                ${escapeHtml(item.name)} 
-                <span style="font-size: 0.78rem; font-weight: normal; color: var(--text-secondary); margin-left: 4px;">(${escapeHtml(u.name)} 영업자 / <span style="color: var(--accent-primary); font-weight: 600;">${escapeHtml(String(item.id))}</span>)</span>
-              </div>
-              <button type="button" class="btn-delete-manager-item" onclick="window.deleteManagerItem('${u.id}', '${item.id}'); return false;" title="영업 물건 삭제" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s ease;">
-                <i class="fa-solid fa-trash-can"></i> 삭제
-              </button>
-            </div>
-            
-            <div style="font-size: 0.82rem; color: var(--text-secondary); text-align: left;">
-              <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> 주소: ${escapeHtml(item.address)}</div>
-              ${item.phone ? `<div style="margin-top: 2px;"><i class="fa-solid fa-phone" style="width: 14px; color: #64748b;"></i> 연락처: ${escapeHtml(item.phone)}</div>` : ''}
-            </div>
-            
-            <div class="status-select-wrapper" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 6px; padding-top: 8px; border-top: 1px dashed #f1f5f9;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">접수:</label>
-                <select class="status-select select-receipt-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff;">
-                  <option value="업체신청" ${(item.receiptStatus === '업체신청') ? 'selected' : ''}>업체신청</option>
-                  <option value="접수예정" ${(item.receiptStatus === '접수예정' || !item.receiptStatus || item.receiptStatus === '접수 대기') ? 'selected' : ''}>접수예정</option>
-                  <option value="접수완료" ${(item.receiptStatus === '접수완료' || item.receiptStatus === '접수 완료' || item.receiptStatus.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
-                </select>
-              </div>
-              
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">진행:</label>
-                <select class="status-select select-progress-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff;">
-                  <option value="지원대기중" ${(item.progressStatus === '지원대기중' || !item.progressStatus || item.progressStatus === '심사 대기') ? 'selected' : ''}>지원대기중</option>
-                  <option value="심사대기" ${(item.progressStatus === '심사대기' || item.progressStatus === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
-                  <option value="대상자선정" ${(item.progressStatus === '대상자선정' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
-                  <option value="간판시공 준비중" ${(item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
-                  <option value="간판시공완료" ${(item.progressStatus === '간판시공완료' || item.progressStatus === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
-                </select>
-              </div>
-            </div>
-          `;
-          managerItemsList.appendChild(row);
+          allBusinessItems.push({
+            user: u,
+            item: item
+          });
         });
       }
     });
 
-    if (!hasItems) {
+    const paginationItemsContainer = document.getElementById('pagination-manager-items');
+
+    if (allBusinessItems.length === 0) {
       managerItemsList.innerHTML = `<p class="text-muted" style="text-align: center; padding: 30px 0;">등록된 영업물건이 없습니다.</p>`;
+      if (paginationItemsContainer) paginationItemsContainer.innerHTML = '';
+    } else {
+      const totalItemsCount = allBusinessItems.length;
+      const totalItemsPages = Math.ceil(totalItemsCount / itemsPerPage);
+      if (itemsCurrentPage > totalItemsPages) itemsCurrentPage = totalItemsPages;
+      if (itemsCurrentPage < 1) itemsCurrentPage = 1;
+
+      const startIndex = (itemsCurrentPage - 1) * itemsPerPage;
+      const paginatedItems = allBusinessItems.slice(startIndex, startIndex + itemsPerPage);
+
+      paginatedItems.forEach(({ user: u, item }) => {
+        const row = document.createElement('div');
+        row.className = 'manager-item-row';
+        row.style.display = 'flex';
+        row.style.flexDirection = 'column';
+        row.style.gap = '8px';
+        row.style.background = '#ffffff';
+        row.style.padding = '14px 18px';
+        row.style.borderRadius = '10px';
+        row.style.border = '1px solid #e2e8f0';
+        row.style.marginBottom = '10px';
+
+        row.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div class="manager-item-row-title" style="font-weight: 700; font-size: 0.98rem; color: var(--text-primary);">
+              ${escapeHtml(item.name)} 
+              <span style="font-size: 0.78rem; font-weight: normal; color: var(--text-secondary); margin-left: 4px;">(${escapeHtml(u.name)} 영업자 / <span style="color: var(--accent-primary); font-weight: 600;">${escapeHtml(String(item.id))}</span>)</span>
+            </div>
+            <button type="button" class="btn-delete-manager-item" onclick="window.deleteManagerItem('${u.id}', '${item.id}'); return false;" title="영업 물건 삭제" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s ease;">
+              <i class="fa-solid fa-trash-can"></i> 삭제
+            </button>
+          </div>
+          
+          <div style="font-size: 0.82rem; color: var(--text-secondary); text-align: left;">
+            <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> 주소: ${escapeHtml(item.address)}</div>
+            ${item.phone ? `<div style="margin-top: 2px;"><i class="fa-solid fa-phone" style="width: 14px; color: #64748b;"></i> 연락처: ${escapeHtml(item.phone)}</div>` : ''}
+          </div>
+          
+          <div class="status-select-wrapper" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 6px; padding-top: 8px; border-top: 1px dashed #f1f5f9;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">접수:</label>
+              <select class="status-select select-receipt-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff;">
+                <option value="업체신청" ${(item.receiptStatus === '업체신청') ? 'selected' : ''}>업체신청</option>
+                <option value="접수예정" ${(item.receiptStatus === '접수예정' || !item.receiptStatus || item.receiptStatus === '접수 대기') ? 'selected' : ''}>접수예정</option>
+                <option value="접수완료" ${(item.receiptStatus === '접수완료' || item.receiptStatus === '접수 완료' || item.receiptStatus.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
+              </select>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">진행:</label>
+              <select class="status-select select-progress-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff;">
+                <option value="지원대기중" ${(item.progressStatus === '지원대기중' || !item.progressStatus || item.progressStatus === '심사 대기') ? 'selected' : ''}>지원대기중</option>
+                <option value="심사대기" ${(item.progressStatus === '심사대기' || item.progressStatus === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
+                <option value="대상자선정" ${(item.progressStatus === '대상자선정' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
+                <option value="간판시공 준비중" ${(item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
+                <option value="간판시공완료" ${(item.progressStatus === '간판시공완료' || item.progressStatus === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
+              </select>
+            </div>
+          </div>
+        `;
+        managerItemsList.appendChild(row);
+      });
+
+      if (paginationItemsContainer) {
+        paginationItemsContainer.innerHTML = renderPaginationControls(totalItemsCount, itemsPerPage, itemsCurrentPage, 'window.changeItemsPage');
+      }
     }
   };
 
@@ -1440,6 +1532,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!applicationsTableBody) return;
 
     const apps = JSON.parse(localStorage.getItem('applications')) || [];
+    const paginationAppsContainer = document.getElementById('pagination-manager-apps');
 
     if (apps.length === 0) {
       applicationsTableBody.innerHTML = `
@@ -1447,6 +1540,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td colspan="7" class="text-muted" style="text-align: center; padding: 40px 0;">접수된 온라인 간편 지원 신청이 없습니다.</td>
         </tr>
       `;
+      if (paginationAppsContainer) paginationAppsContainer.innerHTML = '';
       return;
     }
 
@@ -1455,7 +1549,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sort applications by applied date descending (latest first)
     const sortedApps = [...apps].sort((a, b) => b.id - a.id);
 
-    sortedApps.forEach(app => {
+    const totalAppsCount = sortedApps.length;
+    const totalAppsPages = Math.ceil(totalAppsCount / appsPerPage);
+    if (appsCurrentPage > totalAppsPages) appsCurrentPage = totalAppsPages;
+    if (appsCurrentPage < 1) appsCurrentPage = 1;
+
+    const startIndex = (appsCurrentPage - 1) * appsPerPage;
+    const paginatedApps = sortedApps.slice(startIndex, startIndex + appsPerPage);
+
+    paginatedApps.forEach(app => {
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid var(--border-color)';
       tr.style.transition = 'background 0.2s ease';
@@ -1543,6 +1645,10 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       applicationsTableBody.appendChild(tr);
     });
+
+    if (paginationAppsContainer) {
+      paginationAppsContainer.innerHTML = renderPaginationControls(totalAppsCount, appsPerPage, appsCurrentPage, 'window.changeAppsPage');
+    }
 
     // Add event listeners to the action buttons
     document.querySelectorAll('.btn-approve-app').forEach(btn => {
