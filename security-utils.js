@@ -298,6 +298,30 @@ function generateBizItemId(bizCode, userItems) {
   return `${prefix}${nextSeq}`;
 }
 
+// 12. 시공업체 회원 코드 생성 헬퍼 (규칙: BPCYYMM01 ~ 순차 증가, 예: BPC260801, BPC260803)
+function generateConstCode(usersList) {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const prefix = `BPC${yy}${mm}`;
+
+  const currentUsers = Array.isArray(usersList) ? usersList : (JSON.parse(localStorage.getItem('users')) || []);
+
+  let maxSeq = 0;
+  currentUsers.forEach(u => {
+    if (u && u.constCode && typeof u.constCode === 'string' && u.constCode.startsWith(prefix)) {
+      const seqStr = u.constCode.slice(prefix.length);
+      const seqNum = parseInt(seqStr, 10);
+      if (!isNaN(seqNum) && seqNum > maxSeq) {
+        maxSeq = seqNum;
+      }
+    }
+  });
+
+  const nextSeq = String(maxSeq + 1).padStart(2, '0');
+  return `${prefix}${nextSeq}`;
+}
+
 // 11. 개인정보 보호 마스킹 유틸리티
 function maskName(name) {
   if (!name) return '고객';

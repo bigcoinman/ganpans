@@ -5,6 +5,55 @@ document.addEventListener('DOMContentLoaded', () => {
   let users = JSON.parse(localStorage.getItem('users')) || [];
   let activeUser = getActiveUser() || null;
 
+  // 상태 표준화 자동 마이그레이션 (접수 3개, 진행 5개 표준값 매핑)
+  let needUsersSave = false;
+  users = users.map(u => {
+    if (u.items && Array.isArray(u.items)) {
+      const updatedItems = u.items.map(item => {
+        let r = item.receiptStatus;
+        let p = item.progressStatus;
+        let changed = false;
+
+        if (!r || r === '접수 대기' || r.includes('대기')) {
+          r = '접수예정';
+          changed = true;
+        } else if (r.includes('완료') && r !== '접수완료') {
+          r = '접수완료';
+          changed = true;
+        }
+
+        if (!p || p === '심사 대기' || p === '대기') {
+          p = '지원대기중';
+          changed = true;
+        } else if (p === '서류 보완 필요') {
+          p = '심사대기';
+          changed = true;
+        } else if (p === '서류 심사 통과' || p === '현장 실사 중' || p === '지원금 최종 승인') {
+          p = '대상자선정';
+          changed = true;
+        } else if (p === '간판 시공 중') {
+          p = '간판시공 준비중';
+          changed = true;
+        } else if (p === '시공 완료') {
+          p = '간판시공완료';
+          changed = true;
+        }
+
+        if (changed) {
+          needUsersSave = true;
+          return { ...item, receiptStatus: r, progressStatus: p };
+        }
+        return item;
+      });
+      return { ...u, items: updatedItems };
+    }
+    return u;
+  });
+
+  if (needUsersSave) {
+    localStorage.setItem('users', JSON.stringify(users));
+  }
+
   // 1. Guard for unauthorized access
   if (!activeUser) {
     alert('로그인이 필요한 페이지입니다. 홈으로 이동합니다.');
@@ -768,8 +817,8 @@ document.addEventListener('DOMContentLoaded', () => {
         phone: phoneVal,
         address: addrVal,
         photosCount: selectedPhotos.length,
-        receiptStatus: '접수 완료 (경기도시장상권진흥원)',
-        progressStatus: '심사 대기',
+        receiptStatus: '접수예정',
+        progressStatus: '지원대기중',
         photos: photoUrls
       };
 
@@ -876,28 +925,51 @@ document.addEventListener('DOMContentLoaded', () => {
           hasItems = true;
           const row = document.createElement('div');
           row.className = 'manager-item-row';
+          row.style.display = 'flex';
+          row.style.flexDirection = 'column';
+          row.style.gap = '8px';
+          row.style.background = '#ffffff';
+          row.style.padding = '14px 18px';
+          row.style.borderRadius = '10px';
+          row.style.border = '1px solid #e2e8f0';
+          row.style.marginBottom = '10px';
+
           row.innerHTML = `
-            <div class="manager-item-row-title">${item.name} (${u.name} 영업자)</div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary); text-align: left;">주소: ${item.address}</div>
-            ${item.phone ? `<div style="font-size: 0.8rem; color: var(--text-secondary); text-align: left;">연락처: ${item.phone}</div>` : ''}
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <div class="manager-item-row-title" style="font-weight: 700; font-size: 0.98rem; color: var(--text-primary);">
+                ${escapeHtml(item.name)} 
+                <span style="font-size: 0.78rem; font-weight: normal; color: var(--text-secondary); margin-left: 4px;">(${escapeHtml(u.name)} 영업자 / <span style="color: var(--accent-primary); font-weight: 600;">${escapeHtml(String(item.id))}</span>)</span>
+              </div>
+              <button type="button" class="btn-delete-manager-item" onclick="window.deleteManagerItem('${u.id}', '${item.id}'); return false;" title="영업 물건 삭제" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s ease;">
+                <i class="fa-solid fa-trash-can"></i> 삭제
+              </button>
+            </div>
             
-            <div class="status-select-wrapper">
-              <label style="font-size: 0.75rem; font-weight: 700;">접수:</label>
-              <select class="status-select select-receipt-status" data-uid="${u.id}" data-itemid="${item.id}">
-                <option value="접수 대기" ${item.receiptStatus === '접수 대기' ? 'selected' : ''}>접수 대기</option>
-                <option value="접수 완료 (경기도시장상권진흥원)" ${item.receiptStatus === '접수 완료 (경기도시장상권진흥원)' ? 'selected' : ''}>접수 완료</option>
-              </select>
+            <div style="font-size: 0.82rem; color: var(--text-secondary); text-align: left;">
+              <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> 주소: ${escapeHtml(item.address)}</div>
+              ${item.phone ? `<div style="margin-top: 2px;"><i class="fa-solid fa-phone" style="width: 14px; color: #64748b;"></i> 연락처: ${escapeHtml(item.phone)}</div>` : ''}
+            </div>
+            
+            <div class="status-select-wrapper" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 6px; padding-top: 8px; border-top: 1px dashed #f1f5f9;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">접수:</label>
+                <select class="status-select select-receipt-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff;">
+                  <option value="업체신청" ${(item.receiptStatus === '업체신청') ? 'selected' : ''}>업체신청</option>
+                  <option value="접수예정" ${(item.receiptStatus === '접수예정' || !item.receiptStatus || item.receiptStatus === '접수 대기') ? 'selected' : ''}>접수예정</option>
+                  <option value="접수완료" ${(item.receiptStatus === '접수완료' || item.receiptStatus === '접수 완료' || item.receiptStatus.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
+                </select>
+              </div>
               
-              <label style="font-size: 0.75rem; font-weight: 700; margin-left: 10px;">진행:</label>
-              <select class="status-select select-progress-status" data-uid="${u.id}" data-itemid="${item.id}">
-                <option value="심사 대기" ${item.progressStatus === '심사 대기' ? 'selected' : ''}>심사 대기</option>
-                <option value="서류 보완 필요" ${item.progressStatus === '서류 보완 필요' ? 'selected' : ''}>서류 보완 필요</option>
-                <option value="서류 심사 통과" ${item.progressStatus === '서류 심사 통과' ? 'selected' : ''}>서류 심사 통과</option>
-                <option value="현장 실사 중" ${item.progressStatus === '현장 실사 중' ? 'selected' : ''}>현장 실사 중</option>
-                <option value="지원금 최종 승인" ${item.progressStatus === '지원금 최종 승인' ? 'selected' : ''}>지원금 최종 승인</option>
-                <option value="간판 시공 중" ${item.progressStatus === '간판 시공 중' ? 'selected' : ''}>간판 시공 중</option>
-                <option value="시공 완료" ${item.progressStatus === '시공 완료' ? 'selected' : ''}>시공 완료</option>
-              </select>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">진행:</label>
+                <select class="status-select select-progress-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff;">
+                  <option value="지원대기중" ${(item.progressStatus === '지원대기중' || !item.progressStatus || item.progressStatus === '심사 대기') ? 'selected' : ''}>지원대기중</option>
+                  <option value="심사대기" ${(item.progressStatus === '심사대기' || item.progressStatus === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
+                  <option value="대상자선정" ${(item.progressStatus === '대상자선정' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
+                  <option value="간판시공 준비중" ${(item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
+                  <option value="간판시공완료" ${(item.progressStatus === '간판시공완료' || item.progressStatus === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
+                </select>
+              </div>
             </div>
           `;
           managerItemsList.appendChild(row);
@@ -911,7 +983,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.select-receipt-status').forEach(select => {
         select.addEventListener('change', (e) => {
           const uid = e.target.dataset.uid;
-          const itemId = parseInt(e.target.dataset.itemid);
+          const itemId = e.target.dataset.itemid;
           const val = e.target.value;
           updateItemStatus(uid, itemId, 'receipt', val);
         });
@@ -920,13 +992,59 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.select-progress-status').forEach(select => {
         select.addEventListener('change', (e) => {
           const uid = e.target.dataset.uid;
-          const itemId = parseInt(e.target.dataset.itemid);
+          const itemId = e.target.dataset.itemid;
           const val = e.target.value;
           updateItemStatus(uid, itemId, 'progress', val);
         });
       });
     }
   };
+
+  const deleteManagerItem = (uid, itemId) => {
+    if (!activeUser || activeUser.role !== 'admin') {
+      alert('최고 관리자만 영업 물건을 삭제할 수 있습니다.');
+      return;
+    }
+
+    let targetItemName = '해당 영업 물건';
+    const targetUser = users.find(u => String(u.id) === String(uid));
+    if (targetUser && targetUser.items) {
+      const found = targetUser.items.find(it => String(it.id) === String(itemId));
+      if (found && found.name) targetItemName = found.name;
+    }
+
+    const ok = confirm(`정말 [${targetItemName}] 영업 물건을 영구 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 등록된 현장 사진 및 진행 상태 정보가 모두 삭제됩니다.`);
+    if (!ok) return;
+
+    users = users.map(u => {
+      if (String(u.id) === String(uid)) {
+        const remainingItems = (u.items || []).filter(item => String(item.id) !== String(itemId));
+        return { ...u, items: remainingItems };
+      }
+      return u;
+    });
+
+    localStorage.setItem('users', JSON.stringify(users));
+
+    // Supabase DB Sync
+    if (window.supabaseClient) {
+      const updatedUser = users.find(u => String(u.id) === String(uid));
+      if (updatedUser) {
+        window.supabaseClient.from('users').update({
+          items: updatedUser.items || []
+        }).eq('id', uid).then(({ error }) => {
+          if (error) console.error('Supabase item deletion error:', error.message);
+        });
+      }
+      window.supabaseClient.from('applications').delete().eq('id', itemId).then(({ error }) => {
+        if (error) console.log('Notice: Item not in applications table');
+      });
+    }
+
+    alert(`[${targetItemName}] 영업 물건이 안전하게 삭제되었습니다.`);
+    updateSessionUI();
+  };
+  window.deleteManagerItem = deleteManagerItem;
 
   const approveUserConversion = (uid) => {
     if (activeUser.role !== 'admin') return;
@@ -935,7 +1053,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!targetUser) return;
     
     if (targetUser.conversionStatus === 'pending_constructor') {
-      const code = `CO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const code = generateConstCode(users);
       users = users.map(u => {
         if (u.id === uid) {
           return {
@@ -950,6 +1068,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return u;
       });
       localStorage.setItem('users', JSON.stringify(users));
+
+      // Supabase Sync
+      if (window.supabaseClient) {
+        window.supabaseClient.from('users').update({
+          role: 'constructor',
+          const_code: code,
+          business_name: targetUser.pendingBusinessName || '(주)새로운시공',
+          license_number: targetUser.pendingLicenseNumber || '000-00-00000',
+          conversion_status: 'approved'
+        }).eq('id', uid).then(({ error }) => {
+          if (error) console.error('Supabase constructor conversion error:', error.message);
+        });
+      }
+
       alert(`시공업체 전환 신청이 승인되었습니다.\n\n발급된 시공업체 코드: [${code}]`);
     } else {
       const code = generateBizCode(users);
@@ -1000,11 +1132,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const updateItemStatus = (uid, itemId, type, value) => {
-    if (activeUser.role !== 'admin') return;
+    if (!activeUser || activeUser.role !== 'admin') return;
     users = users.map(u => {
-      if (u.id === uid) {
-        const updatedItems = u.items.map(item => {
-          if (item.id === itemId) {
+      if (String(u.id) === String(uid)) {
+        const updatedItems = (u.items || []).map(item => {
+          if (String(item.id) === String(itemId)) {
             if (type === 'receipt') {
               return { ...item, receiptStatus: value };
             } else {
@@ -1019,8 +1151,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     localStorage.setItem('users', JSON.stringify(users));
+
+    // Supabase DB Sync
+    if (window.supabaseClient) {
+      const updatedUser = users.find(u => String(u.id) === String(uid));
+      if (updatedUser) {
+        window.supabaseClient.from('users').update({
+          items: updatedUser.items || []
+        }).eq('id', uid).then(({ error }) => {
+          if (error) console.error('Supabase status update error:', error.message);
+        });
+      }
+    }
+
     updateSessionUI();
   };
+  window.updateItemStatus = updateItemStatus;
 
   // --- Account Deletion (회원탈퇴) ---
   const btnDeleteAccount = document.getElementById('btn-delete-account');

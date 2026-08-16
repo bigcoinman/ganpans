@@ -4977,6 +4977,19 @@ footer {
     transform: translateY(0) !important;
 }
 
+/* PC/공통 통합 검색 모달 전용 스타일 */
+#global-search-modal.inquiry-modal-overlay {
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+#global-search-modal .inquiry-card {
+    max-width: 560px !important;
+    width: 95% !important;
+    padding: 26px 22px !important;
+    margin: auto !important;
+}
+
 .inquiry-close-x {
     position: absolute !important;
     top: 10px !important;

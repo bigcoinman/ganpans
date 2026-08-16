@@ -2064,7 +2064,7 @@ body.mobile-app-body {
     font-weight: 700 !important;
     box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2) !important;
     transition: background-color 0.2s ease, transform 0.1s ease !important;
-    display: flex !important;
+    display: flex;
     align-items: center !important;
     justify-content: center !important; /* 좁아진 공간 내 균형 있는 중앙 배치 */
     gap: 8px !important;
@@ -2076,11 +2076,32 @@ body.mobile-app-body {
     transform: scale(0.97) !important;
 }
 
-.drawer-btn-blue i {
+.drawer-btn-gold {
+    background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%) !important;
     color: #ffffff !important;
+    border-radius: 6px !important;
+    margin: 12px 20px 6px 20px !important;
+    padding: 11px 16px !important;
     font-size: 0.95rem !important;
-    width: 20px !important;
-    display: inline-block !important;
+    font-weight: 800 !important;
+    box-shadow: 0 4px 12px rgba(202, 138, 4, 0.3) !important;
+    transition: all 0.2s ease !important;
+    display: flex;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    text-decoration: none !important;
+    letter-spacing: -0.3px !important;
+}
+
+.drawer-btn-gold:active {
+    background: linear-gradient(135deg, #ca8a04 0%, #a16207 100%) !important;
+    transform: scale(0.97) !important;
+}
+
+.drawer-btn-gold i {
+    color: #ffffff !important;
+    font-size: 1rem !important;
 }
 
 .drawer-btn-green {
@@ -2090,7 +2111,7 @@ body.mobile-app-body {
     font-size: 0.88rem !important;
     font-weight: 700 !important;
     transition: background-color 0.2s ease !important;
-    display: flex !important;
+    display: flex;
     align-items: center !important;
     gap: 10px !important;
     text-decoration: none !important;
@@ -2161,6 +2182,18 @@ body.mobile-app-body {
 
 .inquiry-modal-overlay.active .inquiry-card {
     transform: translateY(0) !important;
+}
+
+/* 통합 검색 모달 전용 스타일 */
+#global-search-modal.inquiry-modal-overlay {
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+#global-search-modal .inquiry-card {
+    max-width: 480px !important;
+    width: 95% !important;
+    padding: 24px 18px !important;
 }
 
 .inquiry-close-x {

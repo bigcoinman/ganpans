@@ -70,7 +70,7 @@
                 <li><a href="#home" class="nav-link">홈</a></li>
                 <li><a href="#intro" class="nav-link">사업소개</a></li>
                 <li><a href="#showcase" class="nav-link">간판 갤러리</a></li>
-                <li><a href="#" class="nav-link" id="nav-search-btn"><i class="fa-solid fa-magnifying-glass"></i> 검색</a></li>
+                <li><a href="#" class="nav-link" id="nav-search-btn" onclick="openGlobalSearchModal(); return false;"><i class="fa-solid fa-magnifying-glass"></i> 검색</a></li>
                 <li><a href="#faq" class="nav-link">FAQ</a></li>
                 <li><a href="#reviews" class="nav-link">후기</a></li>
                 <li><a href="#" id="nav-install-app" class="nav-link"
@@ -1707,7 +1707,7 @@
             <i class="fa-solid fa-house"></i>
             <span>홈</span>
         </a>
-        <a href="#" class="mobile-bottom-nav-item" id="m-nav-search">
+        <a href="#" class="mobile-bottom-nav-item" id="m-nav-search" onclick="openGlobalSearchModal(); return false;">
             <i class="fa-solid fa-magnifying-glass"></i>
             <span>검색</span>
         </a>
@@ -1821,34 +1821,52 @@
                 <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px;">상호명 또는 발급받으신 고유 접수번호로 진행 현황을 조회하실 수 있습니다.</p>
             </div>
 
-            <!-- 탭 선택 (상호로 검색 / 번호로 검색) -->
-            <div class="search-tabs" style="display: flex; gap: 8px; margin-bottom: 14px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 8px;">
-                <button type="button" id="search-tab-name" class="btn btn-primary" style="flex: 1; padding: 10px; font-size: 0.88rem; border-radius: 6px; border: none; font-weight: 600;">
-                    <i class="fa-solid fa-store"></i> 상호로 검색
-                </button>
-                <button type="button" id="search-tab-code" class="btn btn-secondary" style="flex: 1; padding: 10px; font-size: 0.88rem; border-radius: 6px; border: none; font-weight: 600; background: transparent; color: var(--text-secondary);">
-                    <i class="fa-solid fa-hashtag"></i> 번호로 검색
-                </button>
-            </div>
-
-            <!-- 검색 입력창 폼 -->
-            <form id="global-search-form" onsubmit="event.preventDefault();" style="display: flex; gap: 8px; margin-bottom: 12px;">
-                <div style="position: relative; flex: 1;">
-                    <input type="text" id="global-search-input" class="form-input-auth" maxlength="25" style="width: 100%; padding: 11px 14px; border-radius: 8px; font-size: 0.9rem; border: 1.5px solid var(--border-color);" placeholder="상호명을 입력해 주세요 (최대 25자, 예: 초원식당)" required>
+            <!-- 비회원 안내 블록 -->
+            <div id="search-auth-block" style="display: none; text-align: center; padding: 25px 15px;">
+                <div style="width: 60px; height: 60px; margin: 0 auto 16px; background: rgba(99, 102, 241, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <i class="fa-solid fa-lock" style="font-size: 1.8rem; color: var(--accent-primary);"></i>
                 </div>
-                <button type="submit" class="btn btn-primary" style="padding: 0 20px; font-size: 0.9rem; white-space: nowrap; border-radius: 8px;">
-                    <i class="fa-solid fa-magnifying-glass"></i> 검색
+                <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">회원 전용 서비스입니다</h4>
+                <p style="font-size: 0.86rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 22px;">
+                    간판 지원 및 물건 현황 검색은 <strong>회원 전용</strong> 기능입니다.<br>
+                    검색을 이용하시려면 <strong>회원가입</strong> 또는 <strong>로그인</strong>이 필요합니다.
+                </p>
+                <button type="button" class="btn btn-primary btn-full btn-search-go-auth" style="padding: 13px; font-size: 0.95rem; font-weight: 700; border-radius: 8px;">
+                    <i class="fa-solid fa-user-plus"></i> 회원가입 / 로그인하기
                 </button>
-            </form>
-
-            <!-- 검색 힌트 안내 -->
-            <div id="search-guide-box" style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; border: 1px dashed var(--border-color);">
-                <i class="fa-solid fa-circle-info" style="color: var(--accent-primary);"></i> <span id="search-guide-text">조회하고자 하는 매장의 <strong>상호명(업체명)</strong>을 입력해 주세요.</span>
             </div>
 
-            <!-- 검색 결과 목록 영역 -->
-            <div id="search-results-area" style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
-                <!-- 검색 결과가 동적으로 표시됩니다 -->
+            <!-- 회원용 검색 컨텐츠 영역 -->
+            <div id="search-content-area">
+                <!-- 탭 선택 (상호로 검색 / 번호로 검색) -->
+                <div class="search-tabs" style="display: flex; gap: 8px; margin-bottom: 14px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 8px;">
+                    <button type="button" id="search-tab-name" class="btn btn-primary" style="flex: 1; padding: 10px; font-size: 0.88rem; border-radius: 6px; border: none; font-weight: 600;">
+                        <i class="fa-solid fa-store"></i> 상호로 검색
+                    </button>
+                    <button type="button" id="search-tab-code" class="btn btn-secondary" style="flex: 1; padding: 10px; font-size: 0.88rem; border-radius: 6px; border: none; font-weight: 600; background: transparent; color: var(--text-secondary);">
+                        <i class="fa-solid fa-hashtag"></i> 번호로 검색
+                    </button>
+                </div>
+
+                <!-- 검색 입력창 폼 -->
+                <form id="global-search-form" onsubmit="event.preventDefault();" style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <div style="position: relative; flex: 1;">
+                        <input type="text" id="global-search-input" class="form-input-auth" maxlength="25" style="width: 100%; padding: 11px 14px; border-radius: 8px; font-size: 0.9rem; border: 1.5px solid var(--border-color);" placeholder="상호명을 입력해 주세요 (최대 25자, 예: 초원식당)" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="padding: 0 20px; font-size: 0.9rem; white-space: nowrap; border-radius: 8px;">
+                        <i class="fa-solid fa-magnifying-glass"></i> 검색
+                    </button>
+                </form>
+
+                <!-- 검색 힌트 안내 -->
+                <div id="search-guide-box" style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; border: 1px dashed var(--border-color);">
+                    <i class="fa-solid fa-circle-info" style="color: var(--accent-primary);"></i> <span id="search-guide-text">조회하고자 하는 매장의 <strong>상호명(업체명)</strong>을 입력해 주세요.</span>
+                </div>
+
+                <!-- 검색 결과 목록 영역 -->
+                <div id="search-results-area" style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                    <!-- 검색 결과가 동적으로 표시됩니다 -->
+                </div>
             </div>
 
             <button type="button" class="btn btn-secondary btn-full search-modal-close-btn" style="margin-top: 14px; background: #cbd5e1 !important; color: #334155 !important; border: none !important;"><i class="fa-solid fa-xmark"></i> 닫기</button>

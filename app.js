@@ -6,6 +6,55 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeUser = getActiveUser() || null;
     let applications = JSON.parse(localStorage.getItem('applications')) || [];
 
+    // 상태 표준화 자동 마이그레이션 (접수 3개, 진행 5개 표준값 매핑)
+    let needUsersSave = false;
+    users = users.map(u => {
+        if (u.items && Array.isArray(u.items)) {
+            const updatedItems = u.items.map(item => {
+                let r = item.receiptStatus;
+                let p = item.progressStatus;
+                let changed = false;
+
+                if (!r || r === '접수 대기' || r.includes('대기')) {
+                    r = '접수예정';
+                    changed = true;
+                } else if (r.includes('완료') && r !== '접수완료') {
+                    r = '접수완료';
+                    changed = true;
+                }
+
+                if (!p || p === '심사 대기' || p === '대기') {
+                    p = '지원대기중';
+                    changed = true;
+                } else if (p === '서류 보완 필요') {
+                    p = '심사대기';
+                    changed = true;
+                } else if (p === '서류 심사 통과' || p === '현장 실사 중' || p === '지원금 최종 승인') {
+                    p = '대상자선정';
+                    changed = true;
+                } else if (p === '간판 시공 중') {
+                    p = '간판시공 준비중';
+                    changed = true;
+                } else if (p === '시공 완료') {
+                    p = '간판시공완료';
+                    changed = true;
+                }
+
+                if (changed) {
+                    needUsersSave = true;
+                    return { ...item, receiptStatus: r, progressStatus: p };
+                }
+                return item;
+            });
+            return { ...u, items: updatedItems };
+        }
+        return u;
+    });
+
+    if (needUsersSave) {
+        localStorage.setItem('users', JSON.stringify(users));
+    }
+
     // --- Drawer Menu Selectors ---
     const menuTrigger = document.getElementById('app-menu-trigger');
     const drawerOverlay = document.getElementById('app-drawer-overlay');
@@ -47,18 +96,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateDrawerProfile() {
         activeUser = getActiveUser() || null;
+
+        // 메뉴 요소 참조
+        const itemHome = document.getElementById('drawer-item-home');
+        const itemStatus = document.getElementById('drawer-item-status');
+        const itemDirectBiz = document.getElementById('drawer-item-direct-biz');
+        const itemApply = document.getElementById('drawer-item-apply');
+        const dividerMain = document.getElementById('drawer-divider-main');
+        const conversionLinks = document.getElementById('drawer-conversion-links');
+        const btnConv = document.getElementById('drawer-btn-conversion');
+        const btnConst = document.getElementById('drawer-btn-constructor');
+
         if (activeUser) {
             drawerUserName.textContent = `${activeUser.name}님`;
+            
             if (activeUser.role === 'admin') {
                 drawerUserRole.textContent = '최고관리자';
                 drawerUserRole.style.background = 'var(--grad-primary)';
                 drawerUserRole.style.color = '#fff';
             } else if (activeUser.role === 'business') {
-                drawerUserRole.textContent = `영업자 (${activeUser.bizCode})`;
+                drawerUserRole.textContent = `영업자 (${activeUser.bizCode || 'B-260801'})`;
                 drawerUserRole.style.background = 'var(--accent-secondary)';
                 drawerUserRole.style.color = '#fff';
             } else if (activeUser.role === 'constructor') {
-                drawerUserRole.textContent = `시공사 (${activeUser.constCode})`;
+                drawerUserRole.textContent = `시공사 (${activeUser.constCode || 'BPC260801'})`;
                 drawerUserRole.style.background = 'var(--accent-success)';
                 drawerUserRole.style.color = '#fff';
             } else {
@@ -66,60 +127,143 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawerUserRole.style.background = 'var(--accent-primary)';
                 drawerUserRole.style.color = '#fff';
             }
+
             drawerAuthLinks.style.display = 'none';
             drawerLogoutLinks.style.display = 'block';
 
-            // 전환 신청 상태 갱신 로직 추가
-            const conversionLinks = document.getElementById('drawer-conversion-links');
-            if (conversionLinks) {
-                conversionLinks.style.display = 'flex';
-                
-                const btnConv = document.getElementById('drawer-btn-conversion');
-                const btnConst = document.getElementById('drawer-btn-constructor');
-                
-                if (activeUser.conversionStatus === 'pending') {
-                    if (btnConv) {
-                        btnConv.innerHTML = '<i class="fa-solid fa-clock"></i> 영업자 승인 대기 중';
-                        btnConv.style.opacity = '0.7';
-                        btnConv.style.pointerEvents = 'none';
-                    }
-                    if (btnConst) {
-                        btnConst.style.opacity = '0.5';
-                        btnConst.style.pointerEvents = 'none';
-                    }
-                } else if (activeUser.conversionStatus === 'pending_constructor') {
-                    if (btnConv) {
-                        btnConv.style.opacity = '0.5';
-                        btnConv.style.pointerEvents = 'none';
-                    }
-                    if (btnConst) {
+            // --- 회원 유형별 드로어 메뉴 분기 ---
+            if (activeUser.role === 'admin') {
+                // 1. 최고 관리자: 홈 화면, 신청/영업 현황 노출 / 지원신청 및 전환신청 숨김
+                if (itemHome) itemHome.style.display = 'flex';
+                if (itemStatus) itemStatus.style.display = 'flex';
+                if (itemDirectBiz) itemDirectBiz.style.display = 'none';
+                if (itemApply) itemApply.style.display = 'none';
+                if (dividerMain) dividerMain.style.display = 'block';
+                if (conversionLinks) conversionLinks.style.display = 'none';
+            } else if (activeUser.role === 'business') {
+                // 2. 영업자 회원: 홈 화면, 신청/영업 현황, 간판바로 접수하기 노출 / 지원신청 숨김 / 시공업체 전환 노출
+                if (itemHome) itemHome.style.display = 'flex';
+                if (itemStatus) itemStatus.style.display = 'flex';
+                if (itemDirectBiz) itemDirectBiz.style.display = 'flex';
+                if (itemApply) itemApply.style.display = 'none';
+                if (dividerMain) dividerMain.style.display = 'none';
+
+                if (conversionLinks) conversionLinks.style.display = 'flex';
+                if (btnConv) btnConv.style.display = 'none'; // 이미 영업자이므로 숨김
+                if (btnConst) {
+                    btnConst.style.display = 'flex';
+                    if (activeUser.conversionStatus === 'pending_constructor') {
                         btnConst.innerHTML = '<i class="fa-solid fa-clock"></i> 시공업체 승인 대기 중';
                         btnConst.style.opacity = '0.7';
                         btnConst.style.pointerEvents = 'none';
-                    }
-                } else {
-                    if (btnConv) {
-                        btnConv.innerHTML = '<i class="fa-solid fa-arrows-spin"></i> 영업자 회원으로 전환 신청';
-                        btnConv.style.opacity = '1';
-                        btnConv.style.pointerEvents = 'auto';
-                    }
-                    if (btnConst) {
+                    } else {
                         btnConst.innerHTML = '<i class="fa-solid fa-screwdriver-wrench"></i> 시공업체 회원으로 전환 신청';
                         btnConst.style.opacity = '1';
                         btnConst.style.pointerEvents = 'auto';
                     }
                 }
+            } else if (activeUser.role === 'constructor') {
+                // 3. 시공업체 회원: 홈 화면, 신청/영업 현황, 영업자 전환 노출 / 지원신청, 간판접수, 시공업체전환 숨김
+                if (itemHome) itemHome.style.display = 'flex';
+                if (itemStatus) itemStatus.style.display = 'flex';
+                if (itemDirectBiz) itemDirectBiz.style.display = 'none';
+                if (itemApply) itemApply.style.display = 'none';
+                if (dividerMain) dividerMain.style.display = 'block';
+
+                if (conversionLinks) conversionLinks.style.display = 'flex';
+                if (btnConst) btnConst.style.display = 'none'; // 이미 시공업체이므로 숨김
+                if (btnConv) {
+                    btnConv.style.display = 'flex';
+                    if (activeUser.conversionStatus === 'pending') {
+                        btnConv.innerHTML = '<i class="fa-solid fa-clock"></i> 영업자 승인 대기 중';
+                        btnConv.style.opacity = '0.7';
+                        btnConv.style.pointerEvents = 'none';
+                    } else {
+                        btnConv.innerHTML = '<i class="fa-solid fa-arrows-spin"></i> 영업자 회원으로 전환 신청';
+                        btnConv.style.opacity = '1';
+                        btnConv.style.pointerEvents = 'auto';
+                    }
+                }
+            } else {
+                // 4. 일반 회원: 홈 화면, 신청/영업 현황, 간편 신청, 전환신청 2종 노출
+                if (itemHome) itemHome.style.display = 'flex';
+                if (itemStatus) itemStatus.style.display = 'flex';
+                if (itemDirectBiz) itemDirectBiz.style.display = 'none';
+                if (itemApply) itemApply.style.display = 'flex';
+                if (dividerMain) dividerMain.style.display = 'block';
+
+                if (conversionLinks) {
+                    conversionLinks.style.display = 'flex';
+                    if (btnConv) btnConv.style.display = 'flex';
+                    if (btnConst) btnConst.style.display = 'flex';
+
+                    if (activeUser.conversionStatus === 'pending') {
+                        if (btnConv) {
+                            btnConv.innerHTML = '<i class="fa-solid fa-clock"></i> 영업자 승인 대기 중';
+                            btnConv.style.opacity = '0.7';
+                            btnConv.style.pointerEvents = 'none';
+                        }
+                        if (btnConst) {
+                            btnConst.style.opacity = '0.5';
+                            btnConst.style.pointerEvents = 'none';
+                        }
+                    } else if (activeUser.conversionStatus === 'pending_constructor') {
+                        if (btnConv) {
+                            btnConv.style.opacity = '0.5';
+                            btnConv.style.pointerEvents = 'none';
+                        }
+                        if (btnConst) {
+                            btnConst.innerHTML = '<i class="fa-solid fa-clock"></i> 시공업체 승인 대기 중';
+                            btnConst.style.opacity = '0.7';
+                            btnConst.style.pointerEvents = 'none';
+                        }
+                        if (btnConv) {
+                            btnConv.innerHTML = '<i class="fa-solid fa-arrows-spin"></i> 영업자 회원으로 전환 신청';
+                            btnConv.style.opacity = '1';
+                            btnConv.style.pointerEvents = 'auto';
+                        }
+                        if (btnConst) {
+                            btnConst.innerHTML = '<i class="fa-solid fa-screwdriver-wrench"></i> 시공업체 회원으로 전환 신청';
+                            btnConst.style.opacity = '1';
+                            btnConst.style.pointerEvents = 'auto';
+                        }
+                    }
+                }
             }
         } else {
+            // 5. 비회원 게스트
             drawerUserName.textContent = '게스트님';
             drawerUserRole.textContent = '비회원';
             drawerUserRole.style.background = 'var(--text-muted)';
             drawerAuthLinks.style.display = 'block';
             drawerLogoutLinks.style.display = 'none';
-            const conversionLinks = document.getElementById('drawer-conversion-links');
+
+            if (itemHome) itemHome.style.display = 'flex';
+            if (itemStatus) itemStatus.style.display = 'flex';
+            if (itemDirectBiz) itemDirectBiz.style.display = 'none';
+            if (itemApply) itemApply.style.display = 'flex';
+            if (dividerMain) dividerMain.style.display = 'block';
             if (conversionLinks) conversionLinks.style.display = 'none';
         }
     }
+
+    // 영업자 전용 간판바로 접수하기 원터치 이동
+    function openDirectBizApplyMob() {
+        closeDrawer();
+        switchTab('status');
+        setTimeout(() => {
+            const uploadForm = document.getElementById('mobile-upload-form-mob') || document.querySelector('.biz-mobile-upload-box') || document.getElementById('view-status');
+            if (uploadForm) {
+                uploadForm.scrollIntoView({ behavior: 'smooth' });
+                if (uploadForm.id === 'mobile-upload-form-mob' || uploadForm.classList.contains('biz-mobile-upload-box')) {
+                    uploadForm.style.transition = 'box-shadow 0.3s ease';
+                    uploadForm.style.boxShadow = '0 0 0 3px #ca8a04';
+                    setTimeout(() => { uploadForm.style.boxShadow = ''; }, 1500);
+                }
+            }
+        }, 120);
+    }
+    window.openDirectBizApplyMob = openDirectBizApplyMob;
 
     function updateHeaderAuthButton() {
         const appHeaderAuthBtn = document.getElementById('app-header-auth-btn');
@@ -698,16 +842,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 photosHtml += `</div>`;
             }
 
-            let progressClass = '';
-            if (item.progressStatus === '승인 완료') progressClass = 'approved';
-            else if (item.progressStatus === '반려됨') progressClass = 'rejected';
+            let progressClass = 'review';
+            const receiptText = item.receiptStatus || '접수예정';
+            const progressText = item.progressStatus || '지원대기중';
+            if (progressText === '간판시공완료' || progressText === '승인 완료' || progressText === '시공 완료') progressClass = 'approved';
+            else if (progressText === '대상자선정' || progressText === '간판시공 준비중') progressClass = 'approved';
+            else if (progressText === '반려됨') progressClass = 'rejected';
 
             card.innerHTML = `
                 <div class="biz-card-title-row">
                     <span class="biz-card-title">${escapeHtml(item.name)} ${item.id ? `<span style="font-size: 0.7rem; font-weight: 500; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 5px; border-radius: 4px; margin-left: 4px;">${escapeHtml(String(item.id))}</span>` : ''}</span>
                     <div class="biz-card-badges">
-                        <span class="biz-card-badge receipt">접수 완료</span>
-                        <span class="biz-card-badge progress ${progressClass}">${escapeHtml(item.progressStatus)}</span>
+                        <span class="biz-card-badge receipt">${escapeHtml(receiptText)}</span>
+                        <span class="biz-card-badge progress ${progressClass}">${escapeHtml(progressText)}</span>
                     </div>
                 </div>
                 <div class="biz-card-addr"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.address)}</div>
@@ -1022,8 +1169,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     phone: phoneVal,
                     address: addressVal,
                     photosCount: selectedPhotosMob.length,
-                    receiptStatus: '접수 완료 (간판지원단)',
-                    progressStatus: '심사 대기',
+                    receiptStatus: '접수예정',
+                    progressStatus: '지원대기중',
                     photos: base64Photo ? [base64Photo] : []
                 };
 
@@ -1332,28 +1479,35 @@ document.addEventListener('DOMContentLoaded', () => {
                         card.style.textAlign = 'left';
                         
                         card.innerHTML = `
-                            <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">${escapeHtml(item.name)} (${u.name} 영업자)</div>
-                            <div style="font-size: 0.7rem; color: var(--text-secondary);">주소: ${escapeHtml(item.address)}</div>
-                            ${item.phone ? `<div style="font-size: 0.7rem; color: var(--text-secondary);">연락처: ${escapeHtml(item.phone)}</div>` : ''}
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <div style="font-size: 0.85rem; font-weight: bold; color: var(--text-primary);">
+                                    ${escapeHtml(item.name)} 
+                                    <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-secondary);">(${escapeHtml(u.name)} 영업자 / ${escapeHtml(String(item.id))})</span>
+                                </div>
+                                <button type="button" onclick="window.deleteManagerItemMob('${u.id}', '${item.id}'); return false;" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+                                    <i class="fa-solid fa-trash-can"></i> 삭제
+                                </button>
+                            </div>
+                            <div style="font-size: 0.72rem; color: var(--text-secondary);"><i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> 주소: ${escapeHtml(item.address)}</div>
+                            ${item.phone ? `<div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-phone" style="color: #64748b;"></i> 연락처: ${escapeHtml(item.phone)}</div>` : ''}
                             
-                            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+                            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px dashed #e2e8f0;">
                                 <div style="display:flex; align-items:center; gap: 4px;">
-                                    <span style="font-size: 0.7rem; font-weight: 700; width: 45px;">접수:</span>
-                                    <select class="status-select-mob select-receipt-mob" data-uid="${u.id}" data-itemid="${item.id}" style="padding: 4px; font-size: 0.7rem; border-radius: 4px; border: 1px solid var(--border-color); background: white; flex: 1;">
-                                        <option value="접수 대기" ${item.receiptStatus === '접수 대기' ? 'selected' : ''}>접수 대기</option>
-                                        <option value="접수 완료 (경기도시장상권진흥원)" ${item.receiptStatus === '접수 완료 (경기도시장상권진흥원)' ? 'selected' : ''}>접수 완료</option>
+                                    <span style="font-size: 0.72rem; font-weight: 700; width: 45px; color: #475569;">접수:</span>
+                                    <select class="status-select-mob select-receipt-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 4px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
+                                        <option value="업체신청" ${(item.receiptStatus === '업체신청') ? 'selected' : ''}>업체신청</option>
+                                        <option value="접수예정" ${(item.receiptStatus === '접수예정' || !item.receiptStatus || item.receiptStatus === '접수 대기') ? 'selected' : ''}>접수예정</option>
+                                        <option value="접수완료" ${(item.receiptStatus === '접수완료' || item.receiptStatus === '접수 완료' || item.receiptStatus.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
                                     </select>
                                 </div>
                                 <div style="display:flex; align-items:center; gap: 4px;">
-                                    <span style="font-size: 0.7rem; font-weight: 700; width: 45px;">진행:</span>
-                                    <select class="status-select-mob select-progress-mob" data-uid="${u.id}" data-itemid="${item.id}" style="padding: 4px; font-size: 0.7rem; border-radius: 4px; border: 1px solid var(--border-color); background: white; flex: 1;">
-                                        <option value="심사 대기" ${item.progressStatus === '심사 대기' ? 'selected' : ''}>심사 대기</option>
-                                        <option value="서류 보완 필요" ${item.progressStatus === '서류 보완 필요' ? 'selected' : ''}>서류 보완 필요</option>
-                                        <option value="서류 심사 통과" ${item.progressStatus === '서류 심사 통과' ? 'selected' : ''}>서류 심사 통과</option>
-                                        <option value="현장 실사 중" ${item.progressStatus === '현장 실사 중' ? 'selected' : ''}>현장 실사 중</option>
-                                        <option value="지원금 최종 승인" ${item.progressStatus === '지원금 최종 승인' ? 'selected' : ''}>지원금 최종 승인</option>
-                                        <option value="간판 시공 중" ${item.progressStatus === '간판 시공 중' ? 'selected' : ''}>간판 시공 중</option>
-                                        <option value="시공 완료" ${item.progressStatus === '시공 완료' ? 'selected' : ''}>시공 완료</option>
+                                    <span style="font-size: 0.72rem; font-weight: 700; width: 45px; color: #475569;">진행:</span>
+                                    <select class="status-select-mob select-progress-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 4px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
+                                        <option value="지원대기중" ${(item.progressStatus === '지원대기중' || !item.progressStatus || item.progressStatus === '심사 대기') ? 'selected' : ''}>지원대기중</option>
+                                        <option value="심사대기" ${(item.progressStatus === '심사대기' || item.progressStatus === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
+                                        <option value="대상자선정" ${(item.progressStatus === '대상자선정' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
+                                        <option value="간판시공 준비중" ${(item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
+                                        <option value="간판시공완료" ${(item.progressStatus === '간판시공완료' || item.progressStatus === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
                                     </select>
                                 </div>
                             </div>
@@ -1365,23 +1519,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!hasItems) {
                 itemsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">등록된 영업물건이 없습니다.</p>';
-            } else {
-                itemsList.querySelectorAll('.select-receipt-mob').forEach(select => {
-                    select.addEventListener('change', (e) => {
-                        const uid = e.target.dataset.uid;
-                        const itemId = parseInt(e.target.dataset.itemid);
-                        const val = e.target.value;
-                        updateItemStatusMob(uid, itemId, 'receipt', val);
-                    });
-                });
-                itemsList.querySelectorAll('.select-progress-mob').forEach(select => {
-                    select.addEventListener('change', (e) => {
-                        const uid = e.target.dataset.uid;
-                        const itemId = parseInt(e.target.dataset.itemid);
-                        const val = e.target.value;
-                        updateItemStatusMob(uid, itemId, 'progress', val);
-                    });
-                });
             }
         }
 
@@ -1444,9 +1581,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Sub handlers for Admin Mob ---
     function approveConstructorConversionMob(uid) {
-        const code = `CO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+        const targetUser = users.find(u => u.id === uid);
+        const code = generateConstCode(users);
         users = users.map(u => {
             if (u.id === uid) {
                 return {
@@ -1461,7 +1598,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return u;
         });
         localStorage.setItem('users', JSON.stringify(users));
-        alert(`시공업체 회원 승인이 정상 완료되었습니다! (발급된 시공코드: ${code})`);
+
+        // Supabase Sync
+        if (window.supabaseClient) {
+            window.supabaseClient.from('users').update({
+                role: 'constructor',
+                const_code: code,
+                business_name: targetUser?.pendingBusinessName || '(주)새로운시공',
+                license_number: targetUser?.pendingLicenseNumber || '000-00-00000',
+                conversion_status: 'approved'
+            }).eq('id', uid).then(({ error }) => {
+                if (error) console.error('Supabase constructor conversion error:', error.message);
+            });
+        }
+
+        alert(`시공업체 회원 승인이 정상 완료되었습니다! (발급된 시공코드: [${code}])`);
         renderStatusTab();
     }
 
@@ -1570,10 +1721,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateItemStatusMob(uid, itemId, type, value) {
+        if (!activeUser || activeUser.role !== 'admin') return;
         users = users.map(u => {
-            if (u.id === uid) {
-                const updatedItems = u.items.map(item => {
-                    if (item.id === itemId) {
+            if (String(u.id) === String(uid)) {
+                const updatedItems = (u.items || []).map(item => {
+                    if (String(item.id) === String(itemId)) {
                         if (type === 'receipt') {
                             return { ...item, receiptStatus: value };
                         } else {
@@ -1588,8 +1740,68 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         localStorage.setItem('users', JSON.stringify(users));
+
+        // Supabase DB Sync
+        if (window.supabaseClient) {
+            const updatedUser = users.find(u => String(u.id) === String(uid));
+            if (updatedUser) {
+                window.supabaseClient.from('users').update({
+                    items: updatedUser.items || []
+                }).eq('id', uid).then(({ error }) => {
+                    if (error) console.error('Supabase status update mob error:', error.message);
+                });
+            }
+        }
+
         renderStatusTab();
     }
+    window.updateItemStatusMob = updateItemStatusMob;
+
+    function deleteManagerItemMob(uid, itemId) {
+        if (!activeUser || activeUser.role !== 'admin') {
+            alert('최고 관리자만 영업 물건을 삭제할 수 있습니다.');
+            return;
+        }
+
+        let targetItemName = '해당 영업 물건';
+        const targetUser = users.find(u => String(u.id) === String(uid));
+        if (targetUser && targetUser.items) {
+            const found = targetUser.items.find(it => String(it.id) === String(itemId));
+            if (found && found.name) targetItemName = found.name;
+        }
+
+        const ok = confirm(`정말 [${targetItemName}] 영업 물건을 영구 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 등록된 현장 사진 및 진행 상태 정보가 모두 삭제됩니다.`);
+        if (!ok) return;
+
+        users = users.map(u => {
+            if (String(u.id) === String(uid)) {
+                const remainingItems = (u.items || []).filter(item => String(item.id) !== String(itemId));
+                return { ...u, items: remainingItems };
+            }
+            return u;
+        });
+
+        localStorage.setItem('users', JSON.stringify(users));
+
+        // Supabase DB Sync
+        if (window.supabaseClient) {
+            const updatedUser = users.find(u => String(u.id) === String(uid));
+            if (updatedUser) {
+                window.supabaseClient.from('users').update({
+                    items: updatedUser.items || []
+                }).eq('id', uid).then(({ error }) => {
+                    if (error) console.error('Supabase item deletion mob error:', error.message);
+                });
+            }
+            window.supabaseClient.from('applications').delete().eq('id', itemId).then(({ error }) => {
+                if (error) console.log('Notice: Item not in applications table');
+            });
+        }
+
+        alert(`[${targetItemName}] 영업 물건이 안전하게 삭제되었습니다.`);
+        renderStatusTab();
+    }
+    window.deleteManagerItemMob = deleteManagerItemMob;
 
     // Popup management helpers for Mob
     const mobPopupForm = document.getElementById('mob-popup-form');
@@ -2558,4 +2770,248 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- 17. Mobile App Global Search Modal Logic ---
+    const globalSearchModal = document.getElementById('global-search-modal');
+    const searchModalClose = document.getElementById('search-modal-close');
+    const searchTabName = document.getElementById('search-tab-name');
+    const searchTabCode = document.getElementById('search-tab-code');
+    const globalSearchForm = document.getElementById('global-search-form');
+    const globalSearchInput = document.getElementById('global-search-input');
+    const searchGuideText = document.getElementById('search-guide-text');
+    const searchAuthBlock = document.getElementById('search-auth-block');
+    const searchContentArea = document.getElementById('search-content-area');
+    const searchResultsArea = document.getElementById('search-results-area');
+
+    let currentSearchMode = 'name';
+
+    function openGlobalSearchModal() {
+        if (!globalSearchModal) return;
+        const user = typeof getActiveUser === 'function' ? getActiveUser() : null;
+        
+        if (!user) {
+            if (searchAuthBlock) searchAuthBlock.style.display = 'block';
+            if (searchContentArea) searchContentArea.style.display = 'none';
+        } else {
+            if (searchAuthBlock) searchAuthBlock.style.display = 'none';
+            if (searchContentArea) searchContentArea.style.display = 'block';
+            setSearchMode('name');
+            if (globalSearchInput) globalSearchInput.value = '';
+            if (searchResultsArea) searchResultsArea.innerHTML = '';
+            setTimeout(() => { if (globalSearchInput) globalSearchInput.focus(); }, 150);
+        }
+
+        globalSearchModal.classList.add('active');
+    }
+    window.openGlobalSearchModal = openGlobalSearchModal;
+
+    function closeGlobalSearchModal() {
+        if (globalSearchModal) {
+            globalSearchModal.classList.remove('active');
+            if (globalSearchInput) globalSearchInput.value = '';
+            if (searchResultsArea) searchResultsArea.innerHTML = '';
+        }
+    }
+    window.closeGlobalSearchModal = closeGlobalSearchModal;
+
+    function setSearchMode(mode) {
+        currentSearchMode = mode;
+        if (mode === 'name') {
+            if (searchTabName) {
+                searchTabName.className = 'btn btn-primary';
+                searchTabName.style.background = 'var(--grad-primary)';
+                searchTabName.style.color = '#fff';
+            }
+            if (searchTabCode) {
+                searchTabCode.className = 'btn btn-secondary';
+                searchTabCode.style.background = 'transparent';
+                searchTabCode.style.color = 'var(--text-secondary)';
+            }
+            if (globalSearchInput) {
+                globalSearchInput.maxLength = 25;
+                globalSearchInput.placeholder = '상호명을 입력해 주세요 (최대 25자, 예: 초원식당)';
+            }
+            if (searchGuideText) {
+                searchGuideText.innerHTML = '조회하고자 하는 매장의 <strong>상호명(업체명, 최대 25자)</strong>을 입력해 주세요.';
+            }
+        } else {
+            if (searchTabCode) {
+                searchTabCode.className = 'btn btn-primary';
+                searchTabCode.style.background = 'var(--grad-primary)';
+                searchTabCode.style.color = '#fff';
+            }
+            if (searchTabName) {
+                searchTabName.className = 'btn btn-secondary';
+                searchTabName.style.background = 'transparent';
+                searchTabName.style.color = 'var(--text-secondary)';
+            }
+            if (globalSearchInput) {
+                globalSearchInput.maxLength = 15;
+                globalSearchInput.placeholder = '고유번호를 입력해 주세요 (최대 15자, 예: P-260816001)';
+            }
+            if (searchGuideText) {
+                searchGuideText.innerHTML = '발급받으신 <strong>고유 접수번호(최대 15자)</strong>(예: P-260816001, B-260801-0001)를 입력해 주세요.';
+            }
+        }
+        if (globalSearchInput) globalSearchInput.focus();
+    }
+
+    if (searchTabName) {
+        searchTabName.addEventListener('click', () => setSearchMode('name'));
+    }
+    if (searchTabCode) {
+        searchTabCode.addEventListener('click', () => setSearchMode('code'));
+    }
+
+    if (searchModalClose) {
+        searchModalClose.addEventListener('click', closeGlobalSearchModal);
+    }
+    document.querySelectorAll('.search-modal-close-btn').forEach(btn => {
+        btn.addEventListener('click', closeGlobalSearchModal);
+    });
+    if (globalSearchModal) {
+        globalSearchModal.addEventListener('click', (e) => {
+            if (e.target === globalSearchModal) closeGlobalSearchModal();
+        });
+    }
+
+    document.querySelectorAll('.btn-search-go-auth').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeGlobalSearchModal();
+            const authBtn = document.getElementById('drawer-login-link') || document.getElementById('app-header-auth-btn');
+            if (authBtn) {
+                authBtn.click();
+            } else {
+                const authModal = document.getElementById('auth-modal');
+                if (authModal) authModal.classList.add('active');
+            }
+        });
+    });
+
+    if (globalSearchForm) {
+        globalSearchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = typeof getActiveUser === 'function' ? getActiveUser() : null;
+            if (!user) {
+                alert('검색 기능을 이용하시려면 먼저 회원가입 또는 로그인이 필요합니다.');
+                return;
+            }
+
+            const rawQuery = globalSearchInput ? globalSearchInput.value.trim() : '';
+            if (!rawQuery) {
+                alert('검색어를 입력해 주세요.');
+                return;
+            }
+
+            if (currentSearchMode === 'name' && rawQuery.length > 25) {
+                alert('상호명 검색은 최대 25자까지 입력 가능합니다.');
+                return;
+            }
+            if (currentSearchMode === 'code' && rawQuery.length > 15) {
+                alert('번호 검색은 최대 15자까지 입력 가능합니다.');
+                return;
+            }
+
+            const query = rawQuery.toLowerCase();
+            const apps = JSON.parse(localStorage.getItem('applications')) || [];
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+
+            const allRecords = [];
+
+            apps.forEach(app => {
+                allRecords.push({
+                    id: app.id,
+                    storeName: app.storeName || '상호명 미등록',
+                    ownerName: app.ownerName || '신청자',
+                    ownerPhone: app.phone || app.ownerPhone || '',
+                    storeAddress: app.storeAddress || '주소 미등록',
+                    signType: app.signType || '플렉스',
+                    status: app.status || 'pending',
+                    type: '일반신청'
+                });
+            });
+
+            users.forEach(u => {
+                if (u.items && Array.isArray(u.items)) {
+                    u.items.forEach(item => {
+                        if (!allRecords.some(r => r.id === item.id)) {
+                            allRecords.push({
+                                id: item.id,
+                                storeName: item.name || '상호명 미등록',
+                                ownerName: u.name || '영업자',
+                                ownerPhone: item.phone || u.phone || '',
+                                storeAddress: item.address || '주소 미등록',
+                                signType: '현장 실측 간판',
+                                status: item.progressStatus || '심사 대기',
+                                type: '영업물건'
+                            });
+                        }
+                    });
+                }
+            });
+
+            const matched = allRecords.filter(r => {
+                if (currentSearchMode === 'name') {
+                    return r.storeName.toLowerCase().includes(query);
+                } else {
+                    return String(r.id).toLowerCase().includes(query);
+                }
+            });
+
+            if (!searchResultsArea) return;
+            searchResultsArea.innerHTML = '';
+
+            if (matched.length === 0) {
+                searchResultsArea.innerHTML = `
+                    <div style="text-align: center; padding: 25px 15px; color: var(--text-muted); font-size: 0.85rem;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.6rem; margin-bottom: 8px; color: #f59e0b; display: block;"></i>
+                        검색 결과가 없습니다.<br>
+                        <span style="font-size: 0.76rem; color: #94a3b8;">입력하신 ${currentSearchMode === 'name' ? '상호명' : '고유번호'}을(를) 다시 한번 확인해 주세요.</span>
+                    </div>
+                `;
+                return;
+            }
+
+            matched.forEach(item => {
+                let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">심사 대기</span>';
+                if (item.status === 'approved' || item.status === '승인 완료') {
+                    statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-check"></i> 승인 완료</span>';
+                } else if (item.status === 'rejected' || item.status === '반려됨') {
+                    statusBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-xmark"></i> 반려됨</span>';
+                } else if (item.status) {
+                    statusBadge = `<span style="background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">${escapeHtml(item.status)}</span>`;
+                }
+
+                const card = document.createElement('div');
+                card.style.background = '#f8fafc';
+                card.style.border = '1px solid var(--border-color)';
+                card.style.borderRadius = '8px';
+                card.style.padding = '12px 14px';
+                card.style.textAlign = 'left';
+
+                const maskedName = typeof maskName === 'function' ? maskName(item.ownerName) : item.ownerName;
+                const maskedPhone = typeof maskPhone === 'function' ? maskPhone(item.ownerPhone) : item.ownerPhone;
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
+                        <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">
+                            ${escapeHtml(item.storeName)}
+                            <span style="font-size: 0.7rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 6px; border-radius: 4px; margin-left: 4px;">${escapeHtml(String(item.id))}</span>
+                        </div>
+                        <div>${statusBadge}</div>
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
+                        <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> ${escapeHtml(item.storeAddress)}</div>
+                        <div style="display: flex; gap: 12px; margin-top: 3px; font-size: 0.74rem; color: #64748b;">
+                            <span><i class="fa-solid fa-user-shield"></i> 신청인: ${escapeHtml(maskedName)}</span>
+                            ${maskedPhone ? `<span><i class="fa-solid fa-phone"></i> ${escapeHtml(maskedPhone)}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+                searchResultsArea.appendChild(card);
+            });
+        });
+    }
+
 });
+

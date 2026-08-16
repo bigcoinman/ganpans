@@ -1614,8 +1614,8 @@ function initAuthAndDashboard() {
             name: '삼동콩나물국밥',
             address: '경기도 수원시 장안구 경수대로 990',
             photosCount: 3,
-            receiptStatus: '접수 완료 (경기도시장상권진흥원)',
-            progressStatus: '현장 실사 중',
+            receiptStatus: '접수예정',
+            progressStatus: '지원대기중',
             photos: ['placeholder1.jpg', 'placeholder2.jpg', 'placeholder3.jpg']
           }
         ]
@@ -3127,17 +3127,31 @@ function initMobileBottomNav() {
   const globalSearchForm = document.getElementById('global-search-form');
   const globalSearchInput = document.getElementById('global-search-input');
   const searchGuideText = document.getElementById('search-guide-text');
+  const searchAuthBlock = document.getElementById('search-auth-block');
+  const searchContentArea = document.getElementById('search-content-area');
   const searchResultsArea = document.getElementById('search-results-area');
 
   let currentSearchMode = 'name'; // 'name' 또는 'code'
 
   function openGlobalSearchModal() {
     if (!globalSearchModal) return;
-    setSearchMode('name');
-    if (globalSearchInput) globalSearchInput.value = '';
-    if (searchResultsArea) searchResultsArea.innerHTML = '';
+    
+    const user = typeof getActiveUser === 'function' ? getActiveUser() : null;
+    
+    // 비회원 체크
+    if (!user) {
+      if (searchAuthBlock) searchAuthBlock.style.display = 'block';
+      if (searchContentArea) searchContentArea.style.display = 'none';
+    } else {
+      if (searchAuthBlock) searchAuthBlock.style.display = 'none';
+      if (searchContentArea) searchContentArea.style.display = 'block';
+      setSearchMode('name');
+      if (globalSearchInput) globalSearchInput.value = '';
+      if (searchResultsArea) searchResultsArea.innerHTML = '';
+      setTimeout(() => { if (globalSearchInput) globalSearchInput.focus(); }, 100);
+    }
+
     globalSearchModal.classList.add('active');
-    setTimeout(() => { if (globalSearchInput) globalSearchInput.focus(); }, 100);
   }
   window.openGlobalSearchModal = openGlobalSearchModal;
 
@@ -3226,10 +3240,31 @@ function initMobileBottomNav() {
     });
   }
 
+  // 검색 모달 내 회원가입/로그인 이동 버튼
+  document.querySelectorAll('.btn-search-go-auth').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeGlobalSearchModal();
+      const authBtn = document.getElementById('auth-btn') || document.getElementById('drawer-login-link');
+      if (authBtn) {
+        authBtn.click();
+      } else {
+        const authModal = document.getElementById('auth-modal');
+        if (authModal) authModal.classList.add('active');
+      }
+    });
+  });
+
   // 검색 실행
   if (globalSearchForm) {
     globalSearchForm.addEventListener('submit', (e) => {
       e.preventDefault();
+      const user = typeof getActiveUser === 'function' ? getActiveUser() : null;
+      if (!user) {
+        alert('검색 기능을 이용하시려면 먼저 회원가입 또는 로그인이 필요합니다.');
+        return;
+      }
+
       const rawQuery = globalSearchInput ? globalSearchInput.value.trim() : '';
       if (!rawQuery) {
         alert('검색어를 입력해 주세요.');
