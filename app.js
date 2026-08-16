@@ -719,6 +719,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('users', JSON.stringify(users));
                 localStorage.setItem('activeUser', JSON.stringify(activeUser));
                 
+                // Supabase Sync
+                if (window.supabaseClient) {
+                    window.supabaseClient.from('users').update({
+                        conversion_status: 'pending'
+                    }).eq('id', activeUser.id).then(({ error }) => {
+                        if (error) console.error('Supabase conversion update error:', error.message);
+                    });
+                }
+
                 // 카카오톡 관리자 실시간 알림 발송
                 if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyBusinessConversion === 'function') {
                     window.KakaoNotifier.notifyBusinessConversion(activeUser);
@@ -779,6 +788,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             localStorage.setItem('users', JSON.stringify(users));
             localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+            // Supabase Sync
+            if (window.supabaseClient) {
+                window.supabaseClient.from('users').update({
+                    conversion_status: 'pending_constructor',
+                    pending_business_name: bName,
+                    pending_license_number: lNum
+                }).eq('id', activeUser.id).then(({ error }) => {
+                    if (error) console.error('Supabase constructor conversion update error:', error.message);
+                });
+            }
 
             // 카카오톡 관리자 실시간 알림 발송
             if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyConstructorConversion === 'function') {
@@ -1235,7 +1255,110 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAdminDashboardMob();
     };
 
-    function renderAdminDashboardMob() {
+    let isMobSyncing = false;
+    async function syncAdminDataFromSupabaseMob() {
+        if (!window.supabaseClient || isMobSyncing) return;
+        isMobSyncing = true;
+        try {
+            const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
+            if (!usersErr && supaUsers && supaUsers.length > 0) {
+                let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
+                let updated = false;
+
+                supaUsers.forEach(su => {
+                    const localIdx = currentUsers.findIndex(u => u.id === su.id);
+                    const mappedUser = {
+                        id: su.id,
+                        name: su.name,
+                        phone: su.phone,
+                        email: su.email || '',
+                        address: su.address || '',
+                        role: su.role || 'client',
+                        bizCode: su.biz_code || null,
+                        constCode: su.const_code || null,
+                        conversionStatus: su.conversion_status || 'none',
+                        pendingBusinessName: su.pending_business_name || '',
+                        pendingLicenseNumber: su.pending_license_number || '',
+                        items: su.items || []
+                    };
+
+                    if (localIdx === -1) {
+                        currentUsers.push(mappedUser);
+                        updated = true;
+                    } else {
+                        const cur = currentUsers[localIdx];
+                        if (cur.conversionStatus !== mappedUser.conversionStatus || 
+                            cur.role !== mappedUser.role || 
+                            cur.pendingBusinessName !== mappedUser.pendingBusinessName) {
+                            currentUsers[localIdx] = { ...cur, ...mappedUser };
+                            updated = true;
+                        }
+                    }
+                });
+
+                if (updated) {
+                    localStorage.setItem('users', JSON.stringify(currentUsers));
+                    users = currentUsers;
+                    // re-render UI
+                    renderAdminSubPanels();
+                }
+            }
+
+            // Sync applications
+            const { data: supaApps, error: appsErr } = await window.supabaseClient.from('applications').select('*');
+            if (!appsErr && supaApps && supaApps.length > 0) {
+                let currentApps = JSON.parse(localStorage.getItem('applications')) || [];
+                let appUpdated = false;
+
+                supaApps.forEach(sa => {
+                    const localIdx = currentApps.findIndex(a => String(a.id) === String(sa.id));
+                    const mappedApp = {
+                        id: sa.id,
+                        userId: sa.user_id,
+                        ownerName: sa.owner_name,
+                        ownerPhone: sa.phone,
+                        storeName: sa.store_name,
+                        storeAddress: sa.store_address,
+                        signType: sa.sign_type,
+                        fileName: sa.image_url || '현장사진',
+                        appliedAt: sa.created_at || sa.applied_at || new Date().toISOString(),
+                        status: sa.status || 'pending',
+                        referrerCode: sa.referrer_code || '',
+                        assignedConstructorId: sa.assigned_constructor_id || '',
+                        assignedConstructorName: sa.assigned_constructor_name || '',
+                        constructionStatus: sa.construction_status || 'none'
+                    };
+
+                    if (localIdx === -1) {
+                        currentApps.push(mappedApp);
+                        appUpdated = true;
+                    } else {
+                        if (currentApps[localIdx].status !== mappedApp.status || 
+                            currentApps[localIdx].constructionStatus !== mappedApp.constructionStatus) {
+                            currentApps[localIdx] = { ...currentApps[localIdx], ...mappedApp };
+                            appUpdated = true;
+                        }
+                    }
+                });
+
+                if (appUpdated) {
+                    localStorage.setItem('applications', JSON.stringify(currentApps));
+                    applications = currentApps;
+                    renderAdminSubPanels();
+                }
+            }
+        } catch (err) {
+            console.warn('⚠️ 모바일 Supabase 동기화 오류:', err);
+        } finally {
+            isMobSyncing = false;
+        }
+    }
+
+    function renderAdminSubPanels() {
+        renderAdminDashboardMob(true);
+    }
+
+    function renderAdminDashboardMob(skipSync = false) {
         const totalStat = document.getElementById('admin-stat-total-mob');
         const visitorsStat = document.getElementById('admin-stat-visitors-mob');
         
@@ -1245,6 +1368,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (totalStat) totalStat.textContent = `${applications.length}건`;
         if (visitorsStat) visitorsStat.textContent = `${localStorage.getItem('visitor_today') || '34'}명`;
+
+        if (!skipSync) {
+            syncAdminDataFromSupabaseMob();
+        }
 
         // 1) Render Salesperson Requests (conversionStatus === 'pending')
         const requestsList = document.getElementById('admin-requests-list-mob');
