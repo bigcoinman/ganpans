@@ -228,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render Dashboard & Manager Control Panel
     renderDashboard();
+    renderAllUsersList();
     renderManagerPanel();
     renderPopupManager();
     renderApplicationsList();
@@ -294,6 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
           users = currentUsers;
           localStorage.setItem('users', JSON.stringify(users));
           if (activeUser.role === 'admin') {
+            renderAllUsersList();
             renderManagerPanel();
             renderAdminStats();
           }
@@ -1024,6 +1026,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Admin Section Pagination States (10 items per page) ---
+  let allUsersCurrentPage = 1;
+  const allUsersPerPage = 10;
+  let allUsersSearchQuery = '';
+
   let reqCurrentPage = 1;
   const reqPerPage = 10;
 
@@ -1070,6 +1076,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return html;
   }
 
+  window.changeAllUsersPage = (p) => {
+    allUsersCurrentPage = p;
+    renderAllUsersList();
+  };
   window.changeReqPage = (p) => {
     reqCurrentPage = p;
     renderManagerPanel();
@@ -1086,6 +1096,128 @@ document.addEventListener('DOMContentLoaded', () => {
     inquiriesCurrentPage = p;
     renderInquiriesList();
   };
+
+  // --- Render All Users List (전체 회원 정보 관리) ---
+  const renderAllUsersList = () => {
+    if (activeUser.role !== 'admin') return;
+    const allUsersTableBody = document.getElementById('all-users-table-body');
+    const allUsersCountEl = document.getElementById('all-users-count');
+    const paginationContainer = document.getElementById('pagination-manager-all-users');
+    if (!allUsersTableBody) return;
+
+    let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
+
+    // 검색 필터링
+    if (allUsersSearchQuery && allUsersSearchQuery.trim()) {
+      const q = allUsersSearchQuery.trim().toLowerCase();
+      currentUsers = currentUsers.filter(u => 
+        (u.id && u.id.toLowerCase().includes(q)) ||
+        (u.name && u.name.toLowerCase().includes(q)) ||
+        (u.phone && u.phone.includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.address && u.address.toLowerCase().includes(q))
+      );
+    }
+
+    if (allUsersCountEl) {
+      allUsersCountEl.textContent = currentUsers.length;
+    }
+
+    if (currentUsers.length === 0) {
+      allUsersTableBody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-muted" style="text-align: center; padding: 30px 0;">검색/등록된 가입 회원이 없습니다.</td>
+        </tr>
+      `;
+      if (paginationContainer) paginationContainer.innerHTML = '';
+      return;
+    }
+
+    allUsersTableBody.innerHTML = '';
+
+    const totalCount = currentUsers.length;
+    const totalPages = Math.ceil(totalCount / allUsersPerPage);
+    if (allUsersCurrentPage > totalPages) allUsersCurrentPage = totalPages;
+    if (allUsersCurrentPage < 1) allUsersCurrentPage = 1;
+
+    const startIndex = (allUsersCurrentPage - 1) * allUsersPerPage;
+    const paginatedUsers = currentUsers.slice(startIndex, startIndex + allUsersPerPage);
+
+    paginatedUsers.forEach(u => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--border-color)';
+
+      let roleBadge = '<span style="background: #e2e8f0; color: #475569; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">일반회원</span>';
+      if (u.role === 'admin') {
+        roleBadge = '<span style="background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">최고관리자</span>';
+      } else if (u.role === 'business') {
+        roleBadge = '<span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">영업자</span>';
+      } else if (u.role === 'constructor') {
+        roleBadge = '<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">시공사</span>';
+      }
+
+      let codeText = '-';
+      if (u.role === 'business' && u.bizCode) {
+        codeText = `<strong style="color: var(--accent-secondary);">${escapeHtml(u.bizCode)}</strong>`;
+      } else if (u.role === 'constructor' && u.constCode) {
+        codeText = `<strong style="color: var(--accent-success);">${escapeHtml(u.constCode)}</strong>`;
+      }
+
+      const deleteBtn = u.role === 'admin' 
+        ? '<span style="color:#cbd5e1; font-size:0.75rem;">-</span>'
+        : `<button class="btn btn-sm btn-delete-user-admin" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.72rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer;"><i class="fa-solid fa-trash-can"></i> 삭제</button>`;
+
+      tr.innerHTML = `
+        <td style="padding: 12px 14px; font-weight: 700; color: var(--text-primary); font-family: monospace;">${escapeHtml(u.id)}</td>
+        <td style="padding: 12px 14px; font-weight: 600; color: var(--text-primary);">${escapeHtml(u.name || '-')}</td>
+        <td style="padding: 12px 14px; font-size: 0.8rem; color: var(--text-secondary);">
+          <div><a href="tel:${escapeHtml(u.phone || '')}" style="color: var(--accent-primary); text-decoration: none;"><i class="fa-solid fa-phone"></i> ${escapeHtml(u.phone || '-')}</a></div>
+          ${u.email ? `<div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">${escapeHtml(u.email)}</div>` : ''}
+        </td>
+        <td style="padding: 12px 14px; font-size: 0.8rem; color: var(--text-secondary); max-width: 220px;">${escapeHtml(u.address || '-')}</td>
+        <td style="padding: 12px 14px; text-align: center; white-space: nowrap;">${roleBadge}</td>
+        <td style="padding: 12px 14px; text-align: center; white-space: nowrap;">${codeText}</td>
+        <td style="padding: 12px 14px; text-align: center; white-space: nowrap;">${deleteBtn}</td>
+      `;
+      allUsersTableBody.appendChild(tr);
+    });
+
+    if (paginationContainer) {
+      paginationContainer.innerHTML = renderPaginationControls(totalCount, allUsersPerPage, allUsersCurrentPage, 'window.changeAllUsersPage');
+    }
+
+    // Delete user listener
+    allUsersTableBody.querySelectorAll('.btn-delete-user-admin').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const uid = e.target.closest('button').dataset.uid;
+        if (!confirm(`[주의] 회원 ID [${uid}]을(를) 정말로 강제 탈퇴/삭제 처리하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+
+        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        curUsers = curUsers.filter(u => u.id !== uid);
+        localStorage.setItem('users', JSON.stringify(curUsers));
+
+        if (window.supabaseClient) {
+          window.supabaseClient.from('users').delete().eq('id', uid).then(({ error }) => {
+            if (error) console.error('Supabase user delete error:', error.message);
+          });
+        }
+
+        alert(`회원 [${uid}]이(가) 정상적으로 탈퇴/삭제되었습니다.`);
+        renderAllUsersList();
+        renderManagerPanel();
+      });
+    });
+  };
+
+  // 회원 검색 이벤트 바인딩
+  const searchAllUsersInput = document.getElementById('search-all-users-input');
+  if (searchAllUsersInput) {
+    searchAllUsersInput.addEventListener('input', (e) => {
+      allUsersSearchQuery = e.target.value;
+      allUsersCurrentPage = 1;
+      renderAllUsersList();
+    });
+  }
 
   const renderManagerPanel = () => {
     if (activeUser.role !== 'admin') return;

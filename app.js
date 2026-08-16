@@ -1237,6 +1237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const panels = {
+            users: document.getElementById('admin-panel-users-mob'),
             requests: document.getElementById('admin-panel-requests-mob'),
             constructors: document.getElementById('admin-panel-constructors-mob'),
             apps: document.getElementById('admin-panel-apps-mob'),
@@ -1299,7 +1300,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (updated) {
                     localStorage.setItem('users', JSON.stringify(currentUsers));
                     users = currentUsers;
-                    // re-render UI
                     renderAdminSubPanels();
                 }
             }
@@ -1358,6 +1358,14 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAdminDashboardMob(true);
     }
 
+    // 모바일 회원 검색창 이벤트
+    const searchAllUsersInputMob = document.getElementById('search-all-users-input-mob');
+    if (searchAllUsersInputMob) {
+        searchAllUsersInputMob.addEventListener('input', () => {
+            renderAdminDashboardMob(true);
+        });
+    }
+
     function renderAdminDashboardMob(skipSync = false) {
         const totalStat = document.getElementById('admin-stat-total-mob');
         const visitorsStat = document.getElementById('admin-stat-visitors-mob');
@@ -1371,6 +1379,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!skipSync) {
             syncAdminDataFromSupabaseMob();
+        }
+
+        // 0) Render All Users list (회원정보관리)
+        const allUsersListMob = document.getElementById('admin-all-users-list-mob');
+        if (allUsersListMob) {
+            let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+            const searchInput = document.getElementById('search-all-users-input-mob');
+            const q = searchInput && searchInput.value ? searchInput.value.trim().toLowerCase() : '';
+
+            if (q) {
+                curUsers = curUsers.filter(u => 
+                    (u.id && u.id.toLowerCase().includes(q)) ||
+                    (u.name && u.name.toLowerCase().includes(q)) ||
+                    (u.phone && u.phone.includes(q)) ||
+                    (u.email && u.email.toLowerCase().includes(q)) ||
+                    (u.address && u.address.toLowerCase().includes(q))
+                );
+            }
+
+            allUsersListMob.innerHTML = '';
+            if (curUsers.length === 0) {
+                allUsersListMob.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">등록/검색된 회원이 없습니다.</p>';
+            } else {
+                curUsers.forEach(u => {
+                    const card = document.createElement('div');
+                    card.className = 'admin-user-card-mob';
+                    card.style.background = '#ffffff';
+                    card.style.padding = '12px';
+                    card.style.borderRadius = '8px';
+                    card.style.border = '1px solid var(--border-color)';
+                    card.style.marginBottom = '10px';
+
+                    let roleBadge = '<span style="background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 600;">일반</span>';
+                    if (u.role === 'admin') roleBadge = '<span style="background: #fee2e2; color: #b91c1c; padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 700;">관리자</span>';
+                    else if (u.role === 'business') roleBadge = `<span style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 700;">영업자 (${u.bizCode || '-'})</span>`;
+                    else if (u.role === 'constructor') roleBadge = `<span style="background: #dcfce7; color: #15803d; padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 700;">시공사 (${u.constCode || '-'})</span>`;
+
+                    const deleteBtn = u.role === 'admin' ? '' : `
+                        <button class="btn btn-secondary btn-sm btn-delete-user-mob" data-uid="${u.id}" style="padding: 3px 8px; font-size: 0.65rem; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2;">
+                            <i class="fa-solid fa-trash-can"></i> 삭제
+                        </button>
+                    `;
+
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                            <strong style="font-size: 0.85rem; color: var(--text-primary); font-family: monospace;">${escapeHtml(u.id)}</strong>
+                            ${roleBadge}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; text-align: left;">
+                            <div>성명: <strong>${escapeHtml(u.name || '-')}</strong></div>
+                            <div>연락처: <a href="tel:${escapeHtml(u.phone || '')}" style="color: var(--accent-primary); text-decoration: none;">${escapeHtml(u.phone || '-')}</a></div>
+                            ${u.email ? `<div>이메일: ${escapeHtml(u.email)}</div>` : ''}
+                            ${u.address ? `<div>주소: ${escapeHtml(u.address)}</div>` : ''}
+                        </div>
+                        ${deleteBtn ? `<div style="display:flex; justify-content:flex-end; margin-top: 8px;">${deleteBtn}</div>` : ''}
+                    `;
+                    allUsersListMob.appendChild(card);
+                });
+
+                allUsersListMob.querySelectorAll('.btn-delete-user-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const uid = e.target.closest('button').dataset.uid;
+                        if (!confirm(`[주의] 회원 ID [${uid}]을(를) 강제 탈퇴/삭제하시겠습니까?`)) return;
+
+                        let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
+                        currentUsers = currentUsers.filter(u => u.id !== uid);
+                        localStorage.setItem('users', JSON.stringify(currentUsers));
+
+                        if (window.supabaseClient) {
+                            window.supabaseClient.from('users').delete().eq('id', uid).then(({ error }) => {
+                                if (error) console.error('Supabase user delete error:', error.message);
+                            });
+                        }
+
+                        alert(`회원 [${uid}]이(가) 정상적으로 삭제되었습니다.`);
+                        renderAdminDashboardMob(true);
+                    });
+                });
+            }
         }
 
         // 1) Render Salesperson Requests (conversionStatus === 'pending')

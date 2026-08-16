@@ -342,6 +342,50 @@
 
                         <div class="manager-grid" style="gap: 25px;">
 
+                            <!-- 0. 전체 회원 정보 관리 (가입 회원 명부) -->
+                            <div style="background: rgba(255,255,255,0.7); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); grid-column: 1 / -1;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;" onclick="window.toggleAdminSection('sec-container-all-users', this)">
+                                    <h4 class="manager-section-title" style="margin: 0; font-size: 1.02rem; line-height: 1.4; text-align: left;">
+                                        <i class="fa-solid fa-users-gear" style="color: #6366f1;"></i> 👥 전체 회원 정보 관리 (가입 회원 명부)
+                                    </h4>
+                                    <button type="button" class="btn-toggle-admin" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; margin-left: 10px;">
+                                        <span class="toggle-text">펼치기</span> <i class="fa-solid fa-chevron-down toggle-icon"></i>
+                                    </button>
+                                </div>
+                                <div id="sec-container-all-users" style="margin-top: 14px; display: none;">
+                                    <!-- 회원 검색바 -->
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; flex-wrap: wrap;">
+                                        <div style="font-size: 0.82rem; color: var(--text-secondary);">
+                                            총 등록 회원: <strong id="all-users-count" style="color: var(--accent-primary);">0</strong>명
+                                        </div>
+                                        <div style="display: flex; gap: 6px; max-width: 320px; width: 100%;">
+                                            <input type="text" id="search-all-users-input" placeholder="아이디 / 이름 / 연락처 검색" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; border: 1px solid #cbd5e1; width: 100%;">
+                                        </div>
+                                    </div>
+                                    <div class="manager-table-container" style="overflow-x: auto; background: rgba(255,255,255,0.75); border-radius: 12px; border: 1px solid var(--border-color);">
+                                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 800px;">
+                                            <thead>
+                                                <tr style="background: rgba(241, 245, 249, 0.9); border-bottom: 1px solid #cbd5e1; color: var(--text-primary); font-weight: 700;">
+                                                    <th style="padding: 12px 14px; white-space: nowrap; width: 120px;">아이디(ID)</th>
+                                                    <th style="padding: 12px 14px; white-space: nowrap; width: 130px;">성명 / 대표자</th>
+                                                    <th style="padding: 12px 14px; white-space: nowrap; width: 160px;">연락처 / 이메일</th>
+                                                    <th style="padding: 12px 14px;">등록 주소</th>
+                                                    <th style="padding: 12px 14px; text-align: center; white-space: nowrap; width: 110px;">회원 구분</th>
+                                                    <th style="padding: 12px 14px; text-align: center; white-space: nowrap; width: 120px;">고유 코드</th>
+                                                    <th style="padding: 12px 14px; text-align: center; white-space: nowrap; width: 90px;">관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="all-users-table-body">
+                                                <tr>
+                                                    <td colspan="7" class="text-muted" style="text-align: center; padding: 30px 0;">등록된 가입 회원이 없습니다.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div id="pagination-manager-all-users" style="display: flex; justify-content: center; gap: 5px; margin-top: 15px; flex-wrap: wrap;"></div>
+                                </div>
+                            </div>
+
                             <!-- 1. Conversion request list -->
                             <div style="background: rgba(255,255,255,0.7); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
                                 <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;" onclick="window.toggleAdminSection('sec-container-requests', this)">
