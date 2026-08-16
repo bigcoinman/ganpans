@@ -1128,75 +1128,9 @@ function initWizard() {
   let uploadedFileBase64 = '';
 
   // =================================================
-  // 신청서 1단계: 신청인 본인인증 로직
+  // 신청서 1단계: 신청인 본인인증 로직 (선택적)
   // =================================================
-  let isOwnerPhoneVerified = false;
-  let ownerSimulatedSmsCode = '';
-  let ownerSmsTimerInterval = null;
-
-  const btnOwnerSmsAuth = document.getElementById('btn-owner-sms-auth');
-  const ownerSmsAuthGroup = document.getElementById('owner-sms-auth-group');
-  const ownerSmsAuthCode = document.getElementById('owner-sms-auth-code');
-  const btnOwnerVerifySms = document.getElementById('btn-owner-verify-sms');
-  const ownerSmsTimer = document.getElementById('owner-sms-timer');
-  const ownerPhoneCheckMsg = document.getElementById('owner-phone-check-msg');
-
-  if (btnOwnerSmsAuth) {
-    btnOwnerSmsAuth.addEventListener('click', () => {
-      const ownerPhone = document.getElementById('owner-phone')?.value.trim();
-      if (!ownerPhone) {
-        alert('휴대전화 번호를 먼저 입력해 주세요.');
-        return;
-      }
-      // 인증코드 생성 및 발송 시뮬레이션
-      ownerSimulatedSmsCode = Math.floor(100000 + Math.random() * 900000).toString();
-      alert(`[본인인증 문자 발송]\n\n입력하신 번호(${ownerPhone})로\n인증번호 [${ownerSimulatedSmsCode}]가 발송되었습니다.\n\n(실제 서비스에서는 실제 문자가 전송됩니다.)`);
-
-      if (ownerSmsAuthGroup) ownerSmsAuthGroup.style.display = 'block';
-      if (ownerSmsAuthCode) { ownerSmsAuthCode.value = ''; ownerSmsAuthCode.focus(); }
-
-      let timeLeft = 180;
-      if (ownerSmsTimerInterval) clearInterval(ownerSmsTimerInterval);
-
-      const updateOwnerTimer = () => {
-        const min = Math.floor(timeLeft / 60);
-        const sec = timeLeft % 60;
-        if (ownerSmsTimer) ownerSmsTimer.textContent = `남은 시간 ${min}:${sec < 10 ? '0' : ''}${sec}`;
-      };
-      updateOwnerTimer();
-
-      ownerSmsTimerInterval = setInterval(() => {
-        timeLeft--;
-        if (timeLeft <= 0) {
-          clearInterval(ownerSmsTimerInterval);
-          if (ownerSmsAuthGroup) ownerSmsAuthGroup.style.display = 'none';
-          alert('인증 시간이 초과되었습니다. 다시 인증해 주세요.');
-        } else {
-          updateOwnerTimer();
-        }
-      }, 1000);
-    });
-  }
-
-  if (btnOwnerVerifySms) {
-    btnOwnerVerifySms.addEventListener('click', () => {
-      const entered = ownerSmsAuthCode?.value.trim();
-      if (entered === ownerSimulatedSmsCode) {
-        clearInterval(ownerSmsTimerInterval);
-        isOwnerPhoneVerified = true;
-        if (ownerSmsAuthGroup) ownerSmsAuthGroup.style.display = 'none';
-        const ownerPhoneInput = document.getElementById('owner-phone');
-        if (ownerPhoneInput) ownerPhoneInput.disabled = true;
-        if (btnOwnerSmsAuth) btnOwnerSmsAuth.disabled = true;
-        if (ownerPhoneCheckMsg) {
-          ownerPhoneCheckMsg.className = 'form-helper success';
-          ownerPhoneCheckMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> 본인인증이 완료되었습니다.';
-        }
-      } else {
-        alert('인증번호가 일치하지 않습니다. 다시 확인해 주세요.');
-      }
-    });
-  }
+  let isOwnerPhoneVerified = true;
 
 
   if (uploadArea && uploadInput) {
@@ -1325,11 +1259,6 @@ function initWizard() {
         alert('신청자 이름과 연락처를 모두 입력해 주세요.');
         return false;
       }
-      // 본인인증 필수 체크 (인증 버튼이 존재하는 경우에만 강제)
-      if (btnOwnerSmsAuth && !isOwnerPhoneVerified) {
-        alert('휴대전화 본인인증을 완료해 주세요.\n"인증 문자" 버튼을 눌러 인증번호를 받아 입력해 주세요.');
-        return false;
-      }
     } else if (step === 1) {
       const storeName = document.getElementById('app-shop-name')?.value.trim();
       const address = document.getElementById('store-address')?.value.trim();
@@ -1375,8 +1304,24 @@ function initWizard() {
     const userId = activeUser ? activeUser.id : 'guest';
 
     const apps = JSON.parse(localStorage.getItem('applications')) || [];
-    // 고유 접수 번호 생성 (P-YYMMDDNNN, 예: P-260816001)
-    const customId = typeof generateApplicationId === 'function' ? generateApplicationId(apps) : `P-${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}001`;
+    let users = JSON.parse(localStorage.getItem('users')) || [];
+    let customId = '';
+
+    if (referrerCode) {
+      // 추천인 / 영업자 코드가 입력된 경우: {영업자코드}-0001 형식으로 자동 발급 (예: B-260712-0013)
+      const bizUser = users.find(u => u.role === 'business' && u.bizCode === referrerCode);
+      const bizItems = bizUser ? (bizUser.items || []) : [];
+      if (typeof generateBizItemId === 'function') {
+        customId = generateBizItemId(referrerCode, bizItems);
+      } else {
+        const nextNum = String(bizItems.length + 1).padStart(4, '0');
+        customId = `${referrerCode}-${nextNum}`;
+      }
+    } else {
+      // 추천 코드 없이 일반 신청한 경우: P-YYMMDD001 형식으로 자동 발급
+      customId = typeof generateApplicationId === 'function' ? generateApplicationId(apps) : `P-${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}001`;
+    }
+
     const newApp = {
       id: customId,
       userId,
@@ -1606,7 +1551,7 @@ function initAuthAndDashboard() {
         phone: '010-9876-5432',
         role: 'business',
         isSNS: false,
-        bizCode: 'BIZ-2026-8842',
+        bizCode: 'B-260712',
         conversionStatus: 'approved',
         items: [
           {
@@ -1735,10 +1680,6 @@ function initAuthAndDashboard() {
   const pwConfirmMsg = document.getElementById('pw-confirm-msg');
   const phoneCheckMsg = document.getElementById('phone-check-msg');
   const btnCheckId = document.getElementById('btn-check-id');
-
-  // SNS Buttons (카카오만 유지)
-  const btnKakaoLogin = document.getElementById('btn-kakao-login');
-  const btnKakaoSignup = document.getElementById('btn-kakao-signup');
 
   // --- Password Visibility Toggle ---
   document.querySelectorAll('.pw-toggle-btn').forEach(btn => {
@@ -2229,38 +2170,6 @@ function initAuthAndDashboard() {
       alert('아이디 또는 비밀번호가 올바르지 않습니다.');
     }
   });
-
-  // --- SNS Login / Signup Simulations (Auto Login) ---
-  const handleSNSLogin = (snsProvider) => {
-    const snsId = `sns_${snsProvider}_${Math.floor(1000 + Math.random() * 9000)}`;
-    let snsUser = users.find(u => u.id.startsWith(`sns_${snsProvider}_`));
-
-    if (!snsUser) {
-      snsUser = {
-        id: snsId,
-        pw: '',
-        name: `${snsProvider === 'google' ? '구글' : '카카오'} 사용자`,
-        address: '경기도 수원시 권선구 효원로 1',
-        email: `${snsProvider}@sns-login.com`,
-        phone: '010-9999-8888',
-        role: 'normal',
-        isSNS: true,
-        bizCode: null,
-        conversionStatus: 'none',
-        items: []
-      };
-      users.push(snsUser);
-      localStorage.setItem('users', JSON.stringify(users));
-    }
-
-    localStorage.setItem('activeUser', JSON.stringify(sanitizeUser(snsUser)));
-    alert(`${snsUser.name} 계정으로 로그인 완료(자동 로그인 적용).`);
-    authModal.classList.remove('active');
-    updateSessionUI();
-  };
-
-  if (btnKakaoLogin) btnKakaoLogin.addEventListener('click', () => handleSNSLogin('kakao'));
-  if (btnKakaoSignup) btnKakaoSignup.addEventListener('click', () => handleSNSLogin('kakao'));
 
   // --- Logout Logic ---
   if (logoutBtn) {

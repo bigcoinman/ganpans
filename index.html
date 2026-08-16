@@ -876,33 +876,22 @@
                                 정보</h3>
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="owner-name">대표자 성명</label>
-                                    <input type="text" id="owner-name" class="form-input" placeholder="홍길동" required>
+                                    <label for="owner-name">대표자 성명 or 상호명(필수)</label>
+                                    <input type="text" id="owner-name" class="form-input" placeholder="홍길동 또는 상호명" maxlength="25" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="owner-phone">휴대전화 번호 <span style="font-size:0.78rem; color: var(--accent-secondary); font-weight:700;">* 본인인증 필수</span></label>
-                                    <div class="input-with-btn">
-                                        <input type="tel" id="owner-phone" class="form-input" placeholder="010-1234-5678" required>
-                                        <button type="button" class="btn btn-secondary btn-inline" id="btn-owner-sms-auth">인증 문자</button>
-                                    </div>
-                                    <span class="form-helper" id="owner-phone-check-msg"></span>
-                                    <div id="owner-sms-auth-group" style="display: none; margin-top: 10px;">
-                                        <div class="input-with-btn">
-                                            <input type="text" id="owner-sms-auth-code" class="form-input" placeholder="인증번호 6자리 입력">
-                                            <button type="button" class="btn btn-primary btn-inline" id="btn-owner-verify-sms">확인</button>
-                                        </div>
-                                        <span class="form-helper" id="owner-sms-timer">남은 시간 3:00</span>
-                                    </div>
+                                    <label for="owner-phone">휴대전화번호(필수)</label>
+                                    <input type="tel" id="owner-phone" class="form-input" placeholder="010-1234-5678" maxlength="15" required>
                                 </div>
                                 <div class="form-group form-grid-full">
                                     <label for="owner-email">대표 이메일 주소 (선택)</label>
                                     <input type="email" id="owner-email" class="form-input"
-                                        placeholder="representative@domain.com">
+                                        placeholder="representative@domain.com" maxlength="30">
                                 </div>
                                 <div class="form-group form-grid-full">
                                     <label for="referrer-code">추천인 / 담당 영업자 코드 (선택)</label>
                                     <input type="text" id="referrer-code" class="form-input"
-                                        placeholder="예: BIZ-2026-1234 (자동 입력 가능)">
+                                        placeholder="예: B-260712 (자동 입력 가능)" maxlength="15">
                                 </div>
                             </div>
                         </div>
@@ -916,7 +905,7 @@
                                 <div class="form-group">
                                     <label for="app-shop-name">사업자 상호명</label>
                                     <input type="text" id="app-shop-name" class="form-input" placeholder="상호명 입력"
-                                        required>
+                                        maxlength="25" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="app-sign-type">선택한 간판 소재</label>
@@ -926,7 +915,7 @@
                                 <div class="form-group form-grid-full">
                                     <label for="store-address">설치 예정지 전체 주소</label>
                                     <input type="text" id="store-address" class="form-input"
-                                        placeholder="경기도 수원시 OO구 OO로 1" required>
+                                        placeholder="경기도 수원시 OO구 OO로 1" maxlength="35" required>
                                 </div>
 
                                 <!-- Photo upload drag & drop area -->
@@ -1451,12 +1440,6 @@
                         <button type="button" class="find-link-btn" id="btn-find-pw">비밀번호 찾기</button>
                     </div>
                 </form>
-                <div class="auth-divider"><span>또는 간편 로그인</span></div>
-                <div class="sns-login-buttons">
-                    <button type="button" class="btn btn-kakao" id="btn-kakao-login">
-                        <i class="fa-solid fa-comment"></i> 카카오톡 로그인
-                    </button>
-                </div>
             </div>
 
             <!-- Find ID Pane -->
@@ -1591,12 +1574,6 @@
                     <button type="submit" class="btn btn-primary btn-full" id="btn-complete-signup"
                         style="margin-top: 15px;"><i class="fa-solid fa-user-plus"></i> 가입완료</button>
                 </form>
-                <div class="auth-divider"><span>또는 간편 회원가입</span></div>
-                <div class="sns-login-buttons">
-                    <button type="button" class="btn btn-kakao" id="btn-kakao-signup">
-                        <i class="fa-solid fa-comment"></i> 카카오톡 가입
-                    </button>
-                </div>
             </div>
             </div>
         </div>

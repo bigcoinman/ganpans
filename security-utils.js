@@ -281,7 +281,17 @@ function generateApplicationId(appsList) {
 function generateBizItemId(bizCode, userItems) {
   const code = (bizCode && typeof bizCode === 'string') ? bizCode : (typeof generateBizCode === 'function' ? generateBizCode() : 'B-260801');
   const prefix = `${code}-`;
-  const items = Array.isArray(userItems) ? userItems : [];
+  const items = Array.isArray(userItems) ? [...userItems] : [];
+
+  // applications에 저장된 항목도 함께 카운팅에 반영하여 중복 번호 방지
+  try {
+    const apps = JSON.parse(localStorage.getItem('applications')) || [];
+    apps.forEach(app => {
+      if (app && app.id && typeof app.id === 'string' && app.id.startsWith(prefix)) {
+        items.push({ id: app.id });
+      }
+    });
+  } catch (e) {}
 
   let maxSeq = 0;
   items.forEach(item => {

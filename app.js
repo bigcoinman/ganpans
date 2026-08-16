@@ -397,11 +397,9 @@ document.addEventListener('DOMContentLoaded', () => {
         authCloseBtn.addEventListener('touchend', handleCloseAuth);
     }
 
-    // --- Sync PC Auth submissions to mobile status page ---
+    // --- Sync Auth submissions to mobile status page ---
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
-    const snsGoogleBtn = document.getElementById('btn-google-login');
-    const snsKakaoBtn = document.getElementById('btn-kakao-login');
 
     const handleSessionRefresh = () => {
         setTimeout(() => {
@@ -413,8 +411,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loginForm) loginForm.addEventListener('submit', handleSessionRefresh);
     if (signupForm) signupForm.addEventListener('submit', handleSessionRefresh);
-    if (snsGoogleBtn) snsGoogleBtn.addEventListener('click', handleSessionRefresh);
-    if (snsKakaoBtn) snsKakaoBtn.addEventListener('click', handleSessionRefresh);
 
     // --- Intercept Drawer Logout Click ---
     const drawerLogoutBtn = document.getElementById('drawer-logout-btn');
