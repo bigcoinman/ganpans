@@ -2819,7 +2819,8 @@ function initMobileBottomNav() {
     });
   }
 
-  if (inquiryForm) {
+  if (inquiryForm && !inquiryForm.dataset.inquiryBound) {
+    inquiryForm.dataset.inquiryBound = 'true';
     inquiryForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const name = escapeHtml(document.getElementById('inquiry-name').value.trim());
