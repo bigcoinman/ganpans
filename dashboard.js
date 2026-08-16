@@ -1150,6 +1150,32 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   window.updateItemStatus = updateItemStatus;
 
+  // --- Collapsible Sections Toggle for PC Admin Dashboard ---
+  const toggleAdminSection = (containerId, headerEl) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const isHidden = container.style.display === 'none';
+    const toggleBtn = headerEl ? headerEl.querySelector('.btn-toggle-admin') : null;
+    const textSpan = toggleBtn ? toggleBtn.querySelector('.toggle-text') : null;
+    const iconEl = toggleBtn ? toggleBtn.querySelector('.toggle-icon') : null;
+
+    if (isHidden) {
+      container.style.display = 'block';
+      if (textSpan) textSpan.textContent = '접기';
+      if (iconEl) {
+        iconEl.className = 'fa-solid fa-chevron-up toggle-icon';
+      }
+    } else {
+      container.style.display = 'none';
+      if (textSpan) textSpan.textContent = '펼치기';
+      if (iconEl) {
+        iconEl.className = 'fa-solid fa-chevron-down toggle-icon';
+      }
+    }
+  };
+  window.toggleAdminSection = toggleAdminSection;
+
   // --- Account Deletion (회원탈퇴) ---
   const btnDeleteAccount = document.getElementById('btn-delete-account');
   if (btnDeleteAccount) {

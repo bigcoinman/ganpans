@@ -340,51 +340,74 @@
                             </div>
                         </div>
 
-                        <div class="manager-grid">
+                        <div class="manager-grid" style="gap: 25px;">
 
-                            <!-- Conversion request list -->
-                            <div>
-                                <h4 class="manager-section-title"><i class="fa-solid fa-user-clock"></i> 영업자 회원 전환 및 시공업체 회원 전환 신청 목록 (매니저 승인 대기)</h4>
-                                <div id="manager-requests-list">
-                                    <p class="text-muted" style="text-align: center; padding: 30px 0;">대기 중인 승인 신청이
-                                        없습니다.</p>
+                            <!-- 1. Conversion request list -->
+                            <div style="background: rgba(255,255,255,0.7); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;" onclick="window.toggleAdminSection('sec-container-requests', this)">
+                                    <h4 class="manager-section-title" style="margin: 0; font-size: 0.96rem; line-height: 1.4; text-align: left;">
+                                        <div style="display: inline-flex; flex-direction: column; align-items: center;">
+                                            <div style="text-align: left; width: 100%;"><i class="fa-solid fa-user-clock" style="color: var(--accent-primary);"></i> 영업자 회원 전환 및 시공업체 회원 전환 신청 목록</div>
+                                            <div style="font-size: 0.82rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px; width: 100%; text-align: center;">(매니저 승인 대기)</div>
+                                        </div>
+                                    </h4>
+                                    <button type="button" class="btn-toggle-admin" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; margin-left: 10px;">
+                                        <span class="toggle-text">접기</span> <i class="fa-solid fa-chevron-up toggle-icon"></i>
+                                    </button>
+                                </div>
+                                <div id="sec-container-requests" style="margin-top: 14px;">
+                                    <div id="manager-requests-list">
+                                        <p class="text-muted" style="text-align: center; padding: 30px 0;">대기 중인 승인 신청이 없습니다.</p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Registered business items list and progress status change -->
-                            <div>
-                                <h4 class="manager-section-title"><i class="fa-solid fa-sliders"></i> 영업 물건 접수/진행 상태 수동
-                                    조작</h4>
-                                <div id="manager-items-list">
-                                    <p class="text-muted" style="text-align: center; padding: 30px 0;">등록된 영업물건이 없습니다.
-                                    </p>
+                            <!-- 2. Registered business items list and progress status change -->
+                            <div style="background: rgba(255,255,255,0.7); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;" onclick="window.toggleAdminSection('sec-container-items', this)">
+                                    <h4 class="manager-section-title" style="margin: 0; font-size: 0.96rem;"><i class="fa-solid fa-sliders" style="color: var(--accent-secondary);"></i> 영업 물건 접수/진행 상태 수동 조작</h4>
+                                    <button type="button" class="btn-toggle-admin" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
+                                        <span class="toggle-text">접기</span> <i class="fa-solid fa-chevron-up toggle-icon"></i>
+                                    </button>
+                                </div>
+                                <div id="sec-container-items" style="margin-top: 14px;">
+                                    <div id="manager-items-list">
+                                        <p class="text-muted" style="text-align: center; padding: 30px 0;">등록된 영업물건이 없습니다.</p>
+                                    </div>
                                 </div>
                             </div>
 
                         </div>
                         
-                        <!-- 온라인 간편 지원 신청 목록 -->
-                        <div class="manager-applications-section" style="margin-top: 30px; border-top: 1px dashed var(--border-color); padding-top: 25px;">
-                            <h4 class="manager-section-title"><i class="fa-solid fa-file-signature"></i> 온라인 간편 지원 신청 목록 (웹/앱 접수건)</h4>
-                            <div class="manager-table-container" style="overflow-x: auto; background: rgba(255,255,255,0.75); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03); backdrop-filter: blur(5px); margin-top: 15px;">
-                                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 950px;">
-                                    <thead>
-                                        <tr style="background: rgba(241, 245, 249, 0.9); border-bottom: 1px solid #cbd5e1; color: var(--text-primary); font-weight: 700;">
-                                            <th style="padding: 14px 16px;">신청 일시</th>
-                                            <th style="padding: 14px 16px; white-space: nowrap; min-width: 140px;">신청자 (연락처)</th>
-                                            <th style="padding: 14px 16px;">상호명 (설치 주소)</th>
-                                            <th style="padding: 14px 16px; white-space: nowrap; min-width: 100px;">간판 종류</th>
-                                            <th style="padding: 14px 16px;">첨부 파일</th>
-                                            <th style="padding: 14px 16px;">진행 상태</th>
-                                            <th style="padding: 14px 16px; text-align: center; width: 220px;">승인/반려 조작</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="applications-table-body">
-                                        <tr>
-                                            <td colspan="7" class="text-muted" style="text-align: center; padding: 40px 0;">접수된 온라인 간편 지원 신청이 없습니다.</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                        <!-- 3. 온라인 간편 지원 신청 목록 -->
+                        <div class="manager-applications-section" style="margin-top: 25px; border-top: 1px dashed var(--border-color); padding-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; margin-bottom: 12px; background: rgba(241, 245, 249, 0.7); padding: 10px 16px; border-radius: 10px; border: 1px solid #e2e8f0;" onclick="window.toggleAdminSection('sec-container-apps', this)">
+                                <h4 class="manager-section-title" style="margin: 0; font-size: 1.02rem;"><i class="fa-solid fa-file-signature" style="color: var(--accent-success);"></i> 온라인 간편 지원 신청 목록 (웹/앱 접수건)</h4>
+                                <button type="button" class="btn-toggle-admin" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 4px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
+                                    <span class="toggle-text">접기</span> <i class="fa-solid fa-chevron-up toggle-icon"></i>
+                                </button>
+                            </div>
+                            <div id="sec-container-apps">
+                                <div class="manager-table-container" style="overflow-x: auto; background: rgba(255,255,255,0.75); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03); backdrop-filter: blur(5px);">
+                                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 950px;">
+                                        <thead>
+                                            <tr style="background: rgba(241, 245, 249, 0.9); border-bottom: 1px solid #cbd5e1; color: var(--text-primary); font-weight: 700;">
+                                                <th style="padding: 14px 16px;">신청 일시</th>
+                                                <th style="padding: 14px 16px; white-space: nowrap; min-width: 140px;">신청자 (연락처)</th>
+                                                <th style="padding: 14px 16px;">상호명 (설치 주소)</th>
+                                                <th style="padding: 14px 16px; white-space: nowrap; min-width: 100px;">간판 종류</th>
+                                                <th style="padding: 14px 16px;">첨부 파일</th>
+                                                <th style="padding: 14px 16px;">진행 상태</th>
+                                                <th style="padding: 14px 16px; text-align: center; width: 220px;">승인/반려 조작</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="applications-table-body">
+                                            <tr>
+                                                <td colspan="7" class="text-muted" style="text-align: center; padding: 40px 0;">접수된 온라인 간편 지원 신청이 없습니다.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
 
