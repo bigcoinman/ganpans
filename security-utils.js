@@ -227,3 +227,93 @@ function compressImageToBase64(file, maxSizeBytes = 2 * 1024 * 1024) {
     });
   });
 }
+
+// 8. 영업자 코드 생성 헬퍼 (규칙: B-YYMM01 ~ 순차 증가)
+function generateBizCode(usersList) {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const prefix = `B-${yy}${mm}`;
+
+  const currentUsers = Array.isArray(usersList) ? usersList : (JSON.parse(localStorage.getItem('users')) || []);
+
+  let maxSeq = 0;
+  currentUsers.forEach(u => {
+    if (u && u.bizCode && typeof u.bizCode === 'string' && u.bizCode.startsWith(prefix)) {
+      const seqStr = u.bizCode.slice(prefix.length);
+      const seqNum = parseInt(seqStr, 10);
+      if (!isNaN(seqNum) && seqNum > maxSeq) {
+        maxSeq = seqNum;
+      }
+    }
+  });
+
+  const nextSeq = String(maxSeq + 1).padStart(2, '0');
+  return `${prefix}${nextSeq}`;
+}
+
+// 9. 일반회원 간판지원신청 고유번호 생성 헬퍼 (규칙: P-YYMMDD001 ~ 순차 증가)
+function generateApplicationId(appsList) {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const prefix = `P-${yy}${mm}${dd}`;
+
+  const currentApps = Array.isArray(appsList) ? appsList : (JSON.parse(localStorage.getItem('applications')) || []);
+
+  let maxSeq = 0;
+  currentApps.forEach(app => {
+    if (app && app.id && typeof app.id === 'string' && app.id.startsWith(prefix)) {
+      const seqStr = app.id.slice(prefix.length);
+      const seqNum = parseInt(seqStr, 10);
+      if (!isNaN(seqNum) && seqNum > maxSeq) {
+        maxSeq = seqNum;
+      }
+    }
+  });
+
+  const nextSeq = String(maxSeq + 1).padStart(3, '0');
+  return `${prefix}${nextSeq}`;
+}
+
+// 10. 영업자 간판접수신청 물건 고유번호 생성 헬퍼 (규칙: {bizCode}-0001 ~ 순차 증가)
+function generateBizItemId(bizCode, userItems) {
+  const code = (bizCode && typeof bizCode === 'string') ? bizCode : (typeof generateBizCode === 'function' ? generateBizCode() : 'B-260801');
+  const prefix = `${code}-`;
+  const items = Array.isArray(userItems) ? userItems : [];
+
+  let maxSeq = 0;
+  items.forEach(item => {
+    if (item && item.id && typeof item.id === 'string' && item.id.startsWith(prefix)) {
+      const seqStr = item.id.slice(prefix.length);
+      const seqNum = parseInt(seqStr, 10);
+      if (!isNaN(seqNum) && seqNum > maxSeq) {
+        maxSeq = seqNum;
+      }
+    }
+  });
+
+  const nextSeq = String(maxSeq + 1).padStart(4, '0');
+  return `${prefix}${nextSeq}`;
+}
+
+// 11. 개인정보 보호 마스킹 유틸리티
+function maskName(name) {
+  if (!name) return '고객';
+  const str = String(name).trim();
+  if (str.length <= 1) return str;
+  if (str.length === 2) return str[0] + '*';
+  return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1];
+}
+
+function maskPhone(phone) {
+  if (!phone) return '010-****-****';
+  const clean = String(phone).replace(/[^0-9]/g, '');
+  if (clean.length === 11) {
+    return `${clean.slice(0, 3)}-****-${clean.slice(7)}`;
+  } else if (clean.length === 10) {
+    return `${clean.slice(0, 3)}-***-${clean.slice(6)}`;
+  }
+  return String(phone).replace(/(\d{2,3})[^\d]?(\d{3,4})[^\d]?(\d{4})/, '$1-****-$3');
+}

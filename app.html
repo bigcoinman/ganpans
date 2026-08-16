@@ -76,7 +76,7 @@
         <nav class="drawer-nav">
             <a href="#" onclick="switchTab('home'); closeDrawer(); return false;"><i class="fa-solid fa-house"></i> 홈 화면</a>
             <a href="#" onclick="switchTab('status'); closeDrawer(); return false;"><i class="fa-solid fa-list-check"></i> 신청/영업 현황</a>
-            <a href="#" onclick="switchTab('simulator'); closeDrawer(); return false;"><i class="fa-solid fa-palette"></i> 간판 시뮬레이터</a>
+            <a href="#" onclick="openGlobalSearchModal(); closeDrawer(); return false;"><i class="fa-solid fa-magnifying-glass"></i> 검색</a>
             <a href="#" onclick="switchTab('apply'); closeDrawer(); return false;"><i class="fa-solid fa-file-signature"></i> 지원사업 간편 신청</a>
             <a href="#" onclick="openInquiryModal(); closeDrawer(); return false;"><i class="fa-solid fa-circle-question"></i> 비회원 간편 문의하기</a>
             <div class="drawer-divider"></div>
@@ -92,6 +92,7 @@
                 </div>
                 <div class="drawer-divider"></div>
                 <a href="#" id="drawer-logout-btn"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</a>
+                <a href="#" id="drawer-profile-edit-btn"><i class="fa-solid fa-user-pen"></i> 개인정보변경</a>
                 <a href="#" id="drawer-delete-account-btn" style="color: #ef4444;"><i class="fa-solid fa-user-slash"></i> 회원 탈퇴</a>
             </div>
         </nav>
@@ -1609,9 +1610,9 @@
             <i class="fa-solid fa-list-check nav-icon"></i>
             <span class="nav-label">현황</span>
         </button>
-        <button class="nav-item" onclick="switchTab('simulator')" id="tab-btn-simulator">
-            <i class="fa-solid fa-palette nav-icon"></i>
-            <span class="nav-label">시뮬레이터</span>
+        <button class="nav-item" onclick="openGlobalSearchModal();" id="tab-btn-search">
+            <i class="fa-solid fa-magnifying-glass nav-icon"></i>
+            <span class="nav-label">검색</span>
         </button>
         <button class="nav-item nav-fab" onclick="switchTab('apply')" id="tab-btn-apply">
             <div class="fab-circle">
@@ -1907,7 +1908,7 @@
             <!-- QR Code Section -->
             <div class="install-qr-section" id="install-qr-section">
                 <div class="install-qr-frame">
-                    <img id="install-qr-img" src="/ganpan-app-qr.png?v=20260812" alt="설치 QR 코드">
+                    <img id="install-qr-img" src="./ganpan-app-qr.png?v=20260817" alt="설치 QR 코드" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com%2Fapp'">
                 </div>
                 <div class="install-qr-text">
                     <i class="fa-solid fa-qrcode"></i> 스마트폰 카메라로 QR 코드를 스캔하여 앱 열기
@@ -2052,6 +2053,89 @@
                 <!-- 약관 전문이 동적으로 로드되는 영역 -->
             </div>
             <button class="btn btn-primary btn-full" id="btn-policy-confirm" style="margin-top: 15px;"><i class="fa-solid fa-check"></i> 확인</button>
+        </div>
+    </div>
+
+    <!-- 개인정보변경 모달 -->
+    <div id="profile-edit-modal" class="inquiry-modal-overlay">
+        <div class="inquiry-card glass-panel">
+            <button class="inquiry-close-x" id="profile-edit-modal-close">&times;</button>
+            <div class="inquiry-title-area">
+                <h3><i class="fa-solid fa-user-pen"></i> 개인정보변경</h3>
+                <p>변경할 항목만 수정 후 저장하세요. 비밀번호는 새 비밀번호 입력 시에만 변경됩니다.</p>
+            </div>
+            <form id="profile-edit-form" onsubmit="event.preventDefault();">
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-name">이름 (최대 20자)</label>
+                    <input type="text" id="profile-edit-name" minlength="2" maxlength="20" placeholder="이름을 입력하세요">
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-email">이메일 (최대 30자)</label>
+                    <input type="email" id="profile-edit-email" maxlength="30" placeholder="이메일 주소를 입력하세요">
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-phone">휴대폰 번호 (최대 20자)</label>
+                    <input type="tel" id="profile-edit-phone" maxlength="20" placeholder="010-1234-5678">
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-address">주소 (최대 35자)</label>
+                    <input type="text" id="profile-edit-address" maxlength="35" placeholder="주소를 입력하세요">
+                </div>
+                <hr style="border:none; border-top:1px solid var(--border-color); margin: 8px 0;">
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-pw">새 비밀번호 (최대 25자, 변경 시만 입력)</label>
+                    <input type="password" id="profile-edit-pw" maxlength="25" placeholder="새 비밀번호 (변경 없으면 비워두세요)">
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-pw-confirm">새 비밀번호 확인 (최대 25자)</label>
+                    <input type="password" id="profile-edit-pw-confirm" maxlength="25" placeholder="새 비밀번호를 다시 입력하세요">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" style="margin-top: 15px;"><i class="fa-solid fa-floppy-disk"></i> 저장하기</button>
+                <button type="button" class="btn btn-secondary btn-full profile-edit-close-btn" style="margin-top: 8px; background: #cbd5e1 !important; color: #334155 !important; border: none !important;"><i class="fa-solid fa-xmark"></i> 닫기</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 통합 검색 모달 (상호로 검색 / 번호로 검색) -->
+    <div id="global-search-modal" class="inquiry-modal-overlay">
+        <div class="inquiry-card glass-panel" style="max-width: 600px; width: 95%;">
+            <button class="inquiry-close-x" id="search-modal-close">&times;</button>
+            <div class="inquiry-title-area" style="text-align: center; margin-bottom: 16px;">
+                <h3 style="display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="fa-solid fa-magnifying-glass" style="color: var(--accent-primary);"></i> 간판 지원 및 물건 검색</h3>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px;">상호명 또는 발급받으신 고유 접수번호로 진행 현황을 조회하실 수 있습니다.</p>
+            </div>
+
+            <!-- 탭 선택 (상호로 검색 / 번호로 검색) -->
+            <div class="search-tabs" style="display: flex; gap: 8px; margin-bottom: 14px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 8px;">
+                <button type="button" id="search-tab-name" class="btn btn-primary" style="flex: 1; padding: 10px; font-size: 0.88rem; border-radius: 6px; border: none; font-weight: 600;">
+                    <i class="fa-solid fa-store"></i> 상호로 검색
+                </button>
+                <button type="button" id="search-tab-code" class="btn btn-secondary" style="flex: 1; padding: 10px; font-size: 0.88rem; border-radius: 6px; border: none; font-weight: 600; background: transparent; color: var(--text-secondary);">
+                    <i class="fa-solid fa-hashtag"></i> 번호로 검색
+                </button>
+            </div>
+
+            <!-- 검색 입력창 폼 -->
+            <form id="global-search-form" onsubmit="event.preventDefault();" style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <div style="position: relative; flex: 1;">
+                    <input type="text" id="global-search-input" class="form-input-auth" maxlength="25" style="width: 100%; padding: 11px 14px; border-radius: 8px; font-size: 0.9rem; border: 1.5px solid var(--border-color);" placeholder="상호명을 입력해 주세요 (최대 25자, 예: 초원식당)" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="padding: 0 20px; font-size: 0.9rem; white-space: nowrap; border-radius: 8px;">
+                    <i class="fa-solid fa-magnifying-glass"></i> 검색
+                </button>
+            </form>
+
+            <!-- 검색 힌트 안내 -->
+            <div id="search-guide-box" style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; border: 1px dashed var(--border-color);">
+                <i class="fa-solid fa-circle-info" style="color: var(--accent-primary);"></i> <span id="search-guide-text">조회하고자 하는 매장의 <strong>상호명(업체명)</strong>을 입력해 주세요.</span>
+            </div>
+
+            <!-- 검색 결과 목록 영역 -->
+            <div id="search-results-area" style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                <!-- 검색 결과가 동적으로 표시됩니다 -->
+            </div>
+
+            <button type="button" class="btn btn-secondary btn-full search-modal-close-btn" style="margin-top: 14px; background: #cbd5e1 !important; color: #334155 !important; border: none !important;"><i class="fa-solid fa-xmark"></i> 닫기</button>
         </div>
     </div>
 

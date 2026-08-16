@@ -336,8 +336,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let itemsUpdated = false;
 
     items = items.map(item => {
-      // GP-로 시작하는 신청건인 경우, applications의 최신 심사 결과를 반영
-      if (typeof item.id === 'string' && item.id.startsWith('GP-')) {
+      // GP- 또는 P-로 시작하는 신청건인 경우, applications의 최신 심사 결과를 반영
+      if (typeof item.id === 'string' && (item.id.startsWith('GP-') || item.id.startsWith('P-'))) {
         const matchingApp = apps.find(app => app.id === item.id);
         if (matchingApp) {
           let updatedProgress = item.progressStatus;
@@ -401,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
       card.innerHTML = `
         <div class="biz-item-header">
           <div>
-            <h4 class="biz-item-name">${escapeHtml(item.name)}</h4>
+            <h4 class="biz-item-name">${escapeHtml(item.name)} ${item.id ? `<span style="font-size: 0.72rem; font-weight: 500; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 6px; border-radius: 4px; margin-left: 6px;">${escapeHtml(String(item.id))}</span>` : ''}</h4>
             <p class="biz-item-addr"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.address)}</p>
             ${item.phone ? `<p class="biz-item-phone" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-phone" style="color: var(--accent-primary);"></i> ${escapeHtml(item.phone)}</p>` : ''}
           </div>
@@ -430,10 +430,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Check if format is valid (GP-YYYYMMDD-XXXX)
-      const idPattern = /^GP-\d{8}-\d{4}$/;
+      // Check if format is valid (P-YYMMDDNNN 또는 GP-YYYYMMDD-XXXX)
+      const idPattern = /^(P-\d{6}\d{3}|GP-\d{8}-\d{4})$/;
       if (!idPattern.test(appId)) {
-        alert('올바른 신청번호 형식이 아닙니다.\n형식: GP-YYYYMMDD-XXXX (예: GP-20260731-1234)');
+        alert('올바른 신청번호 형식이 아닙니다.\n형식: P-YYMMDDNNN (예: P-260816001) 또는 GP-YYYYMMDD-XXXX');
         return;
       }
 
@@ -759,8 +759,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const photoUrls = selectedPhotos.map(file => URL.createObjectURL(file));
 
+      activeUser.items = activeUser.items || [];
+      const itemId = typeof generateBizItemId === 'function' ? generateBizItemId(activeUser.bizCode, activeUser.items) : `${activeUser.bizCode || 'B-260801'}-0001`;
+
       const newItem = {
-        id: Date.now(),
+        id: itemId,
         name: nameVal,
         phone: phoneVal,
         address: addrVal,
@@ -770,14 +773,13 @@ document.addEventListener('DOMContentLoaded', () => {
         photos: photoUrls
       };
 
-      activeUser.items = activeUser.items || [];
       activeUser.items.push(newItem);
 
       users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
       localStorage.setItem('users', JSON.stringify(users));
       localStorage.setItem('activeUser', JSON.stringify(activeUser));
 
-      alert(`영업물건 [${nameVal}] 등록이 성공적으로 완료되었습니다!\n(경기도시장상권진흥원 접수 상태가 '접수 완료'로 반영되었습니다.)`);
+      alert(`영업물건 [${nameVal}] 등록이 성공적으로 완료되었습니다!\n고유번호: [${itemId}]\n(경기도시장상권진흥원 접수 상태가 '접수 완료'로 반영되었습니다.)`);
 
       mobileUploadForm.reset();
       selectedPhotos = [];
@@ -950,7 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('users', JSON.stringify(users));
       alert(`시공업체 전환 신청이 승인되었습니다.\n\n발급된 시공업체 코드: [${code}]`);
     } else {
-      const code = `BIZ-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const code = generateBizCode(users);
       users = users.map(u => {
         if (u.id === uid) {
           return {
@@ -963,6 +965,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return u;
       });
       localStorage.setItem('users', JSON.stringify(users));
+
+      // Supabase Sync
+      if (window.supabaseClient) {
+        window.supabaseClient.from('users').update({
+          role: 'business',
+          biz_code: code,
+          conversion_status: 'approved'
+        }).eq('id', uid).then(({ error }) => {
+          if (error) console.error('Supabase conversion approve error:', error.message);
+        });
+      }
+
       alert(`영업자 전환 신청이 승인되었습니다.\n\n발급된 영업자 코드: [${code}]`);
     }
     updateSessionUI();
@@ -1918,7 +1932,10 @@ function initPWA() {
     if (e) e.preventDefault();
     
     if (qrImg) {
-      qrImg.src = '/ganpan-app-qr.png?v=20260812';
+      qrImg.onerror = () => {
+        qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com%2Fapp';
+      };
+      qrImg.src = './ganpan-app-qr.png?v=20260817';
     }
     if (qrSection) {
       qrSection.style.display = 'flex';
@@ -2415,6 +2432,129 @@ function initAIAssistant() {
       if (e.target === policyModal) {
         closePolicyModal();
       }
+    });
+  }
+
+  // --- 개인정보변경 모달 연동 ---
+  const profileEditModal = document.getElementById('profile-edit-modal');
+  const profileEditModalClose = document.getElementById('profile-edit-modal-close');
+  const profileEditForm = document.getElementById('profile-edit-form');
+  const btnProfileEdit = document.getElementById('btn-profile-edit');
+
+  function openProfileEditModal() {
+    if (!profileEditModal) return;
+    const user = getActiveUser();
+    if (!user) { alert('로그인이 필요합니다.'); return; }
+    // 기존 정보 자동 채움
+    document.getElementById('profile-edit-name').value = user.name || '';
+    document.getElementById('profile-edit-email').value = user.email || '';
+    document.getElementById('profile-edit-phone').value = user.phone || '';
+    document.getElementById('profile-edit-address').value = user.address || '';
+    document.getElementById('profile-edit-pw').value = '';
+    document.getElementById('profile-edit-pw-confirm').value = '';
+    profileEditModal.classList.add('active');
+  }
+
+  function closeProfileEditModal() {
+    if (profileEditModal) {
+      profileEditModal.classList.remove('active');
+      if (profileEditForm) profileEditForm.reset();
+    }
+  }
+
+  if (btnProfileEdit) {
+    btnProfileEdit.addEventListener('click', (e) => {
+      e.preventDefault();
+      openProfileEditModal();
+    });
+  }
+
+  if (profileEditModalClose) {
+    profileEditModalClose.addEventListener('click', closeProfileEditModal);
+  }
+  document.querySelectorAll('.profile-edit-close-btn').forEach(btn => {
+    btn.addEventListener('click', closeProfileEditModal);
+  });
+  if (profileEditModal) {
+    profileEditModal.addEventListener('click', (e) => {
+      if (e.target === profileEditModal) closeProfileEditModal();
+    });
+  }
+
+  if (profileEditForm) {
+    profileEditForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const user = getActiveUser();
+      if (!user) { alert('세션이 만료되었습니다. 다시 로그인해 주세요.'); return; }
+
+      const nameVal = escapeHtml(document.getElementById('profile-edit-name')?.value.trim() || '');
+      const emailVal = escapeHtml(document.getElementById('profile-edit-email')?.value.trim() || '');
+      const phoneVal = escapeHtml(document.getElementById('profile-edit-phone')?.value.trim() || '');
+      const addressVal = escapeHtml(document.getElementById('profile-edit-address')?.value.trim() || '');
+      const newPw = document.getElementById('profile-edit-pw')?.value || '';
+      const newPwConf = document.getElementById('profile-edit-pw-confirm')?.value || '';
+
+      // 글자수 유효성 검사
+      if (nameVal.length > 0 && nameVal.length < 2) {
+        alert('이름은 최소 2자 이상 입력해 주세요.'); return;
+      }
+      if (nameVal.length > 20) {
+        alert('이름은 최대 20자까지 입력 가능합니다.'); return;
+      }
+      if (emailVal.length > 30) {
+        alert('이메일은 최대 30자까지 입력 가능합니다.'); return;
+      }
+      if (phoneVal.length > 20) {
+        alert('휴대폰 번호는 최대 20자까지 입력 가능합니다.'); return;
+      }
+      if (addressVal.length > 35) {
+        alert('주소는 최대 35자까지 입력 가능합니다.'); return;
+      }
+
+      // 비밀번호 변경 시 확인
+      if (newPw || newPwConf) {
+        if (newPw.length < 6) { alert('비밀번호는 최소 6자 이상이어야 합니다.'); return; }
+        if (newPw.length > 25) { alert('비밀번호는 최대 25자까지 입력 가능합니다.'); return; }
+        if (newPw !== newPwConf) { alert('새 비밀번호가 일치하지 않습니다.'); return; }
+      }
+
+      // Local users update
+      users = JSON.parse(localStorage.getItem('users')) || [];
+      const idx = users.findIndex(u => u.id === user.id);
+
+      if (idx !== -1) {
+        if (nameVal) users[idx].name = nameVal;
+        if (emailVal) users[idx].email = emailVal;
+        if (phoneVal) users[idx].phone = phoneVal;
+        if (addressVal !== undefined) users[idx].address = addressVal;
+        if (newPw) users[idx].pw = sha256(newPw);
+        localStorage.setItem('users', JSON.stringify(users));
+
+        const updatedUser = users[idx];
+        const storage = localStorage.getItem('activeUser') ? localStorage : sessionStorage;
+        storage.setItem('activeUser', JSON.stringify(sanitizeUser ? sanitizeUser(updatedUser) : updatedUser));
+
+        activeUser = getActiveUser();
+
+        // Supabase Sync
+        if (window.supabaseClient) {
+          const updatePayload = {
+            name: nameVal || users[idx].name,
+            email: emailVal !== undefined ? emailVal : users[idx].email,
+            phone: phoneVal || users[idx].phone
+          };
+          if (newPw) {
+            updatePayload.password_hash = sha256(newPw);
+          }
+          window.supabaseClient.from('users').update(updatePayload).eq('id', user.id).then(({ error }) => {
+            if (error) console.error('Supabase Profile Update Error:', error.message);
+          });
+        }
+      }
+
+      alert('개인정보가 성공적으로 변경되었습니다.');
+      closeProfileEditModal();
+      updateSessionUI();
     });
   }
 }

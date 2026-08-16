@@ -5095,7 +5095,30 @@ footer {
         padding: 20px 12px !important;
     }
     .install-qr-section {
-        display: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        margin: 12px 0 16px 0 !important;
+    }
+    .install-qr-frame {
+        width: 140px !important;
+        height: 140px !important;
+        padding: 8px !important;
+        background: #ffffff !important;
+        border-radius: 14px !important;
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+    }
+    .install-qr-frame img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important;
+    }
+    .install-qr-text {
+        font-size: 0.75rem !important;
+        color: #64748b !important;
+        margin-top: 6px !important;
+        text-align: center !important;
     }
     .install-card {
         padding: 26px 20px !important;

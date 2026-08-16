@@ -1374,14 +1374,9 @@ function initWizard() {
     const activeUser = getActiveUser() || null;
     const userId = activeUser ? activeUser.id : 'guest';
 
-    // 고유 접수 번호 생성 (GP-YYYYMMDD-XXXX)
-    const padZero = (n) => String(n).padStart(2, '0');
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}${padZero(now.getMonth() + 1)}${padZero(now.getDate())}`;
-    const randVal = Math.floor(1000 + Math.random() * 9000);
-    const customId = `GP-${dateStr}-${randVal}`;
-
     const apps = JSON.parse(localStorage.getItem('applications')) || [];
+    // 고유 접수 번호 생성 (P-YYMMDDNNN, 예: P-260816001)
+    const customId = typeof generateApplicationId === 'function' ? generateApplicationId(apps) : `P-${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}001`;
     const newApp = {
       id: customId,
       userId,
@@ -2503,7 +2498,10 @@ function initPWA() {
     if (e) e.preventDefault();
     
     if (qrImg) {
-      qrImg.src = '/ganpan-app-qr.png?v=20260812';
+      qrImg.onerror = () => {
+        qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com%2Fapp';
+      };
+      qrImg.src = './ganpan-app-qr.png?v=20260817';
     }
     if (qrSection) {
       qrSection.style.display = 'flex';
@@ -3118,6 +3116,244 @@ function initMobileBottomNav() {
     linkConsent.addEventListener('click', (e) => {
       e.preventDefault();
       window.openPolicyModal('consent');
+    });
+  }
+
+  // --- 통합 검색 모달 (상호로 검색 / 번호로 검색) ---
+  const globalSearchModal = document.getElementById('global-search-modal');
+  const searchModalClose = document.getElementById('search-modal-close');
+  const searchTabName = document.getElementById('search-tab-name');
+  const searchTabCode = document.getElementById('search-tab-code');
+  const globalSearchForm = document.getElementById('global-search-form');
+  const globalSearchInput = document.getElementById('global-search-input');
+  const searchGuideText = document.getElementById('search-guide-text');
+  const searchResultsArea = document.getElementById('search-results-area');
+
+  let currentSearchMode = 'name'; // 'name' 또는 'code'
+
+  function openGlobalSearchModal() {
+    if (!globalSearchModal) return;
+    setSearchMode('name');
+    if (globalSearchInput) globalSearchInput.value = '';
+    if (searchResultsArea) searchResultsArea.innerHTML = '';
+    globalSearchModal.classList.add('active');
+    setTimeout(() => { if (globalSearchInput) globalSearchInput.focus(); }, 100);
+  }
+  window.openGlobalSearchModal = openGlobalSearchModal;
+
+  function closeGlobalSearchModal() {
+    if (globalSearchModal) {
+      globalSearchModal.classList.remove('active');
+      if (globalSearchInput) globalSearchInput.value = '';
+      if (searchResultsArea) searchResultsArea.innerHTML = '';
+    }
+  }
+
+  function setSearchMode(mode) {
+    currentSearchMode = mode;
+    if (mode === 'name') {
+      if (searchTabName) {
+        searchTabName.className = 'btn btn-primary';
+        searchTabName.style.background = 'var(--grad-primary)';
+        searchTabName.style.color = '#fff';
+      }
+      if (searchTabCode) {
+        searchTabCode.className = 'btn btn-secondary';
+        searchTabCode.style.background = 'transparent';
+        searchTabCode.style.color = 'var(--text-secondary)';
+      }
+      if (globalSearchInput) {
+        globalSearchInput.maxLength = 25;
+        globalSearchInput.placeholder = '상호명을 입력해 주세요 (최대 25자, 예: 초원식당)';
+      }
+      if (searchGuideText) {
+        searchGuideText.innerHTML = '조회하고자 하는 매장의 <strong>상호명(업체명, 최대 25자)</strong>을 입력해 주세요.';
+      }
+    } else {
+      if (searchTabCode) {
+        searchTabCode.className = 'btn btn-primary';
+        searchTabCode.style.background = 'var(--grad-primary)';
+        searchTabCode.style.color = '#fff';
+      }
+      if (searchTabName) {
+        searchTabName.className = 'btn btn-secondary';
+        searchTabName.style.background = 'transparent';
+        searchTabName.style.color = 'var(--text-secondary)';
+      }
+      if (globalSearchInput) {
+        globalSearchInput.maxLength = 15;
+        globalSearchInput.placeholder = '고유번호를 입력해 주세요 (최대 15자, 예: P-260816001)';
+      }
+      if (searchGuideText) {
+        searchGuideText.innerHTML = '발급받으신 <strong>고유 접수번호(최대 15자)</strong>(예: P-260816001, B-260801-0001)를 입력해 주세요.';
+      }
+    }
+    if (globalSearchInput) globalSearchInput.focus();
+  }
+
+  if (searchTabName) {
+    searchTabName.addEventListener('click', () => setSearchMode('name'));
+  }
+  if (searchTabCode) {
+    searchTabCode.addEventListener('click', () => setSearchMode('code'));
+  }
+
+  // 상단 헤더 및 모바일 바텀바 검색 링크 연동
+  const navSearchBtn = document.getElementById('nav-search-btn');
+  if (navSearchBtn) {
+    navSearchBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openGlobalSearchModal();
+    });
+  }
+  const mNavSearch = document.getElementById('m-nav-search');
+  if (mNavSearch) {
+    mNavSearch.addEventListener('click', (e) => {
+      e.preventDefault();
+      openGlobalSearchModal();
+    });
+  }
+
+  if (searchModalClose) {
+    searchModalClose.addEventListener('click', closeGlobalSearchModal);
+  }
+  document.querySelectorAll('.search-modal-close-btn').forEach(btn => {
+    btn.addEventListener('click', closeGlobalSearchModal);
+  });
+  if (globalSearchModal) {
+    globalSearchModal.addEventListener('click', (e) => {
+      if (e.target === globalSearchModal) closeGlobalSearchModal();
+    });
+  }
+
+  // 검색 실행
+  if (globalSearchForm) {
+    globalSearchForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const rawQuery = globalSearchInput ? globalSearchInput.value.trim() : '';
+      if (!rawQuery) {
+        alert('검색어를 입력해 주세요.');
+        return;
+      }
+
+      // 글자수 유효성 검사
+      if (currentSearchMode === 'name' && rawQuery.length > 25) {
+        alert('상호명 검색은 최대 25자까지 입력 가능합니다.');
+        return;
+      }
+      if (currentSearchMode === 'code' && rawQuery.length > 15) {
+        alert('번호 검색은 최대 15자까지 입력 가능합니다.');
+        return;
+      }
+
+      const query = rawQuery.toLowerCase();
+
+      const apps = JSON.parse(localStorage.getItem('applications')) || [];
+      const users = JSON.parse(localStorage.getItem('users')) || [];
+
+      // 모든 신청 내역 및 영업물건 수집
+      const allRecords = [];
+
+      // 1. 일반 신청 건
+      apps.forEach(app => {
+        allRecords.push({
+          id: app.id,
+          storeName: app.storeName || '상호명 미등록',
+          ownerName: app.ownerName || '신청자',
+          ownerPhone: app.phone || app.ownerPhone || '',
+          storeAddress: app.storeAddress || '주소 미등록',
+          signType: app.signType || '플렉스',
+          status: app.status || 'pending',
+          constructionStatus: app.constructionStatus || '',
+          appliedAt: app.appliedAt || '',
+          type: '일반신청'
+        });
+      });
+
+      // 2. 영업물건 등록 건
+      users.forEach(u => {
+        if (u.items && Array.isArray(u.items)) {
+          u.items.forEach(item => {
+            // 중복 방지 (이미 apps에 있는 ID 제외)
+            if (!allRecords.some(r => r.id === item.id)) {
+              allRecords.push({
+                id: item.id,
+                storeName: item.name || '상호명 미등록',
+                ownerName: u.name || '영업자',
+                ownerPhone: item.phone || u.phone || '',
+                storeAddress: item.address || '주소 미등록',
+                signType: '현장 실측 간판',
+                status: item.progressStatus || '심사 대기',
+                constructionStatus: '',
+                appliedAt: '',
+                type: '영업물건'
+              });
+            }
+          });
+        }
+      });
+
+      // 검색 조건에 따른 필터링
+      const matched = allRecords.filter(r => {
+        if (currentSearchMode === 'name') {
+          return r.storeName.toLowerCase().includes(query);
+        } else {
+          return String(r.id).toLowerCase().includes(query);
+        }
+      });
+
+      if (!searchResultsArea) return;
+      searchResultsArea.innerHTML = '';
+
+      if (matched.length === 0) {
+        searchResultsArea.innerHTML = `
+          <div style="text-align: center; padding: 30px 15px; color: var(--text-muted); font-size: 0.88rem;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.8rem; margin-bottom: 8px; color: #f59e0b; display: block;"></i>
+            검색 결과가 없습니다.<br>
+            <span style="font-size: 0.78rem; color: #94a3b8;">입력하신 ${currentSearchMode === 'name' ? '상호명' : '고유번호'}을(를) 다시 한번 확인해 주세요.</span>
+          </div>
+        `;
+        return;
+      }
+
+      matched.forEach(item => {
+        let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">심사 대기</span>';
+        if (item.status === 'approved' || item.status === '승인 완료') {
+          statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-check"></i> 승인 완료</span>';
+        } else if (item.status === 'rejected' || item.status === '반려됨') {
+          statusBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-xmark"></i> 반려됨</span>';
+        } else if (item.status) {
+          statusBadge = `<span style="background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">${escapeHtml(item.status)}</span>`;
+        }
+
+        const card = document.createElement('div');
+        card.style.background = '#f8fafc';
+        card.style.border = '1px solid var(--border-color)';
+        card.style.borderRadius = '8px';
+        card.style.padding = '12px 14px';
+        card.style.textAlign = 'left';
+
+        const maskedName = typeof maskName === 'function' ? maskName(item.ownerName) : item.ownerName;
+        const maskedPhone = typeof maskPhone === 'function' ? maskPhone(item.ownerPhone) : item.ownerPhone;
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
+            <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">
+              ${escapeHtml(item.storeName)}
+              <span style="font-size: 0.7rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 6px; border-radius: 4px; margin-left: 4px;">${escapeHtml(String(item.id))}</span>
+            </div>
+            <div>${statusBadge}</div>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
+            <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> ${escapeHtml(item.storeAddress)}</div>
+            <div style="display: flex; gap: 12px; margin-top: 3px; font-size: 0.74rem; color: #64748b;">
+              <span><i class="fa-solid fa-user-shield"></i> 신청인: ${escapeHtml(maskedName)}</span>
+              ${maskedPhone ? `<span><i class="fa-solid fa-phone"></i> ${escapeHtml(maskedPhone)}</span>` : ''}
+            </div>
+          </div>
+        `;
+        searchResultsArea.appendChild(card);
+      });
     });
   }
 }

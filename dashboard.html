@@ -474,8 +474,10 @@
     <footer style="background: #040813; padding: 30px 0;">
         <div class="container footer-bottom" style="display: flex; justify-content: space-between; align-items: center; border-top: none; padding-top: 0; flex-wrap: wrap; gap: 10px;">
             <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem;">&copy; 2026 간판지원단. 경기도 소상공인을 힘차게 응원합니다.</p>
-            <span style="color: rgba(255, 255, 255, 0.45); font-size: 0.8rem; font-weight: 500;"><i class="fa-solid fa-phone" style="margin-right: 5px; color: var(--accent-secondary);"></i> 영업자 회원 전환시 문의전화 : 010-5687-2499</span>
-            <button id="btn-delete-account" class="btn btn-secondary" style="border-color: rgba(239, 68, 68, 0.3); color: rgba(239, 68, 68, 0.7); padding: 5px 11px; font-size: 0.72rem; background: transparent; transition: var(--transition-smooth); cursor: pointer; min-height: auto;"><i class="fa-solid fa-user-slash"></i> 회원탈퇴</button>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button id="btn-profile-edit" class="btn btn-secondary" style="border-color: rgba(99, 102, 241, 0.4); color: rgba(255, 255, 255, 0.85); padding: 5px 11px; font-size: 0.72rem; background: rgba(99, 102, 241, 0.15); transition: var(--transition-smooth); cursor: pointer; min-height: auto;"><i class="fa-solid fa-user-pen"></i> 개인정보변경</button>
+                <button id="btn-delete-account" class="btn btn-secondary" style="border-color: rgba(239, 68, 68, 0.3); color: rgba(239, 68, 68, 0.7); padding: 5px 11px; font-size: 0.72rem; background: transparent; transition: var(--transition-smooth); cursor: pointer; min-height: auto;"><i class="fa-solid fa-user-slash"></i> 회원탈퇴</button>
+            </div>
         </div>
     </footer>
 
@@ -491,7 +493,7 @@
             <!-- QR Code Section -->
             <div class="install-qr-section" id="install-qr-section">
                 <div class="install-qr-frame">
-                    <img id="install-qr-img" src="/ganpan-app-qr.png?v=20260812" alt="설치 QR 코드">
+                    <img id="install-qr-img" src="./ganpan-app-qr.png?v=20260817" alt="설치 QR 코드" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com%2Fapp'">
                 </div>
                 <div class="install-qr-text">
                     <i class="fa-solid fa-qrcode"></i> 스마트폰 카메라로 QR 코드를 스캔하여 앱 열기
@@ -645,6 +647,46 @@
                 <!-- 약관 전문이 동적으로 로드되는 영역 -->
             </div>
             <button class="btn btn-primary btn-full" id="btn-policy-confirm" style="margin-top: 15px;"><i class="fa-solid fa-check"></i> 확인</button>
+        </div>
+    </div>
+
+    <!-- 개인정보변경 모달 -->
+    <div id="profile-edit-modal" class="inquiry-modal-overlay">
+        <div class="inquiry-card glass-panel">
+            <button class="inquiry-close-x" id="profile-edit-modal-close">&times;</button>
+            <div class="inquiry-title-area">
+                <h3><i class="fa-solid fa-user-pen"></i> 개인정보변경</h3>
+                <p>변경할 항목만 수정 후 저장하세요. 비밀번호는 새 비밀번호 입력 시에만 변경됩니다.</p>
+            </div>
+            <form id="profile-edit-form" onsubmit="event.preventDefault();">
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-name">이름 (최대 20자)</label>
+                    <input type="text" id="profile-edit-name" minlength="2" maxlength="20" placeholder="이름을 입력하세요">
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-email">이메일 (최대 30자)</label>
+                    <input type="email" id="profile-edit-email" maxlength="30" placeholder="이메일 주소를 입력하세요">
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-phone">휴대폰 번호 (최대 20자)</label>
+                    <input type="tel" id="profile-edit-phone" maxlength="20" placeholder="010-1234-5678">
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-address">주소 (최대 35자)</label>
+                    <input type="text" id="profile-edit-address" maxlength="35" placeholder="주소를 입력하세요">
+                </div>
+                <hr style="border:none; border-top:1px solid var(--border-color); margin: 8px 0;">
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-pw">새 비밀번호 (최대 25자, 변경 시만 입력)</label>
+                    <input type="password" id="profile-edit-pw" maxlength="25" placeholder="새 비밀번호 (변경 없으면 비워두세요)">
+                </div>
+                <div class="inquiry-form-group">
+                    <label for="profile-edit-pw-confirm">새 비밀번호 확인 (최대 25자)</label>
+                    <input type="password" id="profile-edit-pw-confirm" maxlength="25" placeholder="새 비밀번호를 다시 입력하세요">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" style="margin-top: 15px;"><i class="fa-solid fa-floppy-disk"></i> 저장하기</button>
+                <button type="button" class="btn btn-secondary btn-full profile-edit-close-btn" style="margin-top: 8px; background: #cbd5e1 !important; color: #334155 !important; border: none !important;"><i class="fa-solid fa-xmark"></i> 닫기</button>
+            </form>
         </div>
     </div>
 
