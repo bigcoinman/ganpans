@@ -1340,6 +1340,11 @@ function initWizard() {
     apps.push(newApp);
     localStorage.setItem('applications', JSON.stringify(apps));
 
+    // 카카오톡 관리자 실시간 알림 발송
+    if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
+      window.KakaoNotifier.notifyApplication(newApp);
+    }
+
     // Supabase Sync
     if (window.supabaseClient) {
       window.supabaseClient.from('applications').insert([{
@@ -2863,6 +2868,11 @@ function initMobileBottomNav() {
       };
       inquiries.push(newInquiry);
       localStorage.setItem('inquiries', JSON.stringify(inquiries));
+
+      // 카카오톡 관리자 실시간 알림 발송
+      if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyInquiry === 'function') {
+        window.KakaoNotifier.notifyInquiry(newInquiry);
+      }
 
       alert('간편 문의 접수가 정상 완료되었습니다.\n담당자가 확인 후 연락처로 신속히 연락드리겠습니다.');
       closeInquiryModal();

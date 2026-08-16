@@ -231,6 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderManagerPanel();
     renderPopupManager();
     renderApplicationsList();
+    renderInquiriesList();
     if (activeUser.role === 'admin') {
       if (adminStatsContainer) adminStatsContainer.style.display = 'grid';
       renderAdminStats();
@@ -320,6 +321,11 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('users', JSON.stringify(users));
         localStorage.setItem('activeUser', JSON.stringify(activeUser));
 
+        // 카카오톡 관리자 실시간 알림 발송
+        if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyBusinessConversion === 'function') {
+          window.KakaoNotifier.notifyBusinessConversion(activeUser);
+        }
+
         alert('영업자 회원 전환 신청이 접수되었습니다. 하단 [매니저 승인 콘솔]에서 즉시 승인 테스트를 하실 수 있습니다.');
         updateSessionUI();
       }
@@ -367,6 +373,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       localStorage.setItem('users', JSON.stringify(users));
       localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+      // 카카오톡 관리자 실시간 알림 발송
+      if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyConstructorConversion === 'function') {
+        window.KakaoNotifier.notifyConstructorConversion(activeUser);
+      }
 
       constructorModal.style.display = 'none';
       alert('시공업체 회원 전환 신청이 접수되었습니다. 하단 [매니저 승인 콘솔]에서 즉시 승인 테스트를 하실 수 있습니다.');
@@ -865,6 +876,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let appsCurrentPage = 1;
   const appsPerPage = 10;
 
+  let inquiriesCurrentPage = 1;
+  const inquiriesPerPage = 10;
+
   function renderPaginationControls(totalCount, perPage, currentPage, callbackFnName) {
     if (totalCount <= perPage) return '';
     const totalPages = Math.ceil(totalCount / perPage);
@@ -910,6 +924,10 @@ document.addEventListener('DOMContentLoaded', () => {
   window.changeAppsPage = (p) => {
     appsCurrentPage = p;
     renderApplicationsList();
+  };
+  window.changeInquiriesPage = (p) => {
+    inquiriesCurrentPage = p;
+    renderInquiriesList();
   };
 
   const renderManagerPanel = () => {
@@ -1727,6 +1745,127 @@ document.addEventListener('DOMContentLoaded', () => {
           alert('공사 증빙 검수가 통과되어 최종 정산 종결 처리되었습니다.');
           updateSessionUI();
         }
+      });
+    });
+  };
+
+  // --- Render Inquiries List (3초 간편 문의 접수 목록) ---
+  const renderInquiriesList = () => {
+    if (activeUser.role !== 'admin') return;
+    const inquiriesTableBody = document.getElementById('inquiries-table-body');
+    if (!inquiriesTableBody) return;
+
+    const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+    const paginationInquiriesContainer = document.getElementById('pagination-manager-inquiries');
+
+    if (inquiries.length === 0) {
+      inquiriesTableBody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-muted" style="text-align: center; padding: 40px 0;">접수된 간편 문의 내역이 없습니다.</td>
+        </tr>
+      `;
+      if (paginationInquiriesContainer) paginationInquiriesContainer.innerHTML = '';
+      return;
+    }
+
+    inquiriesTableBody.innerHTML = '';
+    
+    // Sort inquiries descending (latest first)
+    const sortedInquiries = [...inquiries].sort((a, b) => {
+      const timeA = new Date(a.submittedAt || 0).getTime();
+      const timeB = new Date(b.submittedAt || 0).getTime();
+      return timeB - timeA;
+    });
+
+    const totalInqCount = sortedInquiries.length;
+    const totalInqPages = Math.ceil(totalInqCount / inquiriesPerPage);
+    if (inquiriesCurrentPage > totalInqPages) inquiriesCurrentPage = totalInqPages;
+    if (inquiriesCurrentPage < 1) inquiriesCurrentPage = 1;
+
+    const startIndex = (inquiriesCurrentPage - 1) * inquiriesPerPage;
+    const paginatedInquiries = sortedInquiries.slice(startIndex, startIndex + inquiriesPerPage);
+
+    const typeMap = {
+      'eligibility': '지원 대상/자격',
+      'documents': '제출 서류/신청',
+      'simulator': '시뮬레이터 사용법',
+      'constructor': '시공업체 제휴',
+      'other': '기타 일반 문의'
+    };
+
+    paginatedInquiries.forEach(inq => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--border-color)';
+      tr.style.transition = 'background 0.2s ease';
+      
+      const padZero = (n) => String(n).padStart(2, '0');
+      const d = new Date(inq.submittedAt || Date.now());
+      const dateText = `${d.getFullYear()}.${padZero(d.getMonth() + 1)}.${padZero(d.getDate())} ${padZero(d.getHours())}:${padZero(d.getMinutes())}`;
+
+      const typeLabel = typeMap[inq.type] || inq.type || '일반 문의';
+      const isResolved = inq.status === 'resolved';
+
+      const statusBadge = isResolved
+        ? `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-check"></i> 상담 완료</span>`
+        : `<span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-clock"></i> 확인 대기</span>`;
+
+      const actionButtons = `
+        <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+          <button class="btn btn-sm btn-toggle-inquiry-status" data-id="${inq.id}" style="padding: 5px 10px; font-size: 0.75rem; background: ${isResolved ? '#f1f5f9' : 'var(--accent-success)'}; color: ${isResolved ? '#475569' : '#fff'}; border: 1px solid ${isResolved ? '#cbd5e1' : 'transparent'}; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+            <i class="fa-solid ${isResolved ? 'fa-rotate-left' : 'fa-check'}"></i> ${isResolved ? '대기로 변경' : '상담 완료'}
+          </button>
+          <button class="btn btn-sm btn-delete-inquiry" data-id="${inq.id}" style="padding: 5px 9px; font-size: 0.75rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+            <i class="fa-solid fa-trash-can"></i> 삭제
+          </button>
+        </div>
+      `;
+
+      tr.innerHTML = `
+        <td style="padding: 14px 16px; color: var(--text-secondary); font-family: monospace; white-space: nowrap;">${dateText}</td>
+        <td style="padding: 14px 16px; font-weight: 600; color: var(--text-primary);">
+          ${escapeHtml(inq.name)}
+          <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;">
+            <a href="tel:${escapeHtml(inq.phone)}" style="color: var(--accent-primary); text-decoration: none;"><i class="fa-solid fa-phone"></i> ${escapeHtml(inq.phone)}</a>
+          </div>
+        </td>
+        <td style="padding: 14px 16px; white-space: nowrap;">
+          <span style="background: rgba(99, 102, 241, 0.1); color: var(--accent-primary); border: 1px solid rgba(99, 102, 241, 0.2); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">${escapeHtml(typeLabel)}</span>
+        </td>
+        <td style="padding: 14px 16px; color: var(--text-primary); max-width: 320px; line-height: 1.4; word-break: break-word;">
+          ${escapeHtml(inq.message)}
+        </td>
+        <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">${statusBadge}</td>
+        <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">${actionButtons}</td>
+      `;
+      inquiriesTableBody.appendChild(tr);
+    });
+
+    if (paginationInquiriesContainer) {
+      paginationInquiriesContainer.innerHTML = renderPaginationControls(totalInqCount, inquiriesPerPage, inquiriesCurrentPage, 'window.changeInquiriesPage');
+    }
+
+    // Event listeners
+    document.querySelectorAll('.btn-toggle-inquiry-status').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.closest('button').dataset.id;
+        const currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+        const target = currentInquiries.find(i => String(i.id) === String(id));
+        if (target) {
+          target.status = target.status === 'resolved' ? 'pending' : 'resolved';
+          localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+          renderInquiriesList();
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-delete-inquiry').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.closest('button').dataset.id;
+        if (!confirm('정말로 이 간편 문의 내역을 삭제하시겠습니까?')) return;
+        let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+        currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
+        localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+        renderInquiriesList();
       });
     });
   };
@@ -2817,4 +2956,51 @@ function initAIAssistant() {
       updateSessionUI();
     });
   }
+
+  // --- Kakao Notification Admin Settings ---
+  const kakaoTokenInput = document.getElementById('kakao-token-input');
+  const btnSaveKakaoToken = document.getElementById('btn-save-kakao-token');
+  const btnTestKakaoToken = document.getElementById('btn-test-kakao-token');
+
+  if (kakaoTokenInput && window.KakaoNotifier) {
+    const s = window.KakaoNotifier.getSettings();
+    kakaoTokenInput.value = s.accessToken || '';
+  }
+
+  if (btnSaveKakaoToken && kakaoTokenInput && window.KakaoNotifier) {
+    btnSaveKakaoToken.addEventListener('click', () => {
+      const token = kakaoTokenInput.value.trim();
+      const current = window.KakaoNotifier.getSettings();
+      current.accessToken = token;
+      window.KakaoNotifier.saveSettings(current);
+      alert(token ? '카카오 토큰이 안전하게 저장되었습니다.\n이제부터 신규 접수 시 실시간 알림이 발송됩니다.' : '카카오 토큰이 초기화되었습니다.');
+    });
+  }
+
+  if (btnTestKakaoToken && window.KakaoNotifier) {
+    btnTestKakaoToken.addEventListener('click', async () => {
+      const token = kakaoTokenInput ? kakaoTokenInput.value.trim() : '';
+      if (!token) {
+        alert('먼저 카카오 Access Token을 입력하고 저장해 주세요.');
+        return;
+      }
+      btnTestKakaoToken.disabled = true;
+      btnTestKakaoToken.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 전송 중...';
+
+      const res = await window.KakaoNotifier.sendToMe(
+        '🔔 카카오톡 알림 연동 테스트',
+        '간판지원단 시스템과 대표님의 카카오톡이 정상적으로 연동되었습니다! 🎉\n고객 신청 및 접수가 발생하면 이와 같이 실시간 알림이 발송됩니다.'
+      );
+
+      btnTestKakaoToken.disabled = false;
+      btnTestKakaoToken.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 🔔 카톡 테스트 전송';
+
+      if (res.success) {
+        alert('✅ 카카오톡으로 테스트 알림이 성공적으로 전송되었습니다!\n스마트폰 카카오톡을 확인해 보세요.');
+      } else {
+        alert(`❌ 전송 실패: ${res.reason || '토큰이 만료되었거나 권한이 부족합니다.'}\n카카오 디벨로퍼스에서 talk_message 권한 및 토큰을 다시 확인해 주세요.`);
+      }
+    });
+  }
 }
+

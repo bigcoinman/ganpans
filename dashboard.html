@@ -414,6 +414,38 @@
                             </div>
                         </div>
 
+                        <!-- 4. 3초 간편 문의 접수 목록 -->
+                        <div class="manager-inquiries-section" style="margin-top: 25px; border-top: 1px dashed var(--border-color); padding-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; margin-bottom: 12px; background: rgba(241, 245, 249, 0.7); padding: 10px 16px; border-radius: 10px; border: 1px solid #e2e8f0;" onclick="window.toggleAdminSection('sec-container-inquiries', this)">
+                                <h4 class="manager-section-title" style="margin: 0; font-size: 1.02rem;"><i class="fa-solid fa-comments" style="color: #6366f1;"></i> 3초 간편 문의 접수 목록 (Q&A 상담 문의건)</h4>
+                                <button type="button" class="btn-toggle-admin" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 4px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
+                                    <span class="toggle-text">펼치기</span> <i class="fa-solid fa-chevron-down toggle-icon"></i>
+                                </button>
+                            </div>
+                            <div id="sec-container-inquiries" style="display: none;">
+                                <div class="manager-table-container" style="overflow-x: auto; background: rgba(255,255,255,0.75); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03); backdrop-filter: blur(5px);">
+                                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 900px;">
+                                        <thead>
+                                            <tr style="background: rgba(241, 245, 249, 0.9); border-bottom: 1px solid #cbd5e1; color: var(--text-primary); font-weight: 700;">
+                                                <th style="padding: 14px 16px; white-space: nowrap; width: 140px;">접수 일시</th>
+                                                <th style="padding: 14px 16px; white-space: nowrap; width: 160px;">문의자 (연락처)</th>
+                                                <th style="padding: 14px 16px; white-space: nowrap; width: 150px;">문의 유형</th>
+                                                <th style="padding: 14px 16px;">문의 내용</th>
+                                                <th style="padding: 14px 16px; text-align: center; white-space: nowrap; width: 120px;">처리 상태</th>
+                                                <th style="padding: 14px 16px; text-align: center; white-space: nowrap; width: 150px;">상태 변경 / 삭제</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="inquiries-table-body">
+                                            <tr>
+                                                <td colspan="6" class="text-muted" style="text-align: center; padding: 40px 0;">접수된 간편 문의 내역이 없습니다.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div id="pagination-manager-inquiries" style="display: flex; justify-content: center; gap: 6px; margin-top: 16px; flex-wrap: wrap;"></div>
+                            </div>
+                        </div>
+
                         <!-- 팝업창 관리 영역 -->
                         <div class="manager-popup-section" style="margin-top: 30px; border-top: 1px dashed var(--border-color); padding-top: 25px;">
                             <h4 class="manager-section-title"><i class="fa-solid fa-window-restore"></i> 실시간 팝업창 관리 콘솔</h4>
@@ -487,6 +519,35 @@
                                             <button type="submit" id="btn-popup-save" class="btn btn-primary" style="flex: 2; padding: 10px; font-size: 0.85rem; background: var(--grad-primary); border: none;">저장하기</button>
                                         </div>
                                     </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 5. 카카오톡 실시간 알림 연동 콘솔 -->
+                        <div class="manager-kakao-section" style="margin-top: 30px; border-top: 1px dashed var(--border-color); padding-top: 25px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; margin-bottom: 15px; background: #fef08a; padding: 12px 18px; border-radius: 12px; border: 1px solid #fde047;" onclick="window.toggleAdminSection('sec-container-kakao', this)">
+                                <h4 class="manager-section-title" style="margin: 0; font-size: 1.02rem; color: #854d0e;"><i class="fa-solid fa-comment-dots" style="color: #ca8a04;"></i> 📲 카카오톡 '나에게 보내기' 실시간 알림 연동 설정</h4>
+                                <button type="button" class="btn-toggle-admin" style="background: #fef9c3; color: #854d0e; border: 1px solid #facc15; padding: 4px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
+                                    <span class="toggle-text">설정 열기</span> <i class="fa-solid fa-chevron-down toggle-icon"></i>
+                                </button>
+                            </div>
+                            <div id="sec-container-kakao" style="display: none;">
+                                <div class="glass-panel" style="padding: 22px; background: rgba(255,255,255,0.85); border-radius: 14px; border: 1px solid #fde047;">
+                                    <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 18px;">
+                                        💡 <strong>100% 무료 카카오톡 알림</strong>: 방문자 또는 영업자가 <strong>[3초 간편문의], [온라인 지원신청], [영업자/시공사 전환신청]</strong>을 접수하면 대표님의 카카오톡으로 0.1초 만에 실시간 알림이 발송됩니다.
+                                    </p>
+                                    <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+                                        <div class="popup-form-group">
+                                            <label for="kakao-token-input" style="font-weight: 700; color: #854d0e; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                                <span>카카오 REST API Access Token</span>
+                                                <a href="https://developers.kakao.com" target="_blank" style="font-size: 0.75rem; color: var(--accent-primary); text-decoration: underline;">카카오 디벨로퍼스 바로가기 <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                                            </label>
+                                            <input type="text" id="kakao-token-input" placeholder="카카오 발급 Access Token을 붙여넣으세요" style="padding: 10px 14px; font-size: 0.85rem; border-radius: 8px; border: 1px solid #cbd5e1; width: 100%; box-sizing: border-box; font-family: monospace;">
+                                        </div>
+                                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                            <button type="button" id="btn-save-kakao-token" class="btn btn-primary" style="padding: 9px 18px; font-size: 0.85rem; background: #ca8a04; border: none; color: white;"><i class="fa-solid fa-floppy-disk"></i> 토큰 저장하기</button>
+                                            <button type="button" id="btn-test-kakao-token" class="btn btn-secondary" style="padding: 9px 18px; font-size: 0.85rem; border-color: #eab308; color: #854d0e; background: #fef08a;"><i class="fa-solid fa-paper-plane"></i> 🔔 카톡 테스트 전송</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -720,6 +781,7 @@
     <!-- Dashboard Core Script -->
     <script src="supabase-config.js"></script>
     <script src="security-utils.js?v=999"></script>
+    <script src="kakao-notify.js?v=999"></script>
     <script src="dashboard.js?v=999"></script>
 </body>
 

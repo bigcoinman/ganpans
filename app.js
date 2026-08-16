@@ -719,6 +719,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('users', JSON.stringify(users));
                 localStorage.setItem('activeUser', JSON.stringify(activeUser));
                 
+                // 카카오톡 관리자 실시간 알림 발송
+                if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyBusinessConversion === 'function') {
+                    window.KakaoNotifier.notifyBusinessConversion(activeUser);
+                }
+
                 alert('회원 전환 신청이 접수되었습니다. 최고관리자(admin) 계정 로그인 승인 후 영업코드가 정상 발급됩니다.');
                 renderStatusTab();
             }
@@ -774,6 +779,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             localStorage.setItem('users', JSON.stringify(users));
             localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+            // 카카오톡 관리자 실시간 알림 발송
+            if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyConstructorConversion === 'function') {
+                window.KakaoNotifier.notifyConstructorConversion(activeUser);
+            }
 
             alert('시공업체 가입 신청이 정상 완료되었습니다.\n최고관리자 승인 시 정식 코드가 부여됩니다.');
             renderStatusTab();
@@ -1211,6 +1221,8 @@ document.addEventListener('DOMContentLoaded', () => {
             constructors: document.getElementById('admin-panel-constructors-mob'),
             apps: document.getElementById('admin-panel-apps-mob'),
             items: document.getElementById('admin-panel-items-mob'),
+            inquiries: document.getElementById('admin-panel-inquiries-mob'),
+            kakao: document.getElementById('admin-panel-kakao-mob'),
             popups: document.getElementById('admin-panel-popups-mob')
         };
 
@@ -1518,7 +1530,95 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 5) Render Popups list
+        // 5) Render Inquiries list (3초 간편문의 접수건)
+        const inquiriesList = document.getElementById('admin-inquiries-list-mob');
+        if (inquiriesList) {
+            const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+            inquiriesList.innerHTML = '';
+            if (inquiries.length === 0) {
+                inquiriesList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">접수된 3초 간편 문의 내역이 없습니다.</p>';
+            } else {
+                const sortedInquiries = [...inquiries].sort((a, b) => {
+                    const timeA = new Date(a.submittedAt || 0).getTime();
+                    const timeB = new Date(b.submittedAt || 0).getTime();
+                    return timeB - timeA;
+                });
+
+                const typeMap = {
+                    'eligibility': '지원 대상/자격',
+                    'documents': '제출 서류/신청',
+                    'simulator': '시뮬레이터 사용법',
+                    'constructor': '시공업체 제휴',
+                    'other': '기타 일반 문의'
+                };
+
+                sortedInquiries.forEach(inq => {
+                    const card = document.createElement('div');
+                    card.className = 'admin-inquiry-card-mob';
+                    card.style.background = '#ffffff';
+                    card.style.padding = '12px';
+                    card.style.borderRadius = '8px';
+                    card.style.border = '1px solid var(--border-color)';
+                    card.style.marginBottom = '10px';
+
+                    const isResolved = inq.status === 'resolved';
+                    const statusBadge = isResolved
+                        ? `<span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 9999px; font-weight: 700; font-size: 0.7rem;"><i class="fa-solid fa-circle-check"></i> 상담 완료</span>`
+                        : `<span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-weight: 700; font-size: 0.7rem;"><i class="fa-solid fa-clock"></i> 확인 대기</span>`;
+
+                    const typeLabel = typeMap[inq.type] || inq.type || '일반 문의';
+
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                            <strong style="font-size: 0.85rem; color: var(--text-primary);">${escapeHtml(inq.name)}</strong>
+                            ${statusBadge}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">
+                            <a href="tel:${escapeHtml(inq.phone)}" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;"><i class="fa-solid fa-phone"></i> ${escapeHtml(inq.phone)}</a>
+                            <span style="margin-left: 6px; background: rgba(99,102,241,0.1); color: var(--accent-primary); padding: 1px 6px; border-radius: 4px; font-size: 0.68rem;">${escapeHtml(typeLabel)}</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-primary); line-height: 1.4; margin-top: 6px; padding: 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #f1f5f9; word-break: break-word;">
+                            ${escapeHtml(inq.message)}
+                        </div>
+                        <div class="admin-action-row-mob" style="display:flex; gap: 6px; justify-content: flex-end; margin-top: 8px;">
+                            <button class="btn btn-secondary btn-sm btn-toggle-inquiry-mob" data-id="${inq.id}" style="padding: 4px 8px; font-size: 0.65rem; background: ${isResolved ? '#f1f5f9' : 'var(--accent-success)'}; color: ${isResolved ? '#475569' : '#fff'}; border: 1px solid ${isResolved ? '#cbd5e1' : 'transparent'};">
+                                <i class="fa-solid ${isResolved ? 'fa-rotate-left' : 'fa-check'}"></i> ${isResolved ? '대기로 변경' : '상담 완료'}
+                            </button>
+                            <button class="btn btn-secondary btn-sm btn-delete-inquiry-mob" data-id="${inq.id}" style="padding: 4px 8px; font-size: 0.65rem; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2;">
+                                <i class="fa-solid fa-trash-can"></i> 삭제
+                            </button>
+                        </div>
+                    `;
+                    inquiriesList.appendChild(card);
+                });
+
+                inquiriesList.querySelectorAll('.btn-toggle-inquiry-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = e.target.closest('button').dataset.id;
+                        const currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+                        const target = currentInquiries.find(i => String(i.id) === String(id));
+                        if (target) {
+                            target.status = target.status === 'resolved' ? 'pending' : 'resolved';
+                            localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+                            renderAdminDashboardMob();
+                        }
+                    });
+                });
+
+                inquiriesList.querySelectorAll('.btn-delete-inquiry-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = e.target.closest('button').dataset.id;
+                        if (!confirm('정말로 이 간편 문의 내역을 삭제하시겠습니까?')) return;
+                        let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+                        currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
+                        localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+                        renderAdminDashboardMob();
+                    });
+                });
+            }
+        }
+
+        // 6) Render Popups list
         const popupsList = document.getElementById('admin-popups-list-mob');
         if (popupsList) {
             const popups = JSON.parse(localStorage.getItem('popups')) || [];
@@ -1574,6 +1674,52 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 });
             }
+        }
+
+        // 7) Initialize Mobile Kakao Notification Settings
+        const mobKakaoToken = document.getElementById('mob-kakao-token');
+        const btnMobSaveKakao = document.getElementById('btn-mob-save-kakao');
+        const btnMobTestKakao = document.getElementById('btn-mob-test-kakao');
+
+        if (mobKakaoToken && window.KakaoNotifier) {
+            const s = window.KakaoNotifier.getSettings();
+            mobKakaoToken.value = s.accessToken || '';
+        }
+
+        if (btnMobSaveKakao && mobKakaoToken && window.KakaoNotifier) {
+            btnMobSaveKakao.onclick = () => {
+                const token = mobKakaoToken.value.trim();
+                const current = window.KakaoNotifier.getSettings();
+                current.accessToken = token;
+                window.KakaoNotifier.saveSettings(current);
+                alert(token ? '카카오 토큰이 안전하게 저장되었습니다.\n이제부터 신규 접수 시 실시간 알림이 발송됩니다.' : '카카오 토큰이 초기화되었습니다.');
+            };
+        }
+
+        if (btnMobTestKakao && window.KakaoNotifier) {
+            btnMobTestKakao.onclick = async () => {
+                const token = mobKakaoToken ? mobKakaoToken.value.trim() : '';
+                if (!token) {
+                    alert('먼저 카카오 Access Token을 입력하고 저장해 주세요.');
+                    return;
+                }
+                btnMobTestKakao.disabled = true;
+                btnMobTestKakao.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 전송 중...';
+
+                const res = await window.KakaoNotifier.sendToMe(
+                    '🔔 모바일 앱 카톡 알림 연동 테스트',
+                    '간판지원단 모바일 앱과 대표님의 카카오톡이 정상적으로 연동되었습니다! 🎉\n고객 신청 및 접수가 발생하면 이와 같이 실시간 알림이 발송됩니다.'
+                );
+
+                btnMobTestKakao.disabled = false;
+                btnMobTestKakao.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 카톡 테스트';
+
+                if (res.success) {
+                    alert('✅ 카카오톡으로 테스트 알림이 성공적으로 전송되었습니다!\n스마트폰 카카오톡을 확인해 보세요.');
+                } else {
+                    alert(`❌ 전송 실패: ${res.reason || '토큰이 만료되었거나 권한이 부족합니다.'}\n카카오 디벨로퍼스에서 talk_message 권한 및 토큰을 다시 확인해 주세요.`);
+                }
+            };
         }
     }
 
@@ -2493,6 +2639,11 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             inquiries.push(newInquiry);
             localStorage.setItem('inquiries', JSON.stringify(inquiries));
+
+            // 카카오톡 관리자 실시간 알림 발송
+            if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyInquiry === 'function') {
+                window.KakaoNotifier.notifyInquiry(newInquiry);
+            }
 
             alert('간편 문의 접수가 정상 완료되었습니다.\n담당자가 확인 후 연락처로 신속히 연락드리겠습니다.');
             closeInquiryModal();
