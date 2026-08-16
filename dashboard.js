@@ -883,35 +883,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const row = document.createElement('div');
         row.className = 'request-item';
+        row.style.borderLeft = `5px solid ${typeBadgeColor}`;
+        row.style.background = '#ffffff';
+        row.style.padding = '14px 16px';
+        row.style.borderRadius = '8px';
+        row.style.border = '1px solid #e2e8f0';
+        row.style.borderLeft = `5px solid ${typeBadgeColor}`;
+        row.style.marginBottom = '12px';
+
         row.innerHTML = `
-          <div class="request-item-details">
-            <div style="margin-bottom: 6px;"><span style="background: ${typeBadgeColor}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">${typeText} 신청</span></div>
-            <div><strong>신청자 ID:</strong> ${u.id}</div>
-            <div><strong>성명:</strong> ${u.name}</div>
-            <div><strong>연락처:</strong> ${u.phone}</div>
-            <div><strong>주소:</strong> ${u.address}</div>
+          <div class="request-item-details" style="text-align: left; font-size: 0.82rem; line-height: 1.6;">
+            <div style="margin-bottom: 8px;">
+              <span style="background: ${typeBadgeColor}; color: white; padding: 3px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">
+                <i class="fa-solid ${isConstructor ? 'fa-screwdriver-wrench' : 'fa-user-tie'}"></i> ${typeText} 전환 신청
+              </span>
+            </div>
+            <div><strong>신청자 ID:</strong> <span style="color: var(--accent-primary); font-weight: 600;">${escapeHtml(u.id)}</span></div>
+            <div><strong>성명:</strong> ${escapeHtml(u.name)}</div>
+            <div><strong>연락처:</strong> ${escapeHtml(u.phone || '미등록')}</div>
+            <div><strong>주소:</strong> ${escapeHtml(u.address || '미등록')}</div>
             ${detailsHtml}
           </div>
-          <div class="request-item-actions">
-            <button class="btn btn-secondary btn-sm btn-reject-conversion" data-uid="${u.id}"><i class="fa-solid fa-xmark"></i> 반려</button>
-            <button class="btn btn-primary btn-sm btn-approve-conversion" data-uid="${u.id}" style="background: var(--accent-success); border: none;"><i class="fa-solid fa-check"></i> 승인</button>
+          <div class="request-item-actions" style="margin-top: 10px; display: flex; gap: 8px; justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.rejectUserConversion('${u.id}'); return false;" style="padding: 5px 12px; font-size: 0.78rem;"><i class="fa-solid fa-xmark"></i> 반려</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="window.approveUserConversion('${u.id}'); return false;" style="background: var(--accent-success); border: none; padding: 5px 14px; font-size: 0.78rem; font-weight: 700;"><i class="fa-solid fa-check"></i> 승인</button>
           </div>
         `;
         managerRequestsList.appendChild(row);
-      });
-
-      document.querySelectorAll('.btn-approve-conversion').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const uid = e.target.closest('button').dataset.uid;
-          approveUserConversion(uid);
-        });
-      });
-
-      document.querySelectorAll('.btn-reject-conversion').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const uid = e.target.closest('button').dataset.uid;
-          rejectUserConversion(uid);
-        });
       });
     }
 
@@ -979,24 +977,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!hasItems) {
       managerItemsList.innerHTML = `<p class="text-muted" style="text-align: center; padding: 30px 0;">등록된 영업물건이 없습니다.</p>`;
-    } else {
-      document.querySelectorAll('.select-receipt-status').forEach(select => {
-        select.addEventListener('change', (e) => {
-          const uid = e.target.dataset.uid;
-          const itemId = e.target.dataset.itemid;
-          const val = e.target.value;
-          updateItemStatus(uid, itemId, 'receipt', val);
-        });
-      });
-
-      document.querySelectorAll('.select-progress-status').forEach(select => {
-        select.addEventListener('change', (e) => {
-          const uid = e.target.dataset.uid;
-          const itemId = e.target.dataset.itemid;
-          const val = e.target.value;
-          updateItemStatus(uid, itemId, 'progress', val);
-        });
-      });
     }
   };
 
@@ -1113,6 +1093,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateSessionUI();
   };
+  window.approveUserConversion = approveUserConversion;
 
   const rejectUserConversion = (uid) => {
     if (activeUser.role !== 'admin') return;
@@ -1130,6 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     alert('전환 신청이 반려되었습니다.');
     updateSessionUI();
   };
+  window.rejectUserConversion = rejectUserConversion;
 
   const updateItemStatus = (uid, itemId, type, value) => {
     if (!activeUser || activeUser.role !== 'admin') return;

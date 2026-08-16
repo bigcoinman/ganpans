@@ -1294,14 +1294,14 @@
                     <h4 style="color: var(--accent-primary); border-bottom: 2px solid var(--accent-primary); padding-bottom: 8px; margin-bottom: 15px;"><i class="fa-solid fa-shield-halved"></i> 최고관리자 제어판</h4>
                     
                     <!-- Stats widget -->
-                    <div class="admin-stats-mob" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
-                        <div class="stat-card-mob" style="background: #f1f5f9; padding: 12px; border-radius: 8px; text-align: center;">
-                            <span style="font-size: 0.75rem; color: var(--text-secondary);">총 접수 건수</span>
-                            <h4 id="admin-stat-total-mob" style="font-size: 1.4rem; color: var(--accent-primary); margin-top: 4px;">0건</h4>
+                    <div class="admin-stats-mob" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                        <div class="stat-card-mob" style="background: #f1f5f9; padding: 7px 10px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 56px;">
+                            <span style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.2;">총 접수 건수</span>
+                            <h4 id="admin-stat-total-mob" style="font-size: 1.25rem; color: var(--accent-primary); margin-top: 2px; margin-bottom: 0; line-height: 1.2;">0건</h4>
                         </div>
-                        <div class="stat-card-mob" style="background: #f1f5f9; padding: 12px; border-radius: 8px; text-align: center;">
-                            <span style="font-size: 0.75rem; color: var(--text-secondary);">오늘 방문자</span>
-                            <h4 id="admin-stat-visitors-mob" style="font-size: 1.4rem; color: var(--accent-secondary); margin-top: 4px;">0명</h4>
+                        <div class="stat-card-mob" style="background: #f1f5f9; padding: 7px 10px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 56px;">
+                            <span style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.2;">오늘 방문자</span>
+                            <h4 id="admin-stat-visitors-mob" style="font-size: 1.25rem; color: var(--accent-secondary); margin-top: 2px; margin-bottom: 0; line-height: 1.2;">0명</h4>
                         </div>
                     </div>
 
@@ -1309,8 +1309,8 @@
                     <div class="admin-tab-controls-mob">
                         <button class="admin-tab-btn-mob active" onclick="switchAdminTab('requests')"><i class="fa-solid fa-user-tie"></i> 영업자 승인</button>
                         <button class="admin-tab-btn-mob" onclick="switchAdminTab('constructors')"><i class="fa-solid fa-trowel-bricks"></i> 시공사 승인</button>
-                        <button class="admin-tab-btn-mob" onclick="switchAdminTab('apps')"><i class="fa-solid fa-file-signature"></i> 신청접수 & 진행사항</button>
-                        <button class="admin-tab-btn-mob" onclick="switchAdminTab('items')"><i class="fa-solid fa-store"></i> 영업물건 관리</button>
+                        <button class="admin-tab-btn-mob" onclick="switchAdminTab('apps')"><i class="fa-solid fa-file-signature"></i> 신청서 목록</button>
+                        <button class="admin-tab-btn-mob" onclick="switchAdminTab('items')"><i class="fa-solid fa-store"></i> 영업물건 진행사항</button>
                         <button class="admin-tab-btn-mob" onclick="switchAdminTab('popups')"><i class="fa-solid fa-window-restore"></i> 팝업 관리</button>
                     </div>
 
