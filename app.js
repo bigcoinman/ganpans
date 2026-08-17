@@ -1316,24 +1316,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             allUsersListMob.innerHTML = '';
             if (curUsers.length === 0) {
-                allUsersListMob.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">등록/검색된 회원이 없습니다.</p>';
+                allUsersListMob.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">등록/검색된 회원이 없습니다.</p>';
             } else {
                 curUsers.forEach(u => {
                     const card = document.createElement('div');
                     card.className = 'admin-user-card-mob';
                     card.style.background = '#ffffff';
-                    card.style.padding = '12px';
-                    card.style.borderRadius = '8px';
+                    card.style.padding = '14px';
+                    card.style.borderRadius = '10px';
                     card.style.border = '1px solid var(--border-color)';
-                    card.style.marginBottom = '10px';
+                    card.style.marginBottom = '12px';
 
-                    let roleBadge = '<span style="background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 600;">일반</span>';
-                    if (u.role === 'admin') roleBadge = '<span style="background: #fee2e2; color: #b91c1c; padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 700;">최고관리자</span>';
-                    else if (u.role === 'business') roleBadge = `<span style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 700;">영업자 (${u.bizCode || '-'})</span>`;
-                    else if (u.role === 'constructor') roleBadge = `<span style="background: #dcfce7; color: #15803d; padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 700;">시공사 (${u.constCode || '-'})</span>`;
+                    let roleBadge = '<span style="background: #e2e8f0; color: #475569; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">일반</span>';
+                    if (u.role === 'admin') roleBadge = '<span style="background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">최고관리자</span>';
+                    else if (u.role === 'business') roleBadge = `<span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">영업자 (${u.bizCode || '-'})</span>`;
+                    else if (u.role === 'constructor') roleBadge = `<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">시공사 (${u.constCode || '-'})</span>`;
 
                     const deleteBtn = u.role === 'admin' ? '' : `
-                        <button class="btn btn-secondary btn-sm btn-delete-user-mob" data-uid="${u.id}" style="padding: 3px 8px; font-size: 0.65rem; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2;">
+                        <button class="btn btn-secondary btn-sm btn-delete-user-mob" data-uid="${u.id}" style="padding: 5px 12px; font-size: 0.85rem; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2; border-radius: 6px;">
                             <i class="fa-solid fa-trash-can"></i> 삭제
                         </button>
                     `;
@@ -1341,20 +1341,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     const userJoinDate = typeof formatUserDate === 'function' ? formatUserDate(u.createdAt || u.created_at) : (u.createdAt || u.created_at || '-');
 
                     card.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                            <div style="display:flex; align-items:center; gap: 6px; flex-wrap: wrap;">
-                                <strong style="font-size: 0.85rem; color: var(--text-primary); font-family: monospace;">${escapeHtml(u.id)}</strong>
-                                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">(${escapeHtml(userJoinDate)})</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                            <div style="display:flex; align-items:center; gap: 8px; flex-wrap: wrap;">
+                                <strong style="font-size: 1.1rem; color: var(--text-primary); font-family: monospace;">${escapeHtml(u.id)}</strong>
+                                <span style="font-size: 0.9rem; color: #64748b; font-weight: normal;">(${escapeHtml(userJoinDate)})</span>
                             </div>
                             ${roleBadge}
                         </div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; text-align: left;">
-                            <div>성명: <strong>${escapeHtml(u.name || '-')}</strong></div>
-                            <div>연락처: <a href="tel:${escapeHtml(u.phone || '')}" style="color: var(--accent-primary); text-decoration: none;">${escapeHtml(u.phone || '-')}</a></div>
-                            ${u.email ? `<div>이메일: ${escapeHtml(u.email)}</div>` : ''}
-                            ${u.address ? `<div>주소: ${escapeHtml(u.address)}</div>` : ''}
+                        <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5; text-align: left;">
+                            <div>성명: <strong style="color: var(--text-primary);">${escapeHtml(u.name || '-')}</strong></div>
+                            <div>연락처: <a href="tel:${escapeHtml(u.phone || '')}" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;">${escapeHtml(u.phone || '-')}</a></div>
+                            ${u.email ? `<div>이메일: <span style="color: #475569;">${escapeHtml(u.email)}</span></div>` : ''}
+                            ${u.address ? `<div>주소: <span style="color: #475569;">${escapeHtml(u.address)}</span></div>` : ''}
                         </div>
-                        ${deleteBtn ? `<div style="display:flex; justify-content:flex-end; margin-top: 8px;">${deleteBtn}</div>` : ''}
+                        ${deleteBtn ? `<div style="display:flex; justify-content:flex-end; margin-top: 10px;">${deleteBtn}</div>` : ''}
                     `;
                     allUsersListMob.appendChild(card);
                 });
@@ -1386,23 +1386,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (requestsList) {
             const pendingUsers = users.filter(u => u.conversionStatus === 'pending');
             if (pendingUsers.length === 0) {
-                requestsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">승인 대기 중인 영업자 회원 신청건이 없습니다.</p>';
+                requestsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">승인 대기 중인 영업자 회원 신청건이 없습니다.</p>';
             } else {
                 requestsList.innerHTML = '';
                 pendingUsers.forEach(u => {
                     const card = document.createElement('div');
                     card.className = 'admin-req-card-mob';
-                    card.style.marginBottom = '10px';
+                    card.style.marginBottom = '12px';
                     card.style.background = '#f8fafc';
-                    card.style.padding = '12px';
-                    card.style.borderRadius = '8px';
+                    card.style.padding = '14px';
+                    card.style.borderRadius = '10px';
                     card.style.border = '1px solid var(--border-color)';
                     card.innerHTML = `
-                        <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">아이디: ${u.id} (${u.name})</div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 8px;">연락처: ${u.phone} / 주소: ${u.address}</div>
+                        <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 6px; color: var(--text-primary);">아이디: ${u.id} (${u.name})</div>
+                        <div style="font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">연락처: <strong style="color: var(--accent-primary);">${u.phone}</strong> / 주소: ${u.address}</div>
                         <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end;">
-                            <button class="btn btn-secondary btn-sm btn-reject-user-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem;"><i class="fa-solid fa-xmark"></i> 반려</button>
-                            <button class="btn btn-primary btn-sm btn-approve-user-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-check"></i> 승인</button>
+                            <button class="btn btn-secondary btn-sm btn-reject-user-mob" data-uid="${u.id}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;"><i class="fa-solid fa-xmark"></i> 반려</button>
+                            <button class="btn btn-primary btn-sm btn-approve-user-mob" data-uid="${u.id}" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-check"></i> 승인</button>
                         </div>
                     `;
                     requestsList.appendChild(card);
@@ -1428,25 +1428,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (constructorsList) {
             const pendingConst = users.filter(u => u.conversionStatus === 'pending_constructor');
             if (pendingConst.length === 0) {
-                constructorsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">승인 대기 중인 시공업체 회원 신청건이 없습니다.</p>';
+                constructorsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">승인 대기 중인 시공업체 회원 신청건이 없습니다.</p>';
             } else {
                 constructorsList.innerHTML = '';
                 pendingConst.forEach(u => {
                     const card = document.createElement('div');
                     card.className = 'admin-req-card-mob';
-                    card.style.marginBottom = '10px';
+                    card.style.marginBottom = '12px';
                     card.style.background = '#f8fafc';
-                    card.style.padding = '12px';
-                    card.style.borderRadius = '8px';
+                    card.style.padding = '14px';
+                    card.style.borderRadius = '10px';
                     card.style.border = '1px solid var(--border-color)';
                     card.innerHTML = `
-                        <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">아이디: ${u.id} (${u.name})</div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary);">업체명: ${escapeHtml(u.pendingBusinessName)}</div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary);">등록번호: ${escapeHtml(u.pendingLicenseNumber)}</div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 8px;">연락처: ${u.phone} / 주소: ${u.address}</div>
+                        <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 6px; color: var(--text-primary);">아이디: ${u.id} (${u.name})</div>
+                        <div style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.4;">업체명: <strong style="color: var(--text-primary);">${escapeHtml(u.pendingBusinessName)}</strong></div>
+                        <div style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.4;">등록번호: <strong style="color: var(--text-primary);">${escapeHtml(u.pendingLicenseNumber)}</strong></div>
+                        <div style="font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">연락처: <strong style="color: var(--accent-primary);">${u.phone}</strong> / 주소: ${u.address}</div>
                         <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end;">
-                            <button class="btn btn-secondary btn-sm btn-reject-const-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem;"><i class="fa-solid fa-xmark"></i> 반려</button>
-                            <button class="btn btn-primary btn-sm btn-approve-const-mob" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-check"></i> 승인</button>
+                            <button class="btn btn-secondary btn-sm btn-reject-const-mob" data-uid="${u.id}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;"><i class="fa-solid fa-xmark"></i> 반려</button>
+                            <button class="btn btn-primary btn-sm btn-approve-const-mob" data-uid="${u.id}" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-check"></i> 승인</button>
                         </div>
                     `;
                     constructorsList.appendChild(card);
@@ -1471,7 +1471,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const appsList = document.getElementById('admin-apps-list-mob');
         if (appsList) {
             if (applications.length === 0) {
-                appsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">접수된 온라인 신청서가 없습니다.</p>';
+                appsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">접수된 온라인 신청서가 없습니다.</p>';
             } else {
                 appsList.innerHTML = '';
                 const sortedApps = [...applications].sort((a, b) => b.id.localeCompare(a.id) || b.appliedAt.localeCompare(a.appliedAt));
@@ -1479,21 +1479,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     const card = document.createElement('div');
                     card.className = 'admin-app-card-mob';
                     card.style.background = '#ffffff';
-                    card.style.padding = '12px';
-                    card.style.borderRadius = '8px';
+                    card.style.padding = '14px';
+                    card.style.borderRadius = '10px';
                     card.style.border = '1px solid var(--border-color)';
-                    card.style.marginBottom = '10px';
+                    card.style.marginBottom = '12px';
                     
-                    let statusBadge = '<span class="badge-status pending">대기 중</span>';
-                    if (app.status === 'approved') statusBadge = '<span class="badge-status approved">승인됨</span>';
-                    else if (app.status === 'rejected') statusBadge = '<span class="badge-status rejected">반려됨</span>';
+                    let statusBadge = '<span class="badge-status pending" style="font-size: 0.85rem; padding: 3px 8px;">대기 중</span>';
+                    if (app.status === 'approved') statusBadge = '<span class="badge-status approved" style="font-size: 0.85rem; padding: 3px 8px;">승인됨</span>';
+                    else if (app.status === 'rejected') statusBadge = '<span class="badge-status rejected" style="font-size: 0.85rem; padding: 3px 8px;">반려됨</span>';
 
                     let actionsHtml = '';
                     if (app.status === 'pending') {
                         actionsHtml = `
-                            <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
-                                <button class="btn btn-secondary btn-sm btn-reject-app-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem;"><i class="fa-solid fa-xmark"></i> 반려</button>
-                                <button class="btn btn-primary btn-sm btn-approve-app-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-check"></i> 승인</button>
+                            <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end; margin-top: 12px;">
+                                <button class="btn btn-secondary btn-sm btn-reject-app-mob" data-id="${app.id}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;"><i class="fa-solid fa-xmark"></i> 반려</button>
+                                <button class="btn btn-primary btn-sm btn-approve-app-mob" data-id="${app.id}" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-check"></i> 승인</button>
                             </div>
                         `;
                     } else if (app.status === 'approved') {
@@ -1504,16 +1504,16 @@ document.addEventListener('DOMContentLoaded', () => {
                             else if (app.constructionStatus === 'completed') constStatusText = '정산 종결';
 
                             actionsHtml = `
-                                <div style="margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px; text-align: left;">
-                                    <div style="font-size: 0.72rem; font-weight: bold; color: var(--accent-success);"><i class="fa-solid fa-screwdriver-wrench"></i> 배정 시공사: ${escapeHtml(app.assignedConstructorName)}</div>
-                                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 2px;">시공 현황: <strong>${constStatusText}</strong></div>
+                                <div style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 10px; text-align: left;">
+                                    <div style="font-size: 0.95rem; font-weight: bold; color: var(--accent-success);"><i class="fa-solid fa-screwdriver-wrench"></i> 배정 시공사: ${escapeHtml(app.assignedConstructorName)}</div>
+                                    <div style="font-size: 0.92rem; color: var(--text-secondary); margin-top: 3px;">시공 현황: <strong>${constStatusText}</strong></div>
                                 </div>
                             `;
 
                             if (app.constructionStatus === 'after_construction') {
                                 actionsHtml += `
-                                    <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end;">
-                                        <button class="btn btn-primary btn-sm btn-approve-settlement-mob" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.68rem; background: var(--accent-primary); border: none; color: white;"><i class="fa-solid fa-file-invoice-dollar"></i> 증빙확인/정산완료</button>
+                                    <div style="display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end;">
+                                        <button class="btn btn-primary btn-sm btn-approve-settlement-mob" data-id="${app.id}" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-primary); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-file-invoice-dollar"></i> 증빙확인/정산완료</button>
                                     </div>
                                 `;
                             }
@@ -1522,17 +1522,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             const constructors = users.filter(u => u.role === 'constructor');
                             let optionsHtml = '<option value="">시공사 선택...</option>';
                             constructors.forEach(c => {
-                                optionsHtml += `<option value="${c.id}">${escapeHtml(c.businessName)}</option>`;
+                                optionsHtml += `<option value="${c.id}">${escapeHtml(c.businessName || c.pendingBusinessName || c.name || c.id)}</option>`;
                             });
                             
                             actionsHtml = `
-                                <div style="margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; text-align: left;">
-                                    <label style="font-size: 0.7rem; font-weight: bold;">시공사 미배정 - 배정 진행</label>
-                                    <div style="display: flex; gap: 6px;">
-                                        <select class="status-select-mob select-constructor-assign-mob" data-id="${app.id}" style="flex: 1; padding: 4px; font-size: 0.7rem; height: auto; min-height: auto; width: auto; background: white; border: 1px solid var(--border-color); border-radius: 4px;">
+                                <div style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; text-align: left;">
+                                    <label style="font-size: 0.92rem; font-weight: bold; color: var(--text-primary);">시공사 미배정 - 배정 진행</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <select class="status-select-mob select-constructor-assign-mob" data-id="${app.id}" style="flex: 1; padding: 6px 8px; font-size: 0.92rem; height: auto; min-height: auto; width: auto; background: white; border: 1px solid var(--border-color); border-radius: 6px;">
                                             ${optionsHtml}
                                         </select>
-                                        <button class="btn btn-primary btn-sm btn-assign-constructor-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem; background: var(--accent-success); border: none; color: white;"><i class="fa-solid fa-link"></i> 배정</button>
+                                        <button class="btn btn-primary btn-sm btn-assign-constructor-mob" data-id="${app.id}" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-link"></i> 배정</button>
                                     </div>
                                 </div>
                             `;
@@ -1541,22 +1541,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Add Delete application button (always shown in management)
                     actionsHtml += `
-                        <div style="display: flex; justify-content: flex-start; margin-top: 8px;">
-                            <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.65rem; border-color: rgba(239, 68, 68, 0.3); color: rgba(239, 68, 68, 0.8); background: transparent;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+                        <div style="display: flex; justify-content: flex-start; margin-top: 10px;">
+                            <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 5px 12px; font-size: 0.85rem; border-color: rgba(239, 68, 68, 0.3); color: rgba(239, 68, 68, 0.8); background: transparent; border-radius: 6px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
                         </div>
                     `;
 
                     card.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                            <strong style="font-size: 0.85rem;">${escapeHtml(app.shopName || app.storeName)}</strong>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                            <strong style="font-size: 1.1rem; color: var(--text-primary);">${escapeHtml(app.shopName || app.storeName)}</strong>
                             ${statusBadge}
                         </div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; text-align: left;">
-                            <div>신청번호: ${app.id}</div>
-                            <div>대표자: ${app.ownerName} (${app.ownerPhone})</div>
-                            <div>주소: ${app.storeAddress}</div>
-                            <div>소재: ${app.signType}</div>
-                            ${app.referrerCode ? `<div style="color: var(--accent-primary); font-weight: bold;">영업 연동 코드: ${app.referrerCode}</div>` : ''}
+                        <div style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; text-align: left;">
+                            <div>신청번호: <span style="font-family: monospace; font-weight: 600; color: #475569;">${app.id}</span></div>
+                            <div>대표자: <strong style="color: var(--text-primary);">${app.ownerName}</strong> (${app.ownerPhone})</div>
+                            <div>주소: <span style="color: #475569;">${app.storeAddress}</span></div>
+                            <div>소재: <span style="color: #475569;">${app.signType}</span></div>
+                            ${app.referrerCode ? `<div style="color: var(--accent-primary); font-weight: bold; margin-top: 2px;">영업 연동 코드: ${app.referrerCode}</div>` : ''}
                         </div>
                         ${actionsHtml}
                     `;
