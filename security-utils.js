@@ -137,13 +137,39 @@ function clearActiveUser() {
   sessionStorage.removeItem('activeUser');
 }
 
-// 6. Supabase 클라이언트 초기화 (전역 설정 파일 supabase-config.js 를 참조합니다)
-const dbUrl = typeof window.SUPABASE_URL !== 'undefined' ? window.SUPABASE_URL : '';
-const dbKey = typeof window.SUPABASE_ANON_KEY !== 'undefined' ? window.SUPABASE_ANON_KEY : '';
+// 6. Supabase 클라이언트 초기화 (전역 설정 파일 supabase-config.js 및 내장 Fallback 지원)
+const defaultDbUrl = "https://nfexylsehsucctoefwdz.supabase.co";
+const defaultDbKey = "sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh";
+const dbUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) ? window.SUPABASE_URL : defaultDbUrl;
+const dbKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) ? window.SUPABASE_ANON_KEY : defaultDbKey;
+window.SUPABASE_URL = dbUrl;
+window.SUPABASE_ANON_KEY = dbKey;
 window.supabaseClient = null;
 
-if (dbUrl && dbKey && typeof window !== 'undefined' && window.supabase) {
-  window.supabaseClient = window.supabase.createClient(dbUrl, dbKey);
+function initGlobalSupabaseClient() {
+  if (window.supabaseClient) return window.supabaseClient;
+  if (typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
+    try {
+      window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    } catch (e) {
+      console.error('Failed to create Supabase client:', e);
+    }
+  }
+  return window.supabaseClient;
+}
+
+initGlobalSupabaseClient();
+
+// DOMContentLoaded 시점에 Supabase client 재확인
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initGlobalGlobalClient();
+  });
+}
+function initGlobalGlobalClient() {
+  if (!window.supabaseClient) {
+    initGlobalSupabaseClient();
+  }
 }
 
 // 7. 실시간 사진 촬영본 및 이미지 파일 2MB 이하 강제 자동 축소/압축 유틸리티
@@ -638,6 +664,9 @@ window.SupabaseSync = {
 
   // 7. 전체 양방향 동기화 (Supabase <-> LocalStorage)
   async syncAllData() {
+    if (!window.supabaseClient) {
+      initGlobalSupabaseClient();
+    }
     if (!window.supabaseClient || this.isSyncing) return false;
     this.isSyncing = true;
 

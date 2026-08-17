@@ -31,5 +31,3 @@ credentials.json
 client_secret*.json
 config.env
 
-# Supabase Local Credentials
-supabase-config.js
