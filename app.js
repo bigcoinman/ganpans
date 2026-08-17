@@ -1588,24 +1588,46 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.style.border = '1px solid var(--border-color)';
                     card.style.marginBottom = '12px';
                     
-                    let statusBadge = '<span class="badge-status pending" style="font-size: 0.85rem; padding: 3px 8px;">대기 중</span>';
-                    if (app.status === 'approved') statusBadge = '<span class="badge-status approved" style="font-size: 0.85rem; padding: 3px 8px;">승인됨</span>';
-                    else if (app.status === 'rejected') statusBadge = '<span class="badge-status rejected" style="font-size: 0.85rem; padding: 3px 8px;">반려됨</span>';
+                    // Status mapping
+                    const isApproved = (app.status === 'approved' || app.status === '서류제출 & 접수예정');
+                    const isRejected = (app.status === 'rejected' || app.status === '지원사업 탈락');
+                    const isPending = !isApproved && !isRejected;
+
+                    let statusBadge = '<span class="badge-status pending" style="font-size: 0.85rem; padding: 3px 8px;">심사 대기</span>';
+                    if (isApproved) statusBadge = '<span class="badge-status approved" style="font-size: 0.85rem; padding: 3px 8px; background: #dcfce7; color: #166534; font-weight: 700;">서류제출 & 접수예정</span>';
+                    else if (isRejected) statusBadge = '<span class="badge-status rejected" style="font-size: 0.85rem; padding: 3px 8px; background: #fee2e2; color: #991b1b; font-weight: 700;">지원사업 탈락</span>';
+
+                    // Status select styling for mobile
+                    let statusColor = '#475569';
+                    let statusBg = '#ffffff';
+                    let statusBorder = '#cbd5e1';
+                    if (isApproved) {
+                        statusColor = '#15803d';
+                        statusBg = '#f0fdf4';
+                        statusBorder = '#86efac';
+                    } else if (isRejected) {
+                        statusColor = '#b91c1c';
+                        statusBg = '#fef2f2';
+                        statusBorder = '#fca5a5';
+                    }
 
                     let actionsHtml = `
                         <div class="admin-action-row-mob" style="display:flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-top: 12px;">
-                            ${app.status === 'pending' ? `
-                                <button class="btn btn-secondary btn-sm btn-reject-app-mob" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px;"><i class="fa-solid fa-xmark"></i> 반려</button>
-                                <button class="btn btn-primary btn-sm btn-approve-app-mob" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-check"></i> 승인</button>
-                            ` : ''}
-                            <button class="btn btn-sm btn-toggle-bizitem-mob" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; ${app.isBizItem ? 'background: #0284c7; color: white; border: none;' : 'background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;'}">
+                            <div style="position: relative; display: inline-flex; align-items: center;">
+                                <select class="status-select-mob select-app-status-mob" data-id="${app.id}" style="padding: 6px 26px 6px 8px; font-size: 0.85rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 4px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 34px; line-height: 1.2;">
+                                    <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사 대기</option>
+                                    <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
+                                    <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-sm btn-toggle-bizitem-mob" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; height: 34px; ${app.isBizItem ? 'background: #0284c7; color: white; border: none;' : 'background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;'}">
                                 <i class="fa-solid ${app.isBizItem ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> ${app.isBizItem ? '영업물건 등록됨' : '영업물건으로 변경'}
                             </button>
-                            <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 10px; font-size: 0.85rem; border-color: rgba(239, 68, 68, 0.3); color: #dc2626; background: #fee2e2; border-radius: 6px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+                            <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 10px; font-size: 0.85rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; height: 34px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
                         </div>
                     `;
 
-                    if (app.status === 'approved') {
+                    if (isApproved) {
                         if (app.assignedConstructorId) {
                             let constStatusText = '시공 전';
                             if (app.constructionStatus === 'in_construction') constStatusText = '시공 진행 중';
@@ -1709,16 +1731,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         handleApplicationPhotoUploadMob(id);
                     });
                 });
-                appsList.querySelectorAll('.btn-approve-app-mob').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const id = e.target.closest('button').dataset.id;
-                        updateApplicationStatusMob(id, 'approved');
-                    });
-                });
-                appsList.querySelectorAll('.btn-reject-app-mob').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const id = e.target.closest('button').dataset.id;
-                        updateApplicationStatusMob(id, 'rejected');
+                appsList.querySelectorAll('.select-app-status-mob').forEach(select => {
+                    select.addEventListener('change', (e) => {
+                        const id = e.target.dataset.id;
+                        const val = e.target.value;
+                        updateApplicationStatusMob(id, val);
                     });
                 });
                 appsList.querySelectorAll('.btn-toggle-bizitem-mob').forEach(btn => {
@@ -2268,9 +2285,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateApplicationStatusMob(id, newStatus) {
+        let targetApp = null;
         applications = applications.map(app => {
             if (String(app.id) === String(id)) {
-                return { ...app, status: newStatus };
+                targetApp = { ...app, status: newStatus };
+                return targetApp;
             }
             return app;
         });
@@ -2280,9 +2299,25 @@ document.addEventListener('DOMContentLoaded', () => {
             window.SupabaseSync.updateApplication(id, {
                 status: newStatus
             });
+        } else if (window.supabaseClient) {
+            try {
+                window.supabaseClient
+                    .from('applications')
+                    .update({
+                        status: newStatus,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', id);
+            } catch (err) {
+                console.warn('Supabase application status update notice:', err);
+            }
         }
 
-        alert(`신청 건이 [${newStatus === 'approved' ? '승인' : '반려'}] 처리되었습니다.`);
+        let statusLabel = '심사 대기';
+        if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') statusLabel = '서류제출 & 접수예정';
+        else if (newStatus === 'rejected' || newStatus === '지원사업 탈락') statusLabel = '지원사업 탈락';
+
+        alert(`[${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`);
         renderStatusTab();
     }
 

@@ -1819,49 +1819,57 @@ document.addEventListener('DOMContentLoaded', () => {
       const d = new Date(app.appliedAt);
       const dateText = `${d.getFullYear()}.${padZero(d.getMonth() + 1)}.${padZero(d.getDate())} ${padZero(d.getHours())}:${padZero(d.getMinutes())}`;
 
-      // Actions buttons: 승인, 반려, 영업물건으로 변경(토글), 삭제
+      // Status mapping
+      const isApproved = (app.status === 'approved' || app.status === '서류제출 & 접수예정');
+      const isRejected = (app.status === 'rejected' || app.status === '지원사업 탈락');
+      const isPending = !isApproved && !isRejected;
+
+      // Status select styling
+      let statusColor = '#475569';
+      let statusBg = '#ffffff';
+      let statusBorder = '#cbd5e1';
+      if (isApproved) {
+        statusColor = '#15803d';
+        statusBg = '#f0fdf4';
+        statusBorder = '#86efac';
+      } else if (isRejected) {
+        statusColor = '#b91c1c';
+        statusBg = '#fef2f2';
+        statusBorder = '#fca5a5';
+      }
+
+      // Actions buttons: 상태 변경 캐럿 드롭다운, 영업물건으로 변경(토글), 삭제
       let actionButtons = '<div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap;">';
 
-      // 1. 승인 버튼
-      if (app.status === 'approved') {
-        actionButtons += `
-          <button class="btn btn-primary btn-sm btn-approve-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="승인 완료 상태"><i class="fa-solid fa-circle-check"></i> 승인완료</button>
-        `;
-      } else {
-        actionButtons += `
-          <button class="btn btn-primary btn-sm btn-approve-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: var(--accent-success); color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="신청서 승인"><i class="fa-solid fa-check"></i> 승인</button>
-        `;
-      }
+      // 1. 상태 변경 셀렉트 (캐럿 아이콘 포함)
+      actionButtons += `
+        <div style="position: relative; display: inline-flex; align-items: center;">
+          <select class="status-select select-app-status-pc" data-id="${app.id}" style="padding: 5px 26px 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 4px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 30px; line-height: 1.2;">
+            <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사 대기</option>
+            <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
+            <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
+          </select>
+        </div>
+      `;
 
-      // 2. 반려 버튼
-      if (app.status === 'rejected') {
-        actionButtons += `
-          <button class="btn btn-secondary btn-sm btn-reject-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="반려 처리됨"><i class="fa-solid fa-ban"></i> 반려됨</button>
-        `;
-      } else {
-        actionButtons += `
-          <button class="btn btn-secondary btn-sm btn-reject-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="신청서 반려"><i class="fa-solid fa-xmark"></i> 반려</button>
-        `;
-      }
-
-      // 3. [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
+      // 2. [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
       if (app.isBizItem) {
         actionButtons += `
-          <button class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
+          <button class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; height: 30px;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
         `;
       } else {
         actionButtons += `
-          <button class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="클릭 시 영업물건(진흥원 접수)으로 이동/등록"><i class="fa-solid fa-toggle-off"></i> 영업물건으로 변경</button>
+          <button class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="클릭 시 영업물건(진흥원 접수)으로 이동/등록"><i class="fa-solid fa-toggle-off"></i> 영업물건으로 변경</button>
         `;
       }
       
-      // 4. 삭제 버튼 (항상 노출)
+      // 3. 삭제 버튼 (항상 노출)
       actionButtons += `
-        <button class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+        <button class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
       </div>`;
 
-      // 승인 완료된 경우 하단 시공사 배정 UI 표시
-      if (app.status === 'approved') {
+      // 서류제출 & 접수예정(승인)인 경우 하단 시공사 배정 UI 표시
+      if (isApproved) {
         if (app.assignedConstructorId) {
           actionButtons += `
             <div style="margin-top: 6px; font-size: 0.76rem; color: var(--accent-success); font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
@@ -1933,18 +1941,12 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // Add event listeners to the action buttons
-    document.querySelectorAll('.btn-approve-app').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = e.target.closest('button').dataset.id;
-        updateApplicationStatus(id, 'approved');
-      });
-    });
-
-    document.querySelectorAll('.btn-reject-app').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = e.target.closest('button').dataset.id;
-        updateApplicationStatus(id, 'rejected');
+    // Add event listeners to status select dropdown (서류제출 & 접수예정, 지원사업 탈락, 심사 대기)
+    document.querySelectorAll('.select-app-status-pc').forEach(select => {
+      select.addEventListener('change', (e) => {
+        const id = e.target.dataset.id;
+        const val = e.target.value;
+        updateApplicationStatus(id, val);
       });
     });
 
@@ -2250,15 +2252,36 @@ document.addEventListener('DOMContentLoaded', () => {
   const updateApplicationStatus = (id, newStatus) => {
     if (activeUser.role !== 'admin') return;
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let targetApp = null;
     apps = apps.map(app => {
       if (String(app.id) === String(id)) {
-        return { ...app, status: newStatus };
+        targetApp = { ...app, status: newStatus };
+        return targetApp;
       }
       return app;
     });
 
     localStorage.setItem('applications', JSON.stringify(apps));
-    alert(`지원 신청 상태가 [${newStatus === 'approved' ? '승인 완료' : '반려됨'}] 상태로 변경되었습니다.`);
+
+    if (window.supabaseClient) {
+      try {
+        window.supabaseClient
+          .from('applications')
+          .update({
+            status: newStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id);
+      } catch (err) {
+        console.warn('Supabase application status update notice:', err);
+      }
+    }
+
+    let statusLabel = '심사 대기';
+    if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') statusLabel = '서류제출 & 접수예정';
+    else if (newStatus === 'rejected' || newStatus === '지원사업 탈락') statusLabel = '지원사업 탈락';
+
+    alert(`[${targetApp ? (targetApp.storeName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`);
     updateSessionUI();
   };
 
