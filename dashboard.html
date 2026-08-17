@@ -39,7 +39,32 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Core stylesheet -->
-    <link rel="stylesheet" href="style.css?v=20260812_3">
+    <link rel="stylesheet" href="style.css?v=20260817_2345">
+    <!-- Anti-Flicker Guard: 첫 렌더링 전 즉시 역할 파악하여 화면 깜빡임 100% 차단 -->
+    <script>
+        (function() {
+            try {
+                var au = localStorage.getItem('activeUser');
+                if (au) {
+                    var user = JSON.parse(au);
+                    var role = user.role || 'user';
+                    document.documentElement.setAttribute('data-user-role', role);
+                    if (role === 'admin') {
+                        var style = document.createElement('style');
+                        style.id = 'anti-flicker-admin-style';
+                        style.textContent = `
+                            .dashboard-grid, #dashboard-normal-view, #dashboard-business-view, #dashboard-constructor-view, #conversion-area, #user-applications-section { display: none !important; }
+                            .manager-admin-panel { display: block !important; border: 1px solid var(--border-color) !important; background: var(--bg-card) !important; }
+                            #manager-panel-content { display: block !important; }
+                            #admin-stats-container { display: grid !important; }
+                            #manager-toggle-icon { display: none !important; }
+                        `;
+                        document.head.appendChild(style);
+                    }
+                }
+            } catch (e) {}
+        })();
+    </script>
 </head>
 
 <body>
@@ -61,6 +86,17 @@
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
                         <span id="header-user-name" style="font-weight: 600; color: var(--text-primary); font-size: 0.9rem; line-height: 1.2;"></span>
+                        <script>
+                            (function() {
+                                try {
+                                    var au = JSON.parse(localStorage.getItem('activeUser') || '{}');
+                                    if (au && au.name) {
+                                        var roleText = au.role === 'admin' ? '최고관리자' : (au.role === 'business' ? '영업자' : (au.role === 'constructor' ? '시공업체' : '일반'));
+                                        document.getElementById('header-user-name').textContent = au.name + '님 (' + au.id + ') (' + roleText + ')';
+                                    }
+                                } catch(e) {}
+                            })();
+                        </script>
                         <button id="logout-btn" class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.78rem; min-height: auto;"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</button>
                     </div>
                 </div>
@@ -73,8 +109,28 @@
         <section id="dashboard-section" class="section" style="background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); min-height: 80vh; padding: 45px 0 50px 0;">
             <div class="container">
                 <div class="section-title" style="margin: 0 auto 20px; max-width: 700px;">
-                    <h2 id="dashboard-title" style="margin-bottom: 6px; font-size: 2.1rem;">마이페이지 및 영업자 대시보드</h2>
-                    <p id="dashboard-subtitle" style="margin-bottom: 0;">회원님의 상태를 확인하고 영업물건 등록 및 진행 현황을 실시간으로 관리하세요.</p>
+                    <h2 id="dashboard-title" style="margin-bottom: 6px; font-size: 2.1rem;">대시보드</h2>
+                    <p id="dashboard-subtitle" style="margin-bottom: 0;">대시보드 정보를 불러오는 중입니다...</p>
+                    <script>
+                        (function() {
+                            try {
+                                var au = JSON.parse(localStorage.getItem('activeUser') || '{}');
+                                if (au.role === 'admin') {
+                                    document.getElementById('dashboard-title').textContent = '최고관리자 대시보드';
+                                    document.getElementById('dashboard-subtitle').textContent = '최고관리자 모드입니다';
+                                } else if (au.role === 'business') {
+                                    document.getElementById('dashboard-title').textContent = '영업자 전용 대시보드';
+                                    document.getElementById('dashboard-subtitle').textContent = '회원님의 상태를 확인하고 영업물건 등록 및 진행 현황을 실시간으로 관리하세요.';
+                                } else if (au.role === 'constructor') {
+                                    document.getElementById('dashboard-title').textContent = '시공업체 전용 대시보드';
+                                    document.getElementById('dashboard-subtitle').textContent = '배정된 시공 물건 관리 및 완료 보고를 실시간으로 진행하세요.';
+                                } else if (au.name) {
+                                    document.getElementById('dashboard-title').textContent = '마이페이지 및 영업자 대시보드';
+                                    document.getElementById('dashboard-subtitle').textContent = '회원님의 상태를 확인하고 영업물건 등록 및 진행 현황을 실시간으로 관리하세요.';
+                                }
+                            } catch(e) {}
+                        })();
+                    </script>
                 </div>
 
                 <div class="dashboard-grid glass-panel" style="padding: 30px; margin-top: 20px;">
@@ -91,6 +147,30 @@
                                 <span class="badge" id="dashboard-user-role"
                                     style="background: var(--accent-primary); color: white; padding: 4px 12px; border-radius: 50px; font-size: 0.8rem; font-weight: 600;">-</span>
                             </div>
+                            <script>
+                                (function() {
+                                    try {
+                                        var au = JSON.parse(localStorage.getItem('activeUser') || '{}');
+                                        if (au && au.name) {
+                                            document.getElementById('dashboard-user-name').textContent = au.name + '님';
+                                            var roleBadge = document.getElementById('dashboard-user-role');
+                                            if (au.role === 'admin') {
+                                                roleBadge.textContent = '최고 관리자 (Super Admin)';
+                                                roleBadge.style.background = '#dc2626';
+                                            } else if (au.role === 'business') {
+                                                roleBadge.textContent = '영업자 회원 (' + (au.bizCode || '코드발급') + ')';
+                                                roleBadge.style.background = 'var(--accent-primary)';
+                                            } else if (au.role === 'constructor') {
+                                                roleBadge.textContent = '시공업체 회원 (' + (au.businessName || au.name) + ')';
+                                                roleBadge.style.background = 'var(--accent-success)';
+                                            } else {
+                                                roleBadge.textContent = '일반 회원';
+                                                roleBadge.style.background = '#64748b';
+                                            }
+                                        }
+                                    } catch(e) {}
+                                })();
+                            </script>
                         </div>
                         <div class="dashboard-user-actions" id="conversion-area">
                             <button id="btn-request-conversion" class="btn btn-primary"><i
@@ -114,7 +194,7 @@
                     </div>
 
                     <!-- 1) Normal User View -->
-                    <div id="dashboard-normal-view" style="display: block;">
+                    <div id="dashboard-normal-view" style="display: none;">
                         <div style="text-align: center; padding: 40px 20px;">
                             <i class="fa-solid fa-circle-info"
                                 style="font-size: 3rem; color: var(--accent-primary); margin-bottom: 20px; opacity: 0.7;"></i>
