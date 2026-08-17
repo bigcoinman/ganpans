@@ -1265,6 +1265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function syncAdminDataFromSupabaseMob() {
         if (window.SupabaseSync) {
             await window.SupabaseSync.syncAllData();
+            renderAdminDashboardMob(true);
         }
     }
 
@@ -3335,6 +3336,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
+    // 초기 로드 시 Supabase 최신 데이터 즉시 동기화 실행
+    syncAdminDataFromSupabaseMob();
 
 });
 
