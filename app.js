@@ -1729,7 +1729,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (target) {
                             target.status = target.status === 'resolved' ? 'pending' : 'resolved';
                             localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
-                            renderAdminDashboardMob();
+                            if (window.SupabaseSync) {
+                                window.SupabaseSync.upsertInquiry(target);
+                            }
+                            renderAdminDashboardMob(true);
                         }
                     });
                 });
@@ -1741,7 +1744,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
                         currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
                         localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
-                        renderAdminDashboardMob();
+                        if (window.SupabaseSync) {
+                            window.SupabaseSync.deleteInquiry(id);
+                        }
+                        renderAdminDashboardMob(true);
                     });
                 });
             }
@@ -2812,10 +2818,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 phone,
                 type,
                 message,
+                status: 'pending',
                 submittedAt: new Date().toISOString()
             };
             inquiries.push(newInquiry);
             localStorage.setItem('inquiries', JSON.stringify(inquiries));
+
+            // Supabase Sync
+            if (window.SupabaseSync) {
+                window.SupabaseSync.upsertInquiry(newInquiry);
+            }
 
             // 카카오톡 관리자 실시간 알림 발송
             if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyInquiry === 'function') {

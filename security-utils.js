@@ -585,6 +585,57 @@ window.SupabaseSync = {
     }
   },
 
+  // 3초 간편문의 매핑 함수
+  mapInquiryToDb(inq) {
+    if (!inq) return null;
+    return {
+      id: String(inq.id),
+      name: inq.name || '',
+      phone: inq.phone || '',
+      category: inq.type || inq.category || 'other',
+      region: inq.message || inq.region || '',
+      status: inq.status || 'pending',
+      created_at: inq.submittedAt || inq.created_at || new Date().toISOString()
+    };
+  },
+
+  mapDbToInquiry(dbInq) {
+    if (!dbInq) return null;
+    return {
+      id: String(dbInq.id),
+      name: dbInq.name || '',
+      phone: dbInq.phone || '',
+      type: dbInq.category || dbInq.type || 'other',
+      message: dbInq.message || dbInq.region || '',
+      status: dbInq.status || 'pending',
+      submittedAt: dbInq.created_at || dbInq.submitted_at || new Date().toISOString()
+    };
+  },
+
+  // 3초 간편문의 저장/갱신
+  async upsertInquiry(inq) {
+    if (!window.supabaseClient || !inq || !inq.id) return false;
+    const payload = this.mapInquiryToDb(inq);
+    try {
+      const { error } = await window.supabaseClient.from('inquiries').upsert([payload], { onConflict: 'id' });
+      if (!error) return true;
+      console.warn('Supabase upsertInquiry warning:', error.message);
+    } catch (e) {
+      console.error('Supabase upsertInquiry exception:', e);
+    }
+    return false;
+  },
+
+  // 3초 간편문의 삭제
+  async deleteInquiry(inqId) {
+    if (!window.supabaseClient || !inqId) return;
+    try {
+      await window.supabaseClient.from('inquiries').delete().eq('id', String(inqId));
+    } catch (e) {
+      console.error('Supabase deleteInquiry error:', e);
+    }
+  },
+
   // 7. 전체 양방향 동기화 (Supabase <-> LocalStorage)
   async syncAllData() {
     if (!window.supabaseClient || this.isSyncing) return false;
@@ -592,6 +643,7 @@ window.SupabaseSync = {
 
     let usersChanged = false;
     let appsChanged = false;
+    let inqChanged = false;
 
     try {
       // --- A. 회원(Users) 동기화 ---
@@ -658,7 +710,7 @@ window.SupabaseSync = {
         // 2) 로컬에만 있는 회원(모바일 등 로컬 가입자)을 Supabase로 업로드
         for (const lu of localUsers) {
           const inSupa = supaUsers.find(su => su.id === lu.id);
-          if (!inSupa && lu.id !== 'admin' && lu.id !== 'constuser' && lu.id !== 'bizuser') {
+          if (!inSupa) {
             await this.upsertUser(lu);
           } else if (inSupa && lu.conversionStatus !== 'none' && inSupa.conversion_status === 'none') {
             // 로컬에서 전환 신청했으나 Supabase에 아직 안 올라간 경우 동기화
@@ -711,10 +763,44 @@ window.SupabaseSync = {
         }
       }
 
-      // --- C. 변경 사항 발생 시 전역 이벤트 통보 ---
-      if (usersChanged || appsChanged) {
+      // --- C. 3초 간편문의(Inquiries) 동기화 ---
+      let localInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+      const { data: supaInq, error: inqErr } = await window.supabaseClient.from('inquiries').select('*');
+
+      if (!inqErr && Array.isArray(supaInq)) {
+        supaInq.forEach(si => {
+          const mapped = this.mapDbToInquiry(si);
+          const idx = localInquiries.findIndex(i => String(i.id) === String(mapped.id));
+
+          if (idx === -1) {
+            localInquiries.push(mapped);
+            inqChanged = true;
+          } else {
+            const cur = localInquiries[idx];
+            if (cur.status !== mapped.status || cur.message !== mapped.message) {
+              localInquiries[idx] = { ...cur, ...mapped };
+              inqChanged = true;
+            }
+          }
+        });
+
+        // 로컬에만 있는 문의를 Supabase로 업로드
+        for (const li of localInquiries) {
+          const inSupa = supaInq.find(si => String(si.id) === String(li.id));
+          if (!inSupa) {
+            await this.upsertInquiry(li);
+          }
+        }
+
+        if (inqChanged) {
+          localStorage.setItem('inquiries', JSON.stringify(localInquiries));
+        }
+      }
+
+      // --- D. 변경 사항 발생 시 전역 이벤트 통보 ---
+      if (usersChanged || appsChanged || inqChanged) {
         window.dispatchEvent(new CustomEvent('supabase-data-synced', {
-          detail: { usersChanged, appsChanged, users: localUsers, applications: localApps }
+          detail: { usersChanged, appsChanged, inqChanged, users: localUsers, applications: localApps, inquiries: localInquiries }
         }));
       }
 
@@ -724,7 +810,7 @@ window.SupabaseSync = {
       this.isSyncing = false;
     }
 
-    return { usersChanged, appsChanged };
+    return { usersChanged, appsChanged, inqChanged };
   },
 
   // 8. 자동 동기화 시작 (주기적 폴링 + 탭 활성화 시 즉시 동기화)

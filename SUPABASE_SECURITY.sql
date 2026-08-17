@@ -80,16 +80,24 @@ CREATE TABLE IF NOT EXISTS public.reviews (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- 4. 간편 문의 테이블 (inquiries) 생성
+-- 4. 간편 문의 테이블 (inquiries) 생성 및 컬럼 보강
 CREATE TABLE IF NOT EXISTS public.inquiries (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
     phone VARCHAR(20) NOT NULL,
-    region VARCHAR(50),
+    region TEXT,
     category VARCHAR(50),
+    type VARCHAR(50),
+    message TEXT,
     status VARCHAR(20) DEFAULT 'pending',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+
+ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS region TEXT;
+ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS type VARCHAR(50);
+ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS message TEXT;
+ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
 
 -- 5. Row Level Security (RLS) 활성화
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;

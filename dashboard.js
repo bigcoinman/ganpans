@@ -2043,6 +2043,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (target) {
           target.status = target.status === 'resolved' ? 'pending' : 'resolved';
           localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+          if (window.SupabaseSync) {
+            window.SupabaseSync.upsertInquiry(target);
+          }
           renderInquiriesList();
         }
       });
@@ -2055,6 +2058,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
         currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
         localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+        if (window.SupabaseSync) {
+          window.SupabaseSync.deleteInquiry(id);
+        }
         renderInquiriesList();
       });
     });

@@ -2843,10 +2843,16 @@ function initMobileBottomNav() {
         phone,
         type,
         message,
+        status: 'pending',
         submittedAt: new Date().toISOString()
       };
       inquiries.push(newInquiry);
       localStorage.setItem('inquiries', JSON.stringify(inquiries));
+
+      // Supabase Sync
+      if (window.SupabaseSync) {
+        window.SupabaseSync.upsertInquiry(newInquiry);
+      }
 
       // 카카오톡 관리자 실시간 알림 발송
       if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyInquiry === 'function') {
