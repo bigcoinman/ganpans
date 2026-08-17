@@ -187,6 +187,18 @@ function sortUsersLatestFirst(userList) {
 }
 window.sortUsersLatestFirst = sortUsersLatestFirst;
 
+// 6-2. 회원 가입일자 날짜 포맷 함수 (YYYY.MM.DD)
+function formatUserDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '-';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}.${m}.${day}`;
+}
+window.formatUserDate = formatUserDate;
+
 // 7. 실시간 사진 촬영본 및 이미지 파일 2MB 이하 강제 자동 축소/압축 유틸리티
 function compressImageFile(file, maxSizeBytes = 2 * 1024 * 1024) {
   return new Promise((resolve) => {

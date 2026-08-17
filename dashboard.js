@@ -1082,6 +1082,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ? '<span style="color:#cbd5e1; font-size:0.75rem;">-</span>'
         : `<button class="btn btn-sm btn-delete-user-admin" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.72rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer;"><i class="fa-solid fa-trash-can"></i> 삭제</button>`;
 
+      const userJoinDate = typeof formatUserDate === 'function' ? formatUserDate(u.createdAt || u.created_at) : (u.createdAt || u.created_at || '-');
+
       tr.innerHTML = `
         <td style="padding: 12px 14px; font-weight: 700; color: var(--text-primary); font-family: monospace;">${escapeHtml(u.id)}</td>
         <td style="padding: 12px 14px; font-weight: 600; color: var(--text-primary);">${escapeHtml(u.name || '-')}</td>
@@ -1090,6 +1092,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${u.email ? `<div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">${escapeHtml(u.email)}</div>` : ''}
         </td>
         <td style="padding: 12px 14px; font-size: 0.8rem; color: var(--text-secondary); max-width: 220px;">${escapeHtml(u.address || '-')}</td>
+        <td style="padding: 12px 14px; text-align: center; font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; font-family: monospace;">${escapeHtml(userJoinDate)}</td>
         <td style="padding: 12px 14px; text-align: center; white-space: nowrap;">${roleBadge}</td>
         <td style="padding: 12px 14px; text-align: center; white-space: nowrap;">${codeText}</td>
         <td style="padding: 12px 14px; text-align: center; white-space: nowrap;">${deleteBtn}</td>
