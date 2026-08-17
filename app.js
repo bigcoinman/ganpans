@@ -1789,6 +1789,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                     }
 
+                    // 영업자 이름 매칭 (예: 김만석영업자)
+                    let bizUserName = '';
+                    const curUsersList = JSON.parse(localStorage.getItem('users')) || users || [];
+                    if (app.referrerCode) {
+                        const matchedUser = curUsersList.find(u => u.bizCode === app.referrerCode || u.id === app.referrerCode);
+                        if (matchedUser && matchedUser.name) {
+                            bizUserName = `${matchedUser.name}영업자`;
+                        }
+                    }
+                    if (!bizUserName && app.userId) {
+                        const matchedUser = curUsersList.find(u => u.id === app.userId && (u.role === 'business' || u.bizCode));
+                        if (matchedUser && matchedUser.name) {
+                            bizUserName = `${matchedUser.name}영업자`;
+                        }
+                    }
+                    if (!bizUserName && app.referrerCode) {
+                        bizUserName = `${app.referrerCode}영업자`;
+                    }
+
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                             <strong style="font-size: 1.1rem; color: var(--text-primary);">${escapeHtml(app.shopName || app.storeName)}</strong>
@@ -1799,7 +1818,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div>대표자: <strong style="color: var(--text-primary);">${app.ownerName}</strong> (${app.ownerPhone})</div>
                             <div>주소: <span style="color: #475569;">${app.storeAddress}</span></div>
                             <div>소재: <span style="color: #475569;">${app.signType}</span></div>
-                            ${app.referrerCode ? `<div style="color: var(--accent-primary); font-weight: bold; margin-top: 2px;">영업 연동 코드: ${app.referrerCode}</div>` : ''}
+                            ${bizUserName ? `<div style="color: var(--accent-primary); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-user-tie" style="color: var(--accent-secondary);"></i> ${escapeHtml(bizUserName)}</div>` : ''}
                         </div>
                         ${fileAttachmentHtml}
                         ${actionsHtml}
