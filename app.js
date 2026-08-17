@@ -1030,96 +1030,71 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnChoiceCamera = document.getElementById('btn-choice-camera');
     const btnChoiceGallery = document.getElementById('btn-choice-gallery');
     const btnChoiceCancel = document.getElementById('btn-choice-cancel');
-    let selectedPhotosMob = [];
+    let selectedPhotosMob = []; // Array of { name: string, dataUrl: string }
 
-    const resizeImageToLimit = (file, maxSizeBytes = 2 * 1024 * 1024) => {
+    // 고화질 모바일 사진을 안전하고 가볍게(최대 1200px, 80% 품질) DataURL로 압축하는 유틸리티
+    const fileToCompressedDataUrl = (file, maxDimension = 1200, quality = 0.8) => {
         return new Promise((resolve) => {
-            if (file.size <= maxSizeBytes) {
-                resolve(file);
+            if (!file) {
+                resolve('');
                 return;
             }
-
             const reader = new FileReader();
             reader.onload = (e) => {
+                const rawUrl = e.target.result;
                 const img = new Image();
                 img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-
-                    // Resize long edge to max 1600px
-                    const max_size = 1600;
-                    if (width > max_size || height > max_size) {
-                        if (width > height) {
-                            height *= max_size / width;
-                            width = max_size;
-                        } else {
-                            width *= max_size / height;
-                            height = max_size;
-                        }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    let quality = 0.9;
-                    let dataUrl = canvas.toDataURL('image/jpeg', quality);
-                    let size = Math.round((dataUrl.length - 22) * 3 / 4);
-
-                    while (size > maxSizeBytes && quality > 0.1) {
-                        quality -= 0.1;
-                        dataUrl = canvas.toDataURL('image/jpeg', quality);
-                        size = Math.round((dataUrl.length - 22) * 3 / 4);
-                    }
-
                     try {
-                        const byteString = atob(dataUrl.split(',')[1]);
-                        const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
-                        const ab = new ArrayBuffer(byteString.length);
-                        const ia = new Uint8Array(ab);
-                        for (let i = 0; i < byteString.length; i++) {
-                            ia[i] = byteString.charCodeAt(i);
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxDimension || height > maxDimension) {
+                            if (width > height) {
+                                height = Math.round(height * (maxDimension / width));
+                                width = maxDimension;
+                            } else {
+                                width = Math.round(width * (maxDimension / height));
+                                height = maxDimension;
+                            }
                         }
-                        const blob = new Blob([ab], {type: mimeString});
-                        const resizedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {type: 'image/jpeg', lastModified: Date.now()});
-                        resolve(resizedFile);
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const compressedUrl = canvas.toDataURL('image/jpeg', quality);
+                        resolve(compressedUrl || rawUrl);
                     } catch (err) {
-                        resolve(file);
+                        console.warn('[사진 압축 Fallback] 원본 DataURL 사용', err);
+                        resolve(rawUrl);
                     }
                 };
-                img.onerror = () => resolve(file);
-                img.src = e.target.result;
+                img.onerror = () => resolve(rawUrl);
+                img.src = rawUrl;
             };
-            reader.onerror = () => resolve(file);
+            reader.onerror = () => resolve('');
             reader.readAsDataURL(file);
         });
     };
 
     const handleMobilePhotosSelectMob = async (files) => {
-        if (!files.length) return;
+        if (!files || !files.length) return;
 
         if (selectedPhotosMob.length + files.length > 20) {
             alert('영업 물건 현장 사진은 최대 20장 까지만 업로드 할 수 있습니다.');
             return;
         }
 
-        const limit = 3 * 1024 * 1024; // 3MB Limit
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            let processedFile = file;
-
-            if (file.size > limit) {
-                processedFile = await resizeImageToLimit(file, limit);
-                if (processedFile.size > limit) {
-                    alert(`용량 제한 초과: [${file.name}]의 용량이 압축 후에도 3MB를 초과하여 제외되었습니다.`);
-                    continue;
-                } else {
-                    console.log(`[압축 완료] ${file.name}: ${(file.size / 1024 / 1024).toFixed(2)}MB -> ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`);
-                }
+            const dataUrl = await fileToCompressedDataUrl(file, 1200, 0.8);
+            if (dataUrl) {
+                selectedPhotosMob.push({
+                    name: file.name || `현장사진_${selectedPhotosMob.length + 1}.jpg`,
+                    dataUrl: dataUrl
+                });
             }
-            selectedPhotosMob.push(processedFile);
         }
         renderMobilePhotoPreviewsMob();
     };
@@ -1168,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (mobPhotosInputMob) {
         mobPhotosInputMob.addEventListener('change', async (e) => {
-            if (e.target.files.length > 0) {
+            if (e.target.files && e.target.files.length > 0) {
                 const files = Array.from(e.target.files);
                 await handleMobilePhotosSelectMob(files);
                 mobPhotosInputMob.value = ''; // Reset value to trigger change on same file if needed
@@ -1178,7 +1153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (mobCameraInputMob) {
         mobCameraInputMob.addEventListener('change', async (e) => {
-            if (e.target.files.length > 0) {
+            if (e.target.files && e.target.files.length > 0) {
                 const files = Array.from(e.target.files);
                 await handleMobilePhotosSelectMob(files);
                 mobCameraInputMob.value = ''; // Reset value to trigger change on next capture
@@ -1190,7 +1165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!mobPhotoPreviewsMob || !mobPhotoCountMob) return;
         mobPhotoPreviewsMob.innerHTML = '';
         
-        selectedPhotosMob.forEach((file, index) => {
+        selectedPhotosMob.forEach((photoItem, index) => {
             const wrapper = document.createElement('div');
             wrapper.className = 'mob-preview-wrapper';
             wrapper.style.position = 'relative';
@@ -1198,12 +1173,13 @@ document.addEventListener('DOMContentLoaded', () => {
             wrapper.style.margin = '4px';
             
             const img = document.createElement('img');
-            img.src = URL.createObjectURL(file);
+            img.src = sanitizeUrl(photoItem.dataUrl);
             img.style.width = '70px';
             img.style.height = '70px';
             img.style.objectFit = 'cover';
             img.style.borderRadius = '8px';
             img.style.display = 'block';
+            img.style.border = '1px solid #cbd5e1';
             
             const delBtn = document.createElement('button');
             delBtn.className = 'mob-preview-del';
@@ -1211,8 +1187,8 @@ document.addEventListener('DOMContentLoaded', () => {
             delBtn.style.position = 'absolute';
             delBtn.style.top = '-6px';
             delBtn.style.right = '-6px';
-            delBtn.style.width = '20px';
-            delBtn.style.height = '20px';
+            delBtn.style.width = '22px';
+            delBtn.style.height = '22px';
             delBtn.style.borderRadius = '50%';
             delBtn.style.backgroundColor = '#ef4444';
             delBtn.style.color = '#ffffff';
@@ -1220,7 +1196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             delBtn.style.display = 'flex';
             delBtn.style.alignItems = 'center';
             delBtn.style.justifyContent = 'center';
-            delBtn.style.fontSize = '12px';
+            delBtn.style.fontSize = '14px';
             delBtn.style.fontWeight = 'bold';
             delBtn.style.cursor = 'pointer';
             delBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
@@ -1253,110 +1229,87 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const processRegistration = (base64PhotosList) => {
-                let apps = JSON.parse(localStorage.getItem('applications')) || [];
-                const itemId = typeof generateBizItemId === 'function' ? generateBizItemId(activeUser.bizCode, apps) : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(4, '0')}`;
-                const mainPhoto = (base64PhotosList && base64PhotosList.length > 0) ? base64PhotosList[0] : '';
+            const base64PhotosList = selectedPhotosMob.map(p => p.dataUrl).filter(Boolean);
+            const mainPhoto = base64PhotosList.length > 0 ? base64PhotosList[0] : '';
+            const firstFileName = selectedPhotosMob.length > 0 ? selectedPhotosMob[0].name : '현장촬영사진.jpg';
 
-                // 1. 최고관리자 [신청서 목록(applications)]에 등록
-                const newApp = {
-                    id: itemId,
-                    userId: activeUser.id,
-                    ownerName: nameVal,
-                    ownerPhone: phoneVal,
-                    storeName: nameVal,
-                    shopName: nameVal,
-                    storeAddress: addressVal,
-                    signType: '현장 카메라 접수',
-                    fileName: selectedPhotosMob.length > 0 ? (selectedPhotosMob[0].name || '현장촬영사진.jpg') : '현장촬영사진.jpg',
-                    fileData: mainPhoto,
-                    photos: base64PhotosList || [],
-                    photosCount: (base64PhotosList || []).length,
-                    appliedAt: new Date().toISOString(),
-                    status: 'pending',
-                    isBizItem: false,
-                    referrerCode: activeUser.bizCode || ''
-                };
+            let apps = JSON.parse(localStorage.getItem('applications')) || [];
+            const itemId = typeof generateBizItemId === 'function' ? generateBizItemId(activeUser.bizCode, apps) : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(4, '0')}`;
 
-                if (!apps.some(a => a.id === itemId)) {
-                    apps.unshift(newApp);
-                } else {
-                    apps = apps.map(a => a.id === itemId ? newApp : a);
-                }
-                localStorage.setItem('applications', JSON.stringify(apps));
-
-                // 2. 영업자의 [내 관리 영업물건 현황(activeUser.items)]에도 즉시 등록하여 바로 표시되도록 연동
-                const newItem = {
-                    id: itemId,
-                    name: nameVal,
-                    phone: phoneVal,
-                    address: addressVal,
-                    photos: base64PhotosList || [],
-                    receiptStatus: '접수예정',
-                    progressStatus: '지원대기중',
-                    createdAt: new Date().toISOString()
-                };
-
-                if (!activeUser.items) activeUser.items = [];
-                const existingIdx = activeUser.items.findIndex(it => it.id === itemId);
-                if (existingIdx >= 0) {
-                    activeUser.items[existingIdx] = newItem;
-                } else {
-                    activeUser.items.unshift(newItem);
-                }
-
-                users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
-                localStorage.setItem('users', JSON.stringify(users));
-                localStorage.setItem('activeUser', JSON.stringify(activeUser));
-
-                // 3. Supabase 클라우드 DB 실시간 양방향 동기화
-                if (window.SupabaseSync) {
-                    window.SupabaseSync.upsertApplication(newApp);
-                    if (typeof window.SupabaseSync.updateUser === 'function') {
-                        window.SupabaseSync.updateUser(activeUser.id, { items: activeUser.items });
-                    }
-                }
-
-                // 4. 카카오톡 관리자 실시간 알림 발송
-                if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
-                    window.KakaoNotifier.notifyApplication(newApp);
-                }
-
-                alert(`현장 간판 신청 물건 [${nameVal}] 등록이 완료되었습니다!\n신청번호: [${itemId}]\n(내 관리 영업물건 및 최고관리자 대시보드에 정상 등록되었습니다.)`);
-                formBizUploadMob.reset();
-                selectedPhotosMob = [];
-                renderMobilePhotoPreviewsMob();
-                renderBusinessDashboardMob();
-                renderStatusTab();
-                window.scrollTo(0, 0);
-                document.documentElement.scrollTop = 0;
-                document.body.scrollTop = 0;
-                updateHeaderAuthButton();
+            // 1. 최고관리자 [신청서 목록(applications)]에 등록
+            const newApp = {
+                id: itemId,
+                userId: activeUser.id,
+                ownerName: nameVal,
+                ownerPhone: phoneVal,
+                storeName: nameVal,
+                shopName: nameVal,
+                storeAddress: addressVal,
+                signType: '현장 카메라 접수',
+                fileName: firstFileName,
+                fileData: mainPhoto,
+                photos: base64PhotosList,
+                photosCount: base64PhotosList.length,
+                appliedAt: new Date().toISOString(),
+                status: 'pending',
+                isBizItem: false,
+                referrerCode: activeUser.bizCode || ''
             };
 
-            // 모든 선택된 사진을 Base64로 압축 변환
-            if (selectedPhotosMob.length > 0) {
-                const photoPromises = selectedPhotosMob.map(file => {
-                    if (typeof compressImageToBase64 === 'function') {
-                        return compressImageToBase64(file, 2 * 1024 * 1024).catch(() => '');
-                    }
-                    return new Promise(res => {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => res(ev.target.result);
-                        reader.onerror = () => res('');
-                        reader.readAsDataURL(file);
-                    });
-                });
-
-                Promise.all(photoPromises).then(base64Photos => {
-                    const validPhotos = base64Photos.filter(p => !!p);
-                    processRegistration(validPhotos);
-                }).catch(() => {
-                    processRegistration([]);
-                });
+            if (!apps.some(a => a.id === itemId)) {
+                apps.unshift(newApp);
             } else {
-                processRegistration([]);
+                apps = apps.map(a => a.id === itemId ? newApp : a);
             }
+            localStorage.setItem('applications', JSON.stringify(apps));
+
+            // 2. 영업자의 [내 관리 영업물건 현황(activeUser.items)]에도 즉시 등록하여 바로 표시되도록 연동
+            const newItem = {
+                id: itemId,
+                name: nameVal,
+                phone: phoneVal,
+                address: addressVal,
+                photos: base64PhotosList,
+                receiptStatus: '접수예정',
+                progressStatus: '지원대기중',
+                createdAt: new Date().toISOString()
+            };
+
+            if (!activeUser.items) activeUser.items = [];
+            const existingIdx = activeUser.items.findIndex(it => it.id === itemId);
+            if (existingIdx >= 0) {
+                activeUser.items[existingIdx] = newItem;
+            } else {
+                activeUser.items.unshift(newItem);
+            }
+
+            users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
+            localStorage.setItem('users', JSON.stringify(users));
+            localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+            // 3. Supabase 클라우드 DB 실시간 양방향 동기화
+            if (window.SupabaseSync) {
+                window.SupabaseSync.upsertApplication(newApp);
+                if (typeof window.SupabaseSync.updateUser === 'function') {
+                    window.SupabaseSync.updateUser(activeUser.id, { items: activeUser.items });
+                }
+            }
+
+            // 4. 카카오톡 관리자 실시간 알림 발송
+            if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
+                window.KakaoNotifier.notifyApplication(newApp);
+            }
+
+            alert(`현장 간판 신청 물건 [${nameVal}] 등록이 완료되었습니다!\n신청번호: [${itemId}]\n(현장 사진이 최고관리자 대시보드 및 영업물건 현황에 즉시 자동 업로드되었습니다.)`);
+            formBizUploadMob.reset();
+            selectedPhotosMob = [];
+            renderMobilePhotoPreviewsMob();
+            renderBusinessDashboardMob();
+            renderStatusTab();
+            window.scrollTo(0, 0);
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            updateHeaderAuthButton();
         });
     }
 
