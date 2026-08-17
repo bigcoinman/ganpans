@@ -1346,21 +1346,8 @@ function initWizard() {
     }
 
     // Supabase Sync
-    if (window.supabaseClient) {
-      window.supabaseClient.from('applications').insert([{
-        id: customId,
-        user_id: userId,
-        owner_name: ownerName,
-        phone: ownerPhone,
-        store_name: storeName,
-        store_address: storeAddress,
-        sign_type: signType,
-        image_url: null,
-        referrer_code: referrerCode,
-        status: 'pending'
-      }]).then(({ error }) => {
-        if (error) console.error('Supabase Sync Error:', error.message);
-      });
+    if (window.SupabaseSync) {
+      window.SupabaseSync.upsertApplication(newApp);
     }
 
     // 추천 코드 자동 연동 (방안 A)
@@ -1766,7 +1753,6 @@ function initAuthAndDashboard() {
     const phone = document.getElementById('find-pw-phone').value.trim();
     const result = document.getElementById('find-pw-result');
     const resetGroup = document.getElementById('find-pw-reset-group');
-
     foundPwUser = users.find(u => u.id === id && u.phone === phone && !u.isSNS);
     result.style.display = 'block';
     resetGroup.style.display = 'none';
@@ -2013,7 +1999,7 @@ function initAuthAndDashboard() {
   };
 
   // Signup Submit
-  signupForm.addEventListener('submit', () => {
+  signupForm.addEventListener('submit', async () => {
     const idVal = signupIdInput.value.trim();
     const pwVal = signupPwInput.value;
     const nameVal = escapeHtml(signupNameInput.value.trim());
@@ -2089,19 +2075,8 @@ function initAuthAndDashboard() {
     localStorage.setItem('users', JSON.stringify(users));
 
     // Supabase Sync
-    if (window.supabaseClient) {
-      window.supabaseClient.from('users').insert([{
-        id: idVal,
-        name: nameVal,
-        email: emailVal,
-        phone: phoneVal,
-        role: 'normal',
-        biz_code: null,
-        conversion_status: 'none',
-        password_hash: sha256(pwVal)
-      }]).then(({ error }) => {
-        if (error) console.error('Supabase Sync Error:', error.message);
-      });
+    if (window.SupabaseSync) {
+      await window.SupabaseSync.upsertUser(newUser);
     }
 
     // Auto Login
@@ -2131,31 +2106,34 @@ function initAuthAndDashboard() {
           .from('users')
           .select('*')
           .eq('id', idVal)
-          .eq('password_hash', hashedPassword)
           .maybeSingle();
 
-        if (error) {
-          console.error('Supabase login error:', error.message);
-          // DB 실패 시 로컬 스토리지 대조
+        if (!error && data) {
+          const localUser = users.find(u => u.id === idVal && u.pw === hashedPassword);
+          if (data.password_hash) {
+            if (data.password_hash === hashedPassword) {
+              user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : sanitizeUser(data);
+            }
+          } else if (localUser) {
+            user = sanitizeUser(localUser);
+            if (window.SupabaseSync) {
+              window.SupabaseSync.updateUser(idVal, { password_hash: hashedPassword });
+            }
+          } else {
+            user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : sanitizeUser(data);
+          }
+        } else if (error) {
           const localUser = users.find(u => u.id === idVal && u.pw === hashedPassword);
           if (localUser) user = sanitizeUser(localUser);
-        } else if (data) {
-          user = {
-            id: data.id,
-            name: data.name,
-            email: data.email,
-            phone: data.phone,
-            role: data.role || 'normal',
-            bizCode: data.biz_code,
-            conversionStatus: data.conversion_status || 'none'
-          };
         }
       } catch (err) {
-        console.error(err);
+        console.error('Login Supabase error:', err);
         const localUser = users.find(u => u.id === idVal && u.pw === hashedPassword);
         if (localUser) user = sanitizeUser(localUser);
       }
-    } else {
+    }
+
+    if (!user) {
       // 2. 로컬 스토리지 로그인
       const localUser = users.find(u => u.id === idVal && u.pw === hashedPassword);
       if (localUser) user = sanitizeUser(localUser);

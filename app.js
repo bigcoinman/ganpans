@@ -720,11 +720,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('activeUser', JSON.stringify(activeUser));
                 
                 // Supabase Sync
-                if (window.supabaseClient) {
-                    window.supabaseClient.from('users').update({
+                if (window.SupabaseSync) {
+                    window.SupabaseSync.updateUser(activeUser.id, {
                         conversion_status: 'pending'
-                    }).eq('id', activeUser.id).then(({ error }) => {
-                        if (error) console.error('Supabase conversion update error:', error.message);
                     });
                 }
 
@@ -790,13 +788,11 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('activeUser', JSON.stringify(activeUser));
 
             // Supabase Sync
-            if (window.supabaseClient) {
-                window.supabaseClient.from('users').update({
+            if (window.SupabaseSync) {
+                window.SupabaseSync.updateUser(activeUser.id, {
                     conversion_status: 'pending_constructor',
                     pending_business_name: bName,
                     pending_license_number: lNum
-                }).eq('id', activeUser.id).then(({ error }) => {
-                    if (error) console.error('Supabase constructor conversion update error:', error.message);
                 });
             }
 
@@ -1256,101 +1252,19 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAdminDashboardMob();
     };
 
-    let isMobSyncing = false;
+    // --- Supabase 실시간 양방향 데이터 동기화 리스너 (모바일) ---
+    window.addEventListener('supabase-data-synced', (e) => {
+        users = JSON.parse(localStorage.getItem('users')) || [];
+        applications = JSON.parse(localStorage.getItem('applications')) || [];
+        activeUser = getActiveUser() || null;
+        updateDrawerProfile();
+        updateHeaderAuthButton();
+        renderStatusTab();
+    });
+
     async function syncAdminDataFromSupabaseMob() {
-        if (!window.supabaseClient || isMobSyncing) return;
-        isMobSyncing = true;
-        try {
-            const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
-            if (!usersErr && supaUsers && supaUsers.length > 0) {
-                let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
-                let updated = false;
-
-                supaUsers.forEach(su => {
-                    const localIdx = currentUsers.findIndex(u => u.id === su.id);
-                    const mappedUser = {
-                        id: su.id,
-                        name: su.name,
-                        phone: su.phone,
-                        email: su.email || '',
-                        address: su.address || '',
-                        role: su.role || 'client',
-                        bizCode: su.biz_code || null,
-                        constCode: su.const_code || null,
-                        conversionStatus: su.conversion_status || 'none',
-                        pendingBusinessName: su.pending_business_name || '',
-                        pendingLicenseNumber: su.pending_license_number || '',
-                        items: su.items || []
-                    };
-
-                    if (localIdx === -1) {
-                        currentUsers.push(mappedUser);
-                        updated = true;
-                    } else {
-                        const cur = currentUsers[localIdx];
-                        if (cur.conversionStatus !== mappedUser.conversionStatus || 
-                            cur.role !== mappedUser.role || 
-                            cur.pendingBusinessName !== mappedUser.pendingBusinessName) {
-                            currentUsers[localIdx] = { ...cur, ...mappedUser };
-                            updated = true;
-                        }
-                    }
-                });
-
-                if (updated) {
-                    localStorage.setItem('users', JSON.stringify(currentUsers));
-                    users = currentUsers;
-                    renderAdminSubPanels();
-                }
-            }
-
-            // Sync applications
-            const { data: supaApps, error: appsErr } = await window.supabaseClient.from('applications').select('*');
-            if (!appsErr && supaApps && supaApps.length > 0) {
-                let currentApps = JSON.parse(localStorage.getItem('applications')) || [];
-                let appUpdated = false;
-
-                supaApps.forEach(sa => {
-                    const localIdx = currentApps.findIndex(a => String(a.id) === String(sa.id));
-                    const mappedApp = {
-                        id: sa.id,
-                        userId: sa.user_id,
-                        ownerName: sa.owner_name,
-                        ownerPhone: sa.phone,
-                        storeName: sa.store_name,
-                        storeAddress: sa.store_address,
-                        signType: sa.sign_type,
-                        fileName: sa.image_url || '현장사진',
-                        appliedAt: sa.created_at || sa.applied_at || new Date().toISOString(),
-                        status: sa.status || 'pending',
-                        referrerCode: sa.referrer_code || '',
-                        assignedConstructorId: sa.assigned_constructor_id || '',
-                        assignedConstructorName: sa.assigned_constructor_name || '',
-                        constructionStatus: sa.construction_status || 'none'
-                    };
-
-                    if (localIdx === -1) {
-                        currentApps.push(mappedApp);
-                        appUpdated = true;
-                    } else {
-                        if (currentApps[localIdx].status !== mappedApp.status || 
-                            currentApps[localIdx].constructionStatus !== mappedApp.constructionStatus) {
-                            currentApps[localIdx] = { ...currentApps[localIdx], ...mappedApp };
-                            appUpdated = true;
-                        }
-                    }
-                });
-
-                if (appUpdated) {
-                    localStorage.setItem('applications', JSON.stringify(currentApps));
-                    applications = currentApps;
-                    renderAdminSubPanels();
-                }
-            }
-        } catch (err) {
-            console.warn('⚠️ 모바일 Supabase 동기화 오류:', err);
-        } finally {
-            isMobSyncing = false;
+        if (window.SupabaseSync) {
+            await window.SupabaseSync.syncAllData();
         }
     }
 
@@ -1956,15 +1870,13 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('users', JSON.stringify(users));
 
         // Supabase Sync
-        if (window.supabaseClient) {
-            window.supabaseClient.from('users').update({
+        if (window.SupabaseSync) {
+            window.SupabaseSync.updateUser(uid, {
                 role: 'constructor',
                 const_code: code,
-                business_name: targetUser?.pendingBusinessName || '(주)새로운시공',
-                license_number: targetUser?.pendingLicenseNumber || '000-00-00000',
+                pending_business_name: targetUser?.pendingBusinessName || '(주)새로운시공',
+                pending_license_number: targetUser?.pendingLicenseNumber || '000-00-00000',
                 conversion_status: 'approved'
-            }).eq('id', uid).then(({ error }) => {
-                if (error) console.error('Supabase constructor conversion error:', error.message);
             });
         }
 
@@ -1983,13 +1895,11 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('users', JSON.stringify(users));
 
         // Supabase Sync
-        if (window.supabaseClient) {
-            window.supabaseClient.from('users').update({
+        if (window.SupabaseSync) {
+            window.SupabaseSync.updateUser(uid, {
                 role: 'business',
                 biz_code: code,
                 conversion_status: 'approved'
-            }).eq('id', uid).then(({ error }) => {
-                if (error) console.error('Supabase conversion approve error:', error.message);
             });
         }
 
@@ -2008,6 +1918,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return u;
         });
         localStorage.setItem('users', JSON.stringify(users));
+
+        if (window.SupabaseSync) {
+            window.SupabaseSync.updateUser(uid, {
+                conversion_status: 'none'
+            });
+        }
+
         alert('신청이 반려되었습니다.');
         renderStatusTab();
     }
@@ -2029,6 +1946,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         localStorage.setItem('applications', JSON.stringify(applications));
+
+        if (window.SupabaseSync) {
+            window.SupabaseSync.updateApplication(appId, {
+                assigned_constructor_id: constructorId,
+                assigned_constructor_name: constUser.businessName,
+                construction_status: 'before_construction'
+            });
+        }
+
         alert(`시공업체 [${constUser.businessName}]가 성공적으로 배정되었습니다.`);
         renderStatusTab();
     }
@@ -2052,6 +1978,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return a;
             });
             localStorage.setItem('applications', JSON.stringify(applications));
+
+            if (window.SupabaseSync) {
+                window.SupabaseSync.updateApplication(id, {
+                    construction_status: 'completed'
+                });
+            }
+
             alert('공사 증빙 검수가 통과되어 최종 정산 종결 처리되었습니다.');
             renderStatusTab();
         }
@@ -2061,6 +1994,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm('정말로 이 지원 신청 접수 건을 삭제하시겠습니까?')) return;
         applications = applications.filter(app => app.id !== id);
         localStorage.setItem('applications', JSON.stringify(applications));
+
+        if (window.SupabaseSync) {
+            window.SupabaseSync.deleteApplication(id);
+        }
+
         renderStatusTab();
     }
 
@@ -2072,6 +2010,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return app;
         });
         localStorage.setItem('applications', JSON.stringify(applications));
+
+        if (window.SupabaseSync) {
+            window.SupabaseSync.updateApplication(id, {
+                status: newStatus
+            });
+        }
+
         alert(`신청 건이 [${newStatus === 'approved' ? '승인' : '반려'}] 처리되었습니다.`);
         renderStatusTab();
     }
@@ -2098,13 +2043,11 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('users', JSON.stringify(users));
 
         // Supabase DB Sync
-        if (window.supabaseClient) {
+        if (window.SupabaseSync) {
             const updatedUser = users.find(u => String(u.id) === String(uid));
             if (updatedUser) {
-                window.supabaseClient.from('users').update({
+                window.SupabaseSync.updateUser(uid, {
                     items: updatedUser.items || []
-                }).eq('id', uid).then(({ error }) => {
-                    if (error) console.error('Supabase status update mob error:', error.message);
                 });
             }
         }
@@ -2140,18 +2083,14 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('users', JSON.stringify(users));
 
         // Supabase DB Sync
-        if (window.supabaseClient) {
+        if (window.SupabaseSync) {
             const updatedUser = users.find(u => String(u.id) === String(uid));
             if (updatedUser) {
-                window.supabaseClient.from('users').update({
+                window.SupabaseSync.updateUser(uid, {
                     items: updatedUser.items || []
-                }).eq('id', uid).then(({ error }) => {
-                    if (error) console.error('Supabase item deletion mob error:', error.message);
                 });
             }
-            window.supabaseClient.from('applications').delete().eq('id', itemId).then(({ error }) => {
-                if (error) console.log('Notice: Item not in applications table');
-            });
+            window.SupabaseSync.deleteApplication(itemId);
         }
 
         alert(`[${targetItemName}] 영업 물건이 안전하게 삭제되었습니다.`);
@@ -2717,6 +2656,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         localStorage.setItem('users', JSON.stringify(users));
                         localStorage.setItem('activeUser', JSON.stringify(activeUser));
                         
+                        if (window.SupabaseSync) {
+                            window.SupabaseSync.updateUser(activeUser.id, {
+                                conversion_status: 'pending'
+                            });
+                        }
+
+                        if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyBusinessConversion === 'function') {
+                            window.KakaoNotifier.notifyBusinessConversion(activeUser);
+                        }
+
                         alert('회원 전환 신청이 접수되었습니다. 최고관리자(admin) 계정 로그인 승인 후 영업코드가 정상 발급됩니다.');
                         renderStatusTab();
                         updateDrawerProfile();
@@ -2756,6 +2705,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     localStorage.setItem('users', JSON.stringify(users));
                     localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+                    if (window.SupabaseSync) {
+                        window.SupabaseSync.updateUser(activeUser.id, {
+                            conversion_status: 'pending_constructor',
+                            pending_business_name: bName,
+                            pending_license_number: lNum
+                        });
+                    }
+
+                    if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyConstructorConversion === 'function') {
+                        window.KakaoNotifier.notifyConstructorConversion(activeUser);
+                    }
 
                     alert('시공업체 가입 신청이 정상 완료되었습니다.\n최고관리자 승인 시 정식 코드가 부여됩니다.');
                     renderStatusTab();

@@ -244,141 +244,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Supabase 실시간 데이터 백그라운드 동기화
-    syncAdminDataFromSupabase();
+    if (window.SupabaseSync) {
+      window.SupabaseSync.syncAllData();
+    }
   };
 
-  // --- Supabase 실시간 양방향 데이터 동기화 (타 기기/모바일 가입 및 신청건 실시간 패치) ---
+  // --- Supabase 실시간 양방향 데이터 동기화 리스너 ---
+  window.addEventListener('supabase-data-synced', (e) => {
+    users = JSON.parse(localStorage.getItem('users')) || [];
+    applications = JSON.parse(localStorage.getItem('applications')) || [];
+    
+    // 현재 세션 유저 정보 갱신
+    if (activeUser) {
+      const refreshedActive = users.find(u => u.id === activeUser.id);
+      if (refreshedActive) {
+        activeUser = sanitizeUser(refreshedActive);
+        if (localStorage.getItem('activeUser')) {
+          localStorage.setItem('activeUser', JSON.stringify(activeUser));
+        } else if (sessionStorage.getItem('activeUser')) {
+          sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+        }
+      }
+    }
+
+    if (activeUser && activeUser.role === 'admin') {
+      renderAllUsersList();
+      renderManagerPanel();
+      renderAdminStats();
+      renderApplicationsList();
+      renderInquiriesList();
+    } else if (activeUser && activeUser.role === 'business') {
+      renderBusinessDashboard();
+    } else if (activeUser && activeUser.role === 'constructor') {
+      renderConstructorDashboard();
+    } else if (activeUser) {
+      renderUserApplicationsList();
+    }
+  });
+
   const syncAdminDataFromSupabase = async () => {
-    if (!window.supabaseClient) return;
-
-    try {
-      // 1. Supabase에서 전체 회원 데이터 가져오기
-      const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
-      if (!usersErr && supaUsers && supaUsers.length > 0) {
-        let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
-        let updated = false;
-
-        supaUsers.forEach(su => {
-          const localIdx = currentUsers.findIndex(u => u.id === su.id);
-          const mappedUser = {
-            id: su.id,
-            name: su.name,
-            phone: su.phone,
-            email: su.email || '',
-            address: su.address || '',
-            role: su.role || 'client',
-            bizCode: su.biz_code || null,
-            constCode: su.const_code || null,
-            conversionStatus: su.conversion_status || 'none',
-            pendingBusinessName: su.pending_business_name || '',
-            pendingLicenseNumber: su.pending_license_number || '',
-            items: su.items || []
-          };
-
-          if (localIdx === -1) {
-            // 로컬에 없는 신규 가입자 추가
-            currentUsers.push(mappedUser);
-            updated = true;
-          } else {
-            // 기존 유저의 전환 상태나 역할이 변경된 경우 갱신
-            const cur = currentUsers[localIdx];
-            if (cur.conversionStatus !== mappedUser.conversionStatus || 
-                cur.role !== mappedUser.role || 
-                cur.pendingBusinessName !== mappedUser.pendingBusinessName) {
-              currentUsers[localIdx] = { ...cur, ...mappedUser };
-              updated = true;
-            }
-          }
-        });
-
-        if (updated) {
-          users = currentUsers;
-          localStorage.setItem('users', JSON.stringify(users));
-          if (activeUser.role === 'admin') {
-            renderAllUsersList();
-            renderManagerPanel();
-            renderAdminStats();
-          }
-        }
-      }
-
-      // 2. Supabase에서 전체 지원 신청서 가져오기
-      const { data: supaApps, error: appsErr } = await window.supabaseClient.from('applications').select('*');
-      if (!appsErr && supaApps && supaApps.length > 0) {
-        let currentApps = JSON.parse(localStorage.getItem('applications')) || [];
-        let appUpdated = false;
-
-        supaApps.forEach(sa => {
-          const localIdx = currentApps.findIndex(a => String(a.id) === String(sa.id));
-          const mappedApp = {
-            id: sa.id,
-            userId: sa.user_id,
-            ownerName: sa.owner_name,
-            ownerPhone: sa.phone,
-            storeName: sa.store_name,
-            storeAddress: sa.store_address,
-            signType: sa.sign_type,
-            fileName: sa.image_url || '현장사진',
-            appliedAt: sa.created_at || sa.applied_at || new Date().toISOString(),
-            status: sa.status || 'pending',
-            referrerCode: sa.referrer_code || '',
-            assignedConstructorId: sa.assigned_constructor_id || '',
-            assignedConstructorName: sa.assigned_constructor_name || '',
-            constructionStatus: sa.construction_status || 'none'
-          };
-
-          if (localIdx === -1) {
-            currentApps.push(mappedApp);
-            appUpdated = true;
-          } else {
-            if (currentApps[localIdx].status !== mappedApp.status || 
-                currentApps[localIdx].constructionStatus !== mappedApp.constructionStatus) {
-              currentApps[localIdx] = { ...currentApps[localIdx], ...mappedApp };
-              appUpdated = true;
-            }
-          }
-        });
-
-        if (appUpdated) {
-          localStorage.setItem('applications', JSON.stringify(currentApps));
-          if (activeUser.role === 'admin') {
-            renderApplicationsList();
-          }
-        }
-      }
-
-      // 3. Supabase에서 간편 문의 목록 가져오기
-      try {
-        const { data: supaInq, error: inqErr } = await window.supabaseClient.from('inquiries').select('*');
-        if (!inqErr && supaInq && supaInq.length > 0) {
-          let currentInq = JSON.parse(localStorage.getItem('inquiries')) || [];
-          let inqUpdated = false;
-          supaInq.forEach(si => {
-            const localIdx = currentInq.findIndex(i => String(i.id) === String(si.id));
-            if (localIdx === -1) {
-              currentInq.push({
-                id: si.id,
-                name: si.name,
-                phone: si.phone,
-                type: si.type,
-                message: si.message,
-                status: si.status || 'pending',
-                submittedAt: si.created_at || si.submitted_at || new Date().toISOString()
-              });
-              inqUpdated = true;
-            }
-          });
-          if (inqUpdated) {
-            localStorage.setItem('inquiries', JSON.stringify(currentInq));
-            if (activeUser.role === 'admin') {
-              renderInquiriesList();
-            }
-          }
-        }
-      } catch (e) {}
-
-    } catch (err) {
-      console.warn('⚠️ Supabase 동기화 처리 알림:', err);
+    if (window.SupabaseSync) {
+      await window.SupabaseSync.syncAllData();
     }
   };
 
@@ -461,11 +367,9 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('activeUser', JSON.stringify(activeUser));
 
         // Supabase Sync
-        if (window.supabaseClient) {
-          window.supabaseClient.from('users').update({
+        if (window.SupabaseSync) {
+          window.SupabaseSync.updateUser(activeUser.id, {
             conversion_status: 'pending'
-          }).eq('id', activeUser.id).then(({ error }) => {
-            if (error) console.error('Supabase conversion update error:', error.message);
           });
         }
 
@@ -523,13 +427,11 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('activeUser', JSON.stringify(activeUser));
 
       // Supabase Sync
-      if (window.supabaseClient) {
-        window.supabaseClient.from('users').update({
+      if (window.SupabaseSync) {
+        window.SupabaseSync.updateUser(activeUser.id, {
           conversion_status: 'pending_constructor',
           pending_business_name: bName,
           pending_license_number: lNum
-        }).eq('id', activeUser.id).then(({ error }) => {
-          if (error) console.error('Supabase constructor conversion update error:', error.message);
         });
       }
 
@@ -1196,10 +1098,8 @@ document.addEventListener('DOMContentLoaded', () => {
         curUsers = curUsers.filter(u => u.id !== uid);
         localStorage.setItem('users', JSON.stringify(curUsers));
 
-        if (window.supabaseClient) {
-          window.supabaseClient.from('users').delete().eq('id', uid).then(({ error }) => {
-            if (error) console.error('Supabase user delete error:', error.message);
-          });
+        if (window.SupabaseSync) {
+          window.SupabaseSync.deleteUser(uid);
         }
 
         alert(`회원 [${uid}]이(가) 정상적으로 탈퇴/삭제되었습니다.`);
@@ -1449,15 +1349,13 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('users', JSON.stringify(users));
 
       // Supabase Sync
-      if (window.supabaseClient) {
-        window.supabaseClient.from('users').update({
+      if (window.SupabaseSync) {
+        window.SupabaseSync.updateUser(uid, {
           role: 'constructor',
           const_code: code,
-          business_name: targetUser.pendingBusinessName || '(주)새로운시공',
-          license_number: targetUser.pendingLicenseNumber || '000-00-00000',
+          pending_business_name: targetUser.pendingBusinessName || '(주)새로운시공',
+          pending_license_number: targetUser.pendingLicenseNumber || '000-00-00000',
           conversion_status: 'approved'
-        }).eq('id', uid).then(({ error }) => {
-          if (error) console.error('Supabase constructor conversion error:', error.message);
         });
       }
 
@@ -1478,13 +1376,11 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('users', JSON.stringify(users));
 
       // Supabase Sync
-      if (window.supabaseClient) {
-        window.supabaseClient.from('users').update({
+      if (window.SupabaseSync) {
+        window.SupabaseSync.updateUser(uid, {
           role: 'business',
           biz_code: code,
           conversion_status: 'approved'
-        }).eq('id', uid).then(({ error }) => {
-          if (error) console.error('Supabase conversion approve error:', error.message);
         });
       }
 
@@ -1507,6 +1403,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     localStorage.setItem('users', JSON.stringify(users));
+
+    if (window.SupabaseSync) {
+      window.SupabaseSync.updateUser(uid, {
+        conversion_status: 'none'
+      });
+    }
+
     alert('전환 신청이 반려되었습니다.');
     updateSessionUI();
   };
@@ -1534,13 +1437,11 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('users', JSON.stringify(users));
 
     // Supabase DB Sync
-    if (window.supabaseClient) {
+    if (window.SupabaseSync) {
       const updatedUser = users.find(u => String(u.id) === String(uid));
       if (updatedUser) {
-        window.supabaseClient.from('users').update({
+        window.SupabaseSync.updateUser(uid, {
           items: updatedUser.items || []
-        }).eq('id', uid).then(({ error }) => {
-          if (error) console.error('Supabase status update error:', error.message);
         });
       }
     }
