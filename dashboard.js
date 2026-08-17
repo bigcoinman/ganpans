@@ -2079,6 +2079,28 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
       </div>`;
 
+      // 영업담당자 이름 매칭 (예: 김만석영업자)
+      let bizUserName = '';
+      const curUsersList = JSON.parse(localStorage.getItem('users')) || users || [];
+      if (app.referrerCode) {
+        const matchedUser = curUsersList.find(u => u.bizCode === app.referrerCode || u.id === app.referrerCode);
+        if (matchedUser && matchedUser.name) {
+          bizUserName = `${matchedUser.name}영업자`;
+        }
+      }
+      if (!bizUserName && app.userId) {
+        const matchedUser = curUsersList.find(u => u.id === app.userId && (u.role === 'business' || u.bizCode));
+        if (matchedUser && matchedUser.name) {
+          bizUserName = `${matchedUser.name}영업자`;
+        }
+      }
+      if (!bizUserName && app.referrerCode) {
+        bizUserName = `${app.referrerCode}영업자`;
+      }
+      if (!bizUserName) {
+        bizUserName = '본사직접접수';
+      }
+
       tr.innerHTML = `
         <td style="padding: 14px 16px; color: var(--text-secondary); font-family: monospace; white-space: nowrap;">${dateText}</td>
         <td style="padding: 14px 16px; font-weight: 600; color: var(--text-primary);">
@@ -2089,7 +2111,14 @@ document.addEventListener('DOMContentLoaded', () => {
           ${escapeHtml(app.storeName)}
           <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(app.storeAddress)}</div>
         </td>
-        <td style="padding: 14px 16px; white-space: nowrap;"><span style="font-weight: 700; color: var(--accent-primary); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">${escapeHtml(app.signType === 'NEON' || app.signType === 'neon' || !app.signType ? '플렉스' : app.signType)}</span></td>
+        <td style="padding: 14px 16px; white-space: nowrap;">
+          <div style="font-weight: 700; color: ${bizUserName === '본사직접접수' ? '#64748b' : 'var(--accent-primary)'}; font-size: 0.85rem; display: flex; align-items: center; gap: 4px;">
+            <i class="fa-solid ${bizUserName === '본사직접접수' ? 'fa-building' : 'fa-user-tie'}" style="color: ${bizUserName === '본사직접접수' ? '#94a3b8' : 'var(--accent-secondary)'}; font-size: 0.82rem;"></i> ${escapeHtml(bizUserName)}
+          </div>
+          <div style="font-family: monospace; font-size: 0.76rem; font-weight: 600; color: #475569; margin-top: 3px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; display: inline-block; border: 1px solid #e2e8f0;">
+            ${escapeHtml(String(app.id || ''))}
+          </div>
+        </td>
         <td style="padding: 14px 16px; color: var(--text-secondary); max-width: 160px;">
           ${(() => {
             const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '');
