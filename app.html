@@ -39,8 +39,8 @@
     <!-- FontAwesome Icons & Outfit Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Load PC styles first, then mobile overrides -->
-    <link rel="stylesheet" href="style.css?v=20260817_1630">
-    <link rel="stylesheet" href="app.css?v=20260817_1630">
+    <link rel="stylesheet" href="style.css?v=20260817_1635">
+    <link rel="stylesheet" href="app.css?v=20260817_1635">
 </head>
 
 <body class="mobile-app-body">
@@ -1376,60 +1376,60 @@
                     <div id="admin-panel-popups-mob" class="admin-panel-view-mob" style="display: none;">
                         <!-- Popup Form -->
                         <div class="glass-panel" style="padding: 15px; margin-bottom: 15px; text-align: left; background: var(--bg-card); border-radius: 8px;">
-                            <h5 id="mob-popup-form-title" style="margin-bottom: 10px; color: var(--accent-primary);"><i class="fa-solid fa-plus"></i> 신규 팝업창 등록</h5>
+                            <h5 id="mob-popup-form-title" style="margin-bottom: 12px; color: var(--accent-primary); font-size: 1.02rem;"><i class="fa-solid fa-plus"></i> 신규 팝업창 등록</h5>
                             <form id="mob-popup-form" onsubmit="event.preventDefault();">
                                 <input type="hidden" id="mob-popup-id">
-                                <div class="phone-form-group" style="margin-bottom: 8px;">
-                                    <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">팝업 제목</label>
-                                    <input type="text" id="mob-popup-title" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" required placeholder="예: 사업 공고">
+                                <div class="phone-form-group" style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">팝업 제목</label>
+                                    <input type="text" id="mob-popup-title" class="form-input-auth" style="font-size: 0.9rem; padding: 8px 10px;" required placeholder="예: 사업 공고">
                                 </div>
-                                <div class="phone-form-group" style="margin-bottom: 8px;">
-                                    <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">팝업 내용</label>
-                                    <textarea id="mob-popup-content" class="form-input-auth" style="font-size: 0.75rem; padding: 6px; min-height: 60px;" required placeholder="팝업 상세내용"></textarea>
+                                <div class="phone-form-group" style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">팝업 내용</label>
+                                    <textarea id="mob-popup-content" class="form-input-auth" style="font-size: 0.9rem; padding: 8px 10px; min-height: 70px;" required placeholder="팝업 상세내용"></textarea>
                                 </div>
-                                <div class="phone-form-group" style="margin-bottom: 8px;">
-                                    <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">이미지 URL</label>
-                                    <input type="text" id="mob-popup-image" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" placeholder="https://picsum.photos/id/101/400/200">
+                                <div class="phone-form-group" style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">이미지 URL</label>
+                                    <input type="text" id="mob-popup-image" class="form-input-auth" style="font-size: 0.9rem; padding: 8px 10px;" placeholder="https://picsum.photos/id/101/400/200">
                                 </div>
-                                <div class="phone-form-group" style="margin-bottom: 8px;">
-                                    <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">링크 URL</label>
-                                    <input type="text" id="mob-popup-link" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" placeholder="#apply-section">
+                                <div class="phone-form-group" style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">링크 URL</label>
+                                    <input type="text" id="mob-popup-link" class="form-input-auth" style="font-size: 0.9rem; padding: 8px 10px;" placeholder="#apply-section">
                                 </div>
-                                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
                                     <div style="flex: 1;">
-                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">시작일</label>
-                                        <input type="date" id="mob-popup-start" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" required>
+                                        <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">시작일</label>
+                                        <input type="date" id="mob-popup-start" class="form-input-auth" style="font-size: 0.9rem; padding: 8px 10px;" required>
                                     </div>
                                     <div style="flex: 1;">
-                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">종료일</label>
-                                        <input type="date" id="mob-popup-end" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" required>
+                                        <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">종료일</label>
+                                        <input type="date" id="mob-popup-end" class="form-input-auth" style="font-size: 0.9rem; padding: 8px 10px;" required>
                                     </div>
                                 </div>
-                                <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
                                     <div style="flex: 1; min-width: 40%;">
-                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">가로 크기 (px)</label>
-                                        <input type="number" id="mob-popup-width" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" value="380">
+                                        <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">가로 크기 (px)</label>
+                                        <input type="number" id="mob-popup-width" class="form-input-auth" style="font-size: 0.9rem; padding: 8px 10px;" value="380">
                                     </div>
                                     <div style="flex: 1; min-width: 40%;">
-                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">세로 크기 (px)</label>
-                                        <input type="number" id="mob-popup-height" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" value="480">
+                                        <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">세로 크기 (px)</label>
+                                        <input type="number" id="mob-popup-height" class="form-input-auth" style="font-size: 0.9rem; padding: 8px 10px;" value="480">
                                     </div>
                                     <div style="flex: 1; min-width: 40%;">
-                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">상단 위치 (px)</label>
-                                        <input type="number" id="mob-popup-top" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" value="120">
+                                        <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">상단 위치 (px)</label>
+                                        <input type="number" id="mob-popup-top" class="form-input-auth" style="font-size: 0.9rem; padding: 8px 10px;" value="120">
                                     </div>
                                     <div style="flex: 1; min-width: 40%;">
-                                        <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">좌측 위치 (px)</label>
-                                        <input type="number" id="mob-popup-left" class="form-input-auth" style="font-size: 0.75rem; padding: 6px;" value="100">
+                                        <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 4px;">좌측 위치 (px)</label>
+                                        <input type="number" id="mob-popup-left" class="form-input-auth" style="font-size: 0.9rem; padding: 8px 10px;" value="100">
                                     </div>
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                                    <input type="checkbox" id="mob-popup-active" checked style="width: 16px; height: 16px;">
-                                    <label for="mob-popup-active" style="font-size: 0.75rem; font-weight: 700; cursor: pointer;">팝업 활성화 상태로 등록</label>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+                                    <input type="checkbox" id="mob-popup-active" checked style="width: 18px; height: 18px;">
+                                    <label for="mob-popup-active" style="font-size: 0.9rem; font-weight: 700; cursor: pointer;">팝업 활성화 상태로 등록</label>
                                 </div>
                                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                                    <button type="button" id="btn-mob-popup-reset" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;">초기화</button>
-                                    <button type="submit" class="btn btn-primary" style="padding: 6px 16px; font-size: 0.75rem;">저장하기</button>
+                                    <button type="button" id="btn-mob-popup-reset" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.88rem;">초기화</button>
+                                    <button type="submit" class="btn btn-primary" style="padding: 8px 18px; font-size: 0.88rem;">저장하기</button>
                                 </div>
                             </form>
                         </div>
@@ -2185,13 +2185,13 @@
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Security utilities & Core App logic -->
-    <script src="supabase-config.js?v=20260817_1630"></script>
-    <script src="security-utils.js?v=20260817_1630"></script>
-    <script src="kakao-notify.js?v=20260817_1630"></script>
+    <script src="supabase-config.js?v=20260817_1635"></script>
+    <script src="security-utils.js?v=20260817_1635"></script>
+    <script src="kakao-notify.js?v=20260817_1635"></script>
     <!-- Load PC JavaScript first to run interactive components -->
-    <script src="script.js?v=20260817_1630"></script>
+    <script src="script.js?v=20260817_1635"></script>
     <!-- Load mobile drawer, tab, dashboard scripts -->
-    <script src="app.js?v=20260817_1630"></script>
+    <script src="app.js?v=20260817_1635"></script>
 </body>
 
 </html>

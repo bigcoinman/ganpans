@@ -1615,37 +1615,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         const card = document.createElement('div');
                         card.className = 'admin-req-card-mob';
                         card.style.background = '#f8fafc';
-                        card.style.padding = '12px';
-                        card.style.borderRadius = '8px';
+                        card.style.padding = '14px';
+                        card.style.borderRadius = '10px';
                         card.style.border = '1px solid var(--border-color)';
-                        card.style.marginBottom = '8px';
+                        card.style.marginBottom = '12px';
                         card.style.textAlign = 'left';
                         
                         card.innerHTML = `
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <div style="font-size: 0.85rem; font-weight: bold; color: var(--text-primary);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div style="font-size: 1.02rem; font-weight: bold; color: var(--text-primary);">
                                     ${escapeHtml(item.name)} 
-                                    <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-secondary);">(${escapeHtml(u.name)} 영업자 / ${escapeHtml(String(item.id))})</span>
+                                    <span style="font-size: 0.86rem; font-weight: normal; color: var(--text-secondary);">(${escapeHtml(u.name)} 영업자 / ${escapeHtml(String(item.id))})</span>
                                 </div>
-                                <button type="button" onclick="window.deleteManagerItemMob('${u.id}', '${item.id}'); return false;" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+                                <button type="button" onclick="window.deleteManagerItemMob('${u.id}', '${item.id}'); return false;" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 0.84rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
                                     <i class="fa-solid fa-trash-can"></i> 삭제
                                 </button>
                             </div>
-                            <div style="font-size: 0.72rem; color: var(--text-secondary);"><i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> 주소: ${escapeHtml(item.address)}</div>
-                            ${item.phone ? `<div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-phone" style="color: #64748b;"></i> 연락처: ${escapeHtml(item.phone)}</div>` : ''}
+                            <div style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.4;"><i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> 주소: <span style="color: #475569;">${escapeHtml(item.address)}</span></div>
+                            ${item.phone ? `<div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 3px;"><i class="fa-solid fa-phone" style="color: #64748b;"></i> 연락처: <strong style="color: var(--accent-primary);">${escapeHtml(item.phone)}</strong></div>` : ''}
                             
-                            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px dashed #e2e8f0;">
-                                <div style="display:flex; align-items:center; gap: 4px;">
-                                    <span style="font-size: 0.72rem; font-weight: 700; width: 45px; color: #475569;">접수:</span>
-                                    <select class="status-select-mob select-receipt-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 4px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
+                            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                                <div style="display:flex; align-items:center; gap: 6px;">
+                                    <span style="font-size: 0.88rem; font-weight: 700; width: 50px; color: #475569;">접수:</span>
+                                    <select class="status-select-mob select-receipt-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
                                         <option value="업체신청" ${(item.receiptStatus === '업체신청') ? 'selected' : ''}>업체신청</option>
                                         <option value="접수예정" ${(item.receiptStatus === '접수예정' || !item.receiptStatus || item.receiptStatus === '접수 대기') ? 'selected' : ''}>접수예정</option>
                                         <option value="접수완료" ${(item.receiptStatus === '접수완료' || item.receiptStatus === '접수 완료' || item.receiptStatus.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
                                     </select>
                                 </div>
-                                <div style="display:flex; align-items:center; gap: 4px;">
-                                    <span style="font-size: 0.72rem; font-weight: 700; width: 45px; color: #475569;">진행:</span>
-                                    <select class="status-select-mob select-progress-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 4px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
+                                <div style="display:flex; align-items:center; gap: 6px;">
+                                    <span style="font-size: 0.88rem; font-weight: 700; width: 50px; color: #475569;">진행:</span>
+                                    <select class="status-select-mob select-progress-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
                                         <option value="지원대기중" ${(item.progressStatus === '지원대기중' || !item.progressStatus || item.progressStatus === '심사 대기') ? 'selected' : ''}>지원대기중</option>
                                         <option value="심사대기" ${(item.progressStatus === '심사대기' || item.progressStatus === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
                                         <option value="대상자선정" ${(item.progressStatus === '대상자선정' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
@@ -1661,7 +1661,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!hasItems) {
-                itemsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">등록된 영업물건이 없습니다.</p>';
+                itemsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.92rem;">등록된 영업물건이 없습니다.</p>';
             }
         }
 
@@ -1671,7 +1671,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
             inquiriesList.innerHTML = '';
             if (inquiries.length === 0) {
-                inquiriesList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">접수된 3초 간편 문의 내역이 없습니다.</p>';
+                inquiriesList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.92rem;">접수된 3초 간편 문의 내역이 없습니다.</p>';
             } else {
                 const sortedInquiries = [...inquiries].sort((a, b) => {
                     const timeA = new Date(a.submittedAt || 0).getTime();
@@ -1691,35 +1691,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     const card = document.createElement('div');
                     card.className = 'admin-inquiry-card-mob';
                     card.style.background = '#ffffff';
-                    card.style.padding = '12px';
-                    card.style.borderRadius = '8px';
+                    card.style.padding = '14px';
+                    card.style.borderRadius = '10px';
                     card.style.border = '1px solid var(--border-color)';
-                    card.style.marginBottom = '10px';
+                    card.style.marginBottom = '12px';
 
                     const isResolved = inq.status === 'resolved';
                     const statusBadge = isResolved
-                        ? `<span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 9999px; font-weight: 700; font-size: 0.7rem;"><i class="fa-solid fa-circle-check"></i> 상담 완료</span>`
-                        : `<span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-weight: 700; font-size: 0.7rem;"><i class="fa-solid fa-clock"></i> 확인 대기</span>`;
+                        ? `<span style="background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.85rem;"><i class="fa-solid fa-circle-check"></i> 상담 완료</span>`
+                        : `<span style="background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.85rem;"><i class="fa-solid fa-clock"></i> 확인 대기</span>`;
 
                     const typeLabel = typeMap[inq.type] || inq.type || '일반 문의';
 
                     card.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                            <strong style="font-size: 0.85rem; color: var(--text-primary);">${escapeHtml(inq.name)}</strong>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                            <strong style="font-size: 1.05rem; color: var(--text-primary);">${escapeHtml(inq.name)}</strong>
                             ${statusBadge}
                         </div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">
+                        <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 6px;">
                             <a href="tel:${escapeHtml(inq.phone)}" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;"><i class="fa-solid fa-phone"></i> ${escapeHtml(inq.phone)}</a>
-                            <span style="margin-left: 6px; background: rgba(99,102,241,0.1); color: var(--accent-primary); padding: 1px 6px; border-radius: 4px; font-size: 0.68rem;">${escapeHtml(typeLabel)}</span>
+                            <span style="margin-left: 8px; background: rgba(99,102,241,0.1); color: var(--accent-primary); padding: 2px 8px; border-radius: 4px; font-size: 0.82rem; font-weight: 600;">${escapeHtml(typeLabel)}</span>
                         </div>
-                        <div style="font-size: 0.75rem; color: var(--text-primary); line-height: 1.4; margin-top: 6px; padding: 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #f1f5f9; word-break: break-word;">
+                        <div style="font-size: 0.92rem; color: var(--text-primary); line-height: 1.5; margin-top: 8px; padding: 10px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9; word-break: break-word;">
                             ${escapeHtml(inq.message)}
                         </div>
-                        <div class="admin-action-row-mob" style="display:flex; gap: 6px; justify-content: flex-end; margin-top: 8px;">
-                            <button class="btn btn-secondary btn-sm btn-toggle-inquiry-mob" data-id="${inq.id}" style="padding: 4px 8px; font-size: 0.65rem; background: ${isResolved ? '#f1f5f9' : 'var(--accent-success)'}; color: ${isResolved ? '#475569' : '#fff'}; border: 1px solid ${isResolved ? '#cbd5e1' : 'transparent'};">
+                        <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
+                            <button class="btn btn-secondary btn-sm btn-toggle-inquiry-mob" data-id="${inq.id}" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; background: ${isResolved ? '#f1f5f9' : 'var(--accent-success)'}; color: ${isResolved ? '#475569' : '#fff'}; border: 1px solid ${isResolved ? '#cbd5e1' : 'transparent'};">
                                 <i class="fa-solid ${isResolved ? 'fa-rotate-left' : 'fa-check'}"></i> ${isResolved ? '대기로 변경' : '상담 완료'}
                             </button>
-                            <button class="btn btn-secondary btn-sm btn-delete-inquiry-mob" data-id="${inq.id}" style="padding: 4px 8px; font-size: 0.65rem; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2;">
+                            <button class="btn btn-secondary btn-sm btn-delete-inquiry-mob" data-id="${inq.id}" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2;">
                                 <i class="fa-solid fa-trash-can"></i> 삭제
                             </button>
                         </div>
@@ -1765,32 +1765,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const popups = JSON.parse(localStorage.getItem('popups')) || [];
             popupsList.innerHTML = '';
             if (popups.length === 0) {
-                popupsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.75rem;">등록된 팝업창이 없습니다.</p>';
+                popupsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.92rem;">등록된 팝업창이 없습니다.</p>';
             } else {
                 popups.forEach(p => {
                     const card = document.createElement('div');
                     card.className = 'admin-req-card-mob';
                     card.style.background = '#f8fafc';
-                    card.style.padding = '12px';
-                    card.style.borderRadius = '8px';
+                    card.style.padding = '14px';
+                    card.style.borderRadius = '10px';
                     card.style.border = '1px solid var(--border-color)';
-                    card.style.marginBottom = '8px';
+                    card.style.marginBottom = '10px';
                     card.style.textAlign = 'left';
 
                     card.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                            <strong style="font-size: 0.8rem;">${escapeHtml(p.title)}</strong>
-                            <span style="font-size: 0.65rem; padding: 2px 6px; border-radius: 50px; background: ${p.isActive ? 'var(--accent-primary)' : '#64748b'}; color: white;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                            <strong style="font-size: 1.0rem; color: var(--text-primary);">${escapeHtml(p.title)}</strong>
+                            <span style="font-size: 0.82rem; padding: 3px 8px; border-radius: 50px; background: ${p.isActive ? 'var(--accent-primary)' : '#64748b'}; color: white; font-weight: 700;">
                                 ${p.isActive ? '활성화' : '비활성'}
                             </span>
                         </div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 8px;">
-                            기간: ${p.startDate} ~ ${p.endDate}
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px;">
+                            기간: <strong style="color: #475569;">${p.startDate} ~ ${p.endDate}</strong>
                         </div>
-                        <div class="admin-action-row-mob" style="display:flex; gap: 6px; justify-content: flex-end;">
-                            <button class="btn btn-secondary btn-sm btn-toggle-popup-mob" data-id="${p.id}" style="padding: 4px 6px; font-size: 0.65rem;">토글</button>
-                            <button class="btn btn-secondary btn-sm btn-edit-popup-mob" data-id="${p.id}" style="padding: 4px 6px; font-size: 0.65rem; color: var(--accent-primary); border-color: rgba(0,102,255,0.2);"><i class="fa-solid fa-pen"></i> 수정</button>
-                            <button class="btn btn-secondary btn-sm btn-delete-popup-mob" data-id="${p.id}" style="padding: 4px 6px; font-size: 0.65rem; color: rgba(239, 68, 68, 0.8); border-color: rgba(239, 68, 68, 0.2);"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+                        <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end;">
+                            <button class="btn btn-secondary btn-sm btn-toggle-popup-mob" data-id="${p.id}" style="padding: 5px 10px; font-size: 0.82rem; border-radius: 6px;">상태변경</button>
+                            <button class="btn btn-secondary btn-sm btn-edit-popup-mob" data-id="${p.id}" style="padding: 5px 10px; font-size: 0.82rem; border-radius: 6px; color: var(--accent-primary); border-color: rgba(0,102,255,0.2);"><i class="fa-solid fa-pen"></i> 수정</button>
+                            <button class="btn btn-secondary btn-sm btn-delete-popup-mob" data-id="${p.id}" style="padding: 5px 10px; font-size: 0.82rem; border-radius: 6px; color: rgba(239, 68, 68, 0.8); border-color: rgba(239, 68, 68, 0.2);"><i class="fa-solid fa-trash-can"></i> 삭제</button>
                         </div>
                     `;
                     popupsList.appendChild(card);
