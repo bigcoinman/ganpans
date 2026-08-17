@@ -2494,34 +2494,53 @@ function initPWA() {
 
 document.addEventListener('DOMContentLoaded', initPWA);
 
-// --- 8. Visitor Tracking Logic ---
-function initVisitorTracking() {
-  if (localStorage.getItem('visitor_total') === null) {
-    localStorage.setItem('visitor_total', '1420');
-  }
-  if (localStorage.getItem('visitor_today') === null) {
-    localStorage.setItem('visitor_today', '34');
-  }
-  if (localStorage.getItem('visitor_last_date') === null) {
-    localStorage.setItem('visitor_last_date', new Date().toISOString().split('T')[0]);
+// --- 8. Visitor Tracking Logic (실제 접속자 기준 통계) ---
+async function initVisitorTracking() {
+  const RESET_KEY = 'visitor_reset_flag_20260817';
+  
+  // 기존 하드코딩 가짜 수치(1420, 34 등) 초기화
+  if (localStorage.getItem(RESET_KEY) !== 'done') {
+    localStorage.removeItem('visitor_total');
+    localStorage.removeItem('visitor_today');
+    localStorage.removeItem('visitor_last_date');
+    localStorage.setItem(RESET_KEY, 'done');
   }
 
   const todayStr = new Date().toISOString().split('T')[0];
-  let totalCount = parseInt(localStorage.getItem('visitor_total')) || 1420;
-  let todayCount = parseInt(localStorage.getItem('visitor_today')) || 34;
+  let totalCount = parseInt(localStorage.getItem('visitor_total') || '0', 10);
+  let todayCount = parseInt(localStorage.getItem('visitor_today') || '0', 10);
   const lastDate = localStorage.getItem('visitor_last_date');
 
-  if (!sessionStorage.getItem('visitor_session_counted')) {
-    sessionStorage.setItem('visitor_session_counted', 'true');
-    totalCount++;
-    if (lastDate === todayStr) {
-      todayCount++;
-    } else {
-      todayCount = 1;
-      localStorage.setItem('visitor_last_date', todayStr);
-    }
+  // 날짜가 바뀌었으면 오늘의 방문자 수 리셋
+  if (lastDate !== todayStr) {
+    todayCount = 0;
+    localStorage.setItem('visitor_last_date', todayStr);
+    localStorage.setItem('visitor_today', '0');
+  }
+
+  // 세션 단위 중복 카운트 방지 (브라우저 접속 시 1회 카운트)
+  if (!sessionStorage.getItem('visitor_session_counted_v2')) {
+    sessionStorage.setItem('visitor_session_counted_v2', 'true');
+    totalCount += 1;
+    todayCount += 1;
     localStorage.setItem('visitor_total', totalCount.toString());
     localStorage.setItem('visitor_today', todayCount.toString());
+    localStorage.setItem('visitor_last_date', todayStr);
+
+    // Supabase 실시간 동기화
+    if (window.supabaseClient) {
+      try {
+        await window.supabaseClient.from('site_stats').upsert({
+          id: 'visitor_counter',
+          today_date: todayStr,
+          today_count: todayCount,
+          total_count: totalCount,
+          updated_at: new Date().toISOString()
+        });
+      } catch (err) {
+        console.warn('Supabase visitor tracking sync notice:', err.message);
+      }
+    }
   }
 }
 

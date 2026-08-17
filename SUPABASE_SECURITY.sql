@@ -99,13 +99,23 @@ ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS type VARCHAR(50);
 ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS message TEXT;
 ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
 
--- 5. Row Level Security (RLS) 활성화
+-- 5. 사이트 통계 및 방문자수 테이블 (site_stats) 생성
+CREATE TABLE IF NOT EXISTS public.site_stats (
+    id VARCHAR(50) PRIMARY KEY,                   -- 'visitor_counter'
+    today_date VARCHAR(20) NOT NULL,              -- YYYY-MM-DD
+    today_count INT DEFAULT 0,                    -- 오늘 방문자 수
+    total_count INT DEFAULT 0,                    -- 총 방문자 수
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 6. Row Level Security (RLS) 활성화
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.site_stats ENABLE ROW LEVEL SECURITY;
 
--- 6. 기존 구버전 정책 정리 (중복 및 충돌 방지)
+-- 7. 기존 구버전 정책 정리 (중복 및 충돌 방지)
 DROP POLICY IF EXISTS "Anyone can read reviews" ON public.reviews;
 DROP POLICY IF EXISTS "Anyone can insert reviews" ON public.reviews;
 DROP POLICY IF EXISTS "Anyone can update reviews" ON public.reviews;
@@ -150,3 +160,11 @@ CREATE POLICY "Enable all access for inquiries"
 ON public.inquiries FOR ALL 
 USING (true) 
 WITH CHECK (true);
+
+-- site_stats 테이블 보안 정책
+DROP POLICY IF EXISTS "Enable all access for site_stats" ON public.site_stats;
+CREATE POLICY "Enable all access for site_stats" 
+ON public.site_stats FOR ALL 
+USING (true) 
+WITH CHECK (true);
+

@@ -55,6 +55,52 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('users', JSON.stringify(users));
     }
 
+    // --- Visitor Tracking (Mobile) ---
+    const trackVisitorMob = async () => {
+        const RESET_KEY = 'visitor_reset_flag_20260817';
+        if (localStorage.getItem(RESET_KEY) !== 'done') {
+            localStorage.removeItem('visitor_total');
+            localStorage.removeItem('visitor_today');
+            localStorage.removeItem('visitor_last_date');
+            localStorage.setItem(RESET_KEY, 'done');
+        }
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        let totalCount = parseInt(localStorage.getItem('visitor_total') || '0', 10);
+        let todayCount = parseInt(localStorage.getItem('visitor_today') || '0', 10);
+        const lastDate = localStorage.getItem('visitor_last_date');
+
+        if (lastDate !== todayStr) {
+            todayCount = 0;
+            localStorage.setItem('visitor_last_date', todayStr);
+            localStorage.setItem('visitor_today', '0');
+        }
+
+        if (!sessionStorage.getItem('visitor_session_counted_v2')) {
+            sessionStorage.setItem('visitor_session_counted_v2', 'true');
+            totalCount += 1;
+            todayCount += 1;
+            localStorage.setItem('visitor_total', totalCount.toString());
+            localStorage.setItem('visitor_today', todayCount.toString());
+            localStorage.setItem('visitor_last_date', todayStr);
+
+            if (window.supabaseClient) {
+                try {
+                    await window.supabaseClient.from('site_stats').upsert({
+                        id: 'visitor_counter',
+                        today_date: todayStr,
+                        today_count: todayCount,
+                        total_count: totalCount,
+                        updated_at: new Date().toISOString()
+                    });
+                } catch (err) {
+                    console.warn('Supabase visitor tracking notice:', err.message);
+                }
+            }
+        }
+    };
+    trackVisitorMob();
+
     // --- Drawer Menu Selectors ---
     const menuTrigger = document.getElementById('app-menu-trigger');
     const drawerOverlay = document.getElementById('app-drawer-overlay');
@@ -1301,16 +1347,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderAdminDashboardMob(skipSync = false) {
+    async function renderAdminDashboardMob(skipSync = false) {
         const totalStat = document.getElementById('admin-stat-total-mob');
         const visitorsStat = document.getElementById('admin-stat-visitors-mob');
+        const totalVisitorsStat = document.getElementById('admin-stat-total-visitors-mob');
         
         // Reload global variables to ensure data sync
         applications = JSON.parse(localStorage.getItem('applications')) || [];
         users = JSON.parse(localStorage.getItem('users')) || [];
         
+        const todayStr = new Date().toISOString().split('T')[0];
+        const lastDate = localStorage.getItem('visitor_last_date');
+        let todayCount = parseInt(localStorage.getItem('visitor_today') || '0', 10);
+        let totalCount = parseInt(localStorage.getItem('visitor_total') || '0', 10);
+
+        if (lastDate !== todayStr) {
+            todayCount = 0;
+            localStorage.setItem('visitor_today', '0');
+            localStorage.setItem('visitor_last_date', todayStr);
+        }
+
         if (totalStat) totalStat.textContent = `${applications.length}건`;
-        if (visitorsStat) visitorsStat.textContent = `${localStorage.getItem('visitor_today') || '34'}명`;
+        if (visitorsStat) visitorsStat.textContent = `${todayCount}명`;
+        if (totalVisitorsStat) totalVisitorsStat.textContent = `${totalCount}명`;
+
+        // Supabase에서 최신 방문자 통계 동기화 (가능한 경우)
+        if (window.supabaseClient) {
+            try {
+                const { data } = await window.supabaseClient
+                    .from('site_stats')
+                    .select('*')
+                    .eq('id', 'visitor_counter')
+                    .single();
+                if (data) {
+                    if (data.today_date === todayStr && data.today_count > todayCount) {
+                        todayCount = data.today_count;
+                        localStorage.setItem('visitor_today', todayCount.toString());
+                        if (visitorsStat) visitorsStat.textContent = `${todayCount}명`;
+                    }
+                    if (data.total_count > totalCount) {
+                        totalCount = data.total_count;
+                        localStorage.setItem('visitor_total', totalCount.toString());
+                        if (totalVisitorsStat) totalVisitorsStat.textContent = `${totalCount}명`;
+                    }
+                }
+            } catch (e) {
+                // Fallback to localStorage
+            }
+        }
 
         if (!skipSync) {
             syncAdminDataFromSupabaseMob();

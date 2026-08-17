@@ -2483,62 +2483,102 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // --- Visitor Tracking Logic ---
-  const trackVisitor = () => {
-    // Initialize defaults if they don't exist
-    if (localStorage.getItem('visitor_total') === null) {
-      localStorage.setItem('visitor_total', '1420');
-    }
-    if (localStorage.getItem('visitor_today') === null) {
-      localStorage.setItem('visitor_today', '34');
-    }
-    if (localStorage.getItem('visitor_last_date') === null) {
-      localStorage.setItem('visitor_last_date', new Date().toISOString().split('T')[0]);
+  // --- Visitor Tracking Logic (실제 접속자 기준 통계) ---
+  const trackVisitor = async () => {
+    const RESET_KEY = 'visitor_reset_flag_20260817';
+
+    // 기존 하드코딩 가짜 수치(1420, 34 등) 초기화
+    if (localStorage.getItem(RESET_KEY) !== 'done') {
+      localStorage.removeItem('visitor_total');
+      localStorage.removeItem('visitor_today');
+      localStorage.removeItem('visitor_last_date');
+      localStorage.setItem(RESET_KEY, 'done');
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
-    let totalCount = parseInt(localStorage.getItem('visitor_total')) || 1420;
-    let todayCount = parseInt(localStorage.getItem('visitor_today')) || 34;
+    let totalCount = parseInt(localStorage.getItem('visitor_total') || '0', 10);
+    let todayCount = parseInt(localStorage.getItem('visitor_today') || '0', 10);
     const lastDate = localStorage.getItem('visitor_last_date');
 
-    // Count session-based
-    if (!sessionStorage.getItem('visitor_session_counted')) {
-      sessionStorage.setItem('visitor_session_counted', 'true');
-      totalCount++;
-      if (lastDate === todayStr) {
-        todayCount++;
-      } else {
-        todayCount = 1;
-        localStorage.setItem('visitor_last_date', todayStr);
-      }
+    // 날짜가 바뀌었으면 오늘의 방문자 수 리셋
+    if (lastDate !== todayStr) {
+      todayCount = 0;
+      localStorage.setItem('visitor_last_date', todayStr);
+      localStorage.setItem('visitor_today', '0');
+    }
+
+    // 세션 단위 중복 카운트 방지 (브라우저 접속 시 1회 카운트)
+    if (!sessionStorage.getItem('visitor_session_counted_v2')) {
+      sessionStorage.setItem('visitor_session_counted_v2', 'true');
+      totalCount += 1;
+      todayCount += 1;
       localStorage.setItem('visitor_total', totalCount.toString());
       localStorage.setItem('visitor_today', todayCount.toString());
+      localStorage.setItem('visitor_last_date', todayStr);
+
+      // Supabase 실시간 동기화
+      if (window.supabaseClient) {
+        try {
+          await window.supabaseClient.from('site_stats').upsert({
+            id: 'visitor_counter',
+            today_date: todayStr,
+            today_count: todayCount,
+            total_count: totalCount,
+            updated_at: new Date().toISOString()
+          });
+        } catch (err) {
+          console.warn('Supabase visitor sync notice:', err.message);
+        }
+      }
     }
   };
 
   // --- Render Admin Dashboard Metrics ---
-  const renderAdminStats = () => {
+  const renderAdminStats = async () => {
     if (activeUser.role !== 'admin') return;
     const todayStr = new Date().toISOString().split('T')[0];
     const lastDate = localStorage.getItem('visitor_last_date');
-    let todayCount = localStorage.getItem('visitor_today') || '34';
+    let todayCount = parseInt(localStorage.getItem('visitor_today') || '0', 10);
+    let totalCount = parseInt(localStorage.getItem('visitor_total') || '0', 10);
     
     // Reset today's count on new day
     if (lastDate !== todayStr) {
-      todayCount = '0';
+      todayCount = 0;
       localStorage.setItem('visitor_today', '0');
       localStorage.setItem('visitor_last_date', todayStr);
     }
+
+    // Supabase 최신 방문자 통계 데이터 조회 (가능한 경우)
+    if (window.supabaseClient) {
+      try {
+        const { data } = await window.supabaseClient
+          .from('site_stats')
+          .select('*')
+          .eq('id', 'visitor_counter')
+          .single();
+        if (data) {
+          if (data.today_date === todayStr && data.today_count > todayCount) {
+            todayCount = data.today_count;
+            localStorage.setItem('visitor_today', todayCount.toString());
+          }
+          if (data.total_count > totalCount) {
+            totalCount = data.total_count;
+            localStorage.setItem('visitor_total', totalCount.toString());
+          }
+        }
+      } catch (e) {
+        // Fallback to localStorage
+      }
+    }
     
-    const totalCount = localStorage.getItem('visitor_total') || '1420';
     const apps = JSON.parse(localStorage.getItem('applications')) || [];
 
     const statToday = document.getElementById('stat-today-visitors');
     const statTotal = document.getElementById('stat-total-visitors');
     const statApps = document.getElementById('stat-total-applications');
 
-    if (statToday) statToday.textContent = parseInt(todayCount).toLocaleString() + '명';
-    if (statTotal) statTotal.textContent = parseInt(totalCount).toLocaleString() + '명';
+    if (statToday) statToday.textContent = todayCount.toLocaleString() + '명';
+    if (statTotal) statTotal.textContent = totalCount.toLocaleString() + '명';
     if (statApps) statApps.textContent = apps.length + '건';
   };
 
