@@ -1081,8 +1081,9 @@ body.mobile-app-body {
 }
 
 .biz-card-title {
-    font-size: 0.95rem;
+    font-size: 1.15rem;
     font-weight: 800;
+    color: var(--text-primary);
 }
 
 .biz-card-badges {
@@ -1093,8 +1094,8 @@ body.mobile-app-body {
 }
 
 .biz-card-badge {
-    font-size: 0.6rem;
-    padding: 2px 8px;
+    font-size: 0.78rem;
+    padding: 3px 8px;
     border-radius: 9999px;
     font-weight: bold;
 }
@@ -1120,9 +1121,10 @@ body.mobile-app-body {
 }
 
 .biz-card-addr {
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     color: var(--text-secondary);
     margin-bottom: 10px;
+    line-height: 1.4;
 }
 
 .biz-card-photos {

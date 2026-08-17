@@ -846,7 +846,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (items.length === 0) {
-            bizItemsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.8rem;">등록된 영업물건이 없습니다. 아래 현장 등록 폼을 통해 새로 추가해 보세요.</p>';
+            bizItemsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">등록된 영업물건이 없습니다. 아래 현장 등록 폼을 통해 새로 추가해 보세요.</p>';
             return;
         }
 
@@ -873,14 +873,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             card.innerHTML = `
                 <div class="biz-card-title-row">
-                    <span class="biz-card-title">${escapeHtml(item.name)} ${item.id ? `<span style="font-size: 0.7rem; font-weight: 500; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 5px; border-radius: 4px; margin-left: 4px;">${escapeHtml(String(item.id))}</span>` : ''}</span>
+                    <span class="biz-card-title">${escapeHtml(item.name)} ${item.id ? `<span style="font-size: 0.84rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 2px 6px; border-radius: 4px; margin-left: 4px;">${escapeHtml(String(item.id))}</span>` : ''}</span>
                     <div class="biz-card-badges">
                         <span class="biz-card-badge receipt">${escapeHtml(receiptText)}</span>
                         <span class="biz-card-badge progress ${progressClass}">${escapeHtml(progressText)}</span>
                     </div>
                 </div>
-                <div class="biz-card-addr"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.address)}</div>
-                ${item.phone ? `<div class="biz-card-phone" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-phone" style="color: var(--accent-primary);"></i> ${escapeHtml(item.phone)}</div>` : ''}
+                <div class="biz-card-addr"><i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> ${escapeHtml(item.address)}</div>
+                ${item.phone ? `<div class="biz-card-phone" style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 4px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-phone" style="color: var(--accent-primary);"></i> <strong style="color: var(--accent-primary);">${escapeHtml(item.phone)}</strong></div>` : ''}
                 ${photosHtml}
             `;
             bizItemsList.appendChild(card);

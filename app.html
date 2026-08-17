@@ -39,8 +39,8 @@
     <!-- FontAwesome Icons & Outfit Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Load PC styles first, then mobile overrides -->
-    <link rel="stylesheet" href="style.css?v=20260817_1635">
-    <link rel="stylesheet" href="app.css?v=20260817_1635">
+    <link rel="stylesheet" href="style.css?v=20260817_1650">
+    <link rel="stylesheet" href="app.css?v=20260817_1650">
 </head>
 
 <body class="mobile-app-body">
@@ -1237,52 +1237,52 @@
                 <div id="status-business-container" style="display: none;">
                     <!-- Manual app link widget -->
                     <div class="biz-link-panel-mob" style="background: rgba(30, 58, 138, 0.05); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
-                        <h4 style="color: var(--accent-primary); display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.95rem;">
+                        <h4 style="color: var(--accent-primary); display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 1.15rem;">
                             <i class="fa-solid fa-link"></i> 고객 신청서 수동 연동
                         </h4>
-                        <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5;">
                             고객이 직접 제출한 <strong>신청번호(GP-YYYYMMDD-XXXX)</strong>를 입력하여 내 영업물건 목록에 편입합니다.
                         </p>
-                        <div style="display: flex; gap: 6px;">
-                            <input type="text" id="link-app-id-mob" placeholder="GP-YYYYMMDD-XXXX" style="flex: 1; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem;">
-                            <button id="btn-link-app-mob" class="btn btn-primary" style="padding: 8px 14px; font-size: 0.8rem;">연동</button>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="link-app-id-mob" placeholder="GP-YYYYMMDD-XXXX" style="flex: 1; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem;">
+                            <button id="btn-link-app-mob" class="btn btn-primary" style="padding: 10px 18px; font-size: 0.95rem; font-weight: 700; border-radius: 8px;">연동</button>
                         </div>
                     </div>
 
                     <!-- Mobile Simulator (Field photo uploads) inside app -->
                     <div class="app-section">
-                        <h4 class="section-title"><i class="fa-solid fa-camera"></i> 신규 현장 영업물건 카메라 접수</h4>
-                        <form id="mobile-upload-form-mob" onsubmit="event.preventDefault();" style="background: white; padding: 15px; border-radius: 10px; border: 1px solid var(--border-color);">
-                            <div class="phone-form-group">
-                                <label for="mob-item-name-mob">상호명</label>
-                                <input type="text" id="mob-item-name-mob" placeholder="상호명을 입력해 주세요" required class="form-input" style="padding: 8px;">
+                        <h4 class="section-title" style="font-size: 1.2rem; margin-bottom: 12px;"><i class="fa-solid fa-camera"></i> 신규 현장 영업물건 카메라 접수</h4>
+                        <form id="mobile-upload-form-mob" onsubmit="event.preventDefault();" style="background: white; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
+                            <div class="phone-form-group" style="margin-bottom: 12px;">
+                                <label for="mob-item-name-mob" style="font-size: 0.95rem; font-weight: 700; display: block; margin-bottom: 4px;">상호명</label>
+                                <input type="text" id="mob-item-name-mob" placeholder="상호명을 입력해 주세요" required class="form-input" style="padding: 10px 12px; font-size: 0.95rem; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
                             </div>
-                            <div class="phone-form-group">
-                                <label for="mob-item-phone-mob">전화번호</label>
-                                <input type="tel" id="mob-item-phone-mob" placeholder="전화번호를 입력해 주세요" required class="form-input" style="padding: 8px;">
+                            <div class="phone-form-group" style="margin-bottom: 12px;">
+                                <label for="mob-item-phone-mob" style="font-size: 0.95rem; font-weight: 700; display: block; margin-bottom: 4px;">전화번호</label>
+                                <input type="tel" id="mob-item-phone-mob" placeholder="전화번호를 입력해 주세요" required class="form-input" style="padding: 10px 12px; font-size: 0.95rem; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
                             </div>
-                            <div class="phone-form-group">
-                                <label for="mob-item-address-mob">설치 주소</label>
-                                <input type="text" id="mob-item-address-mob" placeholder="설치 주소를 입력해 주세요" required class="form-input" style="padding: 8px;">
+                            <div class="phone-form-group" style="margin-bottom: 12px;">
+                                <label for="mob-item-address-mob" style="font-size: 0.95rem; font-weight: 700; display: block; margin-bottom: 4px;">설치 주소</label>
+                                <input type="text" id="mob-item-address-mob" placeholder="설치 주소를 입력해 주세요" required class="form-input" style="padding: 10px 12px; font-size: 0.95rem; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
                             </div>
-                            <div class="phone-form-group">
-                                <label>현장 사진 업로드 <span style="font-weight: normal; font-size: 0.7rem; color: var(--text-muted);">(최대 20장)</span></label>
-                                <div class="mobile-file-zone" id="mobile-file-zone-mob" style="border: 2px dashed var(--accent-primary); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer;">
-                                    <i class="fa-solid fa-camera" style="font-size: 1.8rem; color: var(--accent-primary); margin-bottom: 6px;"></i>
-                                    <p style="font-size: 0.75rem; color: var(--text-secondary);">사진 촬영 또는 갤러리 선택</p>
+                            <div class="phone-form-group" style="margin-bottom: 12px;">
+                                <label style="font-size: 0.95rem; font-weight: 700; display: block; margin-bottom: 4px;">현장 사진 업로드 <span style="font-weight: normal; font-size: 0.85rem; color: var(--text-muted);">(최대 20장)</span></label>
+                                <div class="mobile-file-zone" id="mobile-file-zone-mob" style="border: 2px dashed var(--accent-primary); border-radius: 10px; padding: 22px; text-align: center; cursor: pointer; background: #fafbff;">
+                                    <i class="fa-solid fa-camera" style="font-size: 2.2rem; color: var(--accent-primary); margin-bottom: 8px;"></i>
+                                    <p style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; margin: 0;">사진 촬영 또는 갤러리 선택</p>
                                     <input type="file" id="mob-photos-input-mob" accept="image/*" multiple style="display: none;">
                                     <input type="file" id="mob-camera-input-mob" accept="image/*" capture="environment" style="display: none;">
                                 </div>
                                 <div id="mob-photo-previews-mob" class="mob-photo-previews" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;"></div>
-                                <div id="mob-photo-count-mob" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">선택된 사진: 0 / 20장</div>
+                                <div id="mob-photo-count-mob" style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 6px; font-weight: 600;">선택된 사진: 0 / 20장</div>
                             </div>
-                            <button type="submit" id="btn-submit-biz-item-mob" class="btn btn-primary" style="width: 100%; margin-top: 10px;">현장 물건으로 등록</button>
+                            <button type="submit" id="btn-submit-biz-item-mob" class="btn btn-primary" style="width: 100%; margin-top: 14px; padding: 12px; font-size: 1.05rem; font-weight: 700; border-radius: 8px;">현장 물건으로 등록</button>
                         </form>
                     </div>
 
                     <!-- Business Items (영업물건 리스트) -->
                     <div class="app-section" style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px;">
-                        <h4 class="section-title"><i class="fa-solid fa-folder-closed"></i> 내 관리 영업물건 현황 및 진행상황</h4>
+                        <h4 class="section-title" style="font-size: 1.2rem; margin-bottom: 12px;"><i class="fa-solid fa-folder-closed"></i> 내 관리 영업물건 현황 및 진행상황</h4>
                         <div id="biz-items-list-mobile" class="biz-mobile-list">
                             <!-- Populated dynamically -->
                         </div>
@@ -2185,13 +2185,13 @@
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Security utilities & Core App logic -->
-    <script src="supabase-config.js?v=20260817_1635"></script>
-    <script src="security-utils.js?v=20260817_1635"></script>
-    <script src="kakao-notify.js?v=20260817_1635"></script>
+    <script src="supabase-config.js?v=20260817_1650"></script>
+    <script src="security-utils.js?v=20260817_1650"></script>
+    <script src="kakao-notify.js?v=20260817_1650"></script>
     <!-- Load PC JavaScript first to run interactive components -->
-    <script src="script.js?v=20260817_1635"></script>
+    <script src="script.js?v=20260817_1650"></script>
     <!-- Load mobile drawer, tab, dashboard scripts -->
-    <script src="app.js?v=20260817_1635"></script>
+    <script src="app.js?v=20260817_1650"></script>
 </body>
 
 </html>
