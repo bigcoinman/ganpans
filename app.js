@@ -396,10 +396,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Auto scroll to top on tab switch
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
         const activeTab = document.getElementById(`view-${tabId}`);
         if (activeTab) {
             activeTab.scrollTop = 0;
         }
+        updateHeaderAuthButton();
     }
     window.switchTab = switchTab;
 
@@ -1272,6 +1276,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedPhotosMob = [];
                 renderMobilePhotoPreviewsMob();
                 renderStatusTab();
+                window.scrollTo(0, 0);
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+                updateHeaderAuthButton();
             };
 
             if (selectedPhotosMob.length > 0) {
