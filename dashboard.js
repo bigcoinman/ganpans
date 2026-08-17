@@ -899,28 +899,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      activeUser.items = activeUser.items || [];
-      const itemId = typeof generateBizItemId === 'function' ? generateBizItemId(activeUser.bizCode, activeUser.items) : `${activeUser.bizCode || 'B-260801'}-0001`;
-
-      const newItem = {
-        id: itemId,
-        name: nameVal,
-        phone: phoneVal,
-        address: addrVal,
-        photosCount: selectedPhotos.length,
-        receiptStatus: '접수예정',
-        progressStatus: '지원대기중',
-        photos: base64Photo ? [base64Photo] : []
-      };
-
-      activeUser.items.push(newItem);
-
-      users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
-      localStorage.setItem('users', JSON.stringify(users));
-      localStorage.setItem('activeUser', JSON.stringify(activeUser));
-
-      // 최고관리자 대시보드 [신청서 목록]에도 자동 연동 등록
       let apps = JSON.parse(localStorage.getItem('applications')) || [];
+      const itemId = typeof generateBizItemId === 'function' ? generateBizItemId(activeUser.bizCode, apps) : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(4, '0')}`;
+
+      // 모든 신청물건은 1차적으로 [신청서 목록(applications)]에만 저장
+      // (최고관리자가 진흥원 접수 확인 후 [영업물건으로 변경] 토글을 켜면 영업물건 목록으로 연동됨)
       const newApp = {
         id: itemId,
         userId: activeUser.id,
@@ -934,6 +917,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fileData: base64Photo || '',
         appliedAt: new Date().toISOString(),
         status: 'pending',
+        isBizItem: false,
         referrerCode: activeUser.bizCode || ''
       };
 
@@ -946,7 +930,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Supabase 클라우드 DB 실시간 양방향 동기화
       if (window.SupabaseSync) {
-        window.SupabaseSync.upsertUser(activeUser);
         window.SupabaseSync.upsertApplication(newApp);
       }
 
@@ -955,7 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.KakaoNotifier.notifyApplication(newApp);
       }
 
-      alert(`영업물건 [${nameVal}] 등록이 성공적으로 완료되었습니다!\n고유번호: [${itemId}]\n(최고관리자 대시보드 및 영업물건 목록에 실시간 등록되었습니다.)`);
+      alert(`현장 간판 신청 물건 [${nameVal}] 등록이 성공적으로 접수되었습니다!\n신청번호: [${itemId}]\n(최고관리자 대시보드 [온라인 간편지원 신청목록]에 안전하게 등록되었습니다.)`);
 
       mobileUploadForm.reset();
       selectedPhotos = [];
@@ -1846,26 +1829,24 @@ document.addEventListener('DOMContentLoaded', () => {
         statusBadge = `<span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-clock"></i> 심사 대기</span>`;
       }
 
-      // Actions buttons
-      let actionButtons = '';
+      // Actions buttons: 승인, 반려, 영업물건으로 변경(토글), 삭제
+      let actionButtons = '<div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap;">';
+
       if (app.status === 'pending') {
-        actionButtons = `
-          <button class="btn btn-primary btn-sm btn-approve-app" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.75rem; background: var(--accent-success); border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-check"></i> 승인</button>
-          <button class="btn btn-secondary btn-sm btn-reject-app" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.75rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-left: 4px;"><i class="fa-solid fa-xmark"></i> 반려</button>
+        actionButtons += `
+          <button class="btn btn-primary btn-sm btn-approve-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: var(--accent-success); border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;"><i class="fa-solid fa-check"></i> 승인</button>
+          <button class="btn btn-secondary btn-sm btn-reject-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;"><i class="fa-solid fa-xmark"></i> 반려</button>
         `;
       } else if (app.status === 'approved') {
         if (app.assignedConstructorId) {
-          actionButtons = `
-            <div style="font-size: 0.8rem; color: var(--accent-success); font-weight: 700; margin-bottom: 4px;">
-              <i class="fa-solid fa-screwdriver-wrench"></i> 배정: ${escapeHtml(app.assignedConstructorName)}
-            </div>
-            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 6px;">
-              상태: ${app.constructionStatus === 'before_construction' ? '시공 전' : (app.constructionStatus === 'in_construction' ? '시공 중' : (app.constructionStatus === 'after_construction' ? '시공 완료 보고됨' : '정산 종결'))}
+          actionButtons += `
+            <div style="font-size: 0.78rem; color: var(--accent-success); font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 3px 8px; border-radius: 6px;">
+              <i class="fa-solid fa-screwdriver-wrench"></i> ${escapeHtml(app.assignedConstructorName)}
             </div>
           `;
           if (app.constructionStatus === 'after_construction') {
             actionButtons += `
-              <button class="btn btn-primary btn-sm btn-approve-settlement" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.75rem; background: var(--accent-primary); border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; width: auto;"><i class="fa-solid fa-file-invoice-dollar"></i> 증빙확인/정산완료</button>
+              <button class="btn btn-primary btn-sm btn-approve-settlement" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: var(--accent-primary); border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;"><i class="fa-solid fa-file-invoice-dollar"></i> 정산완료</button>
             `;
           }
         } else {
@@ -1875,23 +1856,34 @@ document.addEventListener('DOMContentLoaded', () => {
           constructors.forEach(c => {
             optionsHtml += `<option value="${c.id}">${c.businessName} (${c.constCode})</option>`;
           });
-          actionButtons = `
-            <div style="display: flex; gap: 4px; flex-direction: column; margin-bottom: 6px; width: 140px;">
-              <select class="status-select select-constructor-assign" data-id="${app.id}" style="padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: white;">
+          actionButtons += `
+            <div style="display: inline-flex; gap: 4px; align-items: center;">
+              <select class="status-select select-constructor-assign" data-id="${app.id}" style="padding: 4px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: white;">
                 ${optionsHtml}
               </select>
-              <button class="btn btn-primary btn-sm btn-assign-constructor" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.72rem; background: var(--accent-success); border: none; border-radius: 4px; cursor: pointer; text-align: center;"><i class="fa-solid fa-link"></i> 시공사 배정</button>
+              <button class="btn btn-primary btn-sm btn-assign-constructor" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.72rem; background: var(--accent-success); border: none; border-radius: 4px; cursor: pointer; text-align: center; font-weight: 700;"><i class="fa-solid fa-link"></i> 배정</button>
             </div>
           `;
         }
       } else {
-        actionButtons = `<span style="font-size: 0.8rem; color: var(--text-secondary);">처리 완료</span>`;
+        actionButtons += `<span style="font-size: 0.75rem; color: #dc2626; background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-weight: 600;">반려됨</span>`;
+      }
+
+      // [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
+      if (app.isBizItem) {
+        actionButtons += `
+          <button class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
+        `;
+      } else {
+        actionButtons += `
+          <button class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="클릭 시 영업물건(진흥원 접수)으로 이동/등록"><i class="fa-solid fa-toggle-off"></i> 영업물건으로 변경</button>
+        `;
       }
       
       // Delete button (always visible for management)
       actionButtons += `
-        <button class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" style="padding: 6px 10px; font-size: 0.75rem; border-color: rgba(239, 68, 68, 0.2); color: rgba(239, 68, 68, 0.8); background: transparent; border-radius: 6px; cursor: pointer; margin-left: 8px; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.borderColor='rgba(239,68,68,0.4)';" onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(239,68,68,0.2)';"><i class="fa-solid fa-trash-can"></i> 삭제</button>
-      `;
+        <button class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" style="padding: 5px 8px; font-size: 0.75rem; border-color: rgba(239, 68, 68, 0.3); color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; transition: all 0.2s;" title="신청서 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+      </div>`;
 
       tr.innerHTML = `
         <td style="padding: 14px 16px; color: var(--text-secondary); font-family: monospace; white-space: nowrap;">${dateText}</td>
@@ -1909,8 +1901,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <i class="fa-solid fa-download"></i> ${escapeHtml(app.fileName) || '첨부이미지.png'}
           </a>
         </td>
-        <td style="padding: 14px 16px; white-space: nowrap;">${statusBadge}</td>
-        <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">${actionButtons}</td>
+        <td style="padding: 14px 16px; text-align: center;">${actionButtons}</td>
       `;
       applicationsTableBody.appendChild(tr);
     });
@@ -1922,15 +1913,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add event listeners to the action buttons
     document.querySelectorAll('.btn-approve-app').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const id = parseInt(e.target.closest('button').dataset.id);
+        const id = e.target.closest('button').dataset.id;
         updateApplicationStatus(id, 'approved');
       });
     });
 
     document.querySelectorAll('.btn-reject-app').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const id = parseInt(e.target.closest('button').dataset.id);
+        const id = e.target.closest('button').dataset.id;
         updateApplicationStatus(id, 'rejected');
+      });
+    });
+
+    document.querySelectorAll('.btn-toggle-bizitem').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.closest('button').dataset.id;
+        toggleBizItem(id);
       });
     });
 
@@ -2131,7 +2129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (activeUser.role !== 'admin') return;
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
     apps = apps.map(app => {
-      if (app.id === id) {
+      if (String(app.id) === String(id)) {
         return { ...app, status: newStatus };
       }
       return app;
@@ -2142,12 +2140,103 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSessionUI();
   };
 
+  const toggleBizItem = (appId) => {
+    if (activeUser.role !== 'admin') return;
+
+    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    const appIndex = apps.findIndex(a => String(a.id) === String(appId));
+    if (appIndex === -1) return;
+
+    const app = apps[appIndex];
+    const isNowBizItem = !app.isBizItem;
+    app.isBizItem = isNowBizItem;
+    apps[appIndex] = app;
+    localStorage.setItem('applications', JSON.stringify(apps));
+
+    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+
+    if (isNowBizItem) {
+      // 영업물건으로 등록/이동: 대상 영업자 찾기 (app.referrerCode 또는 app.userId 또는 첫 번째 business 유저)
+      let targetUser = null;
+      if (app.referrerCode) {
+        targetUser = curUsers.find(u => u.role === 'business' && u.bizCode === app.referrerCode);
+      }
+      if (!targetUser && app.userId) {
+        targetUser = curUsers.find(u => u.id === app.userId && u.role === 'business');
+      }
+      if (!targetUser) {
+        targetUser = curUsers.find(u => u.role === 'business') || curUsers.find(u => u.role === 'admin');
+      }
+
+      if (targetUser) {
+        targetUser.items = targetUser.items || [];
+        const existingItemIdx = targetUser.items.findIndex(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
+        const bizItem = {
+          id: app.id,
+          name: app.storeName || app.shopName || app.ownerName,
+          phone: app.ownerPhone || '',
+          address: app.storeAddress || '',
+          photosCount: app.fileData ? 1 : 0,
+          receiptStatus: '접수예정',
+          progressStatus: '지원대기중',
+          photos: app.fileData ? [app.fileData] : [],
+          appRefId: app.id
+        };
+
+        if (existingItemIdx >= 0) {
+          targetUser.items[existingItemIdx] = { ...targetUser.items[existingItemIdx], ...bizItem };
+        } else {
+          targetUser.items.push(bizItem);
+        }
+
+        curUsers = curUsers.map(u => u.id === targetUser.id ? targetUser : u);
+        localStorage.setItem('users', JSON.stringify(curUsers));
+
+        if (window.SupabaseSync) {
+          window.SupabaseSync.updateUser(targetUser.id, { items: targetUser.items });
+        }
+      }
+
+      alert(`[${app.storeName || app.ownerName}] 건이 '영업물건'으로 변경되었습니다.\n진흥원 접수 및 영업물건 진행상황 관리 메뉴로 연동됩니다.`);
+    } else {
+      // 영업물건에서 해제/제거
+      curUsers = curUsers.map(u => {
+        if (u.items && u.items.length > 0) {
+          const filteredItems = u.items.filter(it => String(it.id) !== String(app.id) && String(it.appRefId) !== String(app.id));
+          return { ...u, items: filteredItems };
+        }
+        return u;
+      });
+      localStorage.setItem('users', JSON.stringify(curUsers));
+
+      if (window.SupabaseSync) {
+        curUsers.forEach(u => {
+          if (u.role === 'business' || u.role === 'admin') {
+            window.SupabaseSync.updateUser(u.id, { items: u.items || [] });
+          }
+        });
+      }
+
+      alert(`[${app.storeName || app.ownerName}] 건의 '영업물건' 등록이 해제되었습니다.`);
+    }
+
+    if (window.SupabaseSync) {
+      window.SupabaseSync.upsertApplication(app);
+    }
+
+    updateSessionUI();
+  };
+  window.toggleBizItem = toggleBizItem;
+
   const deleteApplication = (id) => {
     if (activeUser.role !== 'admin') return;
     if (!confirm('정말로 이 지원 신청 접수 건을 삭제하시겠습니까?')) return;
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
-    apps = apps.filter(app => app.id !== id);
+    apps = apps.filter(app => String(app.id) !== String(id));
     localStorage.setItem('applications', JSON.stringify(apps));
+    if (window.SupabaseSync) {
+      window.SupabaseSync.deleteApplication(id);
+    }
     updateSessionUI();
   };
 
