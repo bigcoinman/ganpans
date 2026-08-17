@@ -1202,7 +1202,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('users', JSON.stringify(users));
                 localStorage.setItem('activeUser', JSON.stringify(activeUser));
 
-                alert(`영업 현장 물건 [${nameVal}] 등록이 완료되었습니다!\n고유번호: [${itemId}]`);
+                // 최고관리자 대시보드 [신청서 목록]에도 자동 연동 등록
+                let apps = JSON.parse(localStorage.getItem('applications')) || [];
+                const newApp = {
+                    id: itemId,
+                    userId: activeUser.id,
+                    ownerName: nameVal,
+                    ownerPhone: phoneVal,
+                    storeName: nameVal,
+                    shopName: nameVal,
+                    storeAddress: addressVal,
+                    signType: '현장 카메라 접수',
+                    fileName: selectedPhotosMob.length > 0 ? (selectedPhotosMob[0].name || '현장촬영사진.jpg') : '현장촬영사진.jpg',
+                    fileData: base64Photo || '',
+                    appliedAt: new Date().toISOString(),
+                    status: 'pending',
+                    referrerCode: activeUser.bizCode || ''
+                };
+
+                if (!apps.some(a => a.id === itemId)) {
+                    apps.push(newApp);
+                } else {
+                    apps = apps.map(a => a.id === itemId ? newApp : a);
+                }
+                localStorage.setItem('applications', JSON.stringify(apps));
+
+                // Supabase 클라우드 DB 실시간 양방향 동기화
+                if (window.SupabaseSync) {
+                    window.SupabaseSync.upsertUser(activeUser);
+                    window.SupabaseSync.upsertApplication(newApp);
+                }
+
+                // 카카오톡 관리자 실시간 알림 발송
+                if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
+                    window.KakaoNotifier.notifyApplication(newApp);
+                }
+
+                alert(`영업 현장 물건 [${nameVal}] 등록이 완료되었습니다!\n고유번호: [${itemId}]\n최고관리자 대시보드 및 영업물건 목록에 실시간 등록되었습니다.`);
                 formBizUploadMob.reset();
                 selectedPhotosMob = [];
                 renderMobilePhotoPreviewsMob();
