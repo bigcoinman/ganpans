@@ -1347,6 +1347,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 모바일 신청서 목록 검색창 이벤트 (아이디 / 이름 / 코드 / 상호명)
+    const searchAppsInputMob = document.getElementById('search-apps-input-mob');
+    if (searchAppsInputMob) {
+        searchAppsInputMob.addEventListener('input', () => {
+            renderAdminDashboardMob(true);
+        });
+    }
+
+    // 모바일 영업물건 진행사항 검색창 이벤트 (아이디 / 이름 / 코드 / 상호명)
+    const searchItemsInputMob = document.getElementById('search-items-input-mob');
+    if (searchItemsInputMob) {
+        searchItemsInputMob.addEventListener('input', () => {
+            renderAdminDashboardMob(true);
+        });
+    }
+
     async function renderAdminDashboardMob(skipSync = false) {
         const totalStat = document.getElementById('admin-stat-total-mob');
         const visitorsStat = document.getElementById('admin-stat-visitors-mob');
@@ -1571,14 +1587,46 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 3) Render Applications list
+        // 3) Render Applications list (신청서목록)
         const appsList = document.getElementById('admin-apps-list-mob');
         if (appsList) {
-            if (applications.length === 0) {
-                appsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">접수된 온라인 신청서가 없습니다.</p>';
+            const searchAppsInput = document.getElementById('search-apps-input-mob');
+            const qApps = searchAppsInput && searchAppsInput.value ? searchAppsInput.value.trim().toLowerCase() : '';
+
+            // Sort applications by applied date descending
+            let sortedApps = [...applications].sort((a, b) => String(b.id || '').localeCompare(String(a.id || '')) || String(b.appliedAt || '').localeCompare(String(a.appliedAt || '')));
+
+            if (qApps) {
+                sortedApps = sortedApps.filter(app => {
+                    const appId = String(app.id || '').toLowerCase();
+                    const ownerName = String(app.ownerName || '').toLowerCase();
+                    const userId = String(app.userId || '').toLowerCase();
+                    const rawPhone = String(app.ownerPhone || '').toLowerCase();
+                    const cleanPhone = String(app.ownerPhone || '').replace(/[^0-9]/g, '');
+                    const storeName = String(app.storeName || app.shopName || '').toLowerCase();
+                    const storeAddr = String(app.storeAddress || '').toLowerCase();
+                    const refCode = String(app.referrerCode || app.bizCode || '').toLowerCase();
+                    const signType = String(app.signType || '').toLowerCase();
+                    const constName = String(app.assignedConstructorName || '').toLowerCase();
+
+                    return appId.includes(qApps) ||
+                           ownerName.includes(qApps) ||
+                           userId.includes(qApps) ||
+                           rawPhone.includes(qApps) ||
+                           cleanPhone.includes(qApps.replace(/[^0-9]/g, '')) ||
+                           storeName.includes(qApps) ||
+                           storeAddr.includes(qApps) ||
+                           refCode.includes(qApps) ||
+                           signType.includes(qApps) ||
+                           constName.includes(qApps);
+                });
+            }
+
+            if (sortedApps.length === 0) {
+                const emptyMsg = qApps ? `검색어 [${escapeHtml(qApps)}] 에 일치하는 신청서가 없습니다.` : '접수된 온라인 신청서가 없습니다.';
+                appsList.innerHTML = `<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">${emptyMsg}</p>`;
             } else {
                 appsList.innerHTML = '';
-                const sortedApps = [...applications].sort((a, b) => b.id.localeCompare(a.id) || b.appliedAt.localeCompare(a.appliedAt));
                 sortedApps.forEach(app => {
                     const card = document.createElement('div');
                     card.className = 'admin-app-card-mob';
@@ -1716,101 +1764,140 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 4) Render Items list (Sales objects)
+        // 4) Render Items list (영업물건 진행사항)
         const itemsList = document.getElementById('admin-items-list-mob');
         if (itemsList) {
             itemsList.innerHTML = '';
-            let hasItems = false;
+            const searchItemsInput = document.getElementById('search-items-input-mob');
+            const qItems = searchItemsInput && searchItemsInput.value ? searchItemsInput.value.trim().toLowerCase() : '';
+
+            const allBusinessItemsMob = [];
             users.forEach(u => {
                 if (u.role === 'business' && u.items && u.items.length > 0) {
                     u.items.forEach(item => {
-                        hasItems = true;
-                        const card = document.createElement('div');
-                        card.className = 'admin-req-card-mob';
-                        card.style.background = '#f8fafc';
-                        card.style.padding = '14px';
-                        card.style.borderRadius = '10px';
-                        card.style.border = '1px solid var(--border-color)';
-                        card.style.marginBottom = '12px';
-                        card.style.textAlign = 'left';
-                        
-                        const isSelectedOrBeyond = (item.progressStatus === '대상자선정' || item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판시공완료' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인' || item.progressStatus === '간판 시공 중' || item.progressStatus === '시공 완료');
-
-                        let constructorAssignHtml = '';
-                        if (isSelectedOrBeyond) {
-                            if (item.assignedConstructorId) {
-                                constructorAssignHtml = `
-                                    <div style="display: flex; justify-content: space-between; align-items: center; background: #f0fdf4; padding: 8px 10px; border-radius: 6px; border: 1px solid #bbf7d0; margin-top: 4px;">
-                                        <span style="font-size: 0.88rem; font-weight: 700; color: #15803d; display: inline-flex; align-items: center; gap: 6px;">
-                                            <i class="fa-solid fa-screwdriver-wrench"></i> 배정: ${escapeHtml(item.assignedConstructorName || item.assignedConstructorId)}
-                                        </span>
-                                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.reassignConstructorItemMob('${u.id}', '${item.id}')" style="padding: 4px 8px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; color: #64748b; cursor: pointer;">변경</button>
-                                    </div>
-                                `;
-                            } else {
-                                const constructors = users.filter(usr => usr.role === 'constructor');
-                                let constOptions = '<option value="">시공사 선택...</option>';
-                                constructors.forEach(c => {
-                                    const constName = c.businessName || c.pendingBusinessName || c.name || c.id;
-                                    constOptions += `<option value="${c.id}">${escapeHtml(constName)}</option>`;
-                                });
-
-                                constructorAssignHtml = `
-                                    <div style="display: flex; gap: 8px; margin-top: 4px; align-items: center;">
-                                        <select class="status-select-mob select-constructor-bizitem-mob" data-uid="${u.id}" data-itemid="${item.id}" style="flex: 1; padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1.5px solid #86efac; background: white; font-weight: 600; color: #1e293b; height: auto;">
-                                            ${constOptions}
-                                        </select>
-                                        <button type="button" class="btn btn-primary btn-sm" onclick="window.assignConstructorToBizItemMob('${u.id}', '${item.id}', this)" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-                                            <i class="fa-solid fa-link"></i> 배정
-                                        </button>
-                                    </div>
-                                `;
-                            }
-                        }
-
-                        card.innerHTML = `
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <div style="font-size: 1.02rem; font-weight: bold; color: var(--text-primary);">
-                                    ${escapeHtml(item.name)} 
-                                    <span style="font-size: 0.86rem; font-weight: normal; color: var(--text-secondary);">(${escapeHtml(u.name)} 영업자 / ${escapeHtml(String(item.id))})</span>
-                                </div>
-                                <button type="button" onclick="window.deleteManagerItemMob('${u.id}', '${item.id}'); return false;" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 0.84rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                                    <i class="fa-solid fa-trash-can"></i> 삭제
-                                </button>
-                            </div>
-                            <div style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.4;"><i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> 주소: <span style="color: #475569;">${escapeHtml(item.address)}</span></div>
-                            ${item.phone ? `<div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 3px;"><i class="fa-solid fa-phone" style="color: #64748b;"></i> 연락처: <strong style="color: var(--accent-primary);">${escapeHtml(item.phone)}</strong></div>` : ''}
-                            
-                            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
-                                <div style="display:flex; align-items:center; gap: 6px;">
-                                    <span style="font-size: 0.88rem; font-weight: 700; width: 50px; color: #475569;">접수:</span>
-                                    <select class="status-select-mob select-receipt-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
-                                        <option value="업체신청" ${(item.receiptStatus === '업체신청') ? 'selected' : ''}>업체신청</option>
-                                        <option value="접수예정" ${(item.receiptStatus === '접수예정' || !item.receiptStatus || item.receiptStatus === '접수 대기') ? 'selected' : ''}>접수예정</option>
-                                        <option value="접수완료" ${(item.receiptStatus === '접수완료' || item.receiptStatus === '접수 완료' || item.receiptStatus.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
-                                    </select>
-                                </div>
-                                <div style="display:flex; align-items:center; gap: 6px;">
-                                    <span style="font-size: 0.88rem; font-weight: 700; width: 50px; color: #475569;">진행:</span>
-                                    <select class="status-select-mob select-progress-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
-                                        <option value="지원대기중" ${(item.progressStatus === '지원대기중' || !item.progressStatus || item.progressStatus === '심사 대기') ? 'selected' : ''}>지원대기중</option>
-                                        <option value="심사대기" ${(item.progressStatus === '심사대기' || item.progressStatus === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
-                                        <option value="대상자선정" ${(item.progressStatus === '대상자선정' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
-                                        <option value="간판시공 준비중" ${(item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
-                                        <option value="간판시공완료" ${(item.progressStatus === '간판시공완료' || item.progressStatus === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
-                                    </select>
-                                </div>
-
-                                ${constructorAssignHtml}
-                            </div>
-                        `;
-                        itemsList.appendChild(card);
+                        allBusinessItemsMob.push({
+                            user: u,
+                            item: item
+                        });
                     });
                 }
             });
 
-            if (!hasItems) {
-                itemsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.92rem;">등록된 영업물건이 없습니다.</p>';
+            let filteredItemsMob = allBusinessItemsMob;
+            if (qItems) {
+                filteredItemsMob = allBusinessItemsMob.filter(({ user: u, item }) => {
+                    const uId = String(u.id || '').toLowerCase();
+                    const uName = String(u.name || '').toLowerCase();
+                    const uBizCode = String(u.bizCode || '').toLowerCase();
+                    const itemId = String(item.id || '').toLowerCase();
+                    const appRefId = String(item.appRefId || '').toLowerCase();
+                    const itemName = String(item.name || '').toLowerCase();
+                    const rawPhone = String(item.phone || '').toLowerCase();
+                    const cleanPhone = String(item.phone || '').replace(/[^0-9]/g, '');
+                    const itemAddr = String(item.address || '').toLowerCase();
+                    const constName = String(item.assignedConstructorName || '').toLowerCase();
+                    const constId = String(item.assignedConstructorId || '').toLowerCase();
+
+                    return uId.includes(qItems) ||
+                           uName.includes(qItems) ||
+                           uBizCode.includes(qItems) ||
+                           itemId.includes(qItems) ||
+                           appRefId.includes(qItems) ||
+                           itemName.includes(qItems) ||
+                           rawPhone.includes(qItems) ||
+                           cleanPhone.includes(qItems.replace(/[^0-9]/g, '')) ||
+                           itemAddr.includes(qItems) ||
+                           constName.includes(qItems) ||
+                           constId.includes(qItems);
+                });
+            }
+
+            if (filteredItemsMob.length === 0) {
+                const emptyMsg = qItems ? `검색어 [${escapeHtml(qItems)}] 에 일치하는 영업물건이 없습니다.` : '등록된 영업물건이 없습니다.';
+                itemsList.innerHTML = `<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.92rem;">${emptyMsg}</p>`;
+            } else {
+                filteredItemsMob.forEach(({ user: u, item }) => {
+                    const card = document.createElement('div');
+                    card.className = 'admin-req-card-mob';
+                    card.style.background = '#f8fafc';
+                    card.style.padding = '14px';
+                    card.style.borderRadius = '10px';
+                    card.style.border = '1px solid var(--border-color)';
+                    card.style.marginBottom = '12px';
+                    card.style.textAlign = 'left';
+                    
+                    const isSelectedOrBeyond = (item.progressStatus === '대상자선정' || item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판시공완료' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인' || item.progressStatus === '간판 시공 중' || item.progressStatus === '시공 완료');
+
+                    let constructorAssignHtml = '';
+                    if (isSelectedOrBeyond) {
+                        if (item.assignedConstructorId) {
+                            constructorAssignHtml = `
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: #f0fdf4; padding: 8px 10px; border-radius: 6px; border: 1px solid #bbf7d0; margin-top: 4px;">
+                                    <span style="font-size: 0.88rem; font-weight: 700; color: #15803d; display: inline-flex; align-items: center; gap: 6px;">
+                                        <i class="fa-solid fa-screwdriver-wrench"></i> 배정: ${escapeHtml(item.assignedConstructorName || item.assignedConstructorId)}
+                                    </span>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.reassignConstructorItemMob('${u.id}', '${item.id}')" style="padding: 4px 8px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; color: #64748b; cursor: pointer;">변경</button>
+                                </div>
+                            `;
+                        } else {
+                            const constructors = users.filter(usr => usr.role === 'constructor');
+                            let constOptions = '<option value="">시공사 선택...</option>';
+                            constructors.forEach(c => {
+                                const constName = c.businessName || c.pendingBusinessName || c.name || c.id;
+                                constOptions += `<option value="${c.id}">${escapeHtml(constName)}</option>`;
+                            });
+
+                            constructorAssignHtml = `
+                                <div style="display: flex; gap: 8px; margin-top: 4px; align-items: center;">
+                                    <select class="status-select-mob select-constructor-bizitem-mob" data-uid="${u.id}" data-itemid="${item.id}" style="flex: 1; padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1.5px solid #86efac; background: white; font-weight: 600; color: #1e293b; height: auto;">
+                                        ${constOptions}
+                                    </select>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="window.assignConstructorToBizItemMob('${u.id}', '${item.id}', this)" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="fa-solid fa-link"></i> 배정
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    card.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <div style="font-size: 1.02rem; font-weight: bold; color: var(--text-primary);">
+                                ${escapeHtml(item.name)} 
+                                <span style="font-size: 0.86rem; font-weight: normal; color: var(--text-secondary);">(${escapeHtml(u.name)} 영업자 / ${escapeHtml(String(item.id))})</span>
+                            </div>
+                            <button type="button" onclick="window.deleteManagerItemMob('${u.id}', '${item.id}'); return false;" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 0.84rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-trash-can"></i> 삭제
+                            </button>
+                        </div>
+                        <div style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.4;"><i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> 주소: <span style="color: #475569;">${escapeHtml(item.address)}</span></div>
+                        ${item.phone ? `<div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 3px;"><i class="fa-solid fa-phone" style="color: #64748b;"></i> 연락처: <strong style="color: var(--accent-primary);">${escapeHtml(item.phone)}</strong></div>` : ''}
+                        
+                        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                            <div style="display:flex; align-items:center; gap: 6px;">
+                                <span style="font-size: 0.88rem; font-weight: 700; width: 50px; color: #475569;">접수:</span>
+                                <select class="status-select-mob select-receipt-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
+                                    <option value="업체신청" ${(item.receiptStatus === '업체신청') ? 'selected' : ''}>업체신청</option>
+                                    <option value="접수예정" ${(item.receiptStatus === '접수예정' || !item.receiptStatus || item.receiptStatus === '접수 대기') ? 'selected' : ''}>접수예정</option>
+                                    <option value="접수완료" ${(item.receiptStatus === '접수완료' || item.receiptStatus === '접수 완료' || item.receiptStatus.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; align-items:center; gap: 6px;">
+                                <span style="font-size: 0.88rem; font-weight: 700; width: 50px; color: #475569;">진행:</span>
+                                <select class="status-select-mob select-progress-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
+                                    <option value="지원대기중" ${(item.progressStatus === '지원대기중' || !item.progressStatus || item.progressStatus === '심사 대기') ? 'selected' : ''}>지원대기중</option>
+                                    <option value="심사대기" ${(item.progressStatus === '심사대기' || item.progressStatus === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
+                                    <option value="대상자선정" ${(item.progressStatus === '대상자선정' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
+                                    <option value="간판시공 준비중" ${(item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
+                                    <option value="간판시공완료" ${(item.progressStatus === '간판시공완료' || item.progressStatus === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
+                                </select>
+                            </div>
+
+                            ${constructorAssignHtml}
+                        </div>
+                    `;
+                    itemsList.appendChild(card);
+                });
             }
         }
 
