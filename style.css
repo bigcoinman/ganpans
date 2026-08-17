@@ -4373,36 +4373,36 @@ footer {
 /* Mobile Admin Dashboard Tabs Styling */
 .admin-tab-controls-mob {
   display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  gap: 6px !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 8px !important;
   background: #f8fafc !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 12px !important;
-  padding: 8px 6px !important;
+  padding: 10px 8px !important;
   margin-bottom: 20px !important;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03) !important;
 }
 
 .admin-tab-btn-mob {
-  display: flex !important;
-  flex-direction: column !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 5px !important;
-  padding: 10px 4px !important;
-  font-size: 0.86rem !important; /* 기존 0.72rem 대비 20% 확대 */
+  gap: 8px !important;
+  padding: 12px 8px !important;
+  font-size: 0.9rem !important; /* 큼직하고 시원한 20% 확대 글자 크기 */
   font-weight: 700 !important;
-  color: #475569 !important;
+  color: #334155 !important;
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
-  border-radius: 8px !important;
+  border-radius: 10px !important;
   cursor: pointer !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
   text-align: center !important;
-  line-height: 1.25 !important;
-  word-break: keep-all !important;
-  min-height: 64px !important;
+  line-height: 1.3 !important;
+  white-space: nowrap !important;
+  min-height: 48px !important;
 }
 
 .admin-tab-btn-mob:hover {
@@ -4422,7 +4422,7 @@ footer {
 
 .admin-tab-btn-mob i {
   font-size: 1.05rem !important;
-  margin-bottom: 2px !important;
+  flex-shrink: 0 !important;
 }
 
 /* Auth modal internal scroll container to prevent close button scroll-out */
