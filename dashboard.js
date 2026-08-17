@@ -1085,14 +1085,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const userJoinDate = typeof formatUserDate === 'function' ? formatUserDate(u.createdAt || u.created_at) : (u.createdAt || u.created_at || '-');
 
       tr.innerHTML = `
-        <td style="padding: 12px 14px; font-weight: 700; color: var(--text-primary); font-family: monospace;">${escapeHtml(u.id)}</td>
+        <td style="padding: 12px 14px; font-weight: 700; color: var(--text-primary);">
+          <div style="font-family: monospace; font-size: 0.9rem;">${escapeHtml(u.id)}</div>
+          <div style="font-size: 0.72rem; font-weight: normal; color: #64748b; margin-top: 3px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">(${escapeHtml(userJoinDate)})</div>
+        </td>
         <td style="padding: 12px 14px; font-weight: 600; color: var(--text-primary);">${escapeHtml(u.name || '-')}</td>
         <td style="padding: 12px 14px; font-size: 0.8rem; color: var(--text-secondary);">
           <div><a href="tel:${escapeHtml(u.phone || '')}" style="color: var(--accent-primary); text-decoration: none;"><i class="fa-solid fa-phone"></i> ${escapeHtml(u.phone || '-')}</a></div>
           ${u.email ? `<div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">${escapeHtml(u.email)}</div>` : ''}
         </td>
         <td style="padding: 12px 14px; font-size: 0.8rem; color: var(--text-secondary); max-width: 220px;">${escapeHtml(u.address || '-')}</td>
-        <td style="padding: 12px 14px; text-align: center; font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; font-family: monospace;">${escapeHtml(userJoinDate)}</td>
         <td style="padding: 12px 14px; text-align: center; white-space: nowrap;">${roleBadge}</td>
         <td style="padding: 12px 14px; text-align: center; white-space: nowrap;">${codeText}</td>
         <td style="padding: 12px 14px; text-align: center; white-space: nowrap;">${deleteBtn}</td>

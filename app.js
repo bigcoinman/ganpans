@@ -1342,12 +1342,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                            <strong style="font-size: 0.85rem; color: var(--text-primary); font-family: monospace;">${escapeHtml(u.id)}</strong>
+                            <div style="display:flex; align-items:center; gap: 6px; flex-wrap: wrap;">
+                                <strong style="font-size: 0.85rem; color: var(--text-primary); font-family: monospace;">${escapeHtml(u.id)}</strong>
+                                <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">(${escapeHtml(userJoinDate)})</span>
+                            </div>
                             ${roleBadge}
                         </div>
                         <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; text-align: left;">
                             <div>성명: <strong>${escapeHtml(u.name || '-')}</strong></div>
-                            <div>가입일자: <strong style="color: var(--text-primary); font-family: monospace;">${escapeHtml(userJoinDate)}</strong></div>
                             <div>연락처: <a href="tel:${escapeHtml(u.phone || '')}" style="color: var(--accent-primary); text-decoration: none;">${escapeHtml(u.phone || '-')}</a></div>
                             ${u.email ? `<div>이메일: ${escapeHtml(u.email)}</div>` : ''}
                             ${u.address ? `<div>주소: ${escapeHtml(u.address)}</div>` : ''}
