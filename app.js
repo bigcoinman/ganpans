@@ -866,23 +866,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const apps = JSON.parse(localStorage.getItem('applications')) || [];
         let itemsUpdated = false;
 
-        items = items.map(item => {
-            if (typeof item.id === 'string' && (item.id.startsWith('GP-') || item.id.startsWith('P-'))) {
-                const matchingApp = apps.find(app => app.id === item.id);
-                if (matchingApp) {
-                    let updatedProgress = item.progressStatus;
-                    if (matchingApp.status === 'approved') {
-                        updatedProgress = '승인 완료';
-                    } else if (matchingApp.status === 'rejected') {
-                        updatedProgress = '반려됨';
-                    } else {
-                        updatedProgress = '심사 대기';
-                    }
+        // applications 중 해당 영업자(activeUser.bizCode 또는 activeUser.id)가 등록한 건이 items에 없으면 자동 복구/병합
+        apps.forEach(app => {
+            const isMyBizApp = (app.referrerCode && activeUser.bizCode && app.referrerCode === activeUser.bizCode) ||
+                               (app.userId && app.userId === activeUser.id && (String(app.id).startsWith('B-') || app.isBizItem || app.signType === '현장 카메라 접수'));
+            if (isMyBizApp && !items.some(it => String(it.id) === String(app.id))) {
+                const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
+                items.unshift({
+                    id: app.id,
+                    name: app.storeName || app.shopName || app.ownerName || '영업물건',
+                    phone: app.ownerPhone || '',
+                    address: app.storeAddress || '',
+                    photos: photosList,
+                    receiptStatus: app.receiptStatus || '접수예정',
+                    progressStatus: (app.status === 'approved' ? '승인 완료' : (app.status === 'rejected' ? '반려됨' : '지원대기중')),
+                    createdAt: app.appliedAt || new Date().toISOString()
+                });
+                itemsUpdated = true;
+            }
+        });
 
-                    if (item.progressStatus !== updatedProgress) {
-                        item.progressStatus = updatedProgress;
-                        itemsUpdated = true;
-                    }
+        items = items.map(item => {
+            const matchingApp = apps.find(app => String(app.id) === String(item.id));
+            if (matchingApp) {
+                let updatedProgress = item.progressStatus;
+                if (matchingApp.status === 'approved' || matchingApp.status === '서류제출 & 접수예정') {
+                    updatedProgress = '승인 완료';
+                } else if (matchingApp.status === 'rejected' || matchingApp.status === '지원사업 탈락') {
+                    updatedProgress = '반려됨';
+                }
+
+                // 사진이 items에는 없고 matchingApp에 있는 경우 자동 동기화
+                if ((!item.photos || item.photos.length === 0) && (matchingApp.fileData || (matchingApp.photos && matchingApp.photos.length > 0))) {
+                    item.photos = matchingApp.photos && matchingApp.photos.length > 0 ? matchingApp.photos : [matchingApp.fileData];
+                    itemsUpdated = true;
+                }
+
+                if (item.progressStatus !== updatedProgress) {
+                    item.progressStatus = updatedProgress;
+                    itemsUpdated = true;
                 }
             }
             return item;
@@ -1231,12 +1253,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const processRegistration = (base64Photo) => {
+            const processRegistration = (base64PhotosList) => {
                 let apps = JSON.parse(localStorage.getItem('applications')) || [];
                 const itemId = typeof generateBizItemId === 'function' ? generateBizItemId(activeUser.bizCode, apps) : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(4, '0')}`;
+                const mainPhoto = (base64PhotosList && base64PhotosList.length > 0) ? base64PhotosList[0] : '';
 
-                // 모든 신청물건은 1차적으로 [신청서 목록(applications)]에만 저장
-                // (최고관리자가 진흥원 접수 확인 후 [영업물건으로 변경] 토글을 켜면 영업물건 목록으로 연동됨)
+                // 1. 최고관리자 [신청서 목록(applications)]에 등록
                 const newApp = {
                     id: itemId,
                     userId: activeUser.id,
@@ -1247,7 +1269,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     storeAddress: addressVal,
                     signType: '현장 카메라 접수',
                     fileName: selectedPhotosMob.length > 0 ? (selectedPhotosMob[0].name || '현장촬영사진.jpg') : '현장촬영사진.jpg',
-                    fileData: base64Photo || '',
+                    fileData: mainPhoto,
+                    photos: base64PhotosList || [],
+                    photosCount: (base64PhotosList || []).length,
                     appliedAt: new Date().toISOString(),
                     status: 'pending',
                     isBizItem: false,
@@ -1255,26 +1279,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 if (!apps.some(a => a.id === itemId)) {
-                    apps.push(newApp);
+                    apps.unshift(newApp);
                 } else {
                     apps = apps.map(a => a.id === itemId ? newApp : a);
                 }
                 localStorage.setItem('applications', JSON.stringify(apps));
 
-                // Supabase 클라우드 DB 실시간 양방향 동기화
-                if (window.SupabaseSync) {
-                    window.SupabaseSync.upsertApplication(newApp);
+                // 2. 영업자의 [내 관리 영업물건 현황(activeUser.items)]에도 즉시 등록하여 바로 표시되도록 연동
+                const newItem = {
+                    id: itemId,
+                    name: nameVal,
+                    phone: phoneVal,
+                    address: addressVal,
+                    photos: base64PhotosList || [],
+                    receiptStatus: '접수예정',
+                    progressStatus: '지원대기중',
+                    createdAt: new Date().toISOString()
+                };
+
+                if (!activeUser.items) activeUser.items = [];
+                const existingIdx = activeUser.items.findIndex(it => it.id === itemId);
+                if (existingIdx >= 0) {
+                    activeUser.items[existingIdx] = newItem;
+                } else {
+                    activeUser.items.unshift(newItem);
                 }
 
-                // 카카오톡 관리자 실시간 알림 발송
+                users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
+                localStorage.setItem('users', JSON.stringify(users));
+                localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+                // 3. Supabase 클라우드 DB 실시간 양방향 동기화
+                if (window.SupabaseSync) {
+                    window.SupabaseSync.upsertApplication(newApp);
+                    if (typeof window.SupabaseSync.updateUser === 'function') {
+                        window.SupabaseSync.updateUser(activeUser.id, { items: activeUser.items });
+                    }
+                }
+
+                // 4. 카카오톡 관리자 실시간 알림 발송
                 if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
                     window.KakaoNotifier.notifyApplication(newApp);
                 }
 
-                alert(`현장 간판 신청 물건 [${nameVal}] 등록이 완료되었습니다!\n신청번호: [${itemId}]\n(최고관리자 대시보드 [신청서 목록]에 안전하게 등록되었습니다.)`);
+                alert(`현장 간판 신청 물건 [${nameVal}] 등록이 완료되었습니다!\n신청번호: [${itemId}]\n(내 관리 영업물건 및 최고관리자 대시보드에 정상 등록되었습니다.)`);
                 formBizUploadMob.reset();
                 selectedPhotosMob = [];
                 renderMobilePhotoPreviewsMob();
+                renderBusinessDashboardMob();
                 renderStatusTab();
                 window.scrollTo(0, 0);
                 document.documentElement.scrollTop = 0;
@@ -1282,12 +1334,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateHeaderAuthButton();
             };
 
+            // 모든 선택된 사진을 Base64로 압축 변환
             if (selectedPhotosMob.length > 0) {
-                compressImageToBase64(selectedPhotosMob[0], 2 * 1024 * 1024).then(base64 => {
-                    processRegistration(base64);
+                const photoPromises = selectedPhotosMob.map(file => {
+                    if (typeof compressImageToBase64 === 'function') {
+                        return compressImageToBase64(file, 2 * 1024 * 1024).catch(() => '');
+                    }
+                    return new Promise(res => {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => res(ev.target.result);
+                        reader.onerror = () => res('');
+                        reader.readAsDataURL(file);
+                    });
+                });
+
+                Promise.all(photoPromises).then(base64Photos => {
+                    const validPhotos = base64Photos.filter(p => !!p);
+                    processRegistration(validPhotos);
+                }).catch(() => {
+                    processRegistration([]);
                 });
             } else {
-                processRegistration('');
+                processRegistration([]);
             }
         });
     }
@@ -1685,7 +1753,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // 첨부파일 (현장사진) UI
                     let fileAttachmentHtml = '';
-                    if (app.fileData) {
+                    const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '');
+                    if (photoSrc) {
                         fileAttachmentHtml = `
                             <div style="margin-top: 10px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; text-align: left;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -1695,11 +1764,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </button>
                                 </div>
                                 <div style="display: flex; gap: 10px; align-items: center;">
-                                    <a href="${sanitizeUrl(app.fileData)}" target="_blank" style="display: block; width: 64px; height: 64px; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; flex-shrink: 0; background: #000;">
-                                        <img src="${sanitizeUrl(app.fileData)}" alt="현장사진" style="width: 100%; height: 100%; object-fit: cover;">
+                                    <a href="${sanitizeUrl(photoSrc)}" target="_blank" style="display: block; width: 64px; height: 64px; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; flex-shrink: 0; background: #000;">
+                                        <img src="${sanitizeUrl(photoSrc)}" alt="현장사진" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='간판지원단 로고-2.png'">
                                     </a>
                                     <div style="flex: 1; min-width: 0;">
-                                        <a href="${sanitizeUrl(app.fileData)}" download="${escapeHtml(app.fileName || '현장사진.jpg')}" style="color: var(--accent-primary); font-size: 0.85rem; font-weight: 600; text-decoration: underline; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all;">
+                                        <a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(app.fileName || '현장사진.jpg')}" style="color: var(--accent-primary); font-size: 0.85rem; font-weight: 600; text-decoration: underline; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all;">
                                             <i class="fa-solid fa-download"></i> ${escapeHtml(app.fileName || '현장사진.jpg')}
                                         </a>
                                         <div style="font-size: 0.74rem; color: #64748b; margin-top: 2px;">클릭하여 원본 다운로드 / 확대보기</div>

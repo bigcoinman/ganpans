@@ -2090,24 +2090,36 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(app.storeAddress)}</div>
         </td>
         <td style="padding: 14px 16px; white-space: nowrap;"><span style="font-weight: 700; color: var(--accent-primary); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">${escapeHtml(app.signType === 'NEON' || app.signType === 'neon' || !app.signType ? '플렉스' : app.signType)}</span></td>
-        <td style="padding: 14px 16px; color: var(--text-secondary); max-width: 140px; word-break: break-all;">
-          ${app.fileData ? `
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <a href="${sanitizeUrl(app.fileData) || './초원식당 간판.png'}" download="${escapeHtml(app.fileName) || '현장사진.png'}" style="color: var(--accent-primary); font-weight: 600; text-decoration: underline; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;" title="클릭하여 다운로드">
-                <i class="fa-solid fa-download"></i> ${escapeHtml(app.fileName) || '현장사진.png'}
-              </a>
-              <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 2px 6px; font-size: 0.72rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; width: fit-content;" title="사진 변경">
-                <i class="fa-solid fa-camera"></i> 사진 변경
-              </button>
-            </div>
-          ` : `
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <span style="color: #94a3b8; font-size: 0.76rem;">미등록</span>
-              <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 3px 6px; font-size: 0.72rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; width: fit-content; font-weight: 700;" title="현장사진 등록">
-                <i class="fa-solid fa-camera"></i> 사진 등록
-              </button>
-            </div>
-          `}
+        <td style="padding: 14px 16px; color: var(--text-secondary); max-width: 160px;">
+          ${(() => {
+            const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '');
+            if (photoSrc) {
+              return `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <a href="${sanitizeUrl(photoSrc)}" target="_blank" style="display: block; width: 44px; height: 44px; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; flex-shrink: 0; background: #f8fafc;" title="사진 크게 보기">
+                    <img src="${sanitizeUrl(photoSrc)}" alt="현장사진" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='간판지원단 로고-2.png'">
+                  </a>
+                  <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+                    <a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(app.fileName) || '현장사진.jpg'}" style="color: var(--accent-primary); font-weight: 600; font-size: 0.78rem; text-decoration: underline; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;" title="다운로드">
+                      <i class="fa-solid fa-download"></i> 다운로드
+                    </a>
+                    <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 2px 6px; font-size: 0.7rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; width: fit-content;" title="사진 변경">
+                      <i class="fa-solid fa-camera"></i> 변경
+                    </button>
+                  </div>
+                </div>
+              `;
+            } else {
+              return `
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <span style="color: #94a3b8; font-size: 0.76rem;">미등록</span>
+                  <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 3px 6px; font-size: 0.72rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; width: fit-content; font-weight: 700;" title="현장사진 등록">
+                    <i class="fa-solid fa-camera"></i> 사진 등록
+                  </button>
+                </div>
+              `;
+            }
+          })()}
         </td>
         <td style="padding: 14px 16px; text-align: center;">${actionButtons}</td>
       `;
