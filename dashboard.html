@@ -438,7 +438,7 @@
                                             총 등록 회원: <strong id="all-users-count" style="color: var(--accent-primary);">0</strong>명
                                         </div>
                                         <div style="display: flex; gap: 6px; max-width: 320px; width: 100%;">
-                                            <input type="text" id="search-all-users-input" placeholder="아이디 / 이름 / 연락처 검색" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; border: 1px solid #cbd5e1; width: 100%;">
+                                            <input type="text" id="search-all-users-input" placeholder="아이디 / 이름 / 연락처 검색" maxlength="30" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; border: 1px solid #cbd5e1; width: 100%;">
                                         </div>
                                     </div>
                                     <div class="manager-table-container" style="overflow-x: auto; background: rgba(255,255,255,0.75); border-radius: 12px; border: 1px solid var(--border-color);">
@@ -491,7 +491,7 @@
                                 <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; gap: 12px; flex-wrap: wrap;" onclick="window.toggleAdminSection('sec-container-items', this, event)">
                                     <h4 class="manager-section-title" style="margin: 0; font-size: 0.96rem; white-space: nowrap;"><i class="fa-solid fa-sliders" style="color: var(--accent-secondary);"></i> 영업 물건 접수/진행 상태 수동 조작</h4>
                                     <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 360px; justify-content: flex-end;" onclick="event.stopPropagation();">
-                                        <input type="text" id="search-manager-items-input" placeholder="아이디/이름/코드검색" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; border: 1.5px solid #fed7aa; width: 100%; background: #fff; box-shadow: inset 0 1px 2px rgba(0,0,0,0.04); font-weight: 500;">
+                                        <input type="text" id="search-manager-items-input" placeholder="아이디/이름/코드검색" maxlength="30" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; border: 1.5px solid #fed7aa; width: 100%; background: #fff; box-shadow: inset 0 1px 2px rgba(0,0,0,0.04); font-weight: 500;">
                                     </div>
                                     <button type="button" class="btn-toggle-admin" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
                                         <span class="toggle-text">펼치기</span> <i class="fa-solid fa-chevron-down toggle-icon"></i>
@@ -512,7 +512,7 @@
                             <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; margin-bottom: 12px; background: rgba(241, 245, 249, 0.7); padding: 10px 16px; border-radius: 10px; border: 1px solid #e2e8f0; gap: 12px; flex-wrap: wrap;" onclick="window.toggleAdminSection('sec-container-apps', this, event)">
                                 <h4 class="manager-section-title" style="margin: 0; font-size: 1.02rem; white-space: nowrap;"><i class="fa-solid fa-file-signature" style="color: var(--accent-success);"></i> 온라인 간편 지원 신청 목록 (웹/앱 접수건)</h4>
                                 <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 360px; justify-content: flex-end;" onclick="event.stopPropagation();">
-                                    <input type="text" id="search-manager-apps-input" placeholder="아이디/이름/코드검색" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; border: 1.5px solid #bbf7d0; width: 100%; background: #fff; box-shadow: inset 0 1px 2px rgba(0,0,0,0.04); font-weight: 500;">
+                                    <input type="text" id="search-manager-apps-input" placeholder="아이디/이름/코드검색" maxlength="30" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; border: 1.5px solid #bbf7d0; width: 100%; background: #fff; box-shadow: inset 0 1px 2px rgba(0,0,0,0.04); font-weight: 500;">
                                 </div>
                                 <button type="button" class="btn-toggle-admin" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 4px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
                                     <span class="toggle-text">펼치기</span> <i class="fa-solid fa-chevron-down toggle-icon"></i>
@@ -924,10 +924,10 @@
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Dashboard Core Script -->
-    <script src="supabase-config.js?v=20260818_0025"></script>
-    <script src="security-utils.js?v=20260818_0025"></script>
-    <script src="kakao-notify.js?v=20260818_0025"></script>
-    <script src="dashboard.js?v=20260818_0025"></script>
+    <script src="supabase-config.js?v=20260818_0035"></script>
+    <script src="security-utils.js?v=20260818_0035"></script>
+    <script src="kakao-notify.js?v=20260818_0035"></script>
+    <script src="dashboard.js?v=20260818_0035"></script>
 </body>
 
 </html>

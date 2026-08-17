@@ -1157,7 +1157,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchAllUsersInput = document.getElementById('search-all-users-input');
   if (searchAllUsersInput) {
     searchAllUsersInput.addEventListener('input', (e) => {
-      allUsersSearchQuery = e.target.value;
+      allUsersSearchQuery = (e.target.value || '').slice(0, 30);
       allUsersCurrentPage = 1;
       renderAllUsersList();
     });
@@ -1268,9 +1268,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // 검색어 필터링 (아이디/이름/코드검색)
+    // 검색어 필터링 (아이디/이름/코드검색, 최대 30자)
     const searchManagerItemsInput = document.getElementById('search-manager-items-input');
-    const searchItemKeyword = searchManagerItemsInput ? searchManagerItemsInput.value.trim().toLowerCase() : '';
+    const searchItemKeyword = searchManagerItemsInput ? searchManagerItemsInput.value.trim().slice(0, 30).toLowerCase() : '';
     
     let filteredBusinessItems = allBusinessItems;
     if (searchItemKeyword) {
@@ -1965,9 +1965,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const apps = JSON.parse(localStorage.getItem('applications')) || [];
     const paginationAppsContainer = document.getElementById('pagination-manager-apps');
 
-    // 검색어 필터링 (아이디/이름/코드검색)
+    // 검색어 필터링 (아이디/이름/코드검색, 최대 30자)
     const searchManagerAppsInput = document.getElementById('search-manager-apps-input');
-    const searchAppKeyword = searchManagerAppsInput ? searchManagerAppsInput.value.trim().toLowerCase() : '';
+    const searchAppKeyword = searchManagerAppsInput ? searchManagerAppsInput.value.trim().slice(0, 30).toLowerCase() : '';
 
     // Sort applications by applied date descending (latest first)
     const sortedApps = [...apps].sort((a, b) => b.id - a.id);

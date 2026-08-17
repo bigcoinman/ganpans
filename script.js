@@ -3100,11 +3100,11 @@ function initMobileBottomNav() {
         searchTabCode.style.color = 'var(--text-secondary)';
       }
       if (globalSearchInput) {
-        globalSearchInput.maxLength = 25;
-        globalSearchInput.placeholder = '상호명을 입력해 주세요 (최대 25자, 예: 초원식당)';
+        globalSearchInput.maxLength = 30;
+        globalSearchInput.placeholder = '상호명을 입력해 주세요 (최대 30자, 예: 초원식당)';
       }
       if (searchGuideText) {
-        searchGuideText.innerHTML = '조회하고자 하는 매장의 <strong>상호명(업체명, 최대 25자)</strong>을 입력해 주세요.';
+        searchGuideText.innerHTML = '조회하고자 하는 매장의 <strong>상호명(업체명, 최대 30자)</strong>을 입력해 주세요.';
       }
     } else {
       if (searchTabCode) {
@@ -3118,11 +3118,11 @@ function initMobileBottomNav() {
         searchTabName.style.color = 'var(--text-secondary)';
       }
       if (globalSearchInput) {
-        globalSearchInput.maxLength = 15;
-        globalSearchInput.placeholder = '고유번호를 입력해 주세요 (최대 15자, 예: P-260816001)';
+        globalSearchInput.maxLength = 30;
+        globalSearchInput.placeholder = '고유번호를 입력해 주세요 (최대 30자, 예: P-260816001)';
       }
       if (searchGuideText) {
-        searchGuideText.innerHTML = '발급받으신 <strong>고유 접수번호(최대 15자)</strong>(예: P-260816001, B-260801-0001)를 입력해 주세요.';
+        searchGuideText.innerHTML = '발급받으신 <strong>고유 접수번호(최대 30자)</strong>(예: P-260816001, B-260801-0001)를 입력해 주세요.';
       }
     }
     if (globalSearchInput) globalSearchInput.focus();

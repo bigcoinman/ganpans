@@ -1422,7 +1422,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let curUsers = JSON.parse(localStorage.getItem('users')) || [];
             curUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(curUsers) : curUsers;
             const searchInput = document.getElementById('search-all-users-input-mob');
-            const q = searchInput && searchInput.value ? searchInput.value.trim().toLowerCase() : '';
+            const q = searchInput && searchInput.value ? searchInput.value.trim().slice(0, 30).toLowerCase() : '';
 
             if (q) {
                 curUsers = curUsers.filter(u => 
@@ -1591,7 +1591,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const appsList = document.getElementById('admin-apps-list-mob');
         if (appsList) {
             const searchAppsInput = document.getElementById('search-apps-input-mob');
-            const qApps = searchAppsInput && searchAppsInput.value ? searchAppsInput.value.trim().toLowerCase() : '';
+            const qApps = searchAppsInput && searchAppsInput.value ? searchAppsInput.value.trim().slice(0, 30).toLowerCase() : '';
 
             // Sort applications by applied date descending
             let sortedApps = [...applications].sort((a, b) => String(b.id || '').localeCompare(String(a.id || '')) || String(b.appliedAt || '').localeCompare(String(a.appliedAt || '')));
@@ -1769,7 +1769,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (itemsList) {
             itemsList.innerHTML = '';
             const searchItemsInput = document.getElementById('search-items-input-mob');
-            const qItems = searchItemsInput && searchItemsInput.value ? searchItemsInput.value.trim().toLowerCase() : '';
+            const qItems = searchItemsInput && searchItemsInput.value ? searchItemsInput.value.trim().slice(0, 30).toLowerCase() : '';
 
             const allBusinessItemsMob = [];
             users.forEach(u => {
@@ -3842,11 +3842,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 searchTabCode.style.color = 'var(--text-secondary)';
             }
             if (globalSearchInput) {
-                globalSearchInput.maxLength = 25;
-                globalSearchInput.placeholder = '상호명을 입력해 주세요 (최대 25자, 예: 초원식당)';
+                globalSearchInput.maxLength = 30;
+                globalSearchInput.placeholder = '상호명을 입력해 주세요 (최대 30자, 예: 초원식당)';
             }
             if (searchGuideText) {
-                searchGuideText.innerHTML = '조회하고자 하는 매장의 <strong>상호명(업체명, 최대 25자)</strong>을 입력해 주세요.';
+                searchGuideText.innerHTML = '조회하고자 하는 매장의 <strong>상호명(업체명, 최대 30자)</strong>을 입력해 주세요.';
             }
         } else {
             if (searchTabCode) {
@@ -3860,11 +3860,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 searchTabName.style.color = 'var(--text-secondary)';
             }
             if (globalSearchInput) {
-                globalSearchInput.maxLength = 15;
-                globalSearchInput.placeholder = '고유번호를 입력해 주세요 (최대 15자, 예: P-260816001)';
+                globalSearchInput.maxLength = 30;
+                globalSearchInput.placeholder = '고유번호를 입력해 주세요 (최대 30자, 예: P-260816001)';
             }
             if (searchGuideText) {
-                searchGuideText.innerHTML = '발급받으신 <strong>고유 접수번호(최대 15자)</strong>(예: P-260816001, B-260801-0001)를 입력해 주세요.';
+                searchGuideText.innerHTML = '발급받으신 <strong>고유 접수번호(최대 30자)</strong>(예: P-260816001, B-260801-0001)를 입력해 주세요.';
             }
         }
         if (globalSearchInput) globalSearchInput.focus();
