@@ -1277,40 +1277,39 @@ body.mobile-app-body {
     display: flex !important;
 }
 
-/* Mobile Admin Dashboard Tabs Styling */
+/* Mobile Admin Dashboard Tabs Styling - 2줄(4x2) 배열 & 글자크기 20% 확대 */
 .admin-tab-controls-mob {
-  display: flex !important;
-  flex-wrap: wrap !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
   gap: 6px !important;
   background: #f8fafc !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 12px !important;
-  padding: 6px !important;
+  padding: 8px 6px !important;
   margin-bottom: 20px !important;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03) !important;
 }
 
 .admin-tab-btn-mob {
-  flex: 1 1 30% !important;
-  display: inline-flex !important;
+  display: flex !important;
+  flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 6px !important;
-  padding: 10px 8px !important;
-  font-size: 0.72rem !important;
+  gap: 5px !important;
+  padding: 10px 4px !important;
+  font-size: 0.86rem !important; /* 기존 0.72rem 대비 20% 확대 */
   font-weight: 700 !important;
-  color: #64748b !important;
+  color: #475569 !important;
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 8px !important;
   cursor: pointer !important;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
-}
-
-.admin-tab-btn-mob:nth-child(4),
-.admin-tab-btn-mob:nth-child(5) {
-  flex: 1 1 47% !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  text-align: center !important;
+  line-height: 1.25 !important;
+  word-break: keep-all !important;
+  min-height: 64px !important;
 }
 
 .admin-tab-btn-mob:hover {
@@ -1324,12 +1323,13 @@ body.mobile-app-body {
   color: #ffffff !important;
   background: linear-gradient(135deg, var(--accent-primary) 0%, #1e40af 100%) !important;
   border-color: var(--accent-primary) !important;
-  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25) !important;
   transform: translateY(0) !important;
 }
 
 .admin-tab-btn-mob i {
-  font-size: 0.85rem !important;
+  font-size: 1.05rem !important; /* 아이콘 크기 비례 확대 */
+  margin-bottom: 2px !important;
 }
 
 /* 야간 경관 조명 토글 버튼 모바일 최적화 축소 */
