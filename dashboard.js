@@ -1163,6 +1163,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // 영업 물건 검색 이벤트 바인딩 (아이디/이름/코드검색)
+  const searchManagerItemsInput = document.getElementById('search-manager-items-input');
+  if (searchManagerItemsInput) {
+    searchManagerItemsInput.addEventListener('input', () => {
+      itemsCurrentPage = 1;
+      renderManagerPanel();
+    });
+  }
+
+  // 온라인 간편 지원 신청 목록 검색 이벤트 바인딩 (아이디/이름/코드검색)
+  const searchManagerAppsInput = document.getElementById('search-manager-apps-input');
+  if (searchManagerAppsInput) {
+    searchManagerAppsInput.addEventListener('input', () => {
+      appsCurrentPage = 1;
+      renderApplicationsList();
+    });
+  }
+
   const renderManagerPanel = () => {
     if (activeUser.role !== 'admin') return;
     if (!managerRequestsList || !managerItemsList) return;
@@ -1235,7 +1253,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // 2. Render Business Items (with pagination)
+    // 2. Render Business Items (with pagination & search)
     managerItemsList.innerHTML = '';
     const allBusinessItems = [];
 
@@ -1250,19 +1268,53 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // 검색어 필터링 (아이디/이름/코드검색)
+    const searchManagerItemsInput = document.getElementById('search-manager-items-input');
+    const searchItemKeyword = searchManagerItemsInput ? searchManagerItemsInput.value.trim().toLowerCase() : '';
+    
+    let filteredBusinessItems = allBusinessItems;
+    if (searchItemKeyword) {
+      filteredBusinessItems = allBusinessItems.filter(({ user: u, item }) => {
+        const uId = String(u.id || '').toLowerCase();
+        const uName = String(u.name || '').toLowerCase();
+        const uBizCode = String(u.bizCode || '').toLowerCase();
+        const itemId = String(item.id || '').toLowerCase();
+        const appRefId = String(item.appRefId || '').toLowerCase();
+        const itemName = String(item.name || '').toLowerCase();
+        const rawPhone = String(item.phone || '').toLowerCase();
+        const cleanPhone = String(item.phone || '').replace(/[^0-9]/g, '');
+        const itemAddr = String(item.address || '').toLowerCase();
+        const constName = String(item.assignedConstructorName || '').toLowerCase();
+        const constId = String(item.assignedConstructorId || '').toLowerCase();
+
+        return uId.includes(searchItemKeyword) ||
+               uName.includes(searchItemKeyword) ||
+               uBizCode.includes(searchItemKeyword) ||
+               itemId.includes(searchItemKeyword) ||
+               appRefId.includes(searchItemKeyword) ||
+               itemName.includes(searchItemKeyword) ||
+               rawPhone.includes(searchItemKeyword) ||
+               cleanPhone.includes(searchItemKeyword.replace(/[^0-9]/g, '')) ||
+               itemAddr.includes(searchItemKeyword) ||
+               constName.includes(searchItemKeyword) ||
+               constId.includes(searchItemKeyword);
+      });
+    }
+
     const paginationItemsContainer = document.getElementById('pagination-manager-items');
 
-    if (allBusinessItems.length === 0) {
-      managerItemsList.innerHTML = `<p class="text-muted" style="text-align: center; padding: 30px 0;">등록된 영업물건이 없습니다.</p>`;
+    if (filteredBusinessItems.length === 0) {
+      const emptyMsg = searchItemKeyword ? `검색어 [${escapeHtml(searchItemKeyword)}] 에 일치하는 영업물건이 없습니다.` : '등록된 영업물건이 없습니다.';
+      managerItemsList.innerHTML = `<p class="text-muted" style="text-align: center; padding: 30px 0;">${emptyMsg}</p>`;
       if (paginationItemsContainer) paginationItemsContainer.innerHTML = '';
     } else {
-      const totalItemsCount = allBusinessItems.length;
+      const totalItemsCount = filteredBusinessItems.length;
       const totalItemsPages = Math.ceil(totalItemsCount / itemsPerPage);
       if (itemsCurrentPage > totalItemsPages) itemsCurrentPage = totalItemsPages;
       if (itemsCurrentPage < 1) itemsCurrentPage = 1;
 
       const startIndex = (itemsCurrentPage - 1) * itemsPerPage;
-      const paginatedItems = allBusinessItems.slice(startIndex, startIndex + itemsPerPage);
+      const paginatedItems = filteredBusinessItems.slice(startIndex, startIndex + itemsPerPage);
 
       paginatedItems.forEach(({ user: u, item }) => {
         const row = document.createElement('div');
@@ -1619,7 +1671,10 @@ document.addEventListener('DOMContentLoaded', () => {
   window.reassignConstructorItem = reassignConstructorItem;
 
   // --- Collapsible Sections Toggle for PC Admin Dashboard ---
-  const toggleAdminSection = (containerId, headerEl) => {
+  const toggleAdminSection = (containerId, headerEl, event) => {
+    if (event && event.target && event.target.tagName === 'INPUT') {
+      return;
+    }
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -1910,10 +1965,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const apps = JSON.parse(localStorage.getItem('applications')) || [];
     const paginationAppsContainer = document.getElementById('pagination-manager-apps');
 
-    if (apps.length === 0) {
+    // 검색어 필터링 (아이디/이름/코드검색)
+    const searchManagerAppsInput = document.getElementById('search-manager-apps-input');
+    const searchAppKeyword = searchManagerAppsInput ? searchManagerAppsInput.value.trim().toLowerCase() : '';
+
+    // Sort applications by applied date descending (latest first)
+    const sortedApps = [...apps].sort((a, b) => b.id - a.id);
+
+    let filteredApps = sortedApps;
+    if (searchAppKeyword) {
+      filteredApps = sortedApps.filter(app => {
+        const appId = String(app.id || '').toLowerCase();
+        const ownerName = String(app.ownerName || '').toLowerCase();
+        const userId = String(app.userId || '').toLowerCase();
+        const rawPhone = String(app.ownerPhone || '').toLowerCase();
+        const cleanPhone = String(app.ownerPhone || '').replace(/[^0-9]/g, '');
+        const storeName = String(app.storeName || app.shopName || '').toLowerCase();
+        const storeAddr = String(app.storeAddress || '').toLowerCase();
+        const refCode = String(app.referrerCode || app.bizCode || '').toLowerCase();
+        const signType = String(app.signType || '').toLowerCase();
+        const constName = String(app.assignedConstructorName || '').toLowerCase();
+
+        return appId.includes(searchAppKeyword) ||
+               ownerName.includes(searchAppKeyword) ||
+               userId.includes(searchAppKeyword) ||
+               rawPhone.includes(searchAppKeyword) ||
+               cleanPhone.includes(searchAppKeyword.replace(/[^0-9]/g, '')) ||
+               storeName.includes(searchAppKeyword) ||
+               storeAddr.includes(searchAppKeyword) ||
+               refCode.includes(searchAppKeyword) ||
+               signType.includes(searchAppKeyword) ||
+               constName.includes(searchAppKeyword);
+      });
+    }
+
+    if (filteredApps.length === 0) {
+      const emptyMsg = searchAppKeyword ? `검색어 [${escapeHtml(searchAppKeyword)}] 에 일치하는 온라인 간편 지원 신청이 없습니다.` : '접수된 온라인 간편 지원 신청이 없습니다.';
       applicationsTableBody.innerHTML = `
         <tr>
-          <td colspan="6" class="text-muted" style="text-align: center; padding: 40px 0;">접수된 온라인 간편 지원 신청이 없습니다.</td>
+          <td colspan="6" class="text-muted" style="text-align: center; padding: 40px 0;">${emptyMsg}</td>
         </tr>
       `;
       if (paginationAppsContainer) paginationAppsContainer.innerHTML = '';
@@ -1921,17 +2011,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     applicationsTableBody.innerHTML = '';
-    
-    // Sort applications by applied date descending (latest first)
-    const sortedApps = [...apps].sort((a, b) => b.id - a.id);
 
-    const totalAppsCount = sortedApps.length;
+    const totalAppsCount = filteredApps.length;
     const totalAppsPages = Math.ceil(totalAppsCount / appsPerPage);
     if (appsCurrentPage > totalAppsPages) appsCurrentPage = totalAppsPages;
     if (appsCurrentPage < 1) appsCurrentPage = 1;
 
     const startIndex = (appsCurrentPage - 1) * appsPerPage;
-    const paginatedApps = sortedApps.slice(startIndex, startIndex + appsPerPage);
+    const paginatedApps = filteredApps.slice(startIndex, startIndex + appsPerPage);
 
     paginatedApps.forEach(app => {
       const tr = document.createElement('tr');
