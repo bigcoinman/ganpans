@@ -1897,10 +1897,24 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(app.storeAddress)}</div>
         </td>
         <td style="padding: 14px 16px; white-space: nowrap;"><span style="font-weight: 700; color: var(--accent-primary); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">${escapeHtml(app.signType === 'NEON' || app.signType === 'neon' || !app.signType ? '플렉스' : app.signType)}</span></td>
-        <td style="padding: 14px 16px; color: var(--text-secondary); max-width: 130px; word-break: break-all;">
-          <a href="${sanitizeUrl(app.fileData) || './초원식당 간판.png'}" download="${escapeHtml(app.fileName) || '첨부이미지.png'}" style="color: var(--accent-primary); font-weight: 600; text-decoration: underline; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;" title="클릭하여 다운로드">
-            <i class="fa-solid fa-download"></i> ${escapeHtml(app.fileName) || '첨부이미지.png'}
-          </a>
+        <td style="padding: 14px 16px; color: var(--text-secondary); max-width: 140px; word-break: break-all;">
+          ${app.fileData ? `
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <a href="${sanitizeUrl(app.fileData) || './초원식당 간판.png'}" download="${escapeHtml(app.fileName) || '현장사진.png'}" style="color: var(--accent-primary); font-weight: 600; text-decoration: underline; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;" title="클릭하여 다운로드">
+                <i class="fa-solid fa-download"></i> ${escapeHtml(app.fileName) || '현장사진.png'}
+              </a>
+              <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 2px 6px; font-size: 0.72rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; width: fit-content;" title="사진 변경">
+                <i class="fa-solid fa-camera"></i> 사진 변경
+              </button>
+            </div>
+          ` : `
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <span style="color: #94a3b8; font-size: 0.76rem;">미등록</span>
+              <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 3px 6px; font-size: 0.72rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; width: fit-content; font-weight: 700;" title="현장사진 등록">
+                <i class="fa-solid fa-camera"></i> 사진 등록
+              </button>
+            </div>
+          `}
         </td>
         <td style="padding: 14px 16px; text-align: center;">${actionButtons}</td>
       `;
@@ -1910,6 +1924,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (paginationAppsContainer) {
       paginationAppsContainer.innerHTML = renderPaginationControls(totalAppsCount, appsPerPage, appsCurrentPage, 'window.changeAppsPage');
     }
+
+    // Add event listeners for photo upload in PC dashboard
+    document.querySelectorAll('.btn-upload-app-photo-pc').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.closest('button').dataset.id;
+        handleApplicationPhotoUploadPC(id);
+      });
+    });
 
     // Add event listeners to the action buttons
     document.querySelectorAll('.btn-approve-app').forEach(btn => {
@@ -2124,6 +2146,105 @@ document.addEventListener('DOMContentLoaded', () => {
         renderInquiriesList();
       });
     });
+  };
+
+  // PC 신청서 현장사진 파일 선택/업로드 핸들러
+  const handleApplicationPhotoUploadPC = (appId) => {
+    if (activeUser.role !== 'admin') return;
+
+    let fileInput = document.getElementById('pc-app-photo-upload-input');
+    if (!fileInput) {
+      fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.id = 'pc-app-photo-upload-input';
+      fileInput.accept = 'image/*';
+      fileInput.style.display = 'none';
+      document.body.appendChild(fileInput);
+    }
+
+    fileInput.onchange = async (e) => {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+      const file = files[0];
+
+      try {
+        let base64Data = '';
+        if (typeof compressImageToBase64 === 'function') {
+          base64Data = await compressImageToBase64(file, 2 * 1024 * 1024);
+        } else {
+          base64Data = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => resolve(ev.target.result);
+            reader.readAsDataURL(file);
+          });
+        }
+
+        const fileName = file.name || `현장사진_${appId}.jpg`;
+
+        // 1) localStorage applications 업데이트
+        let curApps = JSON.parse(localStorage.getItem('applications')) || [];
+        const targetApp = curApps.find(a => String(a.id) === String(appId));
+        if (targetApp) {
+          targetApp.fileData = base64Data;
+          targetApp.fileName = fileName;
+          localStorage.setItem('applications', JSON.stringify(curApps));
+        }
+
+        // 2) 연동된 users items 영업물건에도 사진 자동 반영
+        let usersList = JSON.parse(localStorage.getItem('users')) || [];
+        let itemUpdated = false;
+        usersList.forEach(u => {
+          if (u.items && Array.isArray(u.items)) {
+            u.items.forEach(item => {
+              if (String(item.id) === String(appId) || String(item.appRefId) === String(appId)) {
+                item.photos = [base64Data];
+                item.photosCount = 1;
+                itemUpdated = true;
+              }
+            });
+          }
+        });
+        if (itemUpdated) {
+          localStorage.setItem('users', JSON.stringify(usersList));
+        }
+
+        // 3) Supabase DB 실시간 동기화
+        if (window.supabaseClient) {
+          try {
+            await window.supabaseClient
+              .from('applications')
+              .update({
+                file_data: base64Data,
+                file_name: fileName,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', appId);
+
+            if (itemUpdated) {
+              await window.supabaseClient
+                .from('business_items')
+                .update({
+                  photos: [base64Data],
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', appId);
+            }
+          } catch (dbErr) {
+            console.warn('Supabase application photo sync warning:', dbErr);
+          }
+        }
+
+        alert(`📷 [${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : appId}] 현장사진이 성공적으로 업로드되었습니다.`);
+        updateSessionUI();
+      } catch (err) {
+        console.error('Photo upload error:', err);
+        alert('사진 처리 중 오류가 발생했습니다: ' + err.message);
+      } finally {
+        fileInput.value = '';
+      }
+    };
+
+    fileInput.click();
   };
 
   const updateApplicationStatus = (id, newStatus) => {

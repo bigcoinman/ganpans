@@ -1564,6 +1564,43 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
+                    // 첨부파일 (현장사진) UI
+                    let fileAttachmentHtml = '';
+                    if (app.fileData) {
+                        fileAttachmentHtml = `
+                            <div style="margin-top: 10px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; text-align: left;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <span style="font-size: 0.88rem; font-weight: 700; color: #1e293b;"><i class="fa-solid fa-camera" style="color: var(--accent-primary);"></i> 첨부 현장사진</span>
+                                    <button type="button" class="btn btn-sm btn-upload-app-photo-mob" data-id="${app.id}" style="padding: 3px 8px; font-size: 0.76rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="fa-solid fa-camera-rotate"></i> 사진 변경
+                                    </button>
+                                </div>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <a href="${sanitizeUrl(app.fileData)}" target="_blank" style="display: block; width: 64px; height: 64px; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; flex-shrink: 0; background: #000;">
+                                        <img src="${sanitizeUrl(app.fileData)}" alt="현장사진" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </a>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <a href="${sanitizeUrl(app.fileData)}" download="${escapeHtml(app.fileName || '현장사진.jpg')}" style="color: var(--accent-primary); font-size: 0.85rem; font-weight: 600; text-decoration: underline; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all;">
+                                            <i class="fa-solid fa-download"></i> ${escapeHtml(app.fileName || '현장사진.jpg')}
+                                        </a>
+                                        <div style="font-size: 0.74rem; color: #64748b; margin-top: 2px;">클릭하여 원본 다운로드 / 확대보기</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        fileAttachmentHtml = `
+                            <div style="margin-top: 10px; padding: 10px; background: #fffbeb; border: 1px dashed #fde68a; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; text-align: left;">
+                                <div style="font-size: 0.85rem; color: #92400e; display: flex; align-items: center; gap: 5px;">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> 현장사진 미등록
+                                </div>
+                                <button type="button" class="btn btn-sm btn-upload-app-photo-mob" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.82rem; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fa-solid fa-camera"></i> 사진 촬영/등록
+                                </button>
+                            </div>
+                        `;
+                    }
+
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                             <strong style="font-size: 1.1rem; color: var(--text-primary);">${escapeHtml(app.shopName || app.storeName)}</strong>
@@ -1576,11 +1613,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div>소재: <span style="color: #475569;">${app.signType}</span></div>
                             ${app.referrerCode ? `<div style="color: var(--accent-primary); font-weight: bold; margin-top: 2px;">영업 연동 코드: ${app.referrerCode}</div>` : ''}
                         </div>
+                        ${fileAttachmentHtml}
                         ${actionsHtml}
                     `;
                     appsList.appendChild(card);
                 });
 
+                appsList.querySelectorAll('.btn-upload-app-photo-mob').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = e.target.closest('button').dataset.id;
+                        handleApplicationPhotoUploadMob(id);
+                    });
+                });
                 appsList.querySelectorAll('.btn-approve-app-mob').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const id = e.target.closest('button').dataset.id;
@@ -2026,6 +2070,106 @@ document.addEventListener('DOMContentLoaded', () => {
             renderStatusTab();
         }
     }
+
+    // 모바일 신청서 현장사진 카메라 촬영/업로드 핸들러
+    const handleApplicationPhotoUploadMob = (appId) => {
+        let fileInput = document.getElementById('mob-app-photo-upload-input');
+        if (!fileInput) {
+            fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.id = 'mob-app-photo-upload-input';
+            fileInput.accept = 'image/*';
+            fileInput.capture = 'environment';
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+        }
+
+        fileInput.onchange = async (e) => {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            const file = files[0];
+
+            try {
+                // 용량 제한 및 압축 (2MB 이하)
+                let base64Data = '';
+                if (typeof compressImageToBase64 === 'function') {
+                    base64Data = await compressImageToBase64(file, 2 * 1024 * 1024);
+                } else {
+                    base64Data = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => resolve(ev.target.result);
+                        reader.readAsDataURL(file);
+                    });
+                }
+
+                const fileName = file.name || `현장사진_${appId}.jpg`;
+
+                // 1) localStorage applications 업데이트
+                let curApps = JSON.parse(localStorage.getItem('applications')) || [];
+                const targetApp = curApps.find(a => String(a.id) === String(appId));
+                if (targetApp) {
+                    targetApp.fileData = base64Data;
+                    targetApp.fileName = fileName;
+                    localStorage.setItem('applications', JSON.stringify(curApps));
+                    applications = curApps;
+                }
+
+                // 2) 연동된 users items 영업물건에도 사진 자동 반영
+                let usersList = JSON.parse(localStorage.getItem('users')) || [];
+                let itemUpdated = false;
+                usersList.forEach(u => {
+                    if (u.items && Array.isArray(u.items)) {
+                        u.items.forEach(item => {
+                            if (String(item.id) === String(appId) || String(item.appRefId) === String(appId)) {
+                                item.photos = [base64Data];
+                                item.photosCount = 1;
+                                itemUpdated = true;
+                            }
+                        });
+                    }
+                });
+                if (itemUpdated) {
+                    localStorage.setItem('users', JSON.stringify(usersList));
+                }
+
+                // 3) Supabase DB 실시간 동기화
+                if (window.supabaseClient) {
+                    try {
+                        await window.supabaseClient
+                            .from('applications')
+                            .update({
+                                file_data: base64Data,
+                                file_name: fileName,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', appId);
+
+                        if (itemUpdated) {
+                            await window.supabaseClient
+                                .from('business_items')
+                                .update({
+                                    photos: [base64Data],
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('id', appId);
+                        }
+                    } catch (dbErr) {
+                        console.warn('Supabase application photo sync warning:', dbErr);
+                    }
+                }
+
+                alert(`📷 [${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : appId}] 현장사진이 성공적으로 업로드되었습니다.`);
+                renderAdminDashboardMob();
+            } catch (err) {
+                console.error('Photo upload error:', err);
+                alert('사진 처리 중 오류가 발생했습니다: ' + err.message);
+            } finally {
+                fileInput.value = '';
+            }
+        };
+
+        fileInput.click();
+    };
 
     function deleteApplicationMob(id) {
         if (!confirm('정말로 이 지원 신청 접수 건을 삭제하시겠습니까?')) return;
