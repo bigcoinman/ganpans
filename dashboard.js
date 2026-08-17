@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (activeUser.role === 'constructor') {
       roleText = '시공업체';
     } else if (activeUser.role === 'admin') {
-      roleText = '관리자';
+      roleText = '최고관리자';
     }
     headerUserName.textContent = `${activeUser.name}님 (${activeUser.id}) (${roleText})`;
 
@@ -185,8 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (conversionArea) conversionArea.style.display = 'none';
       if (userApplicationsSection) userApplicationsSection.style.display = 'none';
       
-      if (dashboardTitle) dashboardTitle.textContent = '관리자 대시보드';
-      if (dashboardSubtitle) dashboardSubtitle.textContent = '관리자 모드입니다';
+      if (dashboardTitle) dashboardTitle.textContent = '최고관리자 대시보드';
+      if (dashboardSubtitle) dashboardSubtitle.textContent = '최고관리자 모드입니다';
       
       if (managerAdminPanel) {
         managerAdminPanel.style.display = 'block';
@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
           managerPanelToggle.style.cursor = 'default';
           const headerTitle = managerPanelToggle.querySelector('h3');
           if (headerTitle) {
-            headerTitle.innerHTML = `<i class="fa-solid fa-user-shield"></i> 간판지원단 관리자 대시보드 콘솔`;
+            headerTitle.innerHTML = `<i class="fa-solid fa-user-shield"></i> 간판지원단 최고관리자 대시보드`;
             headerTitle.style.color = 'var(--accent-primary)';
           }
         }

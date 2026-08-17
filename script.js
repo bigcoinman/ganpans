@@ -1844,12 +1844,12 @@ function initAuthAndDashboard() {
       } else if (activeUser.role === 'constructor') {
         roleText = '시공업체';
       } else if (activeUser.role === 'admin') {
-        roleText = '관리자';
+        roleText = '최고관리자';
       }
       if (headerUserName) headerUserName.textContent = `${activeUser.name}님 (${roleText})`;
       if (navDashboard) {
         if (activeUser.role === 'admin') {
-          navDashboard.textContent = '관리자 대시보드';
+          navDashboard.textContent = '최고관리자 대시보드';
         } else {
           navDashboard.textContent = '마이페이지';
         }
