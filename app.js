@@ -1275,6 +1275,7 @@ document.addEventListener('DOMContentLoaded', () => {
             apps: document.getElementById('admin-panel-apps-mob'),
             items: document.getElementById('admin-panel-items-mob'),
             inquiries: document.getElementById('admin-panel-inquiries-mob'),
+            'const-progress': document.getElementById('admin-panel-const-progress-mob'),
             kakao: document.getElementById('admin-panel-kakao-mob'),
             popups: document.getElementById('admin-panel-popups-mob')
         };
