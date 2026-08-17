@@ -285,8 +285,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const syncAdminDataFromSupabase = async () => {
     if (window.SupabaseSync) {
       await window.SupabaseSync.syncAllData();
+      users = JSON.parse(localStorage.getItem('users')) || [];
+      applications = JSON.parse(localStorage.getItem('applications')) || [];
+      if (activeUser && activeUser.role === 'admin') {
+        renderAllUsersList();
+        renderManagerPanel();
+        renderAdminStats();
+        renderApplicationsList();
+        renderInquiriesList();
+      }
     }
   };
+
+  // 초기 즉시 Supabase 클라우드 동기화 실행
+  syncAdminDataFromSupabase();
 
   // --- Logout ---
   if (logoutBtn) {
