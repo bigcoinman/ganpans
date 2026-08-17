@@ -1627,49 +1627,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
 
-                    if (isApproved) {
-                        if (app.assignedConstructorId) {
-                            let constStatusText = '시공 전';
-                            if (app.constructionStatus === 'in_construction') constStatusText = '시공 진행 중';
-                            else if (app.constructionStatus === 'after_construction') constStatusText = '시공 완료 보고됨';
-                            else if (app.constructionStatus === 'completed') constStatusText = '정산 종결';
-
-                            actionsHtml += `
-                                <div style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 10px; text-align: left;">
-                                    <div style="font-size: 0.95rem; font-weight: bold; color: var(--accent-success);"><i class="fa-solid fa-screwdriver-wrench"></i> 배정 시공사: ${escapeHtml(app.assignedConstructorName)}</div>
-                                    <div style="font-size: 0.92rem; color: var(--text-secondary); margin-top: 3px;">시공 현황: <strong>${constStatusText}</strong></div>
-                                </div>
-                            `;
-
-                            if (app.constructionStatus === 'after_construction') {
-                                actionsHtml += `
-                                    <div style="display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end;">
-                                        <button class="btn btn-primary btn-sm btn-approve-settlement-mob" data-id="${app.id}" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-primary); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-file-invoice-dollar"></i> 증빙확인/정산완료</button>
-                                    </div>
-                                `;
-                            }
-                        } else {
-                            // Assign Constructor Dropdown
-                            const constructors = users.filter(u => u.role === 'constructor');
-                            let optionsHtml = '<option value="">시공사 선택...</option>';
-                            constructors.forEach(c => {
-                                optionsHtml += `<option value="${c.id}">${escapeHtml(c.businessName || c.pendingBusinessName || c.name || c.id)}</option>`;
-                            });
-                            
-                            actionsHtml += `
-                                <div style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; text-align: left;">
-                                    <label style="font-size: 0.92rem; font-weight: bold; color: var(--text-primary);">시공사 미배정 - 배정 진행</label>
-                                    <div style="display: flex; gap: 8px;">
-                                        <select class="status-select-mob select-constructor-assign-mob" data-id="${app.id}" style="flex: 1; padding: 6px 8px; font-size: 0.92rem; height: auto; min-height: auto; width: auto; background: white; border: 1px solid var(--border-color); border-radius: 6px;">
-                                            ${optionsHtml}
-                                        </select>
-                                        <button class="btn btn-primary btn-sm btn-assign-constructor-mob" data-id="${app.id}" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-link"></i> 배정</button>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    }
-
                     // 첨부파일 (현장사진) UI
                     let fileAttachmentHtml = '';
                     if (app.fileData) {
@@ -1750,19 +1707,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         deleteApplicationMob(id);
                     });
                 });
-                appsList.querySelectorAll('.btn-assign-constructor-mob').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const id = e.target.closest('button').dataset.id;
-                        const container = e.target.closest('div');
-                        const select = container.querySelector('.select-constructor-assign-mob');
-                        const constId = select.value;
-                        if (!constId) {
-                            alert('배정할 시공사를 선택해 주세요.');
-                            return;
-                        }
-                        assignConstructorMob(id, constId);
-                    });
-                });
                 appsList.querySelectorAll('.btn-approve-settlement-mob').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const id = e.target.closest('button').dataset.id;
@@ -1790,6 +1734,40 @@ document.addEventListener('DOMContentLoaded', () => {
                         card.style.marginBottom = '12px';
                         card.style.textAlign = 'left';
                         
+                        const isSelectedOrBeyond = (item.progressStatus === '대상자선정' || item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판시공완료' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인' || item.progressStatus === '간판 시공 중' || item.progressStatus === '시공 완료');
+
+                        let constructorAssignHtml = '';
+                        if (isSelectedOrBeyond) {
+                            if (item.assignedConstructorId) {
+                                constructorAssignHtml = `
+                                    <div style="display: flex; justify-content: space-between; align-items: center; background: #f0fdf4; padding: 8px 10px; border-radius: 6px; border: 1px solid #bbf7d0; margin-top: 4px;">
+                                        <span style="font-size: 0.88rem; font-weight: 700; color: #15803d; display: inline-flex; align-items: center; gap: 6px;">
+                                            <i class="fa-solid fa-screwdriver-wrench"></i> 배정: ${escapeHtml(item.assignedConstructorName || item.assignedConstructorId)}
+                                        </span>
+                                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.reassignConstructorItemMob('${u.id}', '${item.id}')" style="padding: 4px 8px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; color: #64748b; cursor: pointer;">변경</button>
+                                    </div>
+                                `;
+                            } else {
+                                const constructors = users.filter(usr => usr.role === 'constructor');
+                                let constOptions = '<option value="">시공사 선택...</option>';
+                                constructors.forEach(c => {
+                                    const constName = c.businessName || c.pendingBusinessName || c.name || c.id;
+                                    constOptions += `<option value="${c.id}">${escapeHtml(constName)}</option>`;
+                                });
+
+                                constructorAssignHtml = `
+                                    <div style="display: flex; gap: 8px; margin-top: 4px; align-items: center;">
+                                        <select class="status-select-mob select-constructor-bizitem-mob" data-uid="${u.id}" data-itemid="${item.id}" style="flex: 1; padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1.5px solid #86efac; background: white; font-weight: 600; color: #1e293b; height: auto;">
+                                            ${constOptions}
+                                        </select>
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="window.assignConstructorToBizItemMob('${u.id}', '${item.id}', this)" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                                            <i class="fa-solid fa-link"></i> 배정
+                                        </button>
+                                    </div>
+                                `;
+                            }
+                        }
+
                         card.innerHTML = `
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <div style="font-size: 1.02rem; font-weight: bold; color: var(--text-primary);">
@@ -1822,6 +1800,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <option value="간판시공완료" ${(item.progressStatus === '간판시공완료' || item.progressStatus === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
                                     </select>
                                 </div>
+
+                                ${constructorAssignHtml}
                             </div>
                         `;
                         itemsList.appendChild(card);
@@ -2486,66 +2466,147 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.deleteManagerItemMob = deleteManagerItemMob;
 
+    // 모바일 영업 물건에 시공사 배정
+    function assignConstructorToBizItemMob(uid, itemId, btnEl) {
+        if (!activeUser || activeUser.role !== 'admin') return;
+        const container = btnEl.closest('div');
+        const select = container.querySelector('.select-constructor-bizitem-mob');
+        const constId = select ? select.value : '';
+        if (!constId) {
+            alert('배정할 시공사를 선택해 주세요.');
+            return;
+        }
+
+        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        const constUser = curUsers.find(u => String(u.id) === String(constId));
+        if (!constUser) {
+            alert('선택된 시공사 정보를 찾을 수 없습니다.');
+            return;
+        }
+
+        const constName = constUser.businessName || constUser.pendingBusinessName || constUser.name || constUser.id;
+        let targetItemName = '영업 물건';
+
+        curUsers = curUsers.map(u => {
+            if (String(u.id) === String(uid)) {
+                const updatedItems = (u.items || []).map(item => {
+                    if (String(item.id) === String(itemId)) {
+                        targetItemName = item.name || targetItemName;
+                        return {
+                            ...item,
+                            assignedConstructorId: constId,
+                            assignedConstructorName: constName,
+                            constructionStatus: item.constructionStatus || 'before_construction',
+                            assignedAt: new Date().toISOString()
+                        };
+                    }
+                    return item;
+                });
+                return { ...u, items: updatedItems };
+            }
+            return u;
+        });
+
+        localStorage.setItem('users', JSON.stringify(curUsers));
+
+        if (window.SupabaseSync) {
+            const updatedUser = curUsers.find(u => String(u.id) === String(uid));
+            if (updatedUser) {
+                window.SupabaseSync.updateUser(uid, {
+                    items: updatedUser.items || []
+                });
+            }
+        }
+
+        alert(`[${targetItemName}] 영업 물건에 시공사 [${constName}]가 성공적으로 배정되었습니다.`);
+        renderStatusTab();
+    }
+    window.assignConstructorToBizItemMob = assignConstructorToBizItemMob;
+
+    // 모바일 배정 시공사 변경 (초기화)
+    function reassignConstructorItemMob(uid, itemId) {
+        if (!activeUser || activeUser.role !== 'admin') return;
+        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        curUsers = curUsers.map(u => {
+            if (String(u.id) === String(uid)) {
+                const updatedItems = (u.items || []).map(item => {
+                    if (String(item.id) === String(itemId)) {
+                        return {
+                            ...item,
+                            assignedConstructorId: null,
+                            assignedConstructorName: null
+                        };
+                    }
+                    return item;
+                });
+                return { ...u, items: updatedItems };
+            }
+            return u;
+        });
+
+        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (window.SupabaseSync) {
+            const updatedUser = curUsers.find(u => String(u.id) === String(uid));
+            if (updatedUser) {
+                window.SupabaseSync.updateUser(uid, {
+                    items: updatedUser.items || []
+                });
+            }
+        }
+        renderStatusTab();
+    }
+    window.reassignConstructorItemMob = reassignConstructorItemMob;
+
     // Popup management helpers for Mob
     const mobPopupForm = document.getElementById('mob-popup-form');
     if (mobPopupForm) {
         mobPopupForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const pid = document.getElementById('mob-popup-id').value;
-            const titleVal = document.getElementById('mob-popup-title').value.trim();
-            const contentVal = document.getElementById('mob-popup-content').value.trim();
-            const imageVal = document.getElementById('mob-popup-image').value.trim() || 'https://picsum.photos/id/101/400/200';
-            const linkVal = document.getElementById('mob-popup-link').value.trim() || '#apply-section';
-            const startVal = document.getElementById('mob-popup-start').value;
-            const endVal = document.getElementById('mob-popup-end').value;
-            const widthVal = parseInt(document.getElementById('mob-popup-width').value) || 380;
-            const heightVal = parseInt(document.getElementById('mob-popup-height').value) || 480;
-            const topVal = parseInt(document.getElementById('mob-popup-top').value) || 120;
-            const leftVal = parseInt(document.getElementById('mob-popup-left').value) || 100;
-            const activeVal = document.getElementById('mob-popup-active').checked;
+            const id = document.getElementById('mob-popup-id').value;
+            const title = document.getElementById('mob-popup-title').value.trim();
+            const content = document.getElementById('mob-popup-content').value.trim();
+            const imageUrl = document.getElementById('mob-popup-image').value.trim();
+            const linkUrl = document.getElementById('mob-popup-link').value.trim();
+            const startDate = document.getElementById('mob-popup-start').value;
+            const endDate = document.getElementById('mob-popup-end').value;
+            const width = parseInt(document.getElementById('mob-popup-width').value) || 380;
+            const height = parseInt(document.getElementById('mob-popup-height').value) || 480;
+            const positionTop = parseInt(document.getElementById('mob-popup-top').value) || 120;
+            const positionLeft = parseInt(document.getElementById('mob-popup-left').value) || 100;
+            const isActive = document.getElementById('mob-popup-active').checked;
+
+            if (!title) {
+                alert('팝업 제목을 입력해 주세요.');
+                return;
+            }
 
             let popups = JSON.parse(localStorage.getItem('popups')) || [];
-
-            if (pid) {
+            if (id) {
                 // Update
                 popups = popups.map(p => {
-                    if (p.id === parseInt(pid)) {
+                    if (p.id === parseInt(id)) {
                         return {
                             ...p,
-                            title: titleVal,
-                            content: contentVal,
-                            imageUrl: imageVal,
-                            linkUrl: linkVal,
-                            startDate: startVal,
-                            endDate: endVal,
-                            width: widthVal,
-                            height: heightVal,
-                            positionTop: topVal,
-                            positionLeft: leftVal,
-                            isActive: activeVal
+                            title, content, imageUrl, linkUrl,
+                            startDate, endDate, width, height,
+                            positionTop, positionLeft, isActive,
+                            updatedAt: new Date().toISOString()
                         };
                     }
                     return p;
                 });
                 alert('팝업창 정보가 수정되었습니다.');
             } else {
-                // Insert
+                // Create
                 const newPopup = {
                     id: Date.now(),
-                    title: titleVal,
-                    content: contentVal,
-                    imageUrl: imageVal,
-                    linkUrl: linkVal,
-                    startDate: startVal,
-                    endDate: endVal,
-                    width: widthVal,
-                    height: heightVal,
-                    positionTop: topVal,
-                    positionLeft: leftVal,
-                    isActive: activeVal
+                    title, content, imageUrl, linkUrl,
+                    startDate, endDate, width, height,
+                    positionTop, positionLeft, isActive,
+                    createdAt: new Date().toISOString()
                 };
-                popups.push(newPopup);
-                alert('신규 팝업창이 등록되었습니다.');
+                popups.unshift(newPopup);
+                alert('새 팝업창이 등록되었습니다.');
             }
 
             localStorage.setItem('popups', JSON.stringify(popups));
@@ -2554,19 +2615,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const btnMobPopupReset = document.getElementById('btn-mob-popup-reset');
-    if (btnMobPopupReset) {
-        btnMobPopupReset.addEventListener('click', () => {
-            resetMobPopupForm();
-        });
-    }
-
     function resetMobPopupForm() {
-        if (mobPopupForm) mobPopupForm.reset();
+        if (!mobPopupForm) return;
+        mobPopupForm.reset();
         document.getElementById('mob-popup-id').value = '';
+        document.getElementById('mob-popup-start').value = '2026-07-01';
+        document.getElementById('mob-popup-end').value = '2026-08-31';
+        document.getElementById('mob-popup-width').value = 380;
+        document.getElementById('mob-popup-height').value = 480;
+        document.getElementById('mob-popup-top').value = 120;
+        document.getElementById('mob-popup-left').value = 100;
+        document.getElementById('mob-popup-active').checked = true;
+
         const titleText = document.getElementById('mob-popup-form-title');
-        if (titleText) titleText.innerHTML = '<i class="fa-solid fa-plus"></i> 신규 팝업창 등록';
+        if (titleText) titleText.innerHTML = '<i class="fa-solid fa-plus-circle"></i> 새 팝업 등록';
     }
+    window.resetMobPopupForm = resetMobPopupForm;
 
     function editPopupMob(pid) {
         const popups = JSON.parse(localStorage.getItem('popups')) || [];
@@ -2574,8 +2638,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!p) return;
 
         document.getElementById('mob-popup-id').value = p.id;
-        document.getElementById('mob-popup-title').value = p.title;
-        document.getElementById('mob-popup-content').value = p.content;
+        document.getElementById('mob-popup-title').value = p.title || '';
+        document.getElementById('mob-popup-content').value = p.content || '';
         document.getElementById('mob-popup-image').value = p.imageUrl || '';
         document.getElementById('mob-popup-link').value = p.linkUrl || '';
         document.getElementById('mob-popup-start').value = p.startDate || '2026-07-01';
@@ -2626,7 +2690,39 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!jobsList) return;
 
         const apps = JSON.parse(localStorage.getItem('applications')) || [];
-        const myJobs = apps.filter(job => job.assignedConstructorId === activeUser.id && job.status === 'approved');
+        const curUsers = JSON.parse(localStorage.getItem('users')) || [];
+
+        let myJobs = [];
+        // 1) 영업물건 중 본인에게 배정된 건
+        curUsers.forEach(u => {
+            if (u.items && Array.isArray(u.items)) {
+                u.items.forEach(item => {
+                    if (String(item.assignedConstructorId) === String(activeUser.id)) {
+                        myJobs.push({
+                            id: item.id,
+                            isBizItemJob: true,
+                            bizItemOwnerId: u.id,
+                            storeName: item.name,
+                            ownerName: `${u.name} (영업자)`,
+                            ownerPhone: item.phone || u.phone || '-',
+                            storeAddress: item.address,
+                            signType: item.signType || 'LED 채널/플렉스',
+                            constructionStatus: item.constructionStatus || 'before_construction',
+                            constructionPhotos: item.constructionPhotos || [],
+                            invoicePhotos: item.invoicePhotos || [],
+                            createdAt: item.assignedAt || item.createdAt || new Date().toISOString()
+                        });
+                    }
+                });
+            }
+        });
+
+        // 2) 기존 applications 중 본인에게 배정된 건 병합
+        apps.forEach(app => {
+            if (String(app.assignedConstructorId) === String(activeUser.id) && !myJobs.some(j => String(j.id) === String(app.id))) {
+                myJobs.push(app);
+            }
+        });
 
         if (myJobs.length === 0) {
             jobsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.8rem;">배정된 시공 물건이 없습니다.</p>';
@@ -2702,7 +2798,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Event listeners
         jobsList.querySelectorAll('.select-const-status-mob').forEach(select => {
             select.addEventListener('change', (e) => {
-                const id = parseInt(e.target.dataset.id);
+                const id = e.target.dataset.id;
                 const val = e.target.value;
                 updateJobConstructionStatusMob(id, val);
             });
@@ -2737,14 +2833,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateJobConstructionStatusMob(id, val) {
+        // 1) applications
         let apps = JSON.parse(localStorage.getItem('applications')) || [];
         apps = apps.map(app => {
-            if (app.id === id) {
+            if (String(app.id) === String(id)) {
                 return { ...app, constructionStatus: val };
             }
             return app;
         });
         localStorage.setItem('applications', JSON.stringify(apps));
+
+        // 2) users.items
+        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        let updatedUid = null;
+        curUsers = curUsers.map(u => {
+            if (u.items && Array.isArray(u.items)) {
+                const updatedItems = u.items.map(item => {
+                    if (String(item.id) === String(id)) {
+                        updatedUid = u.id;
+                        return { ...item, constructionStatus: val };
+                    }
+                    return item;
+                });
+                return { ...u, items: updatedItems };
+            }
+            return u;
+        });
+        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (updatedUid && window.SupabaseSync) {
+            const u = curUsers.find(usr => usr.id === updatedUid);
+            if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+        }
+
         renderConstructorDashboardMob();
     }
 
@@ -2760,9 +2880,10 @@ document.addEventListener('DOMContentLoaded', () => {
             uploadedUrls.push(URL.createObjectURL(processedFile));
         }
 
+        // 1) applications
         let apps = JSON.parse(localStorage.getItem('applications')) || [];
         apps = apps.map(app => {
-            if (app.id === id) {
+            if (String(app.id) === String(id)) {
                 const existing = app.constructionPhotos || [];
                 const merged = existing.concat(uploadedUrls).slice(0, 20);
                 return { ...app, constructionPhotos: merged };
@@ -2770,6 +2891,31 @@ document.addEventListener('DOMContentLoaded', () => {
             return app;
         });
         localStorage.setItem('applications', JSON.stringify(apps));
+
+        // 2) users.items
+        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        let updatedUid = null;
+        curUsers = curUsers.map(u => {
+            if (u.items && Array.isArray(u.items)) {
+                const updatedItems = u.items.map(item => {
+                    if (String(item.id) === String(id)) {
+                        updatedUid = u.id;
+                        const existing = item.constructionPhotos || [];
+                        const merged = existing.concat(uploadedUrls).slice(0, 20);
+                        return { ...item, constructionPhotos: merged };
+                    }
+                    return item;
+                });
+                return { ...u, items: updatedItems };
+            }
+            return u;
+        });
+        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (updatedUid && window.SupabaseSync) {
+            const u = curUsers.find(usr => usr.id === updatedUid);
+            if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+        }
+
         alert('시공 현장 사진이 모바일에 업로드되었습니다.');
         renderConstructorDashboardMob();
     }
@@ -2782,9 +2928,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const url = URL.createObjectURL(processedFile);
 
+        // 1) applications
         let apps = JSON.parse(localStorage.getItem('applications')) || [];
         apps = apps.map(app => {
-            if (app.id === id) {
+            if (String(app.id) === String(id)) {
                 const existing = app.invoicePhotos || [];
                 existing.push(url);
                 return { ...app, invoicePhotos: existing };
@@ -2792,25 +2939,63 @@ document.addEventListener('DOMContentLoaded', () => {
             return app;
         });
         localStorage.setItem('applications', JSON.stringify(apps));
+
+        // 2) users.items
+        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        let updatedUid = null;
+        curUsers = curUsers.map(u => {
+            if (u.items && Array.isArray(u.items)) {
+                const updatedItems = u.items.map(item => {
+                    if (String(item.id) === String(id)) {
+                        updatedUid = u.id;
+                        const existing = item.invoicePhotos || [];
+                        existing.push(url);
+                        return { ...item, invoicePhotos: existing };
+                    }
+                    return item;
+                });
+                return { ...u, items: updatedItems };
+            }
+            return u;
+        });
+        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (updatedUid && window.SupabaseSync) {
+            const u = curUsers.find(usr => usr.id === updatedUid);
+            if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+        }
+
         alert('정산 증빙서류가 업로드되었습니다.');
         renderConstructorDashboardMob();
     }
 
     function reportJobCompletionMob(id) {
         let apps = JSON.parse(localStorage.getItem('applications')) || [];
-        const app = apps.find(a => a.id === id);
+        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
 
-        if (!app.constructionPhotos || app.constructionPhotos.length === 0) {
+        let targetJob = apps.find(a => String(a.id) === String(id));
+        if (!targetJob) {
+            curUsers.forEach(u => {
+                if (u.items) {
+                    const found = u.items.find(it => String(it.id) === String(id));
+                    if (found) targetJob = found;
+                }
+            });
+        }
+
+        if (!targetJob) return;
+
+        if (!targetJob.constructionPhotos || targetJob.constructionPhotos.length === 0) {
             alert('최소 1장 이상의 시공 현장 사진을 등록해 주세요.');
             return;
         }
-        if (!app.invoicePhotos || app.invoicePhotos.length === 0) {
+        if (!targetJob.invoicePhotos || targetJob.invoicePhotos.length === 0) {
             alert('세금계산서 또는 지출 증빙 서류를 등록해 주세요.');
             return;
         }
 
+        // 1) applications
         apps = apps.map(a => {
-            if (a.id === id) {
+            if (String(a.id) === String(id)) {
                 return { 
                     ...a, 
                     constructionStatus: 'after_construction',
@@ -2820,6 +3005,32 @@ document.addEventListener('DOMContentLoaded', () => {
             return a;
         });
         localStorage.setItem('applications', JSON.stringify(apps));
+
+        // 2) users.items
+        let updatedUid = null;
+        curUsers = curUsers.map(u => {
+            if (u.items && Array.isArray(u.items)) {
+                const updatedItems = u.items.map(item => {
+                    if (String(item.id) === String(id)) {
+                        updatedUid = u.id;
+                        return { 
+                            ...item, 
+                            constructionStatus: 'after_construction',
+                            constructionCompletedAt: Date.now()
+                        };
+                    }
+                    return item;
+                });
+                return { ...u, items: updatedItems };
+            }
+            return u;
+        });
+        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (updatedUid && window.SupabaseSync) {
+            const u = curUsers.find(usr => usr.id === updatedUid);
+            if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+        }
+
         alert('시공 완료 보고와 정산 청구가 정상 접수되었습니다!\n최고 관리자 최종 승인 시 정산이 종결됩니다.');
         renderConstructorDashboardMob();
     }
