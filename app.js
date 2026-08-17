@@ -1789,23 +1789,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                     }
 
-                    // 영업자 이름 매칭 (예: 김만석영업자)
+                    // 영업자 이름 매칭 (예: 담당자 : 김만석)
                     let bizUserName = '';
                     const curUsersList = JSON.parse(localStorage.getItem('users')) || users || [];
                     if (app.referrerCode) {
                         const matchedUser = curUsersList.find(u => u.bizCode === app.referrerCode || u.id === app.referrerCode);
                         if (matchedUser && matchedUser.name) {
-                            bizUserName = `${matchedUser.name}영업자`;
+                            bizUserName = matchedUser.name;
                         }
                     }
                     if (!bizUserName && app.userId) {
                         const matchedUser = curUsersList.find(u => u.id === app.userId && (u.role === 'business' || u.bizCode));
                         if (matchedUser && matchedUser.name) {
-                            bizUserName = `${matchedUser.name}영업자`;
+                            bizUserName = matchedUser.name;
                         }
                     }
                     if (!bizUserName && app.referrerCode) {
-                        bizUserName = `${app.referrerCode}영업자`;
+                        bizUserName = app.referrerCode;
                     }
 
                     card.innerHTML = `
@@ -1818,7 +1818,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div>대표자: <strong style="color: var(--text-primary);">${app.ownerName}</strong> (${app.ownerPhone})</div>
                             <div>주소: <span style="color: #475569;">${app.storeAddress}</span></div>
                             <div>소재: <span style="color: #475569;">${app.signType}</span></div>
-                            ${bizUserName ? `<div style="color: var(--accent-primary); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-user-tie" style="color: var(--accent-secondary);"></i> ${escapeHtml(bizUserName)}</div>` : ''}
+                            ${bizUserName ? `<div style="color: var(--accent-primary); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-user-tie" style="color: var(--accent-secondary);"></i> 담당자 : ${escapeHtml(bizUserName)}</div>` : ''}
                         </div>
                         ${fileAttachmentHtml}
                         ${actionsHtml}
