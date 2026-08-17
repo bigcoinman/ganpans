@@ -1300,6 +1300,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');
         if (allUsersListMob) {
             let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+            curUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(curUsers) : curUsers;
             const searchInput = document.getElementById('search-all-users-input-mob');
             const q = searchInput && searchInput.value ? searchInput.value.trim().toLowerCase() : '';
 

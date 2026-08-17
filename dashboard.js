@@ -1020,6 +1020,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!allUsersTableBody) return;
 
     let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
+    currentUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(currentUsers) : currentUsers;
 
     // 검색 필터링
     if (allUsersSearchQuery && allUsersSearchQuery.trim()) {

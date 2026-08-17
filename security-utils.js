@@ -166,11 +166,26 @@ if (typeof document !== 'undefined') {
     initGlobalGlobalClient();
   });
 }
-function initGlobalGlobalClient() {
-  if (!window.supabaseClient) {
-    initGlobalSupabaseClient();
-  }
+// 6-1. 회원 목록 정렬 함수 (최고관리자 최상단 + 최신 가입일순 정렬)
+function sortUsersLatestFirst(userList) {
+  if (!Array.isArray(userList)) return [];
+  return [...userList].sort((a, b) => {
+    // 1) 최고관리자(admin) 계정 최상단 고정
+    if (a.role === 'admin' && b.role !== 'admin') return -1;
+    if (a.role !== 'admin' && b.role === 'admin') return 1;
+
+    // 2) 가입일시 최신순 (내림차순, 최신 가입자가 먼저 표시)
+    const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+    const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+    if (timeB !== timeA) {
+      return timeB - timeA;
+    }
+
+    // 3) 가입일시 동일 시 ID 알파벳/숫자 역순
+    return String(b.id || '').localeCompare(String(a.id || ''));
+  });
 }
+window.sortUsersLatestFirst = sortUsersLatestFirst;
 
 // 7. 실시간 사진 촬영본 및 이미지 파일 2MB 이하 강제 자동 축소/압축 유틸리티
 function compressImageFile(file, maxSizeBytes = 2 * 1024 * 1024) {
@@ -437,6 +452,7 @@ window.SupabaseSync = {
       pendingBusinessName: dbUser.pending_business_name || '',
       pendingLicenseNumber: dbUser.pending_license_number || '',
       pw: dbUser.password_hash || '',
+      createdAt: dbUser.created_at || new Date().toISOString(),
       items: Array.isArray(dbUser.items) ? dbUser.items : []
     };
   },
