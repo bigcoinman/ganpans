@@ -1789,7 +1789,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (apps.length === 0) {
       applicationsTableBody.innerHTML = `
         <tr>
-          <td colspan="7" class="text-muted" style="text-align: center; padding: 40px 0;">접수된 온라인 간편 지원 신청이 없습니다.</td>
+          <td colspan="6" class="text-muted" style="text-align: center; padding: 40px 0;">접수된 온라인 간편 지원 신청이 없습니다.</td>
         </tr>
       `;
       if (paginationAppsContainer) paginationAppsContainer.innerHTML = '';
@@ -1819,57 +1819,32 @@ document.addEventListener('DOMContentLoaded', () => {
       const d = new Date(app.appliedAt);
       const dateText = `${d.getFullYear()}.${padZero(d.getMonth() + 1)}.${padZero(d.getDate())} ${padZero(d.getHours())}:${padZero(d.getMinutes())}`;
 
-      // Status badge
-      let statusBadge = '';
-      if (app.status === 'approved') {
-        statusBadge = `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-check"></i> 승인 완료</span>`;
-      } else if (app.status === 'rejected') {
-        statusBadge = `<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-xmark"></i> 반려됨</span>`;
-      } else {
-        statusBadge = `<span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-clock"></i> 심사 대기</span>`;
-      }
-
       // Actions buttons: 승인, 반려, 영업물건으로 변경(토글), 삭제
       let actionButtons = '<div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap;">';
 
-      if (app.status === 'pending') {
+      // 1. 승인 버튼
+      if (app.status === 'approved') {
         actionButtons += `
-          <button class="btn btn-primary btn-sm btn-approve-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: var(--accent-success); border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;"><i class="fa-solid fa-check"></i> 승인</button>
-          <button class="btn btn-secondary btn-sm btn-reject-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;"><i class="fa-solid fa-xmark"></i> 반려</button>
+          <button class="btn btn-primary btn-sm btn-approve-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="승인 완료 상태"><i class="fa-solid fa-circle-check"></i> 승인완료</button>
         `;
-      } else if (app.status === 'approved') {
-        if (app.assignedConstructorId) {
-          actionButtons += `
-            <div style="font-size: 0.78rem; color: var(--accent-success); font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 3px 8px; border-radius: 6px;">
-              <i class="fa-solid fa-screwdriver-wrench"></i> ${escapeHtml(app.assignedConstructorName)}
-            </div>
-          `;
-          if (app.constructionStatus === 'after_construction') {
-            actionButtons += `
-              <button class="btn btn-primary btn-sm btn-approve-settlement" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: var(--accent-primary); border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;"><i class="fa-solid fa-file-invoice-dollar"></i> 정산완료</button>
-            `;
-          }
-        } else {
-          // Constructor selection dropdown
-          const constructors = users.filter(u => u.role === 'constructor');
-          let optionsHtml = '<option value="">시공사 선택...</option>';
-          constructors.forEach(c => {
-            optionsHtml += `<option value="${c.id}">${c.businessName} (${c.constCode})</option>`;
-          });
-          actionButtons += `
-            <div style="display: inline-flex; gap: 4px; align-items: center;">
-              <select class="status-select select-constructor-assign" data-id="${app.id}" style="padding: 4px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: white;">
-                ${optionsHtml}
-              </select>
-              <button class="btn btn-primary btn-sm btn-assign-constructor" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.72rem; background: var(--accent-success); border: none; border-radius: 4px; cursor: pointer; text-align: center; font-weight: 700;"><i class="fa-solid fa-link"></i> 배정</button>
-            </div>
-          `;
-        }
       } else {
-        actionButtons += `<span style="font-size: 0.75rem; color: #dc2626; background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-weight: 600;">반려됨</span>`;
+        actionButtons += `
+          <button class="btn btn-primary btn-sm btn-approve-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: var(--accent-success); color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="신청서 승인"><i class="fa-solid fa-check"></i> 승인</button>
+        `;
       }
 
-      // [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
+      // 2. 반려 버튼
+      if (app.status === 'rejected') {
+        actionButtons += `
+          <button class="btn btn-secondary btn-sm btn-reject-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="반려 처리됨"><i class="fa-solid fa-ban"></i> 반려됨</button>
+        `;
+      } else {
+        actionButtons += `
+          <button class="btn btn-secondary btn-sm btn-reject-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="신청서 반려"><i class="fa-solid fa-xmark"></i> 반려</button>
+        `;
+      }
+
+      // 3. [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
       if (app.isBizItem) {
         actionButtons += `
           <button class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
@@ -1880,10 +1855,36 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
       }
       
-      // Delete button (always visible for management)
+      // 4. 삭제 버튼 (항상 노출)
       actionButtons += `
-        <button class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" style="padding: 5px 8px; font-size: 0.75rem; border-color: rgba(239, 68, 68, 0.3); color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; transition: all 0.2s;" title="신청서 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+        <button class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
       </div>`;
+
+      // 승인 완료된 경우 하단 시공사 배정 UI 표시
+      if (app.status === 'approved') {
+        if (app.assignedConstructorId) {
+          actionButtons += `
+            <div style="margin-top: 6px; font-size: 0.76rem; color: var(--accent-success); font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+              <i class="fa-solid fa-screwdriver-wrench"></i> 배정: ${escapeHtml(app.assignedConstructorName)}
+              ${app.constructionStatus === 'after_construction' ? `<button class="btn btn-primary btn-sm btn-approve-settlement" data-id="${app.id}" style="margin-left: 6px; padding: 2px 6px; font-size: 0.72rem; background: var(--accent-primary); border: none; border-radius: 4px; cursor: pointer; font-weight: 700;"><i class="fa-solid fa-file-invoice-dollar"></i> 정산완료</button>` : ''}
+            </div>
+          `;
+        } else {
+          const constructors = users.filter(u => u.role === 'constructor');
+          let optionsHtml = '<option value="">시공사 선택...</option>';
+          constructors.forEach(c => {
+            optionsHtml += `<option value="${c.id}">${escapeHtml(c.businessName || c.pendingBusinessName || c.name || c.id)}</option>`;
+          });
+          actionButtons += `
+            <div style="margin-top: 6px; display: inline-flex; gap: 4px; align-items: center; justify-content: center;">
+              <select class="status-select select-constructor-assign" data-id="${app.id}" style="padding: 3px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: white;">
+                ${optionsHtml}
+              </select>
+              <button class="btn btn-primary btn-sm btn-assign-constructor" data-id="${app.id}" style="padding: 3px 8px; font-size: 0.72rem; background: var(--accent-success); border: none; border-radius: 4px; cursor: pointer; font-weight: 700;"><i class="fa-solid fa-link"></i> 배정</button>
+            </div>
+          `;
+        }
+      }
 
       tr.innerHTML = `
         <td style="padding: 14px 16px; color: var(--text-secondary); font-family: monospace; white-space: nowrap;">${dateText}</td>
