@@ -2200,10 +2200,10 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.style.borderBottom = '1px solid var(--border-color)';
       tr.style.transition = 'background 0.2s ease';
       
-      // Formatting date
+      // Formatting date (YYYY.MM.DD 형식만 표시, 시간대 제외)
       const padZero = (n) => String(n).padStart(2, '0');
       const d = new Date(app.appliedAt);
-      const dateText = `${d.getFullYear()}.${padZero(d.getMonth() + 1)}.${padZero(d.getDate())} ${padZero(d.getHours())}:${padZero(d.getMinutes())}`;
+      const dateText = !isNaN(d.getTime()) ? `${d.getFullYear()}.${padZero(d.getMonth() + 1)}.${padZero(d.getDate())}` : (String(app.appliedAt).split('T')[0] || '-');
 
       // Status mapping
       const isApproved = (app.status === 'approved' || app.status === '서류제출 & 접수예정');
