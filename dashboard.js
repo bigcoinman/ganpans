@@ -3171,12 +3171,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Toggle badge 업데이트
     const userAppsToggleBadge = document.getElementById('user-apps-toggle-badge');
     if (userAppsToggleBadge) {
+      userAppsToggleBadge.style.background = '#0f172a';
+      userAppsToggleBadge.style.color = '#ffffff';
+      userAppsToggleBadge.style.border = '1px solid #1e293b';
       if (userAppsExpanded) {
         userAppsToggleBadge.innerHTML = '<i class="fa-solid fa-chevron-up"></i> 기본 3건만 접기';
-        userAppsToggleBadge.style.background = 'rgba(99, 102, 241, 0.15)';
       } else {
         userAppsToggleBadge.innerHTML = `<i class="fa-solid fa-chevron-down"></i> 전체 펼치기${totalCount > 3 ? ` (${totalCount}건)` : ''}`;
-        userAppsToggleBadge.style.background = 'rgba(99, 102, 241, 0.08)';
       }
     }
 
@@ -3326,12 +3327,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Toggle badge 업데이트
     const bizItemsToggleBadge = document.getElementById('biz-items-toggle-badge');
     if (bizItemsToggleBadge) {
+      bizItemsToggleBadge.style.background = '#0f172a';
+      bizItemsToggleBadge.style.color = '#ffffff';
+      bizItemsToggleBadge.style.border = '1px solid #1e293b';
       if (bizTableExpanded) {
         bizItemsToggleBadge.innerHTML = '<i class="fa-solid fa-chevron-up"></i> 기본 3건만 접기';
-        bizItemsToggleBadge.style.background = 'rgba(217, 119, 6, 0.15)';
       } else {
         bizItemsToggleBadge.innerHTML = `<i class="fa-solid fa-chevron-down"></i> 전체 펼치기${totalCount > 3 ? ` (${totalCount}건)` : ''}`;
-        bizItemsToggleBadge.style.background = 'rgba(217, 119, 6, 0.08)';
       }
     }
 
