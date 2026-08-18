@@ -1077,11 +1077,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let inquiriesCurrentPage = 1;
   const inquiriesPerPage = 10;
 
+  // --- Smart Toggle States for User Applications & Business Items ---
+  let userAppsExpanded = false; // false: 최근 3개 요약 노출, true: 10개씩 페이징 노출
   let userAppsCurrentPage = 1;
-  const userAppsPerPage = 3;
 
+  let bizTableExpanded = false; // false: 최근 3개 요약 노출, true: 10개씩 페이징 노출
   let bizTableCurrentPage = 1;
-  const bizTablePerPage = 3;
 
   function renderPaginationControls(totalCount, perPage, currentPage, callbackFnName) {
     if (totalCount <= perPage) return '';
@@ -1325,35 +1326,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 온라인 간편 지원 신청 내역 접기/펼치기 토글
+  // 온라인 간편 지원 신청 내역: 최근 3건 요약 <-> 10건 페이징 전체 펼치기 토글
   const toggleUserAppsHeader = document.getElementById('toggle-user-apps-header');
-  const userAppsContentBody = document.getElementById('user-apps-content-body');
-  const userAppsToggleBadge = document.getElementById('user-apps-toggle-badge');
-  if (toggleUserAppsHeader && userAppsContentBody) {
+  if (toggleUserAppsHeader) {
     toggleUserAppsHeader.addEventListener('click', () => {
-      const isHidden = userAppsContentBody.style.display === 'none';
-      userAppsContentBody.style.display = isHidden ? 'block' : 'none';
-      if (userAppsToggleBadge) {
-        userAppsToggleBadge.innerHTML = isHidden ? '<i class="fa-solid fa-chevron-up"></i> 접기' : '<i class="fa-solid fa-chevron-down"></i> 펼치기';
-        userAppsToggleBadge.style.background = isHidden ? 'rgba(99, 102, 241, 0.1)' : 'rgba(100, 116, 139, 0.1)';
-        userAppsToggleBadge.style.color = isHidden ? 'var(--accent-primary)' : 'var(--text-secondary)';
-      }
+      userAppsExpanded = !userAppsExpanded;
+      userAppsCurrentPage = 1;
+      renderUserApplicationsList();
     });
   }
 
-  // 내 영업물건 현황 접기/펼치기 토글
+  // 내 영업물건 현황: 최근 3건 요약 <-> 10건 페이징 전체 펼치기 토글
   const toggleBizItemsHeader = document.getElementById('toggle-biz-items-header');
-  const bizTableContentBody = document.getElementById('biz-table-content-body');
-  const bizItemsToggleBadge = document.getElementById('biz-items-toggle-badge');
-  if (toggleBizItemsHeader && bizTableContentBody) {
+  if (toggleBizItemsHeader) {
     toggleBizItemsHeader.addEventListener('click', () => {
-      const isHidden = bizTableContentBody.style.display === 'none';
-      bizTableContentBody.style.display = isHidden ? 'block' : 'none';
-      if (bizItemsToggleBadge) {
-        bizItemsToggleBadge.innerHTML = isHidden ? '<i class="fa-solid fa-chevron-up"></i> 접기' : '<i class="fa-solid fa-chevron-down"></i> 펼치기';
-        bizItemsToggleBadge.style.background = isHidden ? 'rgba(217, 119, 6, 0.1)' : 'rgba(100, 116, 139, 0.1)';
-        bizItemsToggleBadge.style.color = isHidden ? 'var(--accent-secondary)' : 'var(--text-secondary)';
-      }
+      bizTableExpanded = !bizTableExpanded;
+      bizTableCurrentPage = 1;
+      renderBizRegisteredTable();
     });
   }
 
@@ -3125,12 +3114,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const totalCount = sortedMyApps.length;
-    const totalPages = Math.ceil(totalCount / userAppsPerPage);
+    const perPage = userAppsExpanded ? 10 : 3;
+    const totalPages = Math.ceil(totalCount / perPage);
     if (userAppsCurrentPage > totalPages) userAppsCurrentPage = totalPages;
     if (userAppsCurrentPage < 1) userAppsCurrentPage = 1;
 
-    const startIndex = (userAppsCurrentPage - 1) * userAppsPerPage;
-    const paginatedApps = sortedMyApps.slice(startIndex, startIndex + userAppsPerPage);
+    const startIndex = (userAppsCurrentPage - 1) * perPage;
+    const paginatedApps = sortedMyApps.slice(startIndex, startIndex + perPage);
 
     paginatedApps.forEach(app => {
       const tr = document.createElement('tr');
@@ -3178,8 +3168,24 @@ document.addEventListener('DOMContentLoaded', () => {
       userApplicationsTableBody.appendChild(tr);
     });
 
+    // Toggle badge 업데이트
+    const userAppsToggleBadge = document.getElementById('user-apps-toggle-badge');
+    if (userAppsToggleBadge) {
+      if (userAppsExpanded) {
+        userAppsToggleBadge.innerHTML = '<i class="fa-solid fa-chevron-up"></i> 기본 3건만 접기';
+        userAppsToggleBadge.style.background = 'rgba(99, 102, 241, 0.15)';
+      } else {
+        userAppsToggleBadge.innerHTML = `<i class="fa-solid fa-chevron-down"></i> 전체 펼치기${totalCount > 3 ? ` (${totalCount}건)` : ''}`;
+        userAppsToggleBadge.style.background = 'rgba(99, 102, 241, 0.08)';
+      }
+    }
+
     if (paginationContainer) {
-      paginationContainer.innerHTML = renderPaginationControls(totalCount, userAppsPerPage, userAppsCurrentPage, 'window.changeUserAppsPage');
+      if (userAppsExpanded && totalCount > 10) {
+        paginationContainer.innerHTML = renderPaginationControls(totalCount, 10, userAppsCurrentPage, 'window.changeUserAppsPage');
+      } else {
+        paginationContainer.innerHTML = '';
+      }
     }
 
     // Add photo upload listeners
@@ -3280,12 +3286,13 @@ document.addEventListener('DOMContentLoaded', () => {
     filteredList.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
     const totalCount = filteredList.length;
-    const totalPages = Math.ceil(totalCount / bizTablePerPage);
+    const perPage = bizTableExpanded ? 10 : 3;
+    const totalPages = Math.ceil(totalCount / perPage);
     if (bizTableCurrentPage > totalPages) bizTableCurrentPage = totalPages;
     if (bizTableCurrentPage < 1) bizTableCurrentPage = 1;
 
-    const startIndex = (bizTableCurrentPage - 1) * bizTablePerPage;
-    const paginatedList = filteredList.slice(startIndex, startIndex + bizTablePerPage);
+    const startIndex = (bizTableCurrentPage - 1) * perPage;
+    const paginatedList = filteredList.slice(startIndex, startIndex + perPage);
 
     paginatedList.forEach(item => {
       const tr = document.createElement('tr');
@@ -3316,8 +3323,24 @@ document.addEventListener('DOMContentLoaded', () => {
       bizRegisteredTableBody.appendChild(tr);
     });
 
+    // Toggle badge 업데이트
+    const bizItemsToggleBadge = document.getElementById('biz-items-toggle-badge');
+    if (bizItemsToggleBadge) {
+      if (bizTableExpanded) {
+        bizItemsToggleBadge.innerHTML = '<i class="fa-solid fa-chevron-up"></i> 기본 3건만 접기';
+        bizItemsToggleBadge.style.background = 'rgba(217, 119, 6, 0.15)';
+      } else {
+        bizItemsToggleBadge.innerHTML = `<i class="fa-solid fa-chevron-down"></i> 전체 펼치기${totalCount > 3 ? ` (${totalCount}건)` : ''}`;
+        bizItemsToggleBadge.style.background = 'rgba(217, 119, 6, 0.08)';
+      }
+    }
+
     if (paginationContainer) {
-      paginationContainer.innerHTML = renderPaginationControls(totalCount, bizTablePerPage, bizTableCurrentPage, 'window.changeBizTablePage');
+      if (bizTableExpanded && totalCount > 10) {
+        paginationContainer.innerHTML = renderPaginationControls(totalCount, 10, bizTableCurrentPage, 'window.changeBizTablePage');
+      } else {
+        paginationContainer.innerHTML = '';
+      }
     }
 
     // Add click listeners to cancel buttons
