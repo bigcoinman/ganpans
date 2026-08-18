@@ -2741,7 +2741,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // PC 신청서 현장사진 파일 선택/업로드 핸들러
   const handleApplicationPhotoUploadPC = (appId) => {
-    if (activeUser.role !== 'admin') return;
+    if (!activeUser) return;
 
     let fileInput = document.getElementById('pc-app-photo-upload-input');
     if (!fileInput) {
@@ -3116,6 +3116,37 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">${escapeHtml(app.storeName || '-')}</div>
           ${app.storeAddress ? `<div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(app.storeAddress)}</div>` : ''}
         </td>
+        <td style="padding: 12px 16px; color: var(--text-secondary); max-width: 160px;">
+          ${(() => {
+            const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '');
+            if (photoSrc) {
+              return `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <a href="${sanitizeUrl(photoSrc)}" target="_blank" style="display: block; width: 44px; height: 44px; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; flex-shrink: 0; background: #f8fafc;" title="사진 크게 보기">
+                    <img src="${sanitizeUrl(photoSrc)}" alt="현장사진" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='간판지원단 로고-2.png'">
+                  </a>
+                  <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+                    <a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(app.fileName) || '현장사진.jpg'}" style="color: var(--accent-primary); font-weight: 600; font-size: 0.76rem; text-decoration: underline; white-space: nowrap;" title="다운로드">
+                      <i class="fa-solid fa-download"></i> 다운로드
+                    </a>
+                    <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 2px 6px; font-size: 0.7rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; width: fit-content;" title="사진 변경">
+                      <i class="fa-solid fa-camera"></i> 변경
+                    </button>
+                  </div>
+                </div>
+              `;
+            } else {
+              return `
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <span style="color: #94a3b8; font-size: 0.76rem;">미등록</span>
+                  <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 3px 8px; font-size: 0.72rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; width: fit-content; font-weight: 700;" title="현장사진 등록">
+                    <i class="fa-solid fa-camera"></i> 사진 등록
+                  </button>
+                </div>
+              `;
+            }
+          })()}
+        </td>
         <td style="padding: 12px 16px; white-space: nowrap;">${statusBadge}</td>
         <td style="padding: 12px 16px; text-align: center; white-space: nowrap;">
           <button class="btn btn-secondary btn-sm btn-cancel-own-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.72rem; border-color: rgba(239, 68, 68, 0.3); color: rgba(239, 68, 68, 0.7); background: transparent; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.borderColor='rgba(239,68,68,0.5)';" onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(239,68,68,0.3)';"><i class="fa-solid fa-trash-can"></i> 취소</button>
@@ -3127,6 +3158,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (paginationContainer) {
       paginationContainer.innerHTML = renderPaginationControls(totalCount, userAppsPerPage, userAppsCurrentPage, 'window.changeUserAppsPage');
     }
+
+    // Add photo upload listeners
+    userApplicationsTableBody.querySelectorAll('.btn-upload-app-photo-pc').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.closest('button').dataset.id;
+        handleApplicationPhotoUploadPC(id);
+      });
+    });
 
     // Add click listeners to cancel buttons
     userApplicationsTableBody.querySelectorAll('.btn-cancel-own-app').forEach(btn => {
