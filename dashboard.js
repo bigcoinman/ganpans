@@ -556,25 +556,62 @@ document.addEventListener('DOMContentLoaded', () => {
       const card = document.createElement('div');
       card.className = 'biz-item-card';
 
+      // Match application data for more detailed fields if available
+      const matchingApp = apps.find(app => String(app.id) === String(item.id) || String(app.id) === String(item.appRefId));
+      const storeName = item.name || (matchingApp ? (matchingApp.storeName || matchingApp.shopName) : '') || '-';
+      const storeAddress = item.address || (matchingApp ? matchingApp.storeAddress : '') || '-';
+      const applyDate = formatDateOnly(item.registeredAt || item.appliedAt || (matchingApp ? matchingApp.appliedAt : '') || new Date());
+      const ownerName = (matchingApp ? matchingApp.ownerName : '') || item.ownerName || item.name || '-';
+      const ownerPhone = item.phone || (matchingApp ? matchingApp.ownerPhone : '') || '-';
+
+      // Photos collection (up to 20 photos)
+      let photoList = [];
+      if (item.photos && Array.isArray(item.photos)) {
+        photoList = photoList.concat(item.photos);
+      }
+      if (matchingApp) {
+        if (matchingApp.fileData && !photoList.includes(matchingApp.fileData)) {
+          photoList.unshift(matchingApp.fileData);
+        }
+        if (matchingApp.photos && Array.isArray(matchingApp.photos)) {
+          matchingApp.photos.forEach(p => {
+            if (p && !photoList.includes(p)) photoList.push(p);
+          });
+        }
+      }
+      photoList = photoList.filter(Boolean).slice(0, 20);
+
       let photosHtml = '';
-      if (item.photos && item.photos.length > 0) {
-        photosHtml = `<div class="biz-item-photos">`;
-        item.photos.forEach(photoSrc => {
-          if (photoSrc) {
-            photosHtml += `<img src="${sanitizeUrl(photoSrc)}" alt="현장사진" class="biz-item-thumb">`;
-          }
+      if (photoList.length > 0) {
+        photosHtml = `<div class="biz-item-photos" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.06);">`;
+        photoList.forEach(photoSrc => {
+          photosHtml += `
+            <a href="${sanitizeUrl(photoSrc)}" target="_blank" style="display: block; width: 38px; height: 38px; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; flex-shrink: 0; background: #f8fafc;" title="현장사진 크게보기">
+              <img src="${sanitizeUrl(photoSrc)}" alt="현장사진" class="biz-item-thumb" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='간판지원단 로고-2.png'">
+            </a>
+          `;
         });
         photosHtml += `</div>`;
       }
 
       card.innerHTML = `
-        <div class="biz-item-header">
-          <div>
-            <h4 class="biz-item-name">${escapeHtml(item.name)} ${item.id ? `<span style="font-size: 0.72rem; font-weight: 500; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 6px; border-radius: 4px; margin-left: 6px;">${escapeHtml(String(item.id))}</span>` : ''}</h4>
-            <p class="biz-item-addr"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.address)}</p>
-            ${item.phone ? `<p class="biz-item-phone" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-phone" style="color: var(--accent-primary);"></i> ${escapeHtml(item.phone)}</p>` : ''}
+        <div class="biz-item-header" style="align-items: flex-start;">
+          <div style="flex: 1;">
+            <h4 class="biz-item-name" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; font-size: 1.05rem;">
+              ${escapeHtml(storeName)}
+              ${item.id ? `<span style="font-size: 0.72rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); padding: 2px 8px; border-radius: 4px; font-family: monospace;">${escapeHtml(String(item.id))}</span>` : ''}
+            </h4>
+            <p class="biz-item-addr" style="margin-bottom: 5px; font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+              <i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> ${escapeHtml(storeAddress)}
+            </p>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">
+              <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 500;">${escapeHtml(applyDate)}</span>
+            </p>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0;">
+              <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(ownerName)}</span> <span style="color: var(--text-secondary); font-size: 0.78rem;">(${escapeHtml(ownerPhone)})</span>
+            </p>
           </div>
-          <div class="biz-item-badges">
+          <div class="biz-item-badges" style="display: flex; gap: 6px; flex-shrink: 0; margin-left: 10px;">
             <span class="badge-receipt">${escapeHtml(item.receiptStatus || '접수예정')}</span>
             <span class="badge-progress">${escapeHtml(item.progressStatus || '지원대기중')}</span>
           </div>
@@ -3116,35 +3153,21 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">${escapeHtml(app.storeName || '-')}</div>
           ${app.storeAddress ? `<div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(app.storeAddress)}</div>` : ''}
         </td>
-        <td style="padding: 12px 16px; color: var(--text-secondary); max-width: 160px;">
+        <td style="padding: 12px 16px; width: 110px; white-space: nowrap;">
           ${(() => {
             const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '');
-            if (photoSrc) {
-              return `
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <a href="${sanitizeUrl(photoSrc)}" target="_blank" style="display: block; width: 44px; height: 44px; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; flex-shrink: 0; background: #f8fafc;" title="사진 크게 보기">
-                    <img src="${sanitizeUrl(photoSrc)}" alt="현장사진" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='간판지원단 로고-2.png'">
-                  </a>
-                  <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
-                    <a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(app.fileName) || '현장사진.jpg'}" style="color: var(--accent-primary); font-weight: 600; font-size: 0.76rem; text-decoration: underline; white-space: nowrap;" title="다운로드">
-                      <i class="fa-solid fa-download"></i> 다운로드
-                    </a>
-                    <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 2px 6px; font-size: 0.7rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; width: fit-content;" title="사진 변경">
-                      <i class="fa-solid fa-camera"></i> 변경
-                    </button>
-                  </div>
-                </div>
-              `;
-            } else {
-              return `
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                  <span style="color: #94a3b8; font-size: 0.76rem;">미등록</span>
-                  <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 3px 8px; font-size: 0.72rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; width: fit-content; font-weight: 700;" title="현장사진 등록">
-                    <i class="fa-solid fa-camera"></i> 사진 등록
-                  </button>
-                </div>
-              `;
-            }
+            const downloadBtn = photoSrc
+              ? `<a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(app.fileName) || '현장사진.jpg'}" style="padding: 4px 8px; font-size: 0.74rem; background: #2563eb; color: #ffffff; border: 1px solid #1d4ed8; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; width: 100%; box-sizing: border-box; text-align: center; box-shadow: 0 1px 2px rgba(37,99,235,0.2); transition: background 0.15s;" title="현장사진 다운로드"><i class="fa-solid fa-download"></i> 다운로드</a>`
+              : `<button type="button" disabled style="padding: 4px 8px; font-size: 0.74rem; background: #e2e8f0; color: #94a3b8; border: 1px solid #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; box-sizing: border-box; cursor: not-allowed;"><i class="fa-solid fa-download"></i> 다운로드</button>`;
+
+            return `
+              <div style="display: flex; flex-direction: column; gap: 6px; width: 96px;">
+                <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 4px 8px; font-size: 0.74rem; background: #ffffff; color: #166534; border: 1.5px solid #22c55e; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; width: 100%; box-sizing: border-box; box-shadow: 0 1px 2px rgba(0,0,0,0.04);" title="현장사진 등록/변경">
+                  <i class="fa-solid fa-camera" style="color: #16a34a;"></i> 사진 등록
+                </button>
+                ${downloadBtn}
+              </div>
+            `;
           })()}
         </td>
         <td style="padding: 12px 16px; white-space: nowrap;">${statusBadge}</td>
