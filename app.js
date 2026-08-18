@@ -857,10 +857,447 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Salesperson Dashboard ---
-    function renderBusinessDashboardMob() {
-        const bizItemsList = document.getElementById('biz-items-list-mobile');
-        if (!bizItemsList) return;
+    function formatDateOnly(dateString) {
+        if (!dateString) return '-';
+        try {
+            const d = new Date(dateString);
+            if (isNaN(d.getTime())) return String(dateString).split('T')[0] || '-';
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}.${m}.${day}`;
+        } catch (e) {
+            return String(dateString).split('T')[0] || '-';
+        }
+    }
 
+    function getAppStatusBadgeHtmlMob(statusObj) {
+        let status = '';
+        let constStatus = '';
+        if (typeof statusObj === 'string') {
+            status = statusObj;
+        } else if (statusObj) {
+            status = statusObj.status || statusObj.receiptStatus || '';
+            constStatus = statusObj.constructionStatus || statusObj.progressStatus || '';
+        }
+
+        if (constStatus === '간판시공완료' || constStatus === '시공 완료' || constStatus === '정산 완료') {
+            return '<span style="background: #fdf4ff; color: #a855f7; border: 1px solid #f0abfc; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-screwdriver-wrench"></i> 시공 완료</span>';
+        }
+        if (constStatus === '대상자선정' || constStatus === '간판시공 준비중') {
+            return '<span style="background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
+        }
+        if (status === 'approved' || status === '서류제출 & 접수예정' || status === '승인 완료') {
+            return '<span style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 승인 완료</span>';
+        }
+        if (status === 'rejected' || status === '지원사업 탈락' || status === '반려됨') {
+            return '<span style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 탈락</span>';
+        }
+        return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 심사 대기</span>';
+    }
+
+    // Mobile Business Dashboard Toggle States
+    let userAppsMobExpanded = false; // false: 최근 3건 요약, true: 전체 확장
+    let bizItemsMobExpanded = false; // false: 최근 3건 요약, true: 전체 확장
+
+    function handleApplicationPhotoUploadMob(appId) {
+        if (!activeUser) return;
+        let fileInput = document.getElementById('mob-app-photo-upload-input');
+        if (!fileInput) {
+            fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.id = 'mob-app-photo-upload-input';
+            fileInput.accept = 'image/*';
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+        }
+
+        fileInput.onchange = async (e) => {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            const file = files[0];
+
+            try {
+                let base64Data = '';
+                if (typeof compressImageToBase64 === 'function') {
+                    base64Data = await compressImageToBase64(file, 2 * 1024 * 1024);
+                } else {
+                    base64Data = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => resolve(ev.target.result);
+                        reader.readAsDataURL(file);
+                    });
+                }
+
+                const fileName = file.name || `현장사진_${appId}.jpg`;
+
+                // 1) localStorage applications 업데이트
+                let curApps = JSON.parse(localStorage.getItem('applications')) || [];
+                const targetApp = curApps.find(a => String(a.id) === String(appId));
+                if (targetApp) {
+                    targetApp.fileData = base64Data;
+                    targetApp.fileName = fileName;
+                    localStorage.setItem('applications', JSON.stringify(curApps));
+                }
+
+                // 2) users items 업데이트
+                let usersList = JSON.parse(localStorage.getItem('users')) || [];
+                let itemUpdated = false;
+                usersList.forEach(u => {
+                    if (u.items && Array.isArray(u.items)) {
+                        u.items.forEach(item => {
+                            if (String(item.id) === String(appId) || String(item.appRefId) === String(appId)) {
+                                item.photos = [base64Data];
+                                item.photosCount = 1;
+                                itemUpdated = true;
+                            }
+                        });
+                    }
+                });
+                if (itemUpdated) {
+                    localStorage.setItem('users', JSON.stringify(usersList));
+                }
+
+                // 3) Supabase DB 동기화
+                if (window.supabaseClient) {
+                    try {
+                        await window.supabaseClient
+                            .from('applications')
+                            .update({
+                                file_data: base64Data,
+                                file_name: fileName,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', appId);
+
+                        if (itemUpdated) {
+                            await window.supabaseClient
+                                .from('business_items')
+                                .update({
+                                    photos: [base64Data],
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('id', appId);
+                        }
+                    } catch (dbErr) {
+                        console.warn('Supabase photo sync warning:', dbErr);
+                    }
+                }
+
+                alert(`📷 [${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : appId}] 현장사진이 성공적으로 등록되었습니다.`);
+                renderBusinessDashboardMob();
+                if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob();
+                if (typeof renderStatusTab === 'function') renderStatusTab();
+            } catch (err) {
+                console.error('Mobile photo upload error:', err);
+                alert('사진 처리 중 오류가 발생했습니다: ' + err.message);
+            } finally {
+                fileInput.value = '';
+            }
+        };
+
+        fileInput.click();
+    }
+
+    // 1. 최근 신청한 업체 (최신 2개 업체 카드)
+    function renderRecentBizItemsMob() {
+        const recentListContainer = document.getElementById('recent-biz-items-mobile');
+        if (!recentListContainer) return;
+
+        let items = activeUser.items || [];
+        const apps = JSON.parse(localStorage.getItem('applications')) || [];
+
+        if (items.length === 0) {
+            recentListContainer.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.88rem; background: #f8fafc; border-radius: 8px;">최근 신청된 업체가 없습니다.</p>';
+            return;
+        }
+
+        const recentItems = [...items].slice(-2).reverse();
+        recentListContainer.innerHTML = '';
+
+        recentItems.forEach(item => {
+            const matchingApp = apps.find(app => String(app.id) === String(item.id) || String(app.id) === String(item.appRefId));
+            const storeName = item.name || (matchingApp ? (matchingApp.storeName || matchingApp.shopName) : '') || '-';
+            const storeAddress = item.address || (matchingApp ? matchingApp.storeAddress : '') || '-';
+            const applyDate = formatDateOnly(item.registeredAt || item.appliedAt || (matchingApp ? matchingApp.appliedAt : '') || new Date());
+            const ownerName = (matchingApp ? matchingApp.ownerName : '') || item.ownerName || item.name || '-';
+            const ownerPhone = item.phone || (matchingApp ? matchingApp.ownerPhone : '') || '-';
+
+            // Collect photos (up to 20)
+            let photoList = [];
+            if (item.photos && Array.isArray(item.photos)) {
+                photoList = photoList.concat(item.photos);
+            }
+            if (matchingApp) {
+                if (matchingApp.fileData && !photoList.includes(matchingApp.fileData)) {
+                    photoList.unshift(matchingApp.fileData);
+                }
+                if (matchingApp.photos && Array.isArray(matchingApp.photos)) {
+                    matchingApp.photos.forEach(p => {
+                        if (p && !photoList.includes(p)) photoList.push(p);
+                    });
+                }
+            }
+            photoList = photoList.filter(Boolean).slice(0, 20);
+
+            let photosHtml = '';
+            if (photoList.length > 0) {
+                photosHtml = `<div class="biz-card-photos" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;">`;
+                photoList.forEach(src => {
+                    photosHtml += `
+                        <a href="${src}" target="_blank" style="display: block; width: 38px; height: 38px; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; flex-shrink: 0; background: #f8fafc;">
+                            <img src="${src}" alt="사진" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='간판지원단 로고-2.png'">
+                        </a>
+                    `;
+                });
+                photosHtml += `</div>`;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'biz-card-mob';
+            card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                    <div>
+                        <h5 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            ${escapeHtml(storeName)}
+                            ${item.id ? `<span style="font-size: 0.72rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); padding: 1px 6px; border-radius: 4px; font-family: monospace;">${escapeHtml(String(item.id))}</span>` : ''}
+                        </h5>
+                    </div>
+                    <div style="display: flex; gap: 4px; flex-shrink: 0; margin-left: 8px;">
+                        <span style="font-size: 0.72rem; font-weight: 700; background: #ecfdf5; color: #10b981; padding: 2px 6px; border-radius: 4px;">${escapeHtml(item.receiptStatus || '접수예정')}</span>
+                        <span style="font-size: 0.72rem; font-weight: 700; background: #eef2ff; color: #6366f1; padding: 2px 6px; border-radius: 4px;">${escapeHtml(item.progressStatus || '지원대기중')}</span>
+                    </div>
+                </div>
+                <p style="font-size: 0.84rem; color: var(--text-secondary); margin: 0 0 4px 0;">
+                    <i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> ${escapeHtml(storeAddress)}
+                </p>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
+                    <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 500;">${escapeHtml(applyDate)}</span>
+                </p>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 4px 0;">
+                    <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(ownerName)}</span> <span style="color: var(--text-secondary); font-size: 0.78rem;">(${escapeHtml(ownerPhone)})</span>
+                </p>
+                ${photosHtml}
+            `;
+            recentListContainer.appendChild(card);
+        });
+    }
+
+    // 2. 내 온라인 간편 지원 신청 내역 (모바일 카드)
+    function renderUserApplicationsMob() {
+        const userAppsContainer = document.getElementById('user-apps-list-mobile');
+        if (!userAppsContainer) return;
+
+        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+        if (!activeUser) return;
+
+        const myApps = apps.filter(app => {
+            const isMyId = app.userId === activeUser.id;
+            const isMyPhone = activeUser.phone && app.ownerPhone && app.ownerPhone.replace(/[^0-9]/g, '') === activeUser.phone.replace(/[^0-9]/g, '');
+            const isMyName = activeUser.name && app.ownerName === activeUser.name;
+            return isMyId || isMyPhone || isMyName;
+        });
+
+        // Search filtering
+        const searchInput = document.getElementById('search-user-apps-mob');
+        const q = (searchInput ? searchInput.value.trim().toLowerCase() : '').slice(0, 30);
+
+        let filtered = myApps;
+        if (q) {
+            filtered = myApps.filter(app => {
+                const id = String(app.id || '').toLowerCase();
+                const owner = String(app.ownerName || '').toLowerCase();
+                const phone = String(app.ownerPhone || '').toLowerCase();
+                const store = String(app.storeName || '').toLowerCase();
+                const addr = String(app.storeAddress || '').toLowerCase();
+                return id.includes(q) || owner.includes(q) || phone.includes(q) || store.includes(q) || addr.includes(q);
+            });
+        }
+
+        const totalCount = filtered.length;
+        const toggleBadge = document.getElementById('user-apps-mob-toggle-badge');
+        if (toggleBadge) {
+            if (userAppsMobExpanded) {
+                toggleBadge.innerHTML = '<i class="fa-solid fa-chevron-up"></i> 기본 3건만 접기';
+                toggleBadge.style.background = 'rgba(99, 102, 241, 0.15)';
+            } else {
+                toggleBadge.innerHTML = `<i class="fa-solid fa-chevron-down"></i> 전체 펼치기${totalCount > 3 ? ` (${totalCount}건)` : ''}`;
+                toggleBadge.style.background = 'rgba(99, 102, 241, 0.08)';
+            }
+        }
+
+        if (filtered.length === 0) {
+            const emptyMsg = q ? `검색어 [${escapeHtml(q)}] 에 일치하는 신청 내역이 없습니다.` : '접수한 온라인 간편 지원 신청 내역이 없습니다.';
+            userAppsContainer.innerHTML = `<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.88rem; background: #f8fafc; border-radius: 8px;">${emptyMsg}</p>`;
+            return;
+        }
+
+        const sortedApps = [...filtered].sort((a, b) => new Date(b.appliedAt || 0).getTime() - new Date(a.appliedAt || 0).getTime());
+        const displayApps = userAppsMobExpanded ? sortedApps : sortedApps.slice(0, 3);
+
+        userAppsContainer.innerHTML = '';
+        displayApps.forEach(app => {
+            const statusBadge = getAppStatusBadgeHtmlMob(app);
+            const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '');
+            const downloadBtn = photoSrc
+                ? `<a href="${photoSrc}" download="${escapeHtml(app.fileName) || '현장사진.jpg'}" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; text-decoration: none; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(37,99,235,0.2);"><i class="fa-solid fa-download"></i> 다운로드</a>`
+                : `<button type="button" disabled style="padding: 6px 12px; font-size: 0.8rem; background: #e2e8f0; color: #94a3b8; border: 1px solid #cbd5e1; border-radius: 6px; display: flex; align-items: center; gap: 4px; cursor: not-allowed;"><i class="fa-solid fa-download"></i> 다운로드</button>`;
+
+            const card = document.createElement('div');
+            card.className = 'biz-card-mob';
+            card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                    <h5 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0;">${escapeHtml(app.storeName || app.shopName || '-')}</h5>
+                    <div>${statusBadge}</div>
+                </div>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
+                    <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 500;">${formatDateOnly(app.appliedAt)}</span>
+                </p>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
+                    <strong style="color: #475569;">신청번호:</strong> <span style="font-family: monospace; font-weight: 600; color: var(--accent-primary);">${escapeHtml(String(app.id))}</span>
+                </p>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
+                    <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(app.ownerName || '-')}</span> <span style="color: var(--text-secondary); font-size: 0.78rem;">(${escapeHtml(app.ownerPhone || '-')})</span>
+                </p>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 10px 0;">
+                    <strong style="color: #475569;">주소:</strong> ${escapeHtml(app.storeAddress || '-')}
+                </p>
+
+                <!-- 하단 현장사진 박스 -->
+                <div style="background: #fefce8; border: 1px dashed #fde047; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="font-size: 0.92rem; font-weight: 700; color: #a16207;">현장사진</span>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button type="button" class="btn-upload-mob-app-photo" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; background: #10b981; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(16,185,129,0.2);">
+                            <i class="fa-solid fa-camera"></i> 사진 촬영/등록
+                        </button>
+                        ${downloadBtn}
+                    </div>
+                </div>
+            `;
+            userAppsContainer.appendChild(card);
+        });
+
+        // Add upload photo listeners
+        userAppsContainer.querySelectorAll('.btn-upload-mob-app-photo').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.closest('button').dataset.id;
+                handleApplicationPhotoUploadMob(id);
+            });
+        });
+    }
+
+    // 3. 내 영업물건 현황 및 진행상황 (모바일 카드)
+    function renderBizRegisteredItemsMob() {
+        const bizListContainer = document.getElementById('biz-items-list-mobile');
+        if (!bizListContainer) return;
+        if (!activeUser || activeUser.role !== 'business') return;
+
+        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+        let myItems = activeUser.items || [];
+        let bizList = [];
+
+        apps.forEach(app => {
+            const isMyReferrer = activeUser.bizCode && app.referrerCode === activeUser.bizCode;
+            const isMyItem = myItems.some(i => String(i.id) === String(app.id));
+            if (isMyReferrer || isMyItem) {
+                bizList.push({
+                    id: app.id,
+                    date: app.appliedAt || new Date().toISOString(),
+                    ownerName: app.ownerName || app.name || '-',
+                    ownerPhone: app.ownerPhone || app.phone || '',
+                    storeName: app.storeName || app.shopName || app.name || '-',
+                    storeAddress: app.storeAddress || app.address || '',
+                    statusObj: app
+                });
+            }
+        });
+
+        myItems.forEach(item => {
+            if (!bizList.some(b => String(b.id) === String(item.id))) {
+                bizList.push({
+                    id: item.id,
+                    date: item.registeredAt || new Date().toISOString(),
+                    ownerName: item.name || '-',
+                    ownerPhone: item.phone || '',
+                    storeName: item.name || '-',
+                    storeAddress: item.address || '',
+                    statusObj: {
+                        status: item.receiptStatus === '승인완료' ? 'approved' : 'pending',
+                        constructionStatus: item.progressStatus
+                    }
+                });
+            }
+        });
+
+        // Search filtering
+        const searchInput = document.getElementById('search-biz-items-mob');
+        const q = (searchInput ? searchInput.value.trim().toLowerCase() : '').slice(0, 30);
+
+        let filtered = bizList;
+        if (q) {
+            filtered = bizList.filter(b => {
+                const id = String(b.id || '').toLowerCase();
+                const owner = String(b.ownerName || '').toLowerCase();
+                const phone = String(b.ownerPhone || '').toLowerCase();
+                const store = String(b.storeName || '').toLowerCase();
+                const addr = String(b.storeAddress || '').toLowerCase();
+                return id.includes(q) || owner.includes(q) || phone.includes(q) || store.includes(q) || addr.includes(q);
+            });
+        }
+
+        const totalCount = filtered.length;
+        const toggleBadge = document.getElementById('biz-items-mob-toggle-badge');
+        if (toggleBadge) {
+            if (bizItemsMobExpanded) {
+                toggleBadge.innerHTML = '<i class="fa-solid fa-chevron-up"></i> 기본 3건만 접기';
+                toggleBadge.style.background = 'rgba(217, 119, 6, 0.15)';
+            } else {
+                toggleBadge.innerHTML = `<i class="fa-solid fa-chevron-down"></i> 전체 펼치기${totalCount > 3 ? ` (${totalCount}건)` : ''}`;
+                toggleBadge.style.background = 'rgba(217, 119, 6, 0.08)';
+            }
+        }
+
+        if (filtered.length === 0) {
+            const emptyMsg = q ? `검색어 [${escapeHtml(q)}] 에 일치하는 영업물건이 없습니다.` : '등록된 영업물건이 없습니다.';
+            bizListContainer.innerHTML = `<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.88rem; background: #f8fafc; border-radius: 8px;">${emptyMsg}</p>`;
+            return;
+        }
+
+        const sortedBiz = [...filtered].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+        const displayBiz = bizItemsMobExpanded ? sortedBiz : sortedBiz.slice(0, 3);
+
+        bizListContainer.innerHTML = '';
+        displayBiz.forEach(item => {
+            const statusBadge = getAppStatusBadgeHtmlMob(item.statusObj);
+
+            const card = document.createElement('div');
+            card.className = 'biz-card-mob';
+            card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                    <h5 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0;">${escapeHtml(item.storeName || '-')}</h5>
+                    <div>${statusBadge}</div>
+                </div>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
+                    <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 500;">${formatDateOnly(item.date)}</span>
+                </p>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
+                    <strong style="color: #475569;">신청번호:</strong> <span style="font-family: monospace; font-weight: 600; color: var(--accent-secondary);">${escapeHtml(String(item.id))}</span>
+                </p>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
+                    <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(item.ownerName || '-')}</span> <span style="color: var(--text-secondary); font-size: 0.78rem;">(${escapeHtml(item.ownerPhone || '-')})</span>
+                </p>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0;">
+                    <strong style="color: #475569;">주소:</strong> ${escapeHtml(item.storeAddress || '-')}
+                </p>
+            `;
+            bizListContainer.appendChild(card);
+        });
+    }
+
+    function renderBusinessDashboardMob() {
         // Sync items status with main applications
         let items = activeUser.items || [];
         const apps = JSON.parse(localStorage.getItem('applications')) || [];
@@ -917,46 +1354,9 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('activeUser', JSON.stringify(activeUser));
         }
 
-        if (items.length === 0) {
-            bizItemsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">등록된 영업물건이 없습니다. 아래 현장 등록 폼을 통해 새로 추가해 보세요.</p>';
-            return;
-        }
-
-        bizItemsList.innerHTML = '';
-        items.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'biz-card-mob';
-
-            let photosHtml = '';
-            if (item.photos && item.photos.length > 0) {
-                photosHtml = `<div class="biz-card-photos">`;
-                item.photos.forEach(src => {
-                    photosHtml += `<img src="${src}" alt="사진" class="biz-thumb-mob" onerror="this.src='간판지원단 로고-2.png'">`;
-                });
-                photosHtml += `</div>`;
-            }
-
-            let progressClass = 'review';
-            const receiptText = item.receiptStatus || '접수예정';
-            const progressText = item.progressStatus || '지원대기중';
-            if (progressText === '간판시공완료' || progressText === '승인 완료' || progressText === '시공 완료') progressClass = 'approved';
-            else if (progressText === '대상자선정' || progressText === '간판시공 준비중') progressClass = 'approved';
-            else if (progressText === '반려됨') progressClass = 'rejected';
-
-            card.innerHTML = `
-                <div class="biz-card-title-row">
-                    <span class="biz-card-title">${escapeHtml(item.name)} ${item.id ? `<span style="font-size: 0.84rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 2px 6px; border-radius: 4px; margin-left: 4px;">${escapeHtml(String(item.id))}</span>` : ''}</span>
-                    <div class="biz-card-badges">
-                        <span class="biz-card-badge receipt">${escapeHtml(receiptText)}</span>
-                        <span class="biz-card-badge progress ${progressClass}">${escapeHtml(progressText)}</span>
-                    </div>
-                </div>
-                <div class="biz-card-addr"><i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> ${escapeHtml(item.address)}</div>
-                ${item.phone ? `<div class="biz-card-phone" style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 4px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-phone" style="color: var(--accent-primary);"></i> <strong style="color: var(--accent-primary);">${escapeHtml(item.phone)}</strong></div>` : ''}
-                ${photosHtml}
-            `;
-            bizItemsList.appendChild(card);
-        });
+        renderRecentBizItemsMob();
+        renderUserApplicationsMob();
+        renderBizRegisteredItemsMob();
     }
 
     // Sales representative manual link (방안 B)
@@ -1310,6 +1710,37 @@ document.addEventListener('DOMContentLoaded', () => {
             document.documentElement.scrollTop = 0;
             document.body.scrollTop = 0;
             updateHeaderAuthButton();
+        });
+    }
+
+    // Mobile Business Dashboard Search & Toggle Event Listeners
+    const searchUserAppsMobInput = document.getElementById('search-user-apps-mob');
+    if (searchUserAppsMobInput) {
+        searchUserAppsMobInput.addEventListener('input', () => {
+            renderUserApplicationsMob();
+        });
+    }
+
+    const toggleUserAppsMobHeader = document.getElementById('toggle-user-apps-mob-header');
+    if (toggleUserAppsMobHeader) {
+        toggleUserAppsMobHeader.addEventListener('click', () => {
+            userAppsMobExpanded = !userAppsMobExpanded;
+            renderUserApplicationsMob();
+        });
+    }
+
+    const searchBizItemsMobInput = document.getElementById('search-biz-items-mob');
+    if (searchBizItemsMobInput) {
+        searchBizItemsMobInput.addEventListener('input', () => {
+            renderBizRegisteredItemsMob();
+        });
+    }
+
+    const toggleBizItemsMobHeader = document.getElementById('toggle-biz-items-mob-header');
+    if (toggleBizItemsMobHeader) {
+        toggleBizItemsMobHeader.addEventListener('click', () => {
+            bizItemsMobExpanded = !bizItemsMobExpanded;
+            renderBizRegisteredItemsMob();
         });
     }
 
@@ -2558,105 +2989,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 모바일 신청서 현장사진 카메라 촬영/업로드 핸들러
-    const handleApplicationPhotoUploadMob = (appId) => {
-        let fileInput = document.getElementById('mob-app-photo-upload-input');
-        if (!fileInput) {
-            fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.id = 'mob-app-photo-upload-input';
-            fileInput.accept = 'image/*';
-            fileInput.capture = 'environment';
-            fileInput.style.display = 'none';
-            document.body.appendChild(fileInput);
-        }
 
-        fileInput.onchange = async (e) => {
-            const files = e.target.files;
-            if (!files || files.length === 0) return;
-            const file = files[0];
-
-            try {
-                // 용량 제한 및 압축 (2MB 이하)
-                let base64Data = '';
-                if (typeof compressImageToBase64 === 'function') {
-                    base64Data = await compressImageToBase64(file, 2 * 1024 * 1024);
-                } else {
-                    base64Data = await new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => resolve(ev.target.result);
-                        reader.readAsDataURL(file);
-                    });
-                }
-
-                const fileName = file.name || `현장사진_${appId}.jpg`;
-
-                // 1) localStorage applications 업데이트
-                let curApps = JSON.parse(localStorage.getItem('applications')) || [];
-                const targetApp = curApps.find(a => String(a.id) === String(appId));
-                if (targetApp) {
-                    targetApp.fileData = base64Data;
-                    targetApp.fileName = fileName;
-                    localStorage.setItem('applications', JSON.stringify(curApps));
-                    applications = curApps;
-                }
-
-                // 2) 연동된 users items 영업물건에도 사진 자동 반영
-                let usersList = JSON.parse(localStorage.getItem('users')) || [];
-                let itemUpdated = false;
-                usersList.forEach(u => {
-                    if (u.items && Array.isArray(u.items)) {
-                        u.items.forEach(item => {
-                            if (String(item.id) === String(appId) || String(item.appRefId) === String(appId)) {
-                                item.photos = [base64Data];
-                                item.photosCount = 1;
-                                itemUpdated = true;
-                            }
-                        });
-                    }
-                });
-                if (itemUpdated) {
-                    localStorage.setItem('users', JSON.stringify(usersList));
-                }
-
-                // 3) Supabase DB 실시간 동기화
-                if (window.supabaseClient) {
-                    try {
-                        await window.supabaseClient
-                            .from('applications')
-                            .update({
-                                file_data: base64Data,
-                                file_name: fileName,
-                                updated_at: new Date().toISOString()
-                            })
-                            .eq('id', appId);
-
-                        if (itemUpdated) {
-                            await window.supabaseClient
-                                .from('business_items')
-                                .update({
-                                    photos: [base64Data],
-                                    updated_at: new Date().toISOString()
-                                })
-                                .eq('id', appId);
-                        }
-                    } catch (dbErr) {
-                        console.warn('Supabase application photo sync warning:', dbErr);
-                    }
-                }
-
-                alert(`📷 [${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : appId}] 현장사진이 성공적으로 업로드되었습니다.`);
-                renderAdminDashboardMob();
-            } catch (err) {
-                console.error('Photo upload error:', err);
-                alert('사진 처리 중 오류가 발생했습니다: ' + err.message);
-            } finally {
-                fileInput.value = '';
-            }
-        };
-
-        fileInput.click();
-    };
 
     function deleteApplicationMob(id) {
         if (!confirm('정말로 이 지원 신청 접수 건을 삭제하시겠습니까?')) return;
