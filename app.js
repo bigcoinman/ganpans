@@ -882,18 +882,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (constStatus === '간판시공완료' || constStatus === '시공 완료' || constStatus === '정산 완료') {
-            return '<span style="background: #fdf4ff; color: #a855f7; border: 1px solid #f0abfc; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-screwdriver-wrench"></i> 시공 완료</span>';
+            return '<span style="background: #fdf4ff; color: #a855f7; border: 1px solid #f0abfc; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-screwdriver-wrench"></i> 시공 완료</span>';
         }
         if (constStatus === '대상자선정' || constStatus === '간판시공 준비중') {
-            return '<span style="background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
+            return '<span style="background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
         }
         if (status === 'approved' || status === '서류제출 & 접수예정' || status === '승인 완료') {
-            return '<span style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 승인 완료</span>';
+            return '<span style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 승인 완료</span>';
         }
         if (status === 'rejected' || status === '지원사업 탈락' || status === '반려됨') {
-            return '<span style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 탈락</span>';
+            return '<span style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 탈락</span>';
         }
-        return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 심사 대기</span>';
+        return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 심사 대기</span>';
     }
 
     // Mobile Business Dashboard Toggle States
@@ -1146,26 +1146,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const card = document.createElement('div');
             card.className = 'biz-card-mob';
-            card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
+            card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
             card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-                    <h5 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0;">${escapeHtml(app.storeName || app.shopName || '-')}</h5>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                    <h5 style="font-size: 1.31rem; font-weight: 700; color: var(--text-primary); margin: 0;">${escapeHtml(app.storeName || app.shopName || '-')}</h5>
                     <div>${statusBadge}</div>
                 </div>
-                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
-                    <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 500;">${formatDateOnly(app.appliedAt)}</span>
+                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 5px 0;">
+                    <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 600;">${formatDateOnly(app.appliedAt)}</span>
                 </p>
-                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
+                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 5px 0;">
                     <strong style="color: #475569;">신청번호:</strong> <span style="font-family: monospace; font-weight: 600; color: var(--accent-primary);">${escapeHtml(String(app.id))}</span>
                 </p>
-                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
-                    <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(app.ownerName || '-')}</span> <span style="color: var(--text-secondary); font-size: 0.78rem;">(${escapeHtml(app.ownerPhone || '-')})</span>
+                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 5px 0;">
+                    <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 700;">${escapeHtml(app.ownerName || '-')}</span> <span style="color: var(--text-secondary); font-size: 0.98rem;">(${escapeHtml(app.ownerPhone || '-')})</span>
                 </p>
-                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 10px 0;">
+                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 12px 0; line-height: 1.4;">
                     <strong style="color: #475569;">주소:</strong> ${escapeHtml(app.storeAddress || '-')}
                 </p>
 
-                <!-- 하단 현장사진 박스 -->
+                <!-- 하단 현장사진 박스 (버튼 및 텍스트 폰트크기 현상태 유지) -->
                 <div style="background: #fefce8; border: 1px dashed #fde047; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <span style="font-size: 0.92rem; font-weight: 700; color: #a16207;">현장사진</span>
                     <div style="display: flex; gap: 8px; align-items: center;">
@@ -1274,22 +1274,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const card = document.createElement('div');
             card.className = 'biz-card-mob';
-            card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
+            card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
             card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-                    <h5 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0;">${escapeHtml(item.storeName || '-')}</h5>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                    <h5 style="font-size: 1.31rem; font-weight: 700; color: var(--text-primary); margin: 0;">${escapeHtml(item.storeName || '-')}</h5>
                     <div>${statusBadge}</div>
                 </div>
-                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
-                    <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 500;">${formatDateOnly(item.date)}</span>
+                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 5px 0;">
+                    <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 600;">${formatDateOnly(item.date)}</span>
                 </p>
-                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
+                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 5px 0;">
                     <strong style="color: #475569;">신청번호:</strong> <span style="font-family: monospace; font-weight: 600; color: var(--accent-secondary);">${escapeHtml(String(item.id))}</span>
                 </p>
-                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
-                    <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(item.ownerName || '-')}</span> <span style="color: var(--text-secondary); font-size: 0.78rem;">(${escapeHtml(item.ownerPhone || '-')})</span>
+                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 5px 0;">
+                    <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 700;">${escapeHtml(item.ownerName || '-')}</span> <span style="color: var(--text-secondary); font-size: 0.98rem;">(${escapeHtml(item.ownerPhone || '-')})</span>
                 </p>
-                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0;">
+                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0; line-height: 1.4;">
                     <strong style="color: #475569;">주소:</strong> ${escapeHtml(item.storeAddress || '-')}
                 </p>
             `;
