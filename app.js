@@ -1055,28 +1055,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const card = document.createElement('div');
             card.className = 'biz-card-mob';
-            card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
+            card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
             card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <div>
-                        <h5 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                        <h5 style="font-size: 1.36rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                             ${escapeHtml(storeName)}
-                            ${item.id ? `<span style="font-size: 0.72rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); padding: 1px 6px; border-radius: 4px; font-family: monospace;">${escapeHtml(String(item.id))}</span>` : ''}
+                            ${item.id ? `<span style="font-size: 0.94rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); padding: 2px 8px; border-radius: 4px; font-family: monospace;">${escapeHtml(String(item.id))}</span>` : ''}
                         </h5>
                     </div>
-                    <div style="display: flex; gap: 4px; flex-shrink: 0; margin-left: 8px;">
-                        <span style="font-size: 0.72rem; font-weight: 700; background: #ecfdf5; color: #10b981; padding: 2px 6px; border-radius: 4px;">${escapeHtml(item.receiptStatus || '접수예정')}</span>
-                        <span style="font-size: 0.72rem; font-weight: 700; background: #eef2ff; color: #6366f1; padding: 2px 6px; border-radius: 4px;">${escapeHtml(item.progressStatus || '지원대기중')}</span>
+                    <div style="display: flex; gap: 6px; flex-shrink: 0; margin-left: 8px;">
+                        <span style="font-size: 0.94rem; font-weight: 700; background: #ecfdf5; color: #10b981; padding: 3px 8px; border-radius: 4px;">${escapeHtml(item.receiptStatus || '접수예정')}</span>
+                        <span style="font-size: 0.94rem; font-weight: 700; background: #eef2ff; color: #6366f1; padding: 3px 8px; border-radius: 4px;">${escapeHtml(item.progressStatus || '지원대기중')}</span>
                     </div>
                 </div>
-                <p style="font-size: 0.84rem; color: var(--text-secondary); margin: 0 0 4px 0;">
+                <p style="font-size: 1.1rem; color: var(--text-secondary); margin: 0 0 6px 0; line-height: 1.4;">
                     <i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> ${escapeHtml(storeAddress)}
                 </p>
-                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 3px 0;">
-                    <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 500;">${escapeHtml(applyDate)}</span>
+                <p style="font-size: 1.07rem; color: var(--text-secondary); margin: 0 0 5px 0;">
+                    <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 600;">${escapeHtml(applyDate)}</span>
                 </p>
-                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 4px 0;">
-                    <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(ownerName)}</span> <span style="color: var(--text-secondary); font-size: 0.78rem;">(${escapeHtml(ownerPhone)})</span>
+                <p style="font-size: 1.07rem; color: var(--text-secondary); margin: 0 0 6px 0;">
+                    <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 700;">${escapeHtml(ownerName)}</span> <span style="color: var(--text-secondary); font-size: 1.02rem;">(${escapeHtml(ownerPhone)})</span>
                 </p>
                 ${photosHtml}
             `;
