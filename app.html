@@ -1293,21 +1293,72 @@
                 <div id="status-admin-container" style="display: none;">
                     <h4 style="color: var(--accent-primary); border-bottom: 2px solid var(--accent-primary); padding-bottom: 8px; margin-bottom: 15px;"><i class="fa-solid fa-shield-halved"></i> 최고관리자 대시보드</h4>
                     
-                    <!-- Stats widget -->
-                    <div class="admin-stats-mob" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px;">
-                        <div class="stat-card-mob" style="background: #f1f5f9; padding: 7px 6px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 56px;">
-                            <span style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.2;">총 접수 건수</span>
-                            <h4 id="admin-stat-total-mob" style="font-size: 1.15rem; color: var(--accent-primary); margin-top: 2px; margin-bottom: 0; line-height: 1.2;">0건</h4>
+                    <!-- Stats widget - 9 cards -->
+                    <div class="admin-stats-mob" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 12px;">
+                        <div class="stat-card-mob" style="background: #eff6ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #3b82f6;">
+                            <span style="font-size: 0.62rem; color: #3b82f6; font-weight: 700; line-height: 1.2;">오늘 방문자</span>
+                            <h4 id="admin-stat-visitors-mob" style="font-size: 1.05rem; color: #1d4ed8; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0명</h4>
                         </div>
-                        <div class="stat-card-mob" style="background: #f1f5f9; padding: 7px 6px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 56px;">
-                            <span style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.2;">오늘 방문자</span>
-                            <h4 id="admin-stat-visitors-mob" style="font-size: 1.15rem; color: var(--accent-secondary); margin-top: 2px; margin-bottom: 0; line-height: 1.2;">0명</h4>
+                        <div class="stat-card-mob" style="background: #f0fdf4; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #10b981;">
+                            <span style="font-size: 0.62rem; color: #10b981; font-weight: 700; line-height: 1.2;">총 방문자</span>
+                            <h4 id="admin-stat-total-visitors-mob" style="font-size: 1.05rem; color: #047857; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0명</h4>
                         </div>
-                        <div class="stat-card-mob" style="background: #f1f5f9; padding: 7px 6px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 56px;">
-                            <span style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.2;">총 방문자</span>
-                            <h4 id="admin-stat-total-visitors-mob" style="font-size: 1.15rem; color: #6366f1; margin-top: 2px; margin-bottom: 0; line-height: 1.2;">0명</h4>
+                        <div class="stat-card-mob" style="background: #faf5ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #8b5cf6;">
+                            <span style="font-size: 0.62rem; color: #8b5cf6; font-weight: 700; line-height: 1.2;">총 신청 건수</span>
+                            <h4 id="admin-stat-total-mob" style="font-size: 1.05rem; color: #6d28d9; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0건</h4>
+                        </div>
+                        <div class="stat-card-mob" style="background: #ecfdf5; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #10b981;">
+                            <span style="font-size: 0.62rem; color: #10b981; font-weight: 700; line-height: 1.2;">승인 건수</span>
+                            <h4 id="admin-stat-approved-mob" style="font-size: 1.05rem; color: #065f46; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0건</h4>
+                        </div>
+                        <div class="stat-card-mob" style="background: #fffbeb; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #f59e0b;">
+                            <span style="font-size: 0.62rem; color: #d97706; font-weight: 700; line-height: 1.2;">시공 진행</span>
+                            <h4 id="admin-stat-in-const-mob" style="font-size: 1.05rem; color: #b45309; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0건</h4>
+                        </div>
+                        <div class="stat-card-mob" style="background: #fdf4ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #a855f7;">
+                            <span style="font-size: 0.62rem; color: #7c3aed; font-weight: 700; line-height: 1.2;">정산 완료</span>
+                            <h4 id="admin-stat-completed-mob" style="font-size: 1.05rem; color: #5b21b6; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0건</h4>
+                        </div>
+                        <div class="stat-card-mob" style="background: #eef2ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #6366f1;">
+                            <span style="font-size: 0.62rem; color: #6366f1; font-weight: 700; line-height: 1.2;">총 회원</span>
+                            <h4 id="admin-stat-members-mob" style="font-size: 1.05rem; color: #4338ca; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0명</h4>
+                        </div>
+                        <div class="stat-card-mob" style="background: #f0f9ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #0ea5e9;">
+                            <span style="font-size: 0.62rem; color: #0284c7; font-weight: 700; line-height: 1.2;">영업자</span>
+                            <h4 id="admin-stat-biz-mob" style="font-size: 1.05rem; color: #0369a1; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0명</h4>
+                        </div>
+                        <div class="stat-card-mob" style="background: #f0fdfa; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #14b8a6;">
+                            <span style="font-size: 0.62rem; color: #0d9488; font-weight: 700; line-height: 1.2;">시공업체</span>
+                            <h4 id="admin-stat-const-mob" style="font-size: 1.05rem; color: #0f766e; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0개</h4>
                         </div>
                     </div>
+
+                    <!-- 시공 단계별 파이프라인 바 (모바일) -->
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;">
+                        <div style="font-size: 0.68rem; font-weight: 700; color: #64748b; margin-bottom: 8px;"><i class="fa-solid fa-arrow-right-long" style="color: #6366f1;"></i> 시공 단계 현황</div>
+                        <div style="display: grid; grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr; gap: 0; align-items: center;">
+                            <div style="text-align: center; background: #eff6ff; border-radius: 6px; padding: 5px 2px;">
+                                <div style="font-size: 0.58rem; color: #3b82f6; font-weight: 700;">시공전</div>
+                                <div id="mob-pipe-before" style="font-size: 1.1rem; font-weight: 800; color: #1d4ed8; font-family: 'Outfit', sans-serif;">0</div>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; text-align: center; padding: 0 1px;">→</div>
+                            <div style="text-align: center; background: #fffbeb; border-radius: 6px; padding: 5px 2px;">
+                                <div style="font-size: 0.58rem; color: #d97706; font-weight: 700;">시공중</div>
+                                <div id="mob-pipe-in" style="font-size: 1.1rem; font-weight: 800; color: #b45309; font-family: 'Outfit', sans-serif;">0</div>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; text-align: center; padding: 0 1px;">→</div>
+                            <div style="text-align: center; background: #f0fdf4; border-radius: 6px; padding: 5px 2px;">
+                                <div style="font-size: 0.58rem; color: #16a34a; font-weight: 700;">완료</div>
+                                <div id="mob-pipe-after" style="font-size: 1.1rem; font-weight: 800; color: #15803d; font-family: 'Outfit', sans-serif;">0</div>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; text-align: center; padding: 0 1px;">→</div>
+                            <div style="text-align: center; background: #faf5ff; border-radius: 6px; padding: 5px 2px;">
+                                <div style="font-size: 0.58rem; color: #7c3aed; font-weight: 700;">정산종결</div>
+                                <div id="mob-pipe-completed" style="font-size: 1.1rem; font-weight: 800; color: #6d28d9; font-family: 'Outfit', sans-serif;">0</div>
+                            </div>
+                        </div>
+                    </div>
+
 
                     <!-- Tab panels inside Admin View (Requests & Online Apps) -->
                     <div class="admin-tab-controls-mob">

@@ -1416,6 +1416,47 @@ document.addEventListener('DOMContentLoaded', () => {
         if (visitorsStat) visitorsStat.textContent = `${todayCount}명`;
         if (totalVisitorsStat) totalVisitorsStat.textContent = `${totalCount}명`;
 
+        // 신규 통계 집계
+        const allUsers = JSON.parse(localStorage.getItem('users')) || [];
+        const approvedApps = applications.filter(a => a.status === 'approved');
+        const inConstApps = approvedApps.filter(a =>
+            a.constructionStatus === 'in_construction' || a.constructionStatus === 'after_construction'
+        );
+        const completedApps = applications.filter(a => a.constructionStatus === 'completed');
+        const bizMembers = allUsers.filter(u => u.role === 'business').length;
+        const constMembers = allUsers.filter(u => u.role === 'constructor').length;
+
+        // 파이프라인 집계
+        const pipeBefore = approvedApps.filter(a => !a.constructionStatus || a.constructionStatus === 'before_construction').length;
+        const pipeIn = approvedApps.filter(a => a.constructionStatus === 'in_construction').length;
+        const pipeAfter = approvedApps.filter(a => a.constructionStatus === 'after_construction').length;
+        const pipeCompleted = approvedApps.filter(a => a.constructionStatus === 'completed').length;
+
+        // 신규 stat 카드 업데이트
+        const approvedStat = document.getElementById('admin-stat-approved-mob');
+        const inConstStat = document.getElementById('admin-stat-in-const-mob');
+        const completedStat = document.getElementById('admin-stat-completed-mob');
+        const membersStat = document.getElementById('admin-stat-members-mob');
+        const bizStat = document.getElementById('admin-stat-biz-mob');
+        const constStat = document.getElementById('admin-stat-const-mob');
+        if (approvedStat) approvedStat.textContent = `${approvedApps.length}건`;
+        if (inConstStat) inConstStat.textContent = `${inConstApps.length}건`;
+        if (completedStat) completedStat.textContent = `${completedApps.length}건`;
+        if (membersStat) membersStat.textContent = `${allUsers.length}명`;
+        if (bizStat) bizStat.textContent = `${bizMembers}명`;
+        if (constStat) constStat.textContent = `${constMembers}개`;
+
+        // 파이프라인 바 업데이트
+        const pBeforeEl = document.getElementById('mob-pipe-before');
+        const pInEl = document.getElementById('mob-pipe-in');
+        const pAfterEl = document.getElementById('mob-pipe-after');
+        const pCompletedEl = document.getElementById('mob-pipe-completed');
+        if (pBeforeEl) pBeforeEl.textContent = pipeBefore;
+        if (pInEl) pInEl.textContent = pipeIn;
+        if (pAfterEl) pAfterEl.textContent = pipeAfter;
+        if (pCompletedEl) pCompletedEl.textContent = pipeCompleted;
+
+
         // Supabase에서 최신 방문자 통계 동기화 (가능한 경우)
         if (window.supabaseClient) {
             try {

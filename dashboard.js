@@ -235,9 +235,13 @@ document.addEventListener('DOMContentLoaded', () => {
     renderInquiriesList();
     if (activeUser.role === 'admin') {
       if (adminStatsContainer) adminStatsContainer.style.display = 'grid';
+      const pipeline = document.getElementById('admin-construction-pipeline');
+      if (pipeline) pipeline.style.display = 'block';
       renderAdminStats();
     } else {
       if (adminStatsContainer) adminStatsContainer.style.display = 'none';
+      const pipeline = document.getElementById('admin-construction-pipeline');
+      if (pipeline) pipeline.style.display = 'none';
     }
     if (activeUser.role !== 'admin') {
       renderUserApplicationsList();
@@ -2790,14 +2794,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const apps = JSON.parse(localStorage.getItem('applications')) || [];
+    const allUsers = JSON.parse(localStorage.getItem('users')) || [];
 
+    // --- 신청 건수 집계 ---
+    const approvedApps = apps.filter(a => a.status === 'approved');
+    const inConstructionApps = approvedApps.filter(a =>
+      a.constructionStatus === 'in_construction' || a.constructionStatus === 'after_construction'
+    );
+    const completedApps = apps.filter(a => a.constructionStatus === 'completed');
+
+    // --- 시공 파이프라인 단계별 집계 (승인된 건만) ---
+    const pipeBefore = approvedApps.filter(a => !a.constructionStatus || a.constructionStatus === 'before_construction').length;
+    const pipeIn = approvedApps.filter(a => a.constructionStatus === 'in_construction').length;
+    const pipeAfter = approvedApps.filter(a => a.constructionStatus === 'after_construction').length;
+    const pipeCompleted = approvedApps.filter(a => a.constructionStatus === 'completed').length;
+
+    // --- 회원 집계 ---
+    const bizMembers = allUsers.filter(u => u.role === 'business').length;
+    const constMembers = allUsers.filter(u => u.role === 'constructor').length;
+
+    // --- DOM 업데이트 ---
     const statToday = document.getElementById('stat-today-visitors');
     const statTotal = document.getElementById('stat-total-visitors');
     const statApps = document.getElementById('stat-total-applications');
+    const statApproved = document.getElementById('stat-approved-applications');
+    const statInConst = document.getElementById('stat-in-construction');
+    const statCompleted = document.getElementById('stat-completed');
+    const statTotalMembers = document.getElementById('stat-total-members');
+    const statBizMembers = document.getElementById('stat-business-members');
+    const statConstMembers = document.getElementById('stat-constructor-members');
 
     if (statToday) statToday.textContent = todayCount.toLocaleString() + '명';
     if (statTotal) statTotal.textContent = totalCount.toLocaleString() + '명';
     if (statApps) statApps.textContent = apps.length + '건';
+    if (statApproved) statApproved.textContent = approvedApps.length + '건';
+    if (statInConst) statInConst.textContent = inConstructionApps.length + '건';
+    if (statCompleted) statCompleted.textContent = completedApps.length + '건';
+    if (statTotalMembers) statTotalMembers.textContent = allUsers.length + '명';
+    if (statBizMembers) statBizMembers.textContent = bizMembers + '명';
+    if (statConstMembers) statConstMembers.textContent = constMembers + '개';
+
+    // --- 파이프라인 바 업데이트 ---
+    const pipeBeforeEl = document.getElementById('pipe-before');
+    const pipeInEl = document.getElementById('pipe-in');
+    const pipeAfterEl = document.getElementById('pipe-after');
+    const pipeCompletedEl = document.getElementById('pipe-completed');
+    if (pipeBeforeEl) pipeBeforeEl.textContent = pipeBefore;
+    if (pipeInEl) pipeInEl.textContent = pipeIn;
+    if (pipeAfterEl) pipeAfterEl.textContent = pipeAfter;
+    if (pipeCompletedEl) pipeCompletedEl.textContent = pipeCompleted;
   };
 
   // Track current visit on page load
