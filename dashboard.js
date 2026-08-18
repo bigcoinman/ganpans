@@ -1040,6 +1040,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let inquiriesCurrentPage = 1;
   const inquiriesPerPage = 10;
 
+  let userAppsCurrentPage = 1;
+  const userAppsPerPage = 10;
+
+  let bizTableCurrentPage = 1;
+  const bizTablePerPage = 10;
+
   function renderPaginationControls(totalCount, perPage, currentPage, callbackFnName) {
     if (totalCount <= perPage) return '';
     const totalPages = Math.ceil(totalCount / perPage);
@@ -1089,6 +1095,14 @@ document.addEventListener('DOMContentLoaded', () => {
   window.changeAppsPage = (p) => {
     appsCurrentPage = p;
     renderApplicationsList();
+  };
+  window.changeUserAppsPage = (p) => {
+    userAppsCurrentPage = p;
+    renderUserApplicationsList();
+  };
+  window.changeBizTablePage = (p) => {
+    bizTableCurrentPage = p;
+    renderBizRegisteredTable();
   };
   window.changeInquiriesPage = (p) => {
     inquiriesCurrentPage = p;
@@ -1260,6 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchUserAppsInput = document.getElementById('search-user-apps-input');
   if (searchUserAppsInput) {
     searchUserAppsInput.addEventListener('input', () => {
+      userAppsCurrentPage = 1;
       renderUserApplicationsList();
     });
   }
@@ -1268,6 +1283,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchBizTableInput = document.getElementById('search-biz-table-input');
   if (searchBizTableInput) {
     searchBizTableInput.addEventListener('input', () => {
+      bizTableCurrentPage = 1;
       renderBizRegisteredTable();
     });
   }
@@ -1275,13 +1291,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // 온라인 간편 지원 신청 내역 접기/펼치기 토글
   const toggleUserAppsHeader = document.getElementById('toggle-user-apps-header');
   const userAppsContentBody = document.getElementById('user-apps-content-body');
-  const userAppsToggleIcon = document.getElementById('user-apps-toggle-icon');
+  const userAppsToggleBadge = document.getElementById('user-apps-toggle-badge');
   if (toggleUserAppsHeader && userAppsContentBody) {
     toggleUserAppsHeader.addEventListener('click', () => {
       const isHidden = userAppsContentBody.style.display === 'none';
       userAppsContentBody.style.display = isHidden ? 'block' : 'none';
-      if (userAppsToggleIcon) {
-        userAppsToggleIcon.innerHTML = isHidden ? '<i class="fa-solid fa-chevron-up"></i>' : '<i class="fa-solid fa-chevron-down"></i>';
+      if (userAppsToggleBadge) {
+        userAppsToggleBadge.innerHTML = isHidden ? '<i class="fa-solid fa-chevron-up"></i> 접기' : '<i class="fa-solid fa-chevron-down"></i> 펼치기';
+        userAppsToggleBadge.style.background = isHidden ? 'rgba(99, 102, 241, 0.1)' : 'rgba(100, 116, 139, 0.1)';
+        userAppsToggleBadge.style.color = isHidden ? 'var(--accent-primary)' : 'var(--text-secondary)';
       }
     });
   }
@@ -1289,13 +1307,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // 내 영업물건 현황 접기/펼치기 토글
   const toggleBizItemsHeader = document.getElementById('toggle-biz-items-header');
   const bizTableContentBody = document.getElementById('biz-table-content-body');
-  const bizItemsToggleIcon = document.getElementById('biz-items-toggle-icon');
+  const bizItemsToggleBadge = document.getElementById('biz-items-toggle-badge');
   if (toggleBizItemsHeader && bizTableContentBody) {
     toggleBizItemsHeader.addEventListener('click', () => {
       const isHidden = bizTableContentBody.style.display === 'none';
       bizTableContentBody.style.display = isHidden ? 'block' : 'none';
-      if (bizItemsToggleIcon) {
-        bizItemsToggleIcon.innerHTML = isHidden ? '<i class="fa-solid fa-chevron-up"></i>' : '<i class="fa-solid fa-chevron-down"></i>';
+      if (bizItemsToggleBadge) {
+        bizItemsToggleBadge.innerHTML = isHidden ? '<i class="fa-solid fa-chevron-up"></i> 접기' : '<i class="fa-solid fa-chevron-down"></i> 펼치기';
+        bizItemsToggleBadge.style.background = isHidden ? 'rgba(217, 119, 6, 0.1)' : 'rgba(100, 116, 139, 0.1)';
+        bizItemsToggleBadge.style.color = isHidden ? 'var(--accent-secondary)' : 'var(--text-secondary)';
       }
     });
   }
@@ -2998,6 +3018,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- 1. 내 온라인 간편 지원 신청 내역 테이블 렌더링 ---
   const renderUserApplicationsList = () => {
     const userApplicationsTableBody = document.getElementById('user-applications-table-body');
+    const paginationContainer = document.getElementById('pagination-user-apps');
     if (!userApplicationsTableBody) return;
 
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
@@ -3053,6 +3074,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td colspan="6" class="text-muted" style="text-align: center; padding: 30px 0;">${emptyMsg}</td>
         </tr>
       `;
+      if (paginationContainer) paginationContainer.innerHTML = '';
       return;
     }
 
@@ -3065,7 +3087,15 @@ document.addEventListener('DOMContentLoaded', () => {
       return timeB - timeA;
     });
 
-    sortedMyApps.forEach(app => {
+    const totalCount = sortedMyApps.length;
+    const totalPages = Math.ceil(totalCount / userAppsPerPage);
+    if (userAppsCurrentPage > totalPages) userAppsCurrentPage = totalPages;
+    if (userAppsCurrentPage < 1) userAppsCurrentPage = 1;
+
+    const startIndex = (userAppsCurrentPage - 1) * userAppsPerPage;
+    const paginatedApps = sortedMyApps.slice(startIndex, startIndex + userAppsPerPage);
+
+    paginatedApps.forEach(app => {
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid var(--border-color)';
       tr.style.transition = 'background 0.2s ease';
@@ -3094,6 +3124,10 @@ document.addEventListener('DOMContentLoaded', () => {
       userApplicationsTableBody.appendChild(tr);
     });
 
+    if (paginationContainer) {
+      paginationContainer.innerHTML = renderPaginationControls(totalCount, userAppsPerPage, userAppsCurrentPage, 'window.changeUserAppsPage');
+    }
+
     // Add click listeners to cancel buttons
     userApplicationsTableBody.querySelectorAll('.btn-cancel-own-app').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -3106,6 +3140,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- 2. 내 영업물건 현황 및 진행상황 테이블 렌더링 (영업자 전용) ---
   const renderBizRegisteredTable = () => {
     const bizRegisteredTableBody = document.getElementById('biz-registered-table-body');
+    const paginationContainer = document.getElementById('pagination-biz-table');
     if (!bizRegisteredTableBody) return;
     if (!activeUser || activeUser.role !== 'business') return;
 
@@ -3173,6 +3208,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td colspan="6" class="text-muted" style="text-align: center; padding: 30px 0;">${emptyMsg}</td>
         </tr>
       `;
+      if (paginationContainer) paginationContainer.innerHTML = '';
       return;
     }
 
@@ -3181,7 +3217,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // 최신 등록순 정렬
     filteredList.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
-    filteredList.forEach(item => {
+    const totalCount = filteredList.length;
+    const totalPages = Math.ceil(totalCount / bizTablePerPage);
+    if (bizTableCurrentPage > totalPages) bizTableCurrentPage = totalPages;
+    if (bizTableCurrentPage < 1) bizTableCurrentPage = 1;
+
+    const startIndex = (bizTableCurrentPage - 1) * bizTablePerPage;
+    const paginatedList = filteredList.slice(startIndex, startIndex + bizTablePerPage);
+
+    paginatedList.forEach(item => {
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid var(--border-color)';
       tr.style.transition = 'background 0.2s ease';
@@ -3209,6 +3253,10 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       bizRegisteredTableBody.appendChild(tr);
     });
+
+    if (paginationContainer) {
+      paginationContainer.innerHTML = renderPaginationControls(totalCount, bizTablePerPage, bizTableCurrentPage, 'window.changeBizTablePage');
+    }
 
     // Add click listeners to cancel buttons
     bizRegisteredTableBody.querySelectorAll('.btn-cancel-biz-item').forEach(btn => {
