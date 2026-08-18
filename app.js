@@ -1716,6 +1716,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Mobile Business Dashboard Search & Toggle Event Listeners
+    window.toggleUserAppsMob = function() {
+        userAppsMobExpanded = !userAppsMobExpanded;
+        renderUserApplicationsMob();
+    };
+
+    window.toggleBizItemsMob = function() {
+        bizItemsMobExpanded = !bizItemsMobExpanded;
+        renderBizRegisteredItemsMob();
+    };
+
     const searchUserAppsMobInput = document.getElementById('search-user-apps-mob');
     if (searchUserAppsMobInput) {
         searchUserAppsMobInput.addEventListener('input', () => {
@@ -1724,10 +1734,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const toggleUserAppsMobHeader = document.getElementById('toggle-user-apps-mob-header');
+    const userAppsMobToggleBadge = document.getElementById('user-apps-mob-toggle-badge');
     if (toggleUserAppsMobHeader) {
-        toggleUserAppsMobHeader.addEventListener('click', () => {
-            userAppsMobExpanded = !userAppsMobExpanded;
-            renderUserApplicationsMob();
+        toggleUserAppsMobHeader.addEventListener('click', (e) => {
+            if (e.target.id === 'user-apps-mob-toggle-badge' || e.target.closest('#user-apps-mob-toggle-badge')) return;
+            window.toggleUserAppsMob();
+        });
+    }
+    if (userAppsMobToggleBadge) {
+        userAppsMobToggleBadge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.toggleUserAppsMob();
         });
     }
 
@@ -1739,10 +1756,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const toggleBizItemsMobHeader = document.getElementById('toggle-biz-items-mob-header');
+    const bizItemsMobToggleBadge = document.getElementById('biz-items-mob-toggle-badge');
     if (toggleBizItemsMobHeader) {
-        toggleBizItemsMobHeader.addEventListener('click', () => {
-            bizItemsMobExpanded = !bizItemsMobExpanded;
-            renderBizRegisteredItemsMob();
+        toggleBizItemsMobHeader.addEventListener('click', (e) => {
+            if (e.target.id === 'biz-items-mob-toggle-badge' || e.target.closest('#biz-items-mob-toggle-badge')) return;
+            window.toggleBizItemsMob();
+        });
+    }
+    if (bizItemsMobToggleBadge) {
+        bizItemsMobToggleBadge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.toggleBizItemsMob();
         });
     }
 
