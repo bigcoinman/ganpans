@@ -2079,8 +2079,11 @@ function initAuthAndDashboard() {
       await window.SupabaseSync.upsertUser(newUser);
     }
 
-    // Auto Login
-    localStorage.setItem('activeUser', JSON.stringify(sanitizeUser(newUser)));
+    // Auto Login (회원가입 기본 세션)
+    sessionStorage.setItem('activeUser', JSON.stringify(sanitizeUser(newUser)));
+    localStorage.removeItem('activeUser_remember');
+    localStorage.removeItem('activeUser');
+    if (typeof recordUserActivity === 'function') recordUserActivity();
 
     alert('회원가입이 완료되었습니다! 자동 로그인됩니다.');
     authModal.classList.remove('active');
@@ -2096,54 +2099,81 @@ function initAuthAndDashboard() {
     const pwVal = document.getElementById('login-pw').value;
     const rememberMe = document.getElementById('login-remember-me') ? document.getElementById('login-remember-me').checked : false;
 
+    if (!idVal || !pwVal) {
+      alert('아이디와 비밀번호를 모두 입력해 주세요.');
+      return;
+    }
+
     const hashedPassword = sha256(pwVal);
     let user = null;
 
     // 1. Supabase 실물 DB 로그인 조회
     if (window.supabaseClient) {
       try {
-        const { data, error } = await window.supabaseClient
+        let { data, error } = await window.supabaseClient
           .from('users')
           .select('*')
           .eq('id', idVal)
           .maybeSingle();
 
+        // 대소문자 차이 대응 fallback
+        if (!data) {
+          const { data: ilikeData } = await window.supabaseClient
+            .from('users')
+            .select('*')
+            .ilike('id', idVal)
+            .maybeSingle();
+          if (ilikeData) data = ilikeData;
+        }
+
         if (!error && data) {
-          const localUser = users.find(u => u.id === idVal && u.pw === hashedPassword);
-          if (data.password_hash) {
-            if (data.password_hash === hashedPassword) {
+          const isPwMatch = (data.password_hash === hashedPassword) || (data.password_hash === pwVal);
+          if (isPwMatch) {
+            user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : sanitizeUser(data);
+          } else if (!data.password_hash) {
+            // 구버전 계정: 로컬스토리지 비밀번호 검증 후 Supabase 업데이트
+            const localUser = users.find(u => u.id.toLowerCase() === idVal.toLowerCase() && (u.pw === hashedPassword || u.pw === pwVal));
+            if (localUser) {
+              user = sanitizeUser(localUser);
+              if (window.SupabaseSync) {
+                window.SupabaseSync.updateUser(data.id, { password_hash: hashedPassword });
+              }
+            } else {
               user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : sanitizeUser(data);
             }
-          } else if (localUser) {
-            user = sanitizeUser(localUser);
-            if (window.SupabaseSync) {
-              window.SupabaseSync.updateUser(idVal, { password_hash: hashedPassword });
-            }
-          } else {
-            user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : sanitizeUser(data);
           }
-        } else if (error) {
-          const localUser = users.find(u => u.id === idVal && u.pw === hashedPassword);
-          if (localUser) user = sanitizeUser(localUser);
         }
       } catch (err) {
         console.error('Login Supabase error:', err);
-        const localUser = users.find(u => u.id === idVal && u.pw === hashedPassword);
-        if (localUser) user = sanitizeUser(localUser);
       }
     }
 
+    // 2. 로컬 스토리지 로그인 fallback (오프라인 / Supabase 미연결 시)
     if (!user) {
-      // 2. 로컬 스토리지 로그인
-      const localUser = users.find(u => u.id === idVal && u.pw === hashedPassword);
+      const localUser = users.find(u => u.id.toLowerCase() === idVal.toLowerCase() && (u.pw === hashedPassword || u.pw === pwVal));
       if (localUser) user = sanitizeUser(localUser);
     }
 
     if (user) {
+      // 로컬 스토리지 사용자 목록 동기화 (새 브라우저 접속 지원)
+      if (!users.some(u => u.id.toLowerCase() === user.id.toLowerCase())) {
+        users.push(user);
+        localStorage.setItem('users', JSON.stringify(users));
+      }
+
       if (rememberMe) {
         localStorage.setItem('activeUser', JSON.stringify(user));
+        localStorage.setItem('activeUser_remember', 'true');
+        sessionStorage.removeItem('activeUser');
       } else {
         sessionStorage.setItem('activeUser', JSON.stringify(user));
+        localStorage.removeItem('activeUser_remember');
+        localStorage.removeItem('activeUser');
+        if (typeof recordUserActivity === 'function') {
+          recordUserActivity();
+        } else {
+          sessionStorage.setItem('last_active_time', Date.now().toString());
+        }
       }
       alert(`${user.name}님, 반갑습니다!`);
       authModal.classList.remove('active');

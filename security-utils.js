@@ -119,22 +119,135 @@ function sanitizeUrl(url) {
   return escapeHtml(trimmed);
 }
 
-// 5. 로그인 상태 유지를 연동한 세션 조회 및 삭제 헬퍼 함수
-function getActiveUser() {
+// ========================================================
+// 5. 로그인 상태 유지 및 1시간 미사용 시 자동 로그아웃 관리
+// ========================================================
+const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000; // 1시간 (3,600,000 ms)
+
+function isRememberMeActive() {
+  return localStorage.getItem('activeUser_remember') === 'true' && !!localStorage.getItem('activeUser');
+}
+
+function recordUserActivity() {
+  const now = Date.now().toString();
+  sessionStorage.setItem('last_active_time', now);
+  localStorage.setItem('last_active_time_session', now);
+}
+
+function checkInactivityTimeout() {
+  // '로그인 상태 유지' 체크가 활성화되어 있다면 1시간 자동 로그아웃을 건너뜁니다.
+  if (isRememberMeActive()) {
+    return false;
+  }
+
+  // 세션 사용자가 존재하는 경우 (로그인 상태 유지 체크 안 함)
+  const sessionUser = sessionStorage.getItem('activeUser');
   const localUser = localStorage.getItem('activeUser');
-  if (localUser) {
+  
+  if (sessionUser || (localUser && localStorage.getItem('activeUser_remember') !== 'true')) {
+    const lastActiveStr = sessionStorage.getItem('last_active_time') || localStorage.getItem('last_active_time_session');
+    
+    if (lastActiveStr) {
+      const lastActive = parseInt(lastActiveStr, 10);
+      const elapsed = Date.now() - lastActive;
+      
+      if (!isNaN(lastActive) && elapsed >= INACTIVITY_TIMEOUT_MS) {
+        // 1시간 초과 -> 자동 로그아웃
+        clearActiveUser();
+        alert('1시간 동안 사용이 없어 보안을 위해 자동 로그아웃되었습니다.');
+        
+        // 대시보드 페이지인 경우 메인으로 이동하거나 새로고침
+        if (typeof window !== 'undefined') {
+          if (window.location.pathname.includes('dashboard.html')) {
+            window.location.href = 'index.html#apply-section';
+          } else {
+            window.location.reload();
+          }
+        }
+        return true;
+      }
+    } else {
+      // 최초 접속 시 현재 시간으로 갱신
+      recordUserActivity();
+    }
+  }
+  return false;
+}
+
+function getActiveUser() {
+  // 1시간 타임아웃 검사 먼저 수행
+  if (checkInactivityTimeout()) {
+    return null;
+  }
+
+  // 1) 로그인 상태 유지 (localStorage)
+  const localUser = localStorage.getItem('activeUser');
+  if (localUser && localStorage.getItem('activeUser_remember') === 'true') {
     try { return JSON.parse(localUser); } catch(e) { return null; }
   }
+
+  // 2) 세션 로그인 (sessionStorage)
   const sessionUser = sessionStorage.getItem('activeUser');
   if (sessionUser) {
     try { return JSON.parse(sessionUser); } catch(e) { return null; }
   }
+
+  // 3) 만약 localStorage에만 있고 remember_me가 지정되지 않은 구버전 캐시라면
+  if (localUser) {
+    try { return JSON.parse(localUser); } catch(e) { return null; }
+  }
+
   return null;
 }
 
 function clearActiveUser() {
   localStorage.removeItem('activeUser');
+  localStorage.removeItem('activeUser_remember');
+  localStorage.removeItem('last_active_time_session');
   sessionStorage.removeItem('activeUser');
+  sessionStorage.removeItem('last_active_time');
+}
+
+// 사용자 활동 감지 이벤트 리스너 등록
+function initInactivityListeners() {
+  if (typeof window === 'undefined') return;
+
+  const activityEvents = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll', 'click'];
+  let throttleTimer = null;
+
+  const handleActivity = () => {
+    if (!throttleTimer) {
+      throttleTimer = setTimeout(() => {
+        throttleTimer = null;
+        if (!isRememberMeActive() && getActiveUser()) {
+          recordUserActivity();
+        }
+      }, 1000); // 1초 단위 쓰로틀링으로 성능 최적화
+    }
+  };
+
+  activityEvents.forEach(evt => {
+    window.addEventListener(evt, handleActivity, { passive: true });
+  });
+
+  // 브라우저 탭 전환/복귀 시 즉시 1시간 경과 체크
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkInactivityTimeout();
+    }
+  });
+
+  // 주기적으로 (30초마다) 1시간 미사용 타임아웃 체크
+  setInterval(checkInactivityTimeout, 30000);
+}
+
+// 초기화 실행
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initInactivityListeners);
+  } else {
+    initInactivityListeners();
+  }
 }
 
 // 6. Supabase 클라이언트 초기화 (전역 설정 파일 supabase-config.js 및 내장 Fallback 지원)

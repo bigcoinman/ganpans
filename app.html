@@ -1289,47 +1289,71 @@
                     </div>
                 </div>
 
+                <!-- 2.5) Constructor View -->
+                <div id="status-constructor-container" style="display: none;">
+                    <div class="app-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 class="section-title" style="font-size: 1.15rem; margin: 0; color: var(--accent-success);"><i class="fa-solid fa-screwdriver-wrench"></i> 내 시공 배정 현황 및 진행상황</h4>
+                        </div>
+                        <div style="margin-bottom: 14px;">
+                            <input type="text" id="search-constructor-jobs-input-mob" placeholder="상호명 / 주소 / 간판종류 검색" maxlength="30" style="padding: 10px 14px; font-size: 0.95rem; border-radius: 8px; border: 1.5px solid #86efac; width: 100%; box-sizing: border-box; background: #ffffff; font-weight: 500;">
+                        </div>
+                        <div id="constructor-jobs-list-mobile" class="biz-mobile-list">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 3) Admin View -->
                 <div id="status-admin-container" style="display: none;">
                     <h4 style="color: var(--accent-primary); border-bottom: 2px solid var(--accent-primary); padding-bottom: 8px; margin-bottom: 15px;"><i class="fa-solid fa-shield-halved"></i> 최고관리자 대시보드</h4>
                     
-                    <!-- Stats widget - 9 cards -->
+                    <!-- Stats widget - 9 cards (순서: 오늘 방문자, 총 방문자, 총회원 수, 영업자 수, 시공업체 수, 총 신청 건수, 총 대상자 선정 건수, 시공 진행 건수, 정산 완료 건수) -->
                     <div class="admin-stats-mob" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 12px;">
+                        <!-- 1. 오늘 방문자 -->
                         <div class="stat-card-mob" style="background: #eff6ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #3b82f6;">
                             <span style="font-size: 0.62rem; color: #3b82f6; font-weight: 700; line-height: 1.2;">오늘 방문자</span>
                             <h4 id="admin-stat-visitors-mob" style="font-size: 1.05rem; color: #1d4ed8; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0명</h4>
                         </div>
+                        <!-- 2. 총 방문자 -->
                         <div class="stat-card-mob" style="background: #f0fdf4; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #10b981;">
                             <span style="font-size: 0.62rem; color: #10b981; font-weight: 700; line-height: 1.2;">총 방문자</span>
                             <h4 id="admin-stat-total-visitors-mob" style="font-size: 1.05rem; color: #047857; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0명</h4>
                         </div>
+                        <!-- 3. 총회원 수 -->
+                        <div class="stat-card-mob" style="background: #eef2ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #6366f1;">
+                            <span style="font-size: 0.62rem; color: #6366f1; font-weight: 700; line-height: 1.2;">총회원 수</span>
+                            <h4 id="admin-stat-members-mob" style="font-size: 1.05rem; color: #4338ca; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0명</h4>
+                        </div>
+                        <!-- 4. 영업자 수 -->
+                        <div class="stat-card-mob" style="background: #f0f9ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #0ea5e9;">
+                            <span style="font-size: 0.62rem; color: #0284c7; font-weight: 700; line-height: 1.2;">영업자 수</span>
+                            <h4 id="admin-stat-biz-mob" style="font-size: 1.05rem; color: #0369a1; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0명</h4>
+                        </div>
+                        <!-- 5. 시공업체 수 -->
+                        <div class="stat-card-mob" style="background: #f0fdfa; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #14b8a6;">
+                            <span style="font-size: 0.62rem; color: #0d9488; font-weight: 700; line-height: 1.2;">시공업체 수</span>
+                            <h4 id="admin-stat-const-mob" style="font-size: 1.05rem; color: #0f766e; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0개</h4>
+                        </div>
+                        <!-- 6. 총 신청 건수 -->
                         <div class="stat-card-mob" style="background: #faf5ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #8b5cf6;">
                             <span style="font-size: 0.62rem; color: #8b5cf6; font-weight: 700; line-height: 1.2;">총 신청 건수</span>
                             <h4 id="admin-stat-total-mob" style="font-size: 1.05rem; color: #6d28d9; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0건</h4>
                         </div>
+                        <!-- 7. 총 대상자 선정 건수 -->
                         <div class="stat-card-mob" style="background: #ecfdf5; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #10b981;">
-                            <span style="font-size: 0.62rem; color: #10b981; font-weight: 700; line-height: 1.2;">승인 건수</span>
+                            <span style="font-size: 0.62rem; color: #10b981; font-weight: 700; line-height: 1.2;">총 대상자 선정 건수</span>
                             <h4 id="admin-stat-approved-mob" style="font-size: 1.05rem; color: #065f46; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0건</h4>
                         </div>
+                        <!-- 8. 시공 진행 건수 -->
                         <div class="stat-card-mob" style="background: #fffbeb; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #f59e0b;">
-                            <span style="font-size: 0.62rem; color: #d97706; font-weight: 700; line-height: 1.2;">시공 진행</span>
+                            <span style="font-size: 0.62rem; color: #d97706; font-weight: 700; line-height: 1.2;">시공 진행 건수</span>
                             <h4 id="admin-stat-in-const-mob" style="font-size: 1.05rem; color: #b45309; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0건</h4>
                         </div>
+                        <!-- 9. 정산 완료 건수 -->
                         <div class="stat-card-mob" style="background: #fdf4ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #a855f7;">
-                            <span style="font-size: 0.62rem; color: #7c3aed; font-weight: 700; line-height: 1.2;">정산 완료</span>
+                            <span style="font-size: 0.62rem; color: #7c3aed; font-weight: 700; line-height: 1.2;">정산 완료 건수</span>
                             <h4 id="admin-stat-completed-mob" style="font-size: 1.05rem; color: #5b21b6; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0건</h4>
-                        </div>
-                        <div class="stat-card-mob" style="background: #eef2ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #6366f1;">
-                            <span style="font-size: 0.62rem; color: #6366f1; font-weight: 700; line-height: 1.2;">총 회원</span>
-                            <h4 id="admin-stat-members-mob" style="font-size: 1.05rem; color: #4338ca; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0명</h4>
-                        </div>
-                        <div class="stat-card-mob" style="background: #f0f9ff; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #0ea5e9;">
-                            <span style="font-size: 0.62rem; color: #0284c7; font-weight: 700; line-height: 1.2;">영업자</span>
-                            <h4 id="admin-stat-biz-mob" style="font-size: 1.05rem; color: #0369a1; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0명</h4>
-                        </div>
-                        <div class="stat-card-mob" style="background: #f0fdfa; padding: 7px 5px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 54px; border-left: 3px solid #14b8a6;">
-                            <span style="font-size: 0.62rem; color: #0d9488; font-weight: 700; line-height: 1.2;">시공업체</span>
-                            <h4 id="admin-stat-const-mob" style="font-size: 1.05rem; color: #0f766e; margin-top: 2px; margin-bottom: 0; line-height: 1.2; font-family: 'Outfit', sans-serif;">0개</h4>
                         </div>
                     </div>
 
@@ -1419,15 +1443,11 @@
                     </div>
 
                     <div id="admin-panel-const-progress-mob" class="admin-panel-view-mob" style="display: none;">
-                        <div class="glass-panel" style="padding: 16px; margin-bottom: 15px; text-align: left; background: #ffffff; border-radius: 10px; border: 1px solid var(--border-color);">
-                            <h5 style="margin-bottom: 10px; color: var(--accent-primary); font-size: 1.05rem;"><i class="fa-solid fa-screwdriver-wrench"></i> 시공업체 진행현황</h5>
-                            <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
-                                배정된 시공업체의 현장 시공 및 정산 진행 상황을 관리합니다.
-                            </p>
-                            <div id="admin-const-progress-list-mob" style="display: flex; flex-direction: column; gap: 10px;">
-                                <!-- 시공업체 진행현황 데이터 연동 영역 -->
-                                <p class="text-muted" style="text-align: center; padding: 25px 0; font-size: 0.92rem;">시공업체 진행현황 기능이 준비 중입니다.</p>
-                            </div>
+                        <div style="margin-bottom: 12px;">
+                            <input type="text" id="search-admin-const-input-mob" placeholder="시공사 / 상호명 / 주소 / 코드 검색" maxlength="30" style="padding: 10px 14px; font-size: 0.95rem; border-radius: 8px; border: 1.5px solid #86efac; width: 100%; box-sizing: border-box; background: #ffffff; font-weight: 500;">
+                        </div>
+                        <div id="admin-const-progress-list-mob" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- 시공업체 진행현황 데이터 연동 영역 -->
                         </div>
                     </div>
 

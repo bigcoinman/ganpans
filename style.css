@@ -5227,3 +5227,20 @@ footer {
     width: 18px !important;
     height: 18px !important;
 }
+
+/* PC 최고관리자 대시보드 통계 카드 2열 반응형 그리드 */
+@media (max-width: 1100px) {
+    .admin-stats-row-1 {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+    .admin-stats-row-2 {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-stats-row-1,
+    .admin-stats-row-2 {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}

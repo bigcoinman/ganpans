@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderApplicationsList();
     renderInquiriesList();
     if (activeUser.role === 'admin') {
-      if (adminStatsContainer) adminStatsContainer.style.display = 'grid';
+      if (adminStatsContainer) adminStatsContainer.style.display = 'flex';
       const pipeline = document.getElementById('admin-construction-pipeline');
       if (pipeline) pipeline.style.display = 'block';
       renderAdminStats();
@@ -276,6 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderManagerPanel();
       renderAdminStats();
       renderApplicationsList();
+      renderManagerConstProgress();
       renderInquiriesList();
     } else if (activeUser && activeUser.role === 'business') {
       renderBusinessDashboard();
@@ -296,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderManagerPanel();
         renderAdminStats();
         renderApplicationsList();
+        renderManagerConstProgress();
         renderInquiriesList();
       }
     }
@@ -1182,6 +1184,23 @@ document.addEventListener('DOMContentLoaded', () => {
     searchManagerAppsInput.addEventListener('input', () => {
       appsCurrentPage = 1;
       renderApplicationsList();
+    });
+  }
+
+  // 관리자 시공업체 진행현황 검색 이벤트 바인딩 (시공사/상호명/주소/코드검색)
+  const searchManagerConstInput = document.getElementById('search-manager-const-input');
+  if (searchManagerConstInput) {
+    searchManagerConstInput.addEventListener('input', () => {
+      constProgressCurrentPage = 1;
+      renderManagerConstProgress();
+    });
+  }
+
+  // 시공업체 내 배정 물건 검색 이벤트 바인딩 (상호명/주소/간판종류 검색)
+  const searchConstructorJobsInput = document.getElementById('search-constructor-jobs-input');
+  if (searchConstructorJobsInput) {
+    searchConstructorJobsInput.addEventListener('input', () => {
+      renderConstructorDashboard();
     });
   }
 
@@ -2349,6 +2368,261 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  // --- Render Manager Constructor Progress (시공업체 진행현황 관리자 뷰) ---
+  let constProgressCurrentPage = 1;
+  const constProgressPerPage = 10;
+
+  window.changeConstProgressPage = (page) => {
+    constProgressCurrentPage = page;
+    renderManagerConstProgress();
+  };
+
+  const renderManagerConstProgress = () => {
+    if (activeUser.role !== 'admin') return;
+    const constTableBody = document.getElementById('manager-const-progress-table-body');
+    if (!constTableBody) return;
+
+    const apps = JSON.parse(localStorage.getItem('applications')) || [];
+    const curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    const paginationContainer = document.getElementById('pagination-manager-const-progress');
+
+    let allConstJobs = [];
+
+    // 1) From users' items (영업물건 중 시공사가 배정되었거나 시공상태가 존재하는 건)
+    curUsers.forEach(u => {
+      if (u.items && Array.isArray(u.items)) {
+        u.items.forEach(item => {
+          if (item.assignedConstructorId || (item.constructionStatus && item.constructionStatus !== 'none') || item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판시공완료' || item.progressStatus === '간판 시공 중' || item.progressStatus === '시공 완료') {
+            let cName = item.assignedConstructorName || '';
+            let cCode = '';
+            let cPhone = '';
+            if (item.assignedConstructorId) {
+              const cu = curUsers.find(x => x.id === item.assignedConstructorId || x.constCode === item.assignedConstructorId);
+              if (cu) {
+                cName = cu.businessName || cu.pendingBusinessName || cu.name || cu.id;
+                cCode = cu.constCode || '';
+                cPhone = cu.phone || '';
+              } else {
+                cName = item.assignedConstructorName || item.assignedConstructorId;
+              }
+            }
+            allConstJobs.push({
+              id: item.id,
+              isBizItemJob: true,
+              bizItemOwnerId: u.id,
+              bizOwnerName: u.name,
+              storeName: item.name || '-',
+              ownerName: `${u.name} (영업자)`,
+              ownerPhone: item.phone || u.phone || '-',
+              storeAddress: item.address || '-',
+              signType: item.signType || 'LED 채널/플렉스',
+              assignedConstructorId: item.assignedConstructorId || '',
+              assignedConstructorName: cName || '미배정',
+              assignedConstructorCode: cCode,
+              assignedConstructorPhone: cPhone,
+              constructionStatus: item.constructionStatus || 'before_construction',
+              constructionPhotos: item.constructionPhotos || [],
+              invoicePhotos: item.invoicePhotos || [],
+              createdAt: item.assignedAt || item.createdAt || new Date().toISOString()
+            });
+          }
+        });
+      }
+    });
+
+    // 2) From applications (온라인 신청서 중 시공사가 배정되었거나 승인된 건)
+    apps.forEach(app => {
+      if (app.assignedConstructorId || (app.constructionStatus && app.constructionStatus !== 'none')) {
+        if (!allConstJobs.some(j => String(j.id) === String(app.id))) {
+          let cName = app.assignedConstructorName || '';
+          let cCode = '';
+          let cPhone = '';
+          if (app.assignedConstructorId) {
+            const cu = curUsers.find(x => x.id === app.assignedConstructorId || x.constCode === app.assignedConstructorId);
+            if (cu) {
+              cName = cu.businessName || cu.pendingBusinessName || cu.name || cu.id;
+              cCode = cu.constCode || '';
+              cPhone = cu.phone || '';
+            } else {
+              cName = app.assignedConstructorName || app.assignedConstructorId;
+            }
+          }
+          allConstJobs.push({
+            id: app.id,
+            isBizItemJob: false,
+            bizItemOwnerId: null,
+            bizOwnerName: app.referrerCode || '본사접수',
+            storeName: app.storeName || '-',
+            ownerName: app.ownerName || '-',
+            ownerPhone: app.ownerPhone || app.phone || '-',
+            storeAddress: app.storeAddress || '-',
+            signType: app.signType || '간판',
+            assignedConstructorId: app.assignedConstructorId || '',
+            assignedConstructorName: cName || '미배정',
+            assignedConstructorCode: cCode,
+            assignedConstructorPhone: cPhone,
+            constructionStatus: app.constructionStatus || 'before_construction',
+            constructionPhotos: app.constructionPhotos || [],
+            invoicePhotos: app.invoicePhotos || [],
+            createdAt: app.appliedAt || app.createdAt || new Date().toISOString()
+          });
+        }
+      }
+    });
+
+    // Sort descending by date
+    allConstJobs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Search filter (시공사 / 상호명 / 주소 / 코드 / 전화번호 / 간판종류)
+    const searchInput = document.getElementById('search-manager-const-input');
+    const searchKeyword = (searchInput ? searchInput.value.trim().toLowerCase() : '').slice(0, 30);
+
+    let filteredJobs = allConstJobs;
+    if (searchKeyword) {
+      filteredJobs = allConstJobs.filter(job => {
+        const cName = String(job.assignedConstructorName || '').toLowerCase();
+        const cId = String(job.assignedConstructorId || '').toLowerCase();
+        const cCode = String(job.assignedConstructorCode || '').toLowerCase();
+        const sName = String(job.storeName || '').toLowerCase();
+        const sAddr = String(job.storeAddress || '').toLowerCase();
+        const oName = String(job.ownerName || '').toLowerCase();
+        const oPhone = String(job.ownerPhone || '').toLowerCase();
+        const sType = String(job.signType || '').toLowerCase();
+        const jId = String(job.id || '').toLowerCase();
+
+        return cName.includes(searchKeyword) ||
+               cId.includes(searchKeyword) ||
+               cCode.includes(searchKeyword) ||
+               sName.includes(searchKeyword) ||
+               sAddr.includes(searchKeyword) ||
+               oName.includes(searchKeyword) ||
+               oPhone.includes(searchKeyword) ||
+               sType.includes(searchKeyword) ||
+               jId.includes(searchKeyword);
+      });
+    }
+
+    if (filteredJobs.length === 0) {
+      const emptyMsg = searchKeyword ? `검색어 [${escapeHtml(searchKeyword)}] 에 일치하는 시공 진행건이 없습니다.` : '배정된 시공 진행 물건이 없습니다.';
+      constTableBody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-muted" style="text-align: center; padding: 40px 0;">${emptyMsg}</td>
+        </tr>
+      `;
+      if (paginationContainer) paginationContainer.innerHTML = '';
+      return;
+    }
+
+    constTableBody.innerHTML = '';
+    const totalCount = filteredJobs.length;
+    const totalPages = Math.ceil(totalCount / constProgressPerPage);
+    if (constProgressCurrentPage > totalPages) constProgressCurrentPage = totalPages;
+    if (constProgressCurrentPage < 1) constProgressCurrentPage = 1;
+
+    const startIndex = (constProgressCurrentPage - 1) * constProgressPerPage;
+    const paginatedJobs = filteredJobs.slice(startIndex, startIndex + constProgressPerPage);
+
+    paginatedJobs.forEach(job => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--border-color)';
+      tr.style.transition = 'background 0.2s ease';
+
+      const padZero = (n) => String(n).padStart(2, '0');
+      const d = new Date(job.createdAt);
+      const dateText = !isNaN(d.getTime()) ? `${d.getFullYear()}.${padZero(d.getMonth() + 1)}.${padZero(d.getDate())}` : '-';
+
+      const st = job.constructionStatus || 'before_construction';
+      let statusColor = '#475569';
+      let statusBg = '#ffffff';
+      let statusBorder = '#cbd5e1';
+
+      if (st === 'in_construction') {
+        statusColor = '#92400e';
+        statusBg = '#fef3c7';
+        statusBorder = '#fde68a';
+      } else if (st === 'after_construction') {
+        statusColor = '#166534';
+        statusBg = '#dcfce7';
+        statusBorder = '#86efac';
+      } else if (st === 'completed') {
+        statusColor = '#1e40af';
+        statusBg = '#dbeafe';
+        statusBorder = '#93c5fd';
+      }
+
+      const pCount = job.constructionPhotos ? job.constructionPhotos.length : 0;
+      const iCount = job.invoicePhotos ? job.invoicePhotos.length : 0;
+      let proofBadge = '';
+      if (pCount > 0 || iCount > 0) {
+        let photosLinks = '';
+        if (pCount > 0) {
+          const firstPhoto = job.constructionPhotos[0];
+          photosLinks += `
+            <a href="${sanitizeUrl(firstPhoto)}" target="_blank" style="font-size: 0.73rem; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="시공 사진 보기">
+              <i class="fa-solid fa-camera"></i> 사진 ${pCount}장
+            </a>
+          `;
+        }
+        if (iCount > 0) {
+          const firstInvoice = job.invoicePhotos[0];
+          photosLinks += `
+            <a href="${sanitizeUrl(firstInvoice)}" target="_blank" style="font-size: 0.73rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 4px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="세금계산서/증빙 보기">
+              <i class="fa-solid fa-file-invoice-dollar"></i> 계산서 ${iCount}장
+            </a>
+          `;
+        }
+        proofBadge = `<div style="display: flex; gap: 5px; align-items: center; justify-content: center; flex-wrap: wrap;">${photosLinks}</div>`;
+      } else {
+        proofBadge = '<span style="color: #94a3b8; font-size: 0.75rem;">증빙 미등록</span>';
+      }
+
+      tr.innerHTML = `
+        <td style="padding: 14px 16px; color: var(--text-secondary); font-family: monospace; white-space: nowrap;">${dateText}</td>
+        <td style="padding: 14px 16px; white-space: nowrap;">
+          <div style="font-weight: 700; color: #0f766e; font-size: 0.86rem; display: flex; align-items: center; gap: 5px;">
+            <i class="fa-solid fa-trowel-bricks" style="color: #14b8a6;"></i> ${escapeHtml(job.assignedConstructorName)}
+          </div>
+          ${job.assignedConstructorPhone ? `<div style="font-size: 0.74rem; color: #64748b; margin-top: 2px;"><i class="fa-solid fa-phone"></i> ${escapeHtml(job.assignedConstructorPhone)}</div>` : ''}
+          ${job.assignedConstructorCode ? `<div style="font-size: 0.72rem; color: #0f766e; font-family: monospace;">코드: ${escapeHtml(job.assignedConstructorCode)}</div>` : ''}
+        </td>
+        <td style="padding: 14px 16px; font-weight: 600; color: var(--text-primary);">
+          ${escapeHtml(job.storeName)}
+          <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;">
+            <i class="fa-solid fa-user"></i> ${escapeHtml(job.ownerName)} (${escapeHtml(job.ownerPhone)})
+          </div>
+        </td>
+        <td style="padding: 14px 16px;">
+          <div style="font-size: 0.82rem; color: #334155;"><i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> ${escapeHtml(job.storeAddress)}</div>
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">간판: <strong style="color: var(--accent-primary);">${escapeHtml(job.signType)}</strong></div>
+        </td>
+        <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">
+          <select class="status-select select-admin-const-status" data-id="${job.id}" style="padding: 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: ${statusBg}; cursor: pointer;">
+            <option value="before_construction" ${st === 'before_construction' ? 'selected' : ''}>시공 전</option>
+            <option value="in_construction" ${st === 'in_construction' ? 'selected' : ''}>시공 진행 중</option>
+            <option value="after_construction" ${st === 'after_construction' ? 'selected' : ''}>완료 보고됨</option>
+            <option value="completed" ${st === 'completed' ? 'selected' : ''}>정산 종결</option>
+          </select>
+        </td>
+        <td style="padding: 14px 16px; text-align: center;">${proofBadge}</td>
+      `;
+      constTableBody.appendChild(tr);
+    });
+
+    if (paginationContainer) {
+      paginationContainer.innerHTML = renderPaginationControls(totalCount, constProgressPerPage, constProgressCurrentPage, 'window.changeConstProgressPage');
+    }
+
+    // Attach status update listener
+    constTableBody.querySelectorAll('.select-admin-const-status').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const id = e.target.dataset.id;
+        const val = e.target.value;
+        updateJobConstructionStatus(id, val);
+        renderManagerConstProgress();
+      });
+    });
+  };
+
   // PC 신청서 현장사진 파일 선택/업로드 핸들러
   const handleApplicationPhotoUploadPC = (appId) => {
     if (activeUser.role !== 'admin') return;
@@ -2888,16 +3162,34 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    if (myJobs.length === 0) {
+    // Search filter for constructor partner view
+    const searchConstructorJobsInput = document.getElementById('search-constructor-jobs-input');
+    const qJobs = (searchConstructorJobsInput ? searchConstructorJobsInput.value.trim().toLowerCase() : '').slice(0, 30);
+
+    let filteredJobs = myJobs;
+    if (qJobs) {
+      filteredJobs = myJobs.filter(j => {
+        const sName = String(j.storeName || '').toLowerCase();
+        const sAddr = String(j.storeAddress || '').toLowerCase();
+        const sType = String(j.signType || '').toLowerCase();
+        const oName = String(j.ownerName || '').toLowerCase();
+        const oPhone = String(j.ownerPhone || '').toLowerCase();
+        const jId = String(j.id || '').toLowerCase();
+        return sName.includes(qJobs) || sAddr.includes(qJobs) || sType.includes(qJobs) || oName.includes(qJobs) || oPhone.includes(qJobs) || jId.includes(qJobs);
+      });
+    }
+
+    if (filteredJobs.length === 0) {
+      const emptyMsg = qJobs ? `검색어 [${escapeHtml(qJobs)}] 에 일치하는 시공 물건이 없습니다.` : '배정된 시공 물건이 없습니다.';
       constructorJobsTableBody.innerHTML = `
         <tr>
-          <td colspan="6" class="text-muted" style="text-align: center; padding: 40px 0;">배정된 시공 물건이 없습니다.</td>
+          <td colspan="6" class="text-muted" style="text-align: center; padding: 40px 0;">${emptyMsg}</td>
         </tr>
       `;
       return;
     }
 
-    myJobs.forEach(job => {
+    filteredJobs.forEach(job => {
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid #cbd5e1';
 
