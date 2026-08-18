@@ -243,8 +243,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const pipeline = document.getElementById('admin-construction-pipeline');
       if (pipeline) pipeline.style.display = 'none';
     }
+    const userAppsSec = document.getElementById('user-applications-section');
     if (activeUser.role !== 'admin') {
+      if (userAppsSec) userAppsSec.style.display = 'block';
       renderUserApplicationsList();
+    } else {
+      if (userAppsSec) userAppsSec.style.display = 'none';
+    }
+
+    const bizRegSec = document.getElementById('biz-registered-items-section');
+    if (activeUser.role === 'business') {
+      if (bizRegSec) bizRegSec.style.display = 'block';
+      renderBizRegisteredTable();
+    } else {
+      if (bizRegSec) bizRegSec.style.display = 'none';
     }
 
     // Supabase 실시간 데이터 백그라운드 동기화
@@ -280,8 +292,11 @@ document.addEventListener('DOMContentLoaded', () => {
       renderInquiriesList();
     } else if (activeUser && activeUser.role === 'business') {
       renderBusinessDashboard();
+      renderUserApplicationsList();
+      renderBizRegisteredTable();
     } else if (activeUser && activeUser.role === 'constructor') {
       renderConstructorDashboard();
+      renderUserApplicationsList();
     } else if (activeUser) {
       renderUserApplicationsList();
     }
@@ -323,23 +338,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dashboardBusinessView) dashboardBusinessView.style.display = 'none';
     if (dashboardConstructorView) dashboardConstructorView.style.display = 'none';
 
+    // 전환 신청 버튼 영역 제어 (영업자/시공사/관리자는 무조건 숨김)
+    const conversionArea = document.getElementById('conversion-area');
+    if (activeUser.role === 'business' || activeUser.bizCode || activeUser.role === 'constructor' || activeUser.constCode || activeUser.role === 'admin') {
+      if (conversionArea) conversionArea.style.display = 'none';
+    }
+
     if (activeUser.role === 'business') {
-      dashboardUserRole.textContent = `영업자 코드 (${activeUser.bizCode})`;
+      dashboardUserRole.textContent = `영업자 코드 (${activeUser.bizCode || '코드발급'})`;
       dashboardUserRole.style.background = 'var(--accent-secondary)';
       if (dashboardBusinessView) dashboardBusinessView.style.display = 'block';
+      if (conversionArea) conversionArea.style.display = 'none';
       renderBusinessDashboard();
     } else if (activeUser.role === 'constructor') {
-      dashboardUserRole.textContent = `시공업체 코드 (${activeUser.constCode})`;
+      dashboardUserRole.textContent = `시공업체 코드 (${activeUser.constCode || '시공사'})`;
       dashboardUserRole.style.background = 'var(--accent-success)';
       if (dashboardConstructorView) dashboardConstructorView.style.display = 'block';
+      if (conversionArea) conversionArea.style.display = 'none';
       renderConstructorDashboard();
     } else if (activeUser.role === 'admin') {
       dashboardUserRole.textContent = '최고관리자';
       dashboardUserRole.style.background = 'var(--grad-sunset)';
+      if (conversionArea) conversionArea.style.display = 'none';
     } else {
       dashboardUserRole.textContent = '일반 회원';
       dashboardUserRole.style.background = 'var(--accent-primary)';
       if (dashboardNormalView) dashboardNormalView.style.display = 'block';
+      if (conversionArea) conversionArea.style.display = 'block';
 
       // Conversion status
       if (activeUser.isSNS) {
@@ -518,13 +543,16 @@ document.addEventListener('DOMContentLoaded', () => {
       bizItemsList.innerHTML = `
         <div class="empty-list-msg">
           <i class="fa-solid fa-folder-open" style="font-size: 2.5rem; margin-bottom: 15px; opacity: 0.5;"></i>
-          <p>등록된 영업물건이 없습니다. 우측 모바일 업로드기에서 첫 물건을 등록해 보세요.</p>
+          <p>등록된 최근 신청 업체가 없습니다. 우측 모바일 업로드기에서 첫 물건을 등록해 보세요.</p>
         </div>
       `;
       return;
     }
 
-    items.forEach(item => {
+    // 최근 신청한 업체: 최신 2개 업체만 표시
+    const recentItems = [...items].slice(-2).reverse();
+
+    recentItems.forEach(item => {
       const card = document.createElement('div');
       card.className = 'biz-item-card';
 
@@ -532,7 +560,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (item.photos && item.photos.length > 0) {
         photosHtml = `<div class="biz-item-photos">`;
         item.photos.forEach(photoSrc => {
-          photosHtml += `<img src="${sanitizeUrl(photoSrc)}" alt="현장사진" class="biz-item-thumb" onerror="this.src='간판지원단 로고-2.png'">`;
+          if (photoSrc) {
+            photosHtml += `<img src="${sanitizeUrl(photoSrc)}" alt="현장사진" class="biz-item-thumb">`;
+          }
         });
         photosHtml += `</div>`;
       }
@@ -545,8 +575,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ${item.phone ? `<p class="biz-item-phone" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-phone" style="color: var(--accent-primary);"></i> ${escapeHtml(item.phone)}</p>` : ''}
           </div>
           <div class="biz-item-badges">
-            <span class="badge-receipt">${escapeHtml(item.receiptStatus)}</span>
-            <span class="badge-progress">${escapeHtml(item.progressStatus)}</span>
+            <span class="badge-receipt">${escapeHtml(item.receiptStatus || '접수예정')}</span>
+            <span class="badge-progress">${escapeHtml(item.progressStatus || '지원대기중')}</span>
           </div>
         </div>
         ${photosHtml}
@@ -908,8 +938,6 @@ document.addEventListener('DOMContentLoaded', () => {
       let apps = JSON.parse(localStorage.getItem('applications')) || [];
       const itemId = typeof generateBizItemId === 'function' ? generateBizItemId(activeUser.bizCode, apps) : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(4, '0')}`;
 
-      // 모든 신청물건은 1차적으로 [신청서 목록(applications)]에만 저장
-      // (최고관리자가 진흥원 접수 확인 후 [영업물건으로 변경] 토글을 켜면 영업물건 목록으로 연동됨)
       const newApp = {
         id: itemId,
         userId: activeUser.id,
@@ -934,9 +962,30 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       localStorage.setItem('applications', JSON.stringify(apps));
 
+      // 영업자 본인의 items 에도 등록 (실제 촬영 사진 base64 포함)
+      const newItem = {
+        id: itemId,
+        name: nameVal,
+        phone: phoneVal,
+        address: addrVal,
+        receiptStatus: '접수예정',
+        progressStatus: '지원대기중',
+        photos: base64Photo ? [base64Photo] : []
+      };
+      activeUser.items = activeUser.items || [];
+      if (!activeUser.items.some(i => i.id === itemId)) {
+        activeUser.items.push(newItem);
+      } else {
+        activeUser.items = activeUser.items.map(i => i.id === itemId ? newItem : i);
+      }
+      users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
       // Supabase 클라우드 DB 실시간 양방향 동기화
       if (window.SupabaseSync) {
         window.SupabaseSync.upsertApplication(newApp);
+        window.SupabaseSync.updateUser(activeUser.id, { items: activeUser.items });
       }
 
       // 카카오톡 관리자 실시간 알림 발송
@@ -944,13 +993,16 @@ document.addEventListener('DOMContentLoaded', () => {
         window.KakaoNotifier.notifyApplication(newApp);
       }
 
-      alert(`현장 간판 신청 물건 [${nameVal}] 등록이 성공적으로 접수되었습니다!\n신청번호: [${itemId}]\n(최고관리자 대시보드 [온라인 간편지원 신청목록]에 안전하게 등록되었습니다.)`);
+      alert(`현장 간판 신청 물건 [${nameVal}] 등록이 성공적으로 접수되었습니다!\n신청번호: [${itemId}]\n(대시보드에 안전하게 등록되었습니다.)`);
 
       mobileUploadForm.reset();
       selectedPhotos = [];
       renderMobilePhotoPreviews();
       stopCamera();
-      updateSessionUI();
+      renderDashboard();
+      renderBusinessDashboard();
+      renderBizRegisteredTable();
+      renderUserApplicationsList();
     });
   }
 
@@ -1201,6 +1253,50 @@ document.addEventListener('DOMContentLoaded', () => {
   if (searchConstructorJobsInput) {
     searchConstructorJobsInput.addEventListener('input', () => {
       renderConstructorDashboard();
+    });
+  }
+
+  // 온라인 간편 지원 신청 내역 검색 이벤트
+  const searchUserAppsInput = document.getElementById('search-user-apps-input');
+  if (searchUserAppsInput) {
+    searchUserAppsInput.addEventListener('input', () => {
+      renderUserApplicationsList();
+    });
+  }
+
+  // 영업물건 현황 테이블 검색 이벤트
+  const searchBizTableInput = document.getElementById('search-biz-table-input');
+  if (searchBizTableInput) {
+    searchBizTableInput.addEventListener('input', () => {
+      renderBizRegisteredTable();
+    });
+  }
+
+  // 온라인 간편 지원 신청 내역 접기/펼치기 토글
+  const toggleUserAppsHeader = document.getElementById('toggle-user-apps-header');
+  const userAppsContentBody = document.getElementById('user-apps-content-body');
+  const userAppsToggleIcon = document.getElementById('user-apps-toggle-icon');
+  if (toggleUserAppsHeader && userAppsContentBody) {
+    toggleUserAppsHeader.addEventListener('click', () => {
+      const isHidden = userAppsContentBody.style.display === 'none';
+      userAppsContentBody.style.display = isHidden ? 'block' : 'none';
+      if (userAppsToggleIcon) {
+        userAppsToggleIcon.innerHTML = isHidden ? '<i class="fa-solid fa-chevron-up"></i>' : '<i class="fa-solid fa-chevron-down"></i>';
+      }
+    });
+  }
+
+  // 내 영업물건 현황 접기/펼치기 토글
+  const toggleBizItemsHeader = document.getElementById('toggle-biz-items-header');
+  const bizTableContentBody = document.getElementById('biz-table-content-body');
+  const bizItemsToggleIcon = document.getElementById('biz-items-toggle-icon');
+  if (toggleBizItemsHeader && bizTableContentBody) {
+    toggleBizItemsHeader.addEventListener('click', () => {
+      const isHidden = bizTableContentBody.style.display === 'none';
+      bizTableContentBody.style.display = isHidden ? 'block' : 'none';
+      if (bizItemsToggleIcon) {
+        bizItemsToggleIcon.innerHTML = isHidden ? '<i class="fa-solid fa-chevron-up"></i>' : '<i class="fa-solid fa-chevron-down"></i>';
+      }
     });
   }
 
@@ -2867,17 +2963,50 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSessionUI();
   };
 
-  // --- Render User's Own Online Applications List ---
+  // 날짜 포맷 함수 (YYYY.MM.DD)
+  const formatDateOnly = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr).slice(0, 10);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}.${month}.${day}`;
+  };
+
+  // 신청 상태 뱃지 헬퍼
+  const getAppStatusBadgeHtml = (app) => {
+    if (app.status === 'approved') {
+      if (app.constructionStatus === 'before_construction') {
+        return `<span style="background: #e2e8f0; color: #475569; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-link"></i> 시공사 배정 (시공 전)</span>`;
+      } else if (app.constructionStatus === 'in_construction') {
+        return `<span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-screwdriver-wrench"></i> 시공 진행 중</span>`;
+      } else if (app.constructionStatus === 'after_construction') {
+        return `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-spinner fa-spin"></i> 시공 완료 (검수 중)</span>`;
+      } else if (app.constructionStatus === 'completed') {
+        return `<span style="background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-file-invoice-dollar"></i> 정산 종결 (최종 완료)</span>`;
+      } else {
+        return `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-check"></i> 승인 완료</span>`;
+      }
+    } else if (app.status === 'rejected') {
+      return `<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-xmark"></i> 반려됨</span>`;
+    } else {
+      return `<span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-clock"></i> 심사 대기</span>`;
+    }
+  };
+
+  // --- 1. 내 온라인 간편 지원 신청 내역 테이블 렌더링 ---
   const renderUserApplicationsList = () => {
+    const userApplicationsTableBody = document.getElementById('user-applications-table-body');
     if (!userApplicationsTableBody) return;
 
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
     let updated = false;
 
-    // Migrate/update applications without userId or with 'guest' userId if they match the current user's phone or name
+    // Migrate/update applications without userId or with 'guest' userId
     apps = apps.map(app => {
       const isGuestOrMissing = !app.userId || app.userId === 'guest';
-      if (isGuestOrMissing) {
+      if (isGuestOrMissing && activeUser) {
         const appPhone = app.ownerPhone || '';
         const userPhone = activeUser.phone || '';
         const cleanAppPhone = appPhone.replace(/[^0-9]/g, '');
@@ -2898,13 +3027,30 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('applications', JSON.stringify(apps));
     }
 
-    // Filter by the active user's ID
+    if (!activeUser) return;
     const myApps = apps.filter(app => app.userId === activeUser.id);
 
-    if (myApps.length === 0) {
+    // 검색 필터링
+    const searchInput = document.getElementById('search-user-apps-input');
+    const q = (searchInput ? searchInput.value.trim().toLowerCase() : '').slice(0, 30);
+
+    let filteredApps = myApps;
+    if (q) {
+      filteredApps = myApps.filter(app => {
+        const id = String(app.id || '').toLowerCase();
+        const owner = String(app.ownerName || '').toLowerCase();
+        const phone = String(app.ownerPhone || '').toLowerCase();
+        const store = String(app.storeName || '').toLowerCase();
+        const addr = String(app.storeAddress || '').toLowerCase();
+        return id.includes(q) || owner.includes(q) || phone.includes(q) || store.includes(q) || addr.includes(q);
+      });
+    }
+
+    if (filteredApps.length === 0) {
+      const emptyMsg = q ? `검색어 [${escapeHtml(q)}] 에 일치하는 신청 내역이 없습니다.` : '내가 접수한 온라인 간편 지원 신청 내역이 없습니다.';
       userApplicationsTableBody.innerHTML = `
         <tr>
-          <td colspan="7" class="text-muted" style="text-align: center; padding: 30px 0;">내가 접수한 온라인 간편 지원 신청 내역이 없습니다.</td>
+          <td colspan="6" class="text-muted" style="text-align: center; padding: 30px 0;">${emptyMsg}</td>
         </tr>
       `;
       return;
@@ -2912,58 +3058,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     userApplicationsTableBody.innerHTML = '';
     
-    // Sort my applications by applied date descending (latest first)
-    const sortedMyApps = [...myApps].sort((a, b) => b.id - a.id);
+    // Sort my applications by applied date descending
+    const sortedMyApps = [...filteredApps].sort((a, b) => {
+      const timeA = new Date(a.appliedAt || 0).getTime();
+      const timeB = new Date(b.appliedAt || 0).getTime();
+      return timeB - timeA;
+    });
 
     sortedMyApps.forEach(app => {
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid var(--border-color)';
       tr.style.transition = 'background 0.2s ease';
       
-      // Formatting date
-      const dateText = new Date(app.appliedAt).toLocaleString('ko-KR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-
-      // Status badge
-      let statusBadge = '';
-      if (app.status === 'approved') {
-        if (app.constructionStatus === 'before_construction') {
-          statusBadge = `<span style="background: #e2e8f0; color: #475569; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-link"></i> 시공사 배정 (시공 전)</span>`;
-        } else if (app.constructionStatus === 'in_construction') {
-          statusBadge = `<span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-screwdriver-wrench"></i> 시공 진행 중</span>`;
-        } else if (app.constructionStatus === 'after_construction') {
-          statusBadge = `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-spinner fa-spin"></i> 시공 완료 (검수 중)</span>`;
-        } else if (app.constructionStatus === 'completed') {
-          statusBadge = `<span style="background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-file-invoice-dollar"></i> 정산 종결 (최종 완료)</span>`;
-        } else {
-          statusBadge = `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-check"></i> 승인 완료</span>`;
-        }
-      } else if (app.status === 'rejected') {
-        statusBadge = `<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-xmark"></i> 반려됨</span>`;
-      } else {
-        statusBadge = `<span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-clock"></i> 심사 대기</span>`;
-      }
+      const dateOnly = formatDateOnly(app.appliedAt);
+      const statusBadge = getAppStatusBadgeHtml(app);
 
       tr.innerHTML = `
-        <td style="padding: 12px 16px; color: var(--text-secondary); font-family: monospace;">${dateText}</td>
-        <td style="padding: 12px 16px; font-weight: 600; color: var(--text-primary);">${escapeHtml(app.ownerName)}</td>
-        <td style="padding: 12px 16px; font-weight: 600; color: var(--text-primary);">
-          ${escapeHtml(app.storeName)}
-          <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(app.storeAddress)}</div>
+        <td style="padding: 12px 16px; color: var(--text-secondary); font-family: monospace; white-space: nowrap;">${dateOnly}</td>
+        <td style="padding: 12px 16px; white-space: nowrap;">
+          <span style="font-family: monospace; font-weight: 700; color: var(--accent-primary); font-size: 0.88rem;">${escapeHtml(String(app.id))}</span>
         </td>
-        <td style="padding: 12px 16px;"><span style="font-weight: 700; color: var(--accent-primary); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">${escapeHtml(app.signType === 'NEON' || app.signType === 'neon' || !app.signType ? '플렉스' : app.signType)}</span></td>
-        <td style="padding: 12px 16px; color: var(--text-secondary); max-width: 130px; word-break: break-all;">
-          <a href="${sanitizeUrl(app.fileData) || './초원식당 간판.png'}" download="${escapeHtml(app.fileName) || '첨부이미지.png'}" style="color: var(--accent-primary); font-weight: 600; text-decoration: underline; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;" title="클릭하여 다운로드">
-            <i class="fa-solid fa-download"></i> ${escapeHtml(app.fileName) || '첨부이미지.png'}
-          </a>
+        <td style="padding: 12px 16px;">
+          <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(app.ownerName || '-')}</div>
+          ${app.ownerPhone ? `<div style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-phone" style="color: var(--accent-primary);"></i> ${escapeHtml(app.ownerPhone)}</div>` : ''}
         </td>
-        <td style="padding: 12px 16px;">${statusBadge}</td>
-        <td style="padding: 12px 16px; text-align: center;">
+        <td style="padding: 12px 16px;">
+          <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">${escapeHtml(app.storeName || '-')}</div>
+          ${app.storeAddress ? `<div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(app.storeAddress)}</div>` : ''}
+        </td>
+        <td style="padding: 12px 16px; white-space: nowrap;">${statusBadge}</td>
+        <td style="padding: 12px 16px; text-align: center; white-space: nowrap;">
           <button class="btn btn-secondary btn-sm btn-cancel-own-app" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.72rem; border-color: rgba(239, 68, 68, 0.3); color: rgba(239, 68, 68, 0.7); background: transparent; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.borderColor='rgba(239,68,68,0.5)';" onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(239,68,68,0.3)';"><i class="fa-solid fa-trash-can"></i> 취소</button>
         </td>
       `;
@@ -2971,10 +3095,128 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Add click listeners to cancel buttons
-    document.querySelectorAll('.btn-cancel-own-app').forEach(btn => {
+    userApplicationsTableBody.querySelectorAll('.btn-cancel-own-app').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const id = parseInt(e.target.closest('button').dataset.id);
+        const id = e.target.closest('button').dataset.id;
         deleteOwnApplication(id);
+      });
+    });
+  };
+
+  // --- 2. 내 영업물건 현황 및 진행상황 테이블 렌더링 (영업자 전용) ---
+  const renderBizRegisteredTable = () => {
+    const bizRegisteredTableBody = document.getElementById('biz-registered-table-body');
+    if (!bizRegisteredTableBody) return;
+    if (!activeUser || activeUser.role !== 'business') return;
+
+    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let myItems = activeUser.items || [];
+
+    // 영업자 코드와 매칭되거나 activeUser.items에 등록된 물건들 취합
+    let bizList = [];
+
+    // 1) applications 중 추천인코드가 내 영업자코드이거나 userId가 나인 경우
+    apps.forEach(app => {
+      const isMyReferrer = activeUser.bizCode && app.referrerCode === activeUser.bizCode;
+      const isMyItem = myItems.some(i => i.id === app.id);
+      if (isMyReferrer || isMyItem) {
+        bizList.push({
+          id: app.id,
+          date: app.appliedAt || new Date().toISOString(),
+          ownerName: app.ownerName || app.name || '-',
+          ownerPhone: app.ownerPhone || app.phone || '',
+          storeName: app.storeName || app.name || '-',
+          storeAddress: app.storeAddress || app.address || '',
+          statusObj: app
+        });
+      }
+    });
+
+    // 2) myItems 중 applications에 아직 없는 순수 로컬 items도 추가
+    myItems.forEach(item => {
+      if (!bizList.some(b => b.id === item.id)) {
+        bizList.push({
+          id: item.id,
+          date: item.registeredAt || new Date().toISOString(),
+          ownerName: item.name || '-',
+          ownerPhone: item.phone || '',
+          storeName: item.name || '-',
+          storeAddress: item.address || '',
+          statusObj: {
+            status: item.receiptStatus === '승인완료' ? 'approved' : 'pending',
+            constructionStatus: item.progressStatus
+          }
+        });
+      }
+    });
+
+    // 검색 필터링
+    const searchInput = document.getElementById('search-biz-table-input');
+    const q = (searchInput ? searchInput.value.trim().toLowerCase() : '').slice(0, 30);
+
+    let filteredList = bizList;
+    if (q) {
+      filteredList = bizList.filter(b => {
+        const id = String(b.id || '').toLowerCase();
+        const owner = String(b.ownerName || '').toLowerCase();
+        const phone = String(b.ownerPhone || '').toLowerCase();
+        const store = String(b.storeName || '').toLowerCase();
+        const addr = String(b.storeAddress || '').toLowerCase();
+        return id.includes(q) || owner.includes(q) || phone.includes(q) || store.includes(q) || addr.includes(q);
+      });
+    }
+
+    if (filteredList.length === 0) {
+      const emptyMsg = q ? `검색어 [${escapeHtml(q)}] 에 일치하는 영업물건이 없습니다.` : '등록된 영업물건이 없습니다.';
+      bizRegisteredTableBody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-muted" style="text-align: center; padding: 30px 0;">${emptyMsg}</td>
+        </tr>
+      `;
+      return;
+    }
+
+    bizRegisteredTableBody.innerHTML = '';
+
+    // 최신 등록순 정렬
+    filteredList.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
+    filteredList.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--border-color)';
+      tr.style.transition = 'background 0.2s ease';
+
+      const dateOnly = formatDateOnly(item.date);
+      const statusBadge = getAppStatusBadgeHtml(item.statusObj);
+
+      tr.innerHTML = `
+        <td style="padding: 12px 16px; color: var(--text-secondary); font-family: monospace; white-space: nowrap;">${dateOnly}</td>
+        <td style="padding: 12px 16px; white-space: nowrap;">
+          <span style="font-family: monospace; font-weight: 700; color: var(--accent-secondary); font-size: 0.88rem;">${escapeHtml(String(item.id))}</span>
+        </td>
+        <td style="padding: 12px 16px;">
+          <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(item.ownerName || '-')}</div>
+          ${item.ownerPhone ? `<div style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-phone" style="color: var(--accent-primary);"></i> ${escapeHtml(item.ownerPhone)}</div>` : ''}
+        </td>
+        <td style="padding: 12px 16px;">
+          <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">${escapeHtml(item.storeName || '-')}</div>
+          ${item.storeAddress ? `<div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.storeAddress)}</div>` : ''}
+        </td>
+        <td style="padding: 12px 16px; white-space: nowrap;">${statusBadge}</td>
+        <td style="padding: 12px 16px; text-align: center; white-space: nowrap;">
+          <button class="btn btn-secondary btn-sm btn-cancel-biz-item" data-id="${item.id}" style="padding: 5px 10px; font-size: 0.72rem; border-color: rgba(239, 68, 68, 0.3); color: rgba(239, 68, 68, 0.7); background: transparent; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.borderColor='rgba(239,68,68,0.5)';" onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(239,68,68,0.3)';"><i class="fa-solid fa-trash-can"></i> 취소</button>
+        </td>
+      `;
+      bizRegisteredTableBody.appendChild(tr);
+    });
+
+    // Add click listeners to cancel buttons
+    bizRegisteredTableBody.querySelectorAll('.btn-cancel-biz-item').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.closest('button').dataset.id;
+        deleteOwnApplication(id);
+        renderBizRegisteredTable();
+        renderBusinessDashboard();
       });
     });
   };
