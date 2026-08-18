@@ -2271,20 +2271,28 @@ document.addEventListener('DOMContentLoaded', () => {
                             bizUserName = matchedUser.name;
                         }
                     }
-                    if (!bizUserName && app.referrerCode) {
-                        bizUserName = app.referrerCode;
+                    const rawAppDate = app.appliedAt || app.createdAt || '';
+                    let appDateText = '-';
+                    if (rawAppDate) {
+                        const d = new Date(rawAppDate);
+                        if (!isNaN(d.getTime())) {
+                            const padZero = (n) => String(n).padStart(2, '0');
+                            appDateText = `${d.getFullYear()}-${padZero(d.getMonth() + 1)}-${padZero(d.getDate())}`;
+                        } else {
+                            appDateText = String(rawAppDate).slice(0, 10).replace(/\./g, '-');
+                        }
                     }
 
                     card.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
                             <strong style="font-size: 1.1rem; color: var(--text-primary);">${escapeHtml(app.shopName || app.storeName)}</strong>
                             ${statusBadge}
                         </div>
                         <div style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.5; text-align: left;">
+                            <div style="margin-bottom: 2px;"><i class="fa-solid fa-calendar-days" style="color: #64748b; width: 14px;"></i> 신청일: <strong style="color: #1e293b; font-family: monospace;">${appDateText}</strong></div>
                             <div>신청번호: <span style="font-family: monospace; font-weight: 600; color: #475569;">${app.id}</span></div>
                             <div>대표자: <strong style="color: var(--text-primary);">${app.ownerName}</strong> (${app.ownerPhone})</div>
                             <div>주소: <span style="color: #475569;">${app.storeAddress}</span></div>
-                            <div>소재: <span style="color: #475569;">${app.signType}</span></div>
                             ${bizUserName ? `<div style="color: var(--accent-primary); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-user-tie" style="color: var(--accent-secondary);"></i> 담당자 : ${escapeHtml(bizUserName)}</div>` : ''}
                         </div>
                         ${fileAttachmentHtml}
