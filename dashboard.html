@@ -44,24 +44,45 @@
     <script>
         (function() {
             try {
-                var au = localStorage.getItem('activeUser');
+                var au = localStorage.getItem('activeUser') || sessionStorage.getItem('activeUser');
+                var role = 'user';
                 if (au) {
                     var user = JSON.parse(au);
-                    var role = user.role || 'user';
-                    document.documentElement.setAttribute('data-user-role', role);
-                    if (role === 'admin') {
-                        var style = document.createElement('style');
-                        style.id = 'anti-flicker-admin-style';
-                        style.textContent = `
-                            .dashboard-grid, #dashboard-normal-view, #dashboard-business-view, #dashboard-constructor-view, #conversion-area, #user-applications-section { display: none !important; }
-                            .manager-admin-panel { display: block !important; border: 1px solid var(--border-color) !important; background: var(--bg-card) !important; }
-                            #manager-panel-content { display: block !important; }
-                            #admin-stats-container { display: grid !important; }
-                            #manager-toggle-icon { display: none !important; }
-                        `;
-                        document.head.appendChild(style);
-                    }
+                    role = user.role || 'user';
                 }
+                document.documentElement.setAttribute('data-user-role', role);
+
+                var style = document.createElement('style');
+                style.id = 'anti-flicker-style';
+                if (role === 'admin') {
+                    style.textContent = `
+                        .dashboard-grid, #dashboard-normal-view, #dashboard-business-view, #dashboard-constructor-view, #conversion-area, #user-applications-section, #biz-registered-items-section { display: none !important; }
+                        .manager-admin-panel { display: block !important; border: 1px solid var(--border-color) !important; background: var(--bg-card) !important; }
+                        #manager-panel-content { display: block !important; }
+                        #admin-stats-container { display: flex !important; }
+                        #manager-toggle-icon { display: none !important; }
+                    `;
+                } else if (role === 'business') {
+                    style.textContent = `
+                        .manager-admin-panel, #conversion-area, #dashboard-normal-view, #dashboard-constructor-view { display: none !important; }
+                        #dashboard-business-view { display: block !important; }
+                        #biz-registered-items-section { display: block !important; }
+                        #user-applications-section { display: block !important; }
+                    `;
+                } else if (role === 'constructor') {
+                    style.textContent = `
+                        .manager-admin-panel, #conversion-area, #dashboard-normal-view, #dashboard-business-view, #biz-registered-items-section { display: none !important; }
+                        #dashboard-constructor-view { display: block !important; }
+                        #user-applications-section { display: block !important; }
+                    `;
+                } else {
+                    style.textContent = `
+                        .manager-admin-panel, #dashboard-business-view, #dashboard-constructor-view, #biz-registered-items-section { display: none !important; }
+                        #dashboard-normal-view { display: block !important; }
+                        #user-applications-section { display: block !important; }
+                    `;
+                }
+                document.head.appendChild(style);
             } catch (e) {}
         })();
     </script>
@@ -178,7 +199,7 @@
                                 })();
                             </script>
                         </div>
-                        <div class="dashboard-user-actions" id="conversion-area">
+                        <div class="dashboard-user-actions" id="conversion-area" style="display: none;">
                             <button id="btn-request-conversion" class="btn btn-primary"><i
                                     class="fa-solid fa-arrows-spin"></i> 영업자 회원으로 전환 신청</button>
                             <button id="btn-request-constructor" class="btn btn-secondary" style="margin-left: 8px; border-color: var(--accent-success); color: var(--accent-success);"><i
@@ -453,7 +474,7 @@
                 </div>
 
                 <!-- [TEST MODE] Manager Admin Panel -->
-                <div class="manager-admin-panel glass-panel">
+                <div class="manager-admin-panel glass-panel" style="display: none;">
                     <div class="manager-panel-header" id="manager-panel-toggle">
                         <h3
                             style="color: var(--accent-secondary); font-size: 1.15rem; display: flex; align-items: center; gap: 10px;">

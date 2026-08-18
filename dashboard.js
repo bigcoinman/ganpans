@@ -212,13 +212,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     } else {
-      // 2. Normal/Business User Mode
+      // 2. Normal/Business/Constructor User Mode
       if (dashboardGrid) dashboardGrid.style.display = '';
-      if (conversionArea) conversionArea.style.display = '';
+      if (conversionArea) {
+        conversionArea.style.display = (activeUser.role === 'business' || activeUser.role === 'constructor' || activeUser.role === 'admin' || activeUser.bizCode || activeUser.constCode) ? 'none' : 'block';
+      }
       if (userApplicationsSection) userApplicationsSection.style.display = 'block';
       
-      if (dashboardTitle) dashboardTitle.textContent = '마이페이지 및 영업자 대시보드';
-      if (dashboardSubtitle) dashboardSubtitle.textContent = '회원님의 상태를 확인하고 영업물건 등록 및 진행 현황을 실시간으로 관리하세요.';
+      if (activeUser.role === 'business') {
+        if (dashboardTitle) dashboardTitle.textContent = '영업자 전용 대시보드';
+        if (dashboardSubtitle) dashboardSubtitle.textContent = '회원님의 상태를 확인하고 영업물건 등록 및 진행 현황을 실시간으로 관리하세요.';
+      } else if (activeUser.role === 'constructor') {
+        if (dashboardTitle) dashboardTitle.textContent = '시공업체 전용 대시보드';
+        if (dashboardSubtitle) dashboardSubtitle.textContent = '배정된 시공 물건 관리 및 완료 보고를 실시간으로 진행하세요.';
+      } else {
+        if (dashboardTitle) dashboardTitle.textContent = '마이페이지 및 영업자 대시보드';
+        if (dashboardSubtitle) dashboardSubtitle.textContent = '회원님의 상태를 확인하고 영업물건 등록 및 진행 현황을 실시간으로 관리하세요.';
+      }
       
       // Completely hide manager admin panel for non-admins
       if (managerAdminPanel) {
