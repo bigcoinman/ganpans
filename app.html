@@ -1292,12 +1292,10 @@
 
                     <!-- 2. 내 온라인 간편 지원 신청 내역 (검색 + 접기/펼치기 토글 + 현장사진 2줄 버튼) -->
                     <div class="app-section" style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <h4 id="toggle-user-apps-mob-header" onclick="window.toggleUserAppsMob && window.toggleUserAppsMob()" class="section-title" style="font-size: 1.15rem; margin: 0; color: var(--accent-primary); cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; padding: 4px 0; -webkit-tap-highlight-color: transparent;">
-                                <span style="display: inline-flex; align-items: center; gap: 8px;">
-                                    <i class="fa-solid fa-file-signature"></i> 내 온라인 간편 지원 신청 내역
-                                </span>
-                                <span id="user-apps-mob-toggle-badge" onclick="event.stopPropagation(); window.toggleUserAppsMob && window.toggleUserAppsMob()" style="font-size: 0.82rem; padding: 6px 14px; border-radius: 9999px; background: #0f172a; color: #ffffff; font-weight: 700; border: 1px solid #1e293b; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.25); cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"><i class="fa-solid fa-chevron-down"></i> 전체 펼치기</span>
+                        <div style="margin-bottom: 12px;">
+                            <h4 id="toggle-user-apps-mob-header" class="section-title" style="font-size: 1.15rem; margin: 0; color: var(--accent-primary); cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0; -webkit-tap-highlight-color: transparent;">
+                                <i class="fa-solid fa-file-signature"></i> 내 온라인 간편 지원 신청 내역
+                                <span id="user-apps-mob-toggle-badge" style="font-size: 0.78rem; padding: 3px 10px; border-radius: 9999px; background: rgba(99, 102, 241, 0.12); color: #4f46e5; font-weight: 700; border: 1px solid rgba(99, 102, 241, 0.3); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; touch-action: manipulation; transition: all 0.2s;"><i class="fa-solid fa-chevron-down"></i> 전체 펼치기</span>
                             </h4>
                         </div>
                         <div style="margin-bottom: 12px;">
@@ -1313,13 +1311,11 @@
                         <div style="margin-bottom: 12px;">
                             <input type="text" id="search-biz-items-mob" placeholder="아이디 / 이름 / 코드 / 상호명 검색" maxlength="30" style="padding: 10px 14px; font-size: 0.95rem; border-radius: 8px; border: 1.5px solid #cbd5e1; width: 100%; box-sizing: border-box; background: #ffffff; font-weight: 500;">
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                            <div style="width: 100%;">
-                                <h4 id="toggle-biz-items-mob-header" onclick="window.toggleBizItemsMob && window.toggleBizItemsMob()" class="section-title" style="font-size: 1.15rem; margin: 0; color: var(--accent-secondary); cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; padding: 4px 0; -webkit-tap-highlight-color: transparent;">
-                                    <span style="display: inline-flex; align-items: center; gap: 8px;">
-                                        <i class="fa-solid fa-list-check"></i> 내 영업물건 현황 및 진행상황
-                                    </span>
-                                    <span id="biz-items-mob-toggle-badge" onclick="event.stopPropagation(); window.toggleBizItemsMob && window.toggleBizItemsMob()" style="font-size: 0.82rem; padding: 6px 14px; border-radius: 9999px; background: #0f172a; color: #ffffff; font-weight: 700; border: 1px solid #1e293b; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.25); cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"><i class="fa-solid fa-chevron-down"></i> 전체 펼치기</span>
+                        <div style="margin-bottom: 12px;">
+                            <div>
+                                <h4 id="toggle-biz-items-mob-header" class="section-title" style="font-size: 1.15rem; margin: 0; color: var(--accent-secondary); cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0; -webkit-tap-highlight-color: transparent;">
+                                    <i class="fa-solid fa-list-check"></i> 내 영업물건 현황 및 진행상황
+                                    <span id="biz-items-mob-toggle-badge" style="font-size: 0.78rem; padding: 3px 10px; border-radius: 9999px; background: rgba(217, 119, 6, 0.12); color: #d97706; font-weight: 700; border: 1px solid rgba(217, 119, 6, 0.3); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; touch-action: manipulation; transition: all 0.2s;"><i class="fa-solid fa-chevron-down"></i> 전체 펼치기</span>
                                 </h4>
                                 <div style="font-size: 0.78rem; color: var(--accent-secondary); margin-top: 4px; font-weight: 600;">
                                     <i class="fa-solid fa-circle-check"></i> 실제 공단/진흥원에 신청접수된 물건만 등록관리

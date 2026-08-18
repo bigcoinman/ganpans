@@ -1118,9 +1118,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalCount = filtered.length;
         const toggleBadge = document.getElementById('user-apps-mob-toggle-badge');
         if (toggleBadge) {
-            toggleBadge.style.background = '#0f172a';
-            toggleBadge.style.color = '#ffffff';
-            toggleBadge.style.border = '1px solid #1e293b';
+            toggleBadge.style.background = userAppsMobExpanded ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.12)';
+            toggleBadge.style.color = '#4f46e5';
+            toggleBadge.style.border = '1px solid rgba(99, 102, 241, 0.3)';
+            toggleBadge.style.fontSize = '0.78rem';
+            toggleBadge.style.padding = '3px 10px';
+            toggleBadge.style.borderRadius = '9999px';
+            toggleBadge.style.display = 'inline-flex';
+            toggleBadge.style.alignItems = 'center';
+            toggleBadge.style.gap = '4px';
+            toggleBadge.style.cursor = 'pointer';
             if (userAppsMobExpanded) {
                 toggleBadge.innerHTML = '<i class="fa-solid fa-chevron-up"></i> 기본 3건만 접기';
             } else {
@@ -1251,9 +1258,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalCount = filtered.length;
         const toggleBadge = document.getElementById('biz-items-mob-toggle-badge');
         if (toggleBadge) {
-            toggleBadge.style.background = '#0f172a';
-            toggleBadge.style.color = '#ffffff';
-            toggleBadge.style.border = '1px solid #1e293b';
+            toggleBadge.style.background = bizItemsMobExpanded ? 'rgba(217, 119, 6, 0.2)' : 'rgba(217, 119, 6, 0.12)';
+            toggleBadge.style.color = '#d97706';
+            toggleBadge.style.border = '1px solid rgba(217, 119, 6, 0.3)';
+            toggleBadge.style.fontSize = '0.78rem';
+            toggleBadge.style.padding = '3px 10px';
+            toggleBadge.style.borderRadius = '9999px';
+            toggleBadge.style.display = 'inline-flex';
+            toggleBadge.style.alignItems = 'center';
+            toggleBadge.style.gap = '4px';
+            toggleBadge.style.cursor = 'pointer';
             if (bizItemsMobExpanded) {
                 toggleBadge.innerHTML = '<i class="fa-solid fa-chevron-up"></i> 기본 3건만 접기';
             } else {
@@ -1734,16 +1748,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const toggleUserAppsMobHeader = document.getElementById('toggle-user-apps-mob-header');
-    const userAppsMobToggleBadge = document.getElementById('user-apps-mob-toggle-badge');
     if (toggleUserAppsMobHeader) {
         toggleUserAppsMobHeader.addEventListener('click', (e) => {
-            if (e.target.id === 'user-apps-mob-toggle-badge' || e.target.closest('#user-apps-mob-toggle-badge')) return;
-            window.toggleUserAppsMob();
-        });
-    }
-    if (userAppsMobToggleBadge) {
-        userAppsMobToggleBadge.addEventListener('click', (e) => {
-            e.stopPropagation();
+            e.preventDefault();
             window.toggleUserAppsMob();
         });
     }
@@ -1756,16 +1763,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const toggleBizItemsMobHeader = document.getElementById('toggle-biz-items-mob-header');
-    const bizItemsMobToggleBadge = document.getElementById('biz-items-mob-toggle-badge');
     if (toggleBizItemsMobHeader) {
         toggleBizItemsMobHeader.addEventListener('click', (e) => {
-            if (e.target.id === 'biz-items-mob-toggle-badge' || e.target.closest('#biz-items-mob-toggle-badge')) return;
-            window.toggleBizItemsMob();
-        });
-    }
-    if (bizItemsMobToggleBadge) {
-        bizItemsMobToggleBadge.addEventListener('click', (e) => {
-            e.stopPropagation();
+            e.preventDefault();
             window.toggleBizItemsMob();
         });
     }
