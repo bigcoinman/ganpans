@@ -2423,6 +2423,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
+                    const appsMob = JSON.parse(localStorage.getItem('applications')) || [];
+                    const matchingApp = appsMob.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
+                    const rawDate = item.createdAt || item.registeredAt || item.appliedAt || item.date || (matchingApp ? (matchingApp.appliedAt || matchingApp.createdAt) : '') || '';
+                    let itemDateText = '-';
+                    if (rawDate) {
+                        const d = new Date(rawDate);
+                        if (!isNaN(d.getTime())) {
+                            const padZero = (n) => String(n).padStart(2, '0');
+                            itemDateText = `${d.getFullYear()}-${padZero(d.getMonth() + 1)}-${padZero(d.getDate())}`;
+                        } else {
+                            itemDateText = String(rawDate).slice(0, 10).replace(/\./g, '-');
+                        }
+                    }
+
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                             <div style="font-size: 1.02rem; font-weight: bold; color: var(--text-primary);">
@@ -2434,6 +2448,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </button>
                         </div>
                         <div style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.4;"><i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> 주소: <span style="color: #475569;">${escapeHtml(item.address)}</span></div>
+                        <div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 3px;"><i class="fa-solid fa-calendar-days" style="color: #64748b;"></i> 신청일: <strong style="color: #1e293b; font-family: monospace;">${itemDateText}</strong></div>
                         ${item.phone ? `<div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 3px;"><i class="fa-solid fa-phone" style="color: #64748b;"></i> 연락처: <strong style="color: var(--accent-primary);">${escapeHtml(item.phone)}</strong></div>` : ''}
                         
                         <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">

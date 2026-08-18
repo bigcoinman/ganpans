@@ -1537,6 +1537,20 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
 
+        const apps = JSON.parse(localStorage.getItem('applications')) || [];
+        const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
+        const rawDate = item.createdAt || item.registeredAt || item.appliedAt || item.date || (matchingApp ? (matchingApp.appliedAt || matchingApp.createdAt) : '') || '';
+        let itemDateText = '-';
+        if (rawDate) {
+          const d = new Date(rawDate);
+          if (!isNaN(d.getTime())) {
+            const padZero = (n) => String(n).padStart(2, '0');
+            itemDateText = `${d.getFullYear()}-${padZero(d.getMonth() + 1)}-${padZero(d.getDate())}`;
+          } else {
+            itemDateText = String(rawDate).slice(0, 10).replace(/\./g, '-');
+          }
+        }
+
         row.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <div class="manager-item-row-title" style="font-weight: 700; font-size: 0.98rem; color: var(--text-primary);">
@@ -1548,9 +1562,10 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
           </div>
           
-          <div style="font-size: 0.82rem; color: var(--text-secondary); text-align: left;">
-            <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> 주소: ${escapeHtml(item.address)}</div>
-            ${item.phone ? `<div style="margin-top: 2px;"><i class="fa-solid fa-phone" style="width: 14px; color: #64748b;"></i> 연락처: ${escapeHtml(item.phone)}</div>` : ''}
+          <div style="font-size: 0.82rem; color: var(--text-secondary); text-align: left; display: flex; flex-direction: column; gap: 3px;">
+            <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> 주소: <span style="color: #475569;">${escapeHtml(item.address)}</span></div>
+            <div><i class="fa-solid fa-calendar-days" style="width: 14px; color: #64748b;"></i> 신청일: <strong style="color: #1e293b; font-family: monospace;">${itemDateText}</strong></div>
+            ${item.phone ? `<div><i class="fa-solid fa-phone" style="width: 14px; color: #64748b;"></i> 연락처: <strong style="color: var(--accent-primary);">${escapeHtml(item.phone)}</strong></div>` : ''}
           </div>
           
           <div class="status-select-wrapper" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 6px; padding-top: 8px; border-top: 1px dashed #f1f5f9;">
