@@ -1078,10 +1078,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const inquiriesPerPage = 10;
 
   let userAppsCurrentPage = 1;
-  const userAppsPerPage = 10;
+  const userAppsPerPage = 3;
 
   let bizTableCurrentPage = 1;
-  const bizTablePerPage = 10;
+  const bizTablePerPage = 3;
 
   function renderPaginationControls(totalCount, perPage, currentPage, callbackFnName) {
     if (totalCount <= perPage) return '';
