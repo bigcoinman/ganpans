@@ -1563,8 +1563,8 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           
           <div style="font-size: 0.82rem; color: var(--text-secondary); text-align: left; display: flex; flex-direction: column; gap: 3px;">
-            <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> 주소: <span style="color: #475569;">${escapeHtml(item.address)}</span></div>
             <div><i class="fa-solid fa-calendar-days" style="width: 14px; color: #64748b;"></i> 신청일: <strong style="color: #1e293b; font-family: monospace;">${itemDateText}</strong></div>
+            <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> 주소: <span style="color: #475569;">${escapeHtml(item.address)}</span></div>
             ${item.phone ? `<div><i class="fa-solid fa-phone" style="width: 14px; color: #64748b;"></i> 연락처: <strong style="color: var(--accent-primary);">${escapeHtml(item.phone)}</strong></div>` : ''}
           </div>
           
