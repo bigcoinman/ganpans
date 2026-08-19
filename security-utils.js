@@ -188,25 +188,61 @@ async function downloadApplicationPhotos(appOrId) {
   if (typeof JSZip !== 'undefined') {
     try {
       const zip = new JSZip();
-      const folderName = `${storeName}_현장사진`;
-      const imgFolder = zip.folder(folderName) || zip;
 
-      photos.forEach((photoData, idx) => {
+      for (let idx = 0; idx < photos.length; idx++) {
+        const photoData = photos[idx];
         let ext = 'jpg';
-        let base64Part = photoData;
+        let mime = 'image/jpeg';
         if (photoData.startsWith('data:image/')) {
-          const matches = photoData.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-          if (matches && matches.length === 3) {
+          const matches = photoData.match(/^data:image\/([a-zA-Z0-9+]+);/);
+          if (matches && matches[1]) {
             ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-            base64Part = matches[2];
-          } else {
-            base64Part = photoData.replace(/^data:image\/[a-zA-Z0-9]+;base64,/, '');
+            mime = `image/${matches[1]}`;
           }
         }
-        imgFolder.file(`현장사진_${idx + 1}.${ext}`, base64Part, { base64: true });
-      });
 
-      const content = await zip.generateAsync({ type: 'blob' });
+        let blob = null;
+        if (photoData.startsWith('data:') || photoData.startsWith('blob:')) {
+          try {
+            const res = await fetch(photoData);
+            blob = await res.blob();
+          } catch (eFetch) {
+            const base64Clean = photoData.replace(/^data:image\/[a-zA-Z0-9+]+;base64,/, '').trim();
+            const byteString = atob(base64Clean);
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+              ia[i] = byteString.charCodeAt(i);
+            }
+            blob = new Blob([ab], { type: mime });
+          }
+        } else if (photoData.startsWith('http')) {
+          try {
+            const res = await fetch(photoData);
+            blob = await res.blob();
+          } catch (eHttp) {}
+        } else {
+          try {
+            const byteString = atob(photoData.trim());
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+              ia[i] = byteString.charCodeAt(i);
+            }
+            blob = new Blob([ab], { type: mime });
+          } catch (eB64) {}
+        }
+
+        if (blob) {
+          zip.file(`${storeName}_현장사진_${idx + 1}.${ext}`, blob);
+        }
+      }
+
+      const content = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
       const zipFileName = `${storeName}_현장사진_전체(${photos.length}장).zip`;
       const zipUrl = URL.createObjectURL(content);
       const a = document.createElement('a');
