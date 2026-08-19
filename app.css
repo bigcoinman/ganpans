@@ -2594,3 +2594,8 @@ body.mobile-app-body {
 .uploaded-photo-remove:hover {
   background: #ef4444;
 }
+
+.step-pane,
+.step-pane h3 {
+  scroll-margin-top: 110px !important;
+}

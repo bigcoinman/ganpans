@@ -1974,6 +1974,11 @@ input:checked+.slider-round:before {
 .step-pane {
   display: none;
   animation: fadeIn 0.5s ease;
+  scroll-margin-top: 110px;
+}
+
+.step-pane h3 {
+  scroll-margin-top: 110px;
 }
 
 .step-pane.active {

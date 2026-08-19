@@ -1339,16 +1339,21 @@ function initWizard() {
   }
 
   function scrollToActiveStep() {
-    setTimeout(() => {
+    const doScroll = () => {
       const activePane = document.querySelector('.step-pane.active');
-      if (activePane) {
-        // 상단 헤더 네비게이션 높이를 감안하여 여백(90px) 확보 후 스크롤
-        const headerOffset = 90;
-        const elementPosition = activePane.getBoundingClientRect().top + window.pageYOffset;
-        const offsetPosition = elementPosition - headerOffset;
+      const targetHeader = activePane ? (activePane.querySelector('h3') || activePane) : null;
+      if (targetHeader) {
+        // 1. 네이티브 scrollIntoView (CSS scroll-margin-top: 110px 적용)
+        targetHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // 2. 브라우저 호환성을 위한 좌표 기반 스크롤 계산 보정
+        const headerOffset = 100;
+        const rect = targetHeader.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        const targetTop = rect.top + scrollTop - headerOffset;
 
         window.scrollTo({
-          top: Math.max(0, offsetPosition),
+          top: Math.max(0, targetTop),
           behavior: 'smooth'
         });
       } else {
@@ -1357,7 +1362,11 @@ function initWizard() {
           applySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }
-    }, 50);
+    };
+
+    requestAnimationFrame(doScroll);
+    setTimeout(doScroll, 60);
+    setTimeout(doScroll, 200);
   }
 
   prevBtn.addEventListener('click', () => {
