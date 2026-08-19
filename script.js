@@ -1465,29 +1465,43 @@ function initWizard() {
       // 휴대폰 번호 기반 자동 계정 생성 규격
       const phoneDigits = ownerPhone.replace(/[^0-9]/g, '');
       const autoPw = 'g-' + (phoneDigits.length >= 8 ? phoneDigits.slice(-8) : phoneDigits.padStart(8, '0'));
+      const hashedPassword = (typeof sha256 === 'function') ? sha256(autoPw) : autoPw;
 
-      let userId = '';
-      let loginNoticeId = '';
-      let loginNoticePw = '';
+      let userId = phoneDigits || ('guest_' + Date.now());
+      let loginNoticeId = phoneDigits;
+      let loginNoticePw = autoPw; // 항상 g-XXXXXXXX 임시 비밀번호 표시
       let isNewAccount = false;
 
-      if (activeUser) {
-        // 1) 이미 로그인된 회원이 신청한 경우
+      if (activeUser && activeUser.role !== 'normal') {
+        // 관리자/영업자/시공사 계정으로 로그인된 상태에서 신청한 경우
         userId = activeUser.id;
         loginNoticeId = activeUser.id;
-        loginNoticePw = '(기존 회원 비밀번호)';
+        loginNoticePw = autoPw;
       } else {
-        // 2) 미로그인 상태인 경우: 기존 회원 DB에서 휴대폰/아이디 일치 여부 확인
-        const existingUser = users.find(u => {
+        // 일반 신청자: 전화번호 기반 계정 조회 및 생성/업데이트
+        const existingIdx = users.findIndex(u => {
           const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
           return (uPhoneDigits && uPhoneDigits === phoneDigits) || (u.id && u.id.toLowerCase() === phoneDigits.toLowerCase());
         });
 
-        if (existingUser) {
-          // 기존 가입 회원 보호: 비밀번호는 변경하지 않고 기존 계정에 연결
-          userId = existingUser.id;
-          loginNoticeId = existingUser.id;
-          loginNoticePw = '(기존 비밀번호로 로그인)';
+        if (existingIdx !== -1) {
+          // 기존 계정이 있는 경우: 비밀번호를 g-XXXXXXXX로 최신화하여 언제든 로그인 가능하도록 보장
+          const existing = users[existingIdx];
+          userId = existing.id;
+          loginNoticeId = existing.id;
+          loginNoticePw = autoPw;
+
+          if (existing.role === 'normal' || !existing.role) {
+            users[existingIdx] = {
+              ...existing,
+              phone: ownerPhone,
+              pw: hashedPassword
+            };
+            safeSetStorage('users', users);
+            if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
+              window.SupabaseSync.updateUser(existing.id, { phone: ownerPhone, password_hash: hashedPassword });
+            }
+          }
         } else {
           // 신규 신청자: 휴대폰 번호(숫자만) 아이디 및 g-XXXXXX 임시 비밀번호로 자동 계정 생성
           isNewAccount = true;
@@ -1495,7 +1509,6 @@ function initWizard() {
           loginNoticeId = phoneDigits;
           loginNoticePw = autoPw;
 
-          const hashedPassword = (typeof sha256 === 'function') ? sha256(autoPw) : autoPw;
           const newUser = {
             id: phoneDigits,
             name: ownerName,
