@@ -1365,14 +1365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 영업자 전용 대시보드 상단 '최근 신청한 업체' 엑셀 다운로드 이벤트
-  const btnExportBizRecentExcel = document.getElementById('btn-export-biz-recent-excel');
-  if (btnExportBizRecentExcel) {
-    btnExportBizRecentExcel.addEventListener('click', (e) => {
-      e.stopPropagation();
-      exportBizRegisteredItemsToExcel();
-    });
-  }
+
 
   // 온라인 간편 지원 신청 내역: 최근 3건 요약 <-> 10건 페이징 전체 펼치기 토글
   const toggleUserAppsHeader = document.getElementById('toggle-user-apps-header');
