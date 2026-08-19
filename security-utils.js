@@ -586,14 +586,15 @@ window.SupabaseSync = {
   // 지원 신청서 객체를 Supabase DB 컬럼으로 매핑
   mapAppToDb(app) {
     if (!app) return null;
+    const safeUserId = (app.userId && app.userId !== 'guest') ? (app.userId || app.user_id) : null;
     return {
       id: String(app.id),
-      user_id: app.userId || app.user_id || null,
+      user_id: safeUserId,
       owner_name: app.ownerName || app.owner_name || '',
       phone: app.ownerPhone || app.phone || '',
       store_name: app.storeName || app.store_name || '',
       store_address: app.storeAddress || app.store_address || '',
-      sign_type: app.signType || app.sign_type || '',
+      sign_type: app.signType || app.sign_type || '간판지원신청',
       image_url: app.fileName || app.image_url || null,
       referrer_code: app.referrerCode || app.referrer_code || '',
       status: app.status || 'pending',
@@ -608,14 +609,15 @@ window.SupabaseSync = {
 
   mapAppToBaseDb(app) {
     if (!app) return null;
+    const safeUserId = (app.userId && app.userId !== 'guest') ? (app.userId || app.user_id) : null;
     return {
       id: String(app.id),
-      user_id: app.userId || app.user_id || null,
+      user_id: safeUserId,
       owner_name: app.ownerName || app.owner_name || '',
       phone: app.ownerPhone || app.phone || '',
       store_name: app.storeName || app.store_name || '',
       store_address: app.storeAddress || app.store_address || '',
-      sign_type: app.signType || app.sign_type || '',
+      sign_type: app.signType || app.sign_type || '간판지원신청',
       image_url: app.fileName || app.image_url || null,
       referrer_code: app.referrerCode || app.referrer_code || '',
       status: app.status || 'pending'
@@ -711,20 +713,48 @@ window.SupabaseSync = {
     }
   },
 
-  // 4. 지원 신청서 저장/갱신
+  // 4. 지원 신청서 저장/갱신 (안전한 Fallback 및 외래키 제약 보호)
   async upsertApplication(app) {
     if (!window.supabaseClient || !app || !app.id) return false;
+
+    // 1) user_id가 guest가 아닌 실사용자 아이디인 경우 users 테이블에 먼저 upsert 보장
+    const safeUserId = (app.userId && app.userId !== 'guest') ? (app.userId || app.user_id) : null;
+    if (safeUserId) {
+      try {
+        const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+        const targetUser = localUsers.find(u => u.id === safeUserId);
+        if (targetUser) {
+          await this.upsertUser(targetUser);
+        }
+      } catch (eUser) {}
+    }
+
     const fullPayload = this.mapAppToDb(app);
 
     try {
       const { error } = await window.supabaseClient.from('applications').upsert([fullPayload], { onConflict: 'id' });
       if (!error) return true;
 
-      if (error.code === 'PGRST204' || (error.message && error.message.includes('column'))) {
-        const basePayload = this.mapAppToBaseDb(app);
-        const { error: retryErr } = await window.supabaseClient.from('applications').upsert([basePayload], { onConflict: 'id' });
-        if (!retryErr) return true;
+      console.warn('Supabase upsertApplication 1st error:', error.message);
+
+      // Foreign key error(23503)인 경우 user_id를 null로 변경하여 재시도
+      if (error.code === '23503' || (error.message && error.message.includes('foreign key'))) {
+        fullPayload.user_id = null;
+        const { error: fkErr } = await window.supabaseClient.from('applications').upsert([fullPayload], { onConflict: 'id' });
+        if (!fkErr) return true;
       }
+
+      // 컬럼 누락 에러인 경우 basePayload로 안전하게 재시도
+      const basePayload = this.mapAppToBaseDb(app);
+      const { error: retryErr } = await window.supabaseClient.from('applications').upsert([basePayload], { onConflict: 'id' });
+      if (!retryErr) return true;
+
+      // basePayload에서도 foreign key 오류 시 user_id를 null로 재시도
+      basePayload.user_id = null;
+      const { error: finalErr } = await window.supabaseClient.from('applications').upsert([basePayload], { onConflict: 'id' });
+      if (!finalErr) return true;
+
+      console.error('Supabase upsertApplication final error:', finalErr.message);
     } catch (err) {
       console.error('Supabase upsertApplication exception:', err);
     }
@@ -936,7 +966,11 @@ window.SupabaseSync = {
             const cur = localApps[idx];
             if (cur.status !== mapped.status || 
                 cur.constructionStatus !== mapped.constructionStatus ||
-                cur.assignedConstructorId !== mapped.assignedConstructorId) {
+                cur.assignedConstructorId !== mapped.assignedConstructorId ||
+                cur.storeName !== mapped.storeName ||
+                cur.storeAddress !== mapped.storeAddress ||
+                cur.ownerName !== mapped.ownerName ||
+                cur.ownerPhone !== mapped.ownerPhone) {
               localApps[idx] = { ...cur, ...mapped };
               appsChanged = true;
             }
@@ -1006,10 +1040,34 @@ window.SupabaseSync = {
     return { usersChanged, appsChanged, inqChanged };
   },
 
-  // 8. 자동 동기화 시작 (주기적 폴링 + 탭 활성화 시 즉시 동기화)
-  initAutoSync(intervalMs = 8000) {
-    // 초기 로드 시 1회 즉시 실행
-    setTimeout(() => this.syncAllData(), 300);
+  // 8. Supabase Realtime WebSocket 실시간 채널 구독 (0초 지연 실시간 동기화)
+  initRealtimeSubscription() {
+    if (!window.supabaseClient || this.realtimeChannel) return;
+    try {
+      this.realtimeChannel = window.supabaseClient
+        .channel('public:ganpans-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'applications' }, () => {
+          this.syncAllData();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+          this.syncAllData();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'inquiries' }, () => {
+          this.syncAllData();
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('Supabase Realtime subscription exception:', err);
+    }
+  },
+
+  // 9. 자동 동기화 시작 (실시간 웹소켓 + 주기적 폴링 + 탭 활성화 시 즉시 동기화)
+  initAutoSync(intervalMs = 5000) {
+    // 초기 로드 시 1회 즉시 실행 및 웹소켓 실시간 리스너 연결
+    setTimeout(() => {
+      this.syncAllData();
+      this.initRealtimeSubscription();
+    }, 200);
 
     // 탭 포커스 / 활성화 시 즉시 동기화
     if (typeof document !== 'undefined') {
@@ -1023,7 +1081,7 @@ window.SupabaseSync = {
       });
     }
 
-    // 백그라운드 주기적 폴링
+    // 백그라운드 주기적 폴링 (웹소켓 연결 유실 대비)
     if (this.autoSyncTimer) clearInterval(this.autoSyncTimer);
     this.autoSyncTimer = setInterval(() => {
       this.syncAllData();
@@ -1033,5 +1091,5 @@ window.SupabaseSync = {
 
 // 페이지 로드 시 SupabaseSync 자동 가동
 if (typeof window !== 'undefined') {
-  window.SupabaseSync.initAutoSync(8000);
+  window.SupabaseSync.initAutoSync(5000);
 }

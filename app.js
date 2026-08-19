@@ -1945,6 +1945,15 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDrawerProfile();
         updateHeaderAuthButton();
         renderStatusTab();
+
+        // 역할별 모바일 대시보드 화면 실시간 즉시 갱신
+        if (activeUser && activeUser.role === 'admin') {
+            renderAdminDashboardMob(true);
+        } else if (activeUser && activeUser.role === 'business') {
+            if (typeof renderBizDashboardMob === 'function') renderBizDashboardMob(true);
+        } else if (activeUser && activeUser.role === 'constructor') {
+            if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
+        }
     });
 
     async function syncAdminDataFromSupabaseMob() {

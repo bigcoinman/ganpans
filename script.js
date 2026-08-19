@@ -1457,9 +1457,13 @@ function initWizard() {
       window.KakaoNotifier.notifyApplication(newApp);
     }
 
-    // Supabase Sync
+    // Supabase Sync & 실시간 즉시 전파
     if (window.SupabaseSync) {
-      window.SupabaseSync.upsertApplication(newApp);
+      window.SupabaseSync.upsertApplication(newApp).then(() => {
+        if (typeof window.SupabaseSync.syncAllData === 'function') {
+          window.SupabaseSync.syncAllData();
+        }
+      });
     }
 
     // 추천 코드 자동 연동 (방안 A)
