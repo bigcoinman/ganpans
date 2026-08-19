@@ -1741,6 +1741,8 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         });
       }
+    });
+
     allBusinessItems.sort((a, b) => {
       const timeA = new Date(a.item.registeredAt || a.item.appliedAt || a.item.createdAt || a.item.created_at || a.user.createdAt || 0).getTime();
       const timeB = new Date(b.item.registeredAt || b.item.appliedAt || b.item.createdAt || b.item.created_at || b.user.createdAt || 0).getTime();
@@ -2046,35 +2048,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSessionUI();
   };
   window.reassignConstructorItem = reassignConstructorItem;
-
-  // --- Collapsible Sections Toggle for PC Admin Dashboard ---
-  const toggleAdminSection = (containerId, headerEl, event) => {
-    if (event && event.target && event.target.tagName === 'INPUT') {
-      return;
-    }
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    const isHidden = container.style.display === 'none';
-    const toggleBtn = headerEl ? headerEl.querySelector('.btn-toggle-admin') : null;
-    const textSpan = toggleBtn ? toggleBtn.querySelector('.toggle-text') : null;
-    const iconEl = toggleBtn ? toggleBtn.querySelector('.toggle-icon') : null;
-
-    if (isHidden) {
-      container.style.display = 'block';
-      if (textSpan) textSpan.textContent = '접기';
-      if (iconEl) {
-        iconEl.className = 'fa-solid fa-chevron-up toggle-icon';
-      }
-    } else {
-      container.style.display = 'none';
-      if (textSpan) textSpan.textContent = '펼치기';
-      if (iconEl) {
-        iconEl.className = 'fa-solid fa-chevron-down toggle-icon';
-      }
-    }
-  };
-  window.toggleAdminSection = toggleAdminSection;
 
   // --- Account Deletion (회원탈퇴) ---
   const btnDeleteAccount = document.getElementById('btn-delete-account');
