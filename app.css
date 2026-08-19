@@ -525,9 +525,9 @@ body.mobile-app-body {
     text-align: center !important;
     height: auto !important;
     min-height: auto !important;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.03) !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
     background: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.07) !important;
+    border: 1.5px solid #cbd5e1 !important; /* 외곽선 두께 및 구분감 강화 */
 }
 
 .process-step-card .step-badge {
@@ -591,10 +591,11 @@ body.mobile-app-body {
     letter-spacing: -0.02em !important;
 }
 
-/* 4단계: 시공 업체로 입금 (오렌지 테마) */
+/* 4단계: 시공 업체로 입금 (오렌지 테마 - 외곽선 및 배경 강화) */
 .process-step-card.highlighted-step {
-    border: 1px solid rgba(234, 88, 12, 0.35) !important;
-    background: rgba(255, 247, 237, 0.85) !important;
+    border: 1.5px solid rgba(234, 88, 12, 0.45) !important;
+    background: rgba(255, 247, 237, 0.95) !important;
+    box-shadow: 0 4px 14px rgba(234, 88, 12, 0.08) !important;
 }
 
 .process-step-card.highlighted-step .step-badge {
@@ -614,10 +615,11 @@ body.mobile-app-body {
     margin-top: 3px !important;
 }
 
-/* 7단계: 지원 사업 완료 (초록 테마) */
+/* 7단계: 지원 사업 완료 (초록 테마 - 외곽선 및 배경 강화) */
 .process-step-card.success-step {
-    border: 1px solid rgba(16, 185, 129, 0.35) !important;
-    background: rgba(236, 253, 245, 0.85) !important;
+    border: 1.5px solid rgba(16, 185, 129, 0.45) !important;
+    background: rgba(236, 253, 245, 0.95) !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.08) !important;
 }
 
 .process-step-card.success-step .step-badge.success-badge {
