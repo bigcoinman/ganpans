@@ -328,8 +328,8 @@ function compressImageFile(file, maxSizeBytes = 2 * 1024 * 1024) {
         let width = img.width;
         let height = img.height;
 
-        // 해상도 최적화 (긴 변 기준 최대 1600px)
-        const max_size = 1600;
+        // 해상도 최적화 (긴 변 기준 최대 1000px - 브라우저 저장 한도 보호 및 빠른 업로드)
+        const max_size = 1000;
         if (width > max_size || height > max_size) {
           if (width > height) {
             height = Math.round(height * (max_size / width));
@@ -345,12 +345,13 @@ function compressImageFile(file, maxSizeBytes = 2 * 1024 * 1024) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        let quality = 0.85;
+        let quality = 0.75;
         let dataUrl = canvas.toDataURL('image/jpeg', quality);
         let approximateSize = Math.round((dataUrl.length - 22) * 3 / 4);
 
-        // 2MB 이하가 될 때까지 화질 품질(quality)을 단계적으로 축소
-        while (approximateSize > maxSizeBytes && quality > 0.1) {
+        // 300KB 이하가 될 때까지 화질 품질(quality)을 단계적으로 축소 (최대 10장 저장 안정성 확보)
+        const targetMax = Math.min(maxSizeBytes, 300 * 1024);
+        while (approximateSize > targetMax && quality > 0.2) {
           quality -= 0.1;
           dataUrl = canvas.toDataURL('image/jpeg', quality);
           approximateSize = Math.round((dataUrl.length - 22) * 3 / 4);

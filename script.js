@@ -1391,201 +1391,259 @@ function initWizard() {
     }
   });
 
+  function safeSetStorage(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (quotaErr) {
+      console.warn(`localStorage quota exceeded for ${key}, trimming large payloads...`, quotaErr);
+      try {
+        if (key === 'applications' && Array.isArray(value)) {
+          const lightweightApps = value.map((app, idx) => {
+            if (idx < value.length - 1) {
+              return { ...app, photos: [], fileData: '' };
+            }
+            return {
+              ...app,
+              photos: (app.photos && app.photos.length > 0) ? [app.photos[0]] : [],
+              fileData: (app.photos && app.photos.length > 0) ? app.photos[0] : ''
+            };
+          });
+          localStorage.setItem(key, JSON.stringify(lightweightApps));
+          return true;
+        } else if (key === 'users' && Array.isArray(value)) {
+          const lightweightUsers = value.map(u => {
+            if (u.items && Array.isArray(u.items)) {
+              const lightItems = u.items.map(it => ({ ...it, photos: [] }));
+              return { ...u, items: lightItems };
+            }
+            return u;
+          });
+          localStorage.setItem(key, JSON.stringify(lightweightUsers));
+          return true;
+        }
+      } catch (e2) {
+        console.error(`Final localStorage setItem failed for ${key}:`, e2);
+      }
+    }
+    return false;
+  }
+
   function submitApplication() {
-    const agreeTerms = document.getElementById('agree-terms');
-    if (agreeTerms && !agreeTerms.checked) {
-      alert('개인정보 수집 및 심사 규정 동의에 체크해 주세요.');
-      return;
-    }
+    try {
+      const agreeTerms = document.getElementById('agree-terms');
+      if (agreeTerms && !agreeTerms.checked) {
+        alert('개인정보 수집 및 심사 규정 동의에 체크해 주세요.');
+        return;
+      }
 
-    const now = new Date();
+      const now = new Date();
 
-    // Save application to localStorage
-    const ownerName = document.getElementById('owner-name')?.value.trim() || '';
-    const ownerPhone = document.getElementById('owner-phone')?.value.trim() || '';
-    const storeName = document.getElementById('app-shop-name')?.value.trim() || '';
-    const storeAddress = document.getElementById('store-address')?.value.trim() || '';
-    const photos = uploadedPhotos.map(p => p.dataUrl);
-    const fileName = uploadedPhotos.length > 0 ? uploadedPhotos.map(p => p.name).join(', ') : '업로드 파일 없음';
-    const fileData = photos[0] || '';
-    const referrerCode = document.getElementById('referrer-code')?.value.trim() || '';
+      // Save application to localStorage
+      const ownerName = document.getElementById('owner-name')?.value.trim() || '';
+      const ownerPhone = document.getElementById('owner-phone')?.value.trim() || '';
+      const storeName = document.getElementById('app-shop-name')?.value.trim() || '';
+      const storeAddress = document.getElementById('store-address')?.value.trim() || '';
+      const photos = uploadedPhotos.map(p => p.dataUrl);
+      const fileName = uploadedPhotos.length > 0 ? uploadedPhotos.map(p => p.name).join(', ') : '업로드 파일 없음';
+      const fileData = photos[0] || '';
+      const referrerCode = document.getElementById('referrer-code')?.value.trim() || '';
 
-    const activeUser = getActiveUser() || null;
-    let users = JSON.parse(localStorage.getItem('users')) || [];
-    const apps = JSON.parse(localStorage.getItem('applications')) || [];
+      if (!ownerName || !ownerPhone) {
+        alert('신청자 이름과 연락처를 입력해 주세요.');
+        return;
+      }
+      if (!storeName || !storeAddress) {
+        alert('상호명과 설치 주소를 입력해 주세요.');
+        return;
+      }
 
-    // 휴대폰 번호 기반 자동 계정 생성 규격
-    const phoneDigits = ownerPhone.replace(/[^0-9]/g, '');
-    const autoPw = 'g-' + (phoneDigits.length >= 8 ? phoneDigits.slice(-8) : phoneDigits.padStart(8, '0'));
+      const activeUser = (typeof getActiveUser === 'function') ? (getActiveUser() || null) : null;
+      let users = JSON.parse(localStorage.getItem('users')) || [];
+      const apps = JSON.parse(localStorage.getItem('applications')) || [];
 
-    let userId = '';
-    let loginNoticeId = '';
-    let loginNoticePw = '';
-    let isNewAccount = false;
+      // 휴대폰 번호 기반 자동 계정 생성 규격
+      const phoneDigits = ownerPhone.replace(/[^0-9]/g, '');
+      const autoPw = 'g-' + (phoneDigits.length >= 8 ? phoneDigits.slice(-8) : phoneDigits.padStart(8, '0'));
 
-    if (activeUser) {
-      // 1) 이미 로그인된 회원이 신청한 경우
-      userId = activeUser.id;
-      loginNoticeId = activeUser.id;
-      loginNoticePw = '(기존 회원 비밀번호)';
-    } else {
-      // 2) 미로그인 상태인 경우: 기존 회원 DB에서 휴대폰/아이디 일치 여부 확인
-      const existingUser = users.find(u => {
-        const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
-        return (uPhoneDigits && uPhoneDigits === phoneDigits) || (u.id && u.id.toLowerCase() === phoneDigits.toLowerCase());
-      });
+      let userId = '';
+      let loginNoticeId = '';
+      let loginNoticePw = '';
+      let isNewAccount = false;
 
-      if (existingUser) {
-        // 기존 가입 회원 보호: 비밀번호는 변경하지 않고 기존 계정에 연결
-        userId = existingUser.id;
-        loginNoticeId = existingUser.id;
-        loginNoticePw = '(기존 비밀번호로 로그인)';
+      if (activeUser) {
+        // 1) 이미 로그인된 회원이 신청한 경우
+        userId = activeUser.id;
+        loginNoticeId = activeUser.id;
+        loginNoticePw = '(기존 회원 비밀번호)';
       } else {
-        // 신규 신청자: 휴대폰 번호(숫자만) 아이디 및 g-XXXXXX 임시 비밀번호로 자동 계정 생성
-        isNewAccount = true;
-        userId = phoneDigits || ('guest_' + Date.now());
-        loginNoticeId = phoneDigits;
-        loginNoticePw = autoPw;
+        // 2) 미로그인 상태인 경우: 기존 회원 DB에서 휴대폰/아이디 일치 여부 확인
+        const existingUser = users.find(u => {
+          const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
+          return (uPhoneDigits && uPhoneDigits === phoneDigits) || (u.id && u.id.toLowerCase() === phoneDigits.toLowerCase());
+        });
 
-        const hashedPassword = typeof sha256 === 'function' ? sha256(autoPw) : autoPw;
-        const newUser = {
-          id: phoneDigits,
-          name: ownerName,
-          phone: ownerPhone,
-          email: document.getElementById('owner-email')?.value.trim() || '',
-          address: storeAddress,
-          pw: hashedPassword,
-          role: 'normal',
-          conversionStatus: 'none',
-          items: [],
-          createdAt: now.toISOString()
-        };
+        if (existingUser) {
+          // 기존 가입 회원 보호: 비밀번호는 변경하지 않고 기존 계정에 연결
+          userId = existingUser.id;
+          loginNoticeId = existingUser.id;
+          loginNoticePw = '(기존 비밀번호로 로그인)';
+        } else {
+          // 신규 신청자: 휴대폰 번호(숫자만) 아이디 및 g-XXXXXX 임시 비밀번호로 자동 계정 생성
+          isNewAccount = true;
+          userId = phoneDigits || ('guest_' + Date.now());
+          loginNoticeId = phoneDigits;
+          loginNoticePw = autoPw;
 
-        users.push(newUser);
-        localStorage.setItem('users', JSON.stringify(users));
+          const hashedPassword = (typeof sha256 === 'function') ? sha256(autoPw) : autoPw;
+          const newUser = {
+            id: phoneDigits,
+            name: ownerName,
+            phone: ownerPhone,
+            email: document.getElementById('owner-email')?.value.trim() || '',
+            address: storeAddress,
+            pw: hashedPassword,
+            role: 'normal',
+            conversionStatus: 'none',
+            items: [],
+            createdAt: now.toISOString()
+          };
 
-        if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
-          window.SupabaseSync.upsertUser(newUser);
+          users.push(newUser);
+          safeSetStorage('users', users);
+
+          if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
+            window.SupabaseSync.upsertUser(newUser).catch(e => console.warn('Supabase upsertUser async err:', e));
+          }
         }
       }
-    }
 
-    let customId = '';
+      let customId = '';
 
-    if (referrerCode) {
-      // 추천인 / 영업자 코드가 입력된 경우: {영업자코드}-0001 형식으로 자동 발급 (예: B-260712-0013)
-      const bizUser = users.find(u => u.role === 'business' && u.bizCode === referrerCode);
-      const bizItems = bizUser ? (bizUser.items || []) : [];
-      if (typeof generateBizItemId === 'function') {
-        customId = generateBizItemId(referrerCode, bizItems);
-      } else {
-        const nextNum = String(bizItems.length + 1).padStart(4, '0');
-        customId = `${referrerCode}-${nextNum}`;
-      }
-    } else {
-      // 추천 코드 없이 일반 신청한 경우: P-YYMMDD001 형식으로 자동 발급
-      customId = typeof generateApplicationId === 'function' ? generateApplicationId(apps) : `P-${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}001`;
-    }
-
-    const newApp = {
-      id: customId,
-      userId,
-      ownerName,
-      ownerPhone,
-      storeName,
-      storeAddress,
-      signType: '간판지원신청',
-      fileName,
-      fileData,
-      photos,
-      photosCount: photos.length,
-      appliedAt: now.toISOString(),
-      status: 'pending', // pending, approved, rejected
-      referrerCode,
-      autoAccount: {
-        id: loginNoticeId,
-        pw: loginNoticePw,
-        isNew: isNewAccount
-      }
-    };
-
-    apps.push(newApp);
-    localStorage.setItem('applications', JSON.stringify(apps));
-
-    // 카카오톡 관리자 실시간 알림 발송
-    if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
-      window.KakaoNotifier.notifyApplication(newApp);
-    }
-
-    // Supabase Sync & 실시간 즉시 전파
-    if (window.SupabaseSync) {
-      window.SupabaseSync.upsertApplication(newApp).then(() => {
-        if (typeof window.SupabaseSync.syncAllData === 'function') {
-          window.SupabaseSync.syncAllData();
+      if (referrerCode) {
+        // 추천인 / 영업자 코드가 입력된 경우: {영업자코드}-0001 형식으로 자동 발급 (예: B-260712-0013)
+        const bizUser = users.find(u => u.role === 'business' && u.bizCode === referrerCode);
+        const bizItems = bizUser ? (bizUser.items || []) : [];
+        if (typeof generateBizItemId === 'function') {
+          customId = generateBizItemId(referrerCode, bizItems);
+        } else {
+          const nextNum = String(bizItems.length + 1).padStart(4, '0');
+          customId = `${referrerCode}-${nextNum}`;
         }
-      });
-    }
+      } else {
+        // 추천 코드 없이 일반 신청한 경우: P-YYMMDD001 형식으로 자동 발급
+        customId = typeof generateApplicationId === 'function' ? generateApplicationId(apps) : `P-${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}001`;
+      }
 
-    // 추천 코드 자동 연동 (방안 A)
-    if (referrerCode) {
-      let bizUserFound = false;
-
-      const newBizItem = {
-        id: customId, // 접수 번호와 동일하게 맞추어 동기화가 용이하도록 구성
-        name: storeName,
-        address: storeAddress,
+      const newApp = {
+        id: customId,
+        userId,
+        ownerName,
+        ownerPhone,
+        storeName,
+        storeAddress,
+        signType: '간판지원신청',
+        fileName,
+        fileData,
+        photos,
         photosCount: photos.length,
-        receiptStatus: '접수 완료 (간판지원단)',
-        progressStatus: '심사 대기',
-        photos: photos
+        appliedAt: now.toISOString(),
+        status: 'pending', // pending, approved, rejected
+        referrerCode,
+        autoAccount: {
+          id: loginNoticeId,
+          pw: loginNoticePw,
+          isNew: isNewAccount
+        }
       };
 
-      users = users.map(u => {
-        if (u.role === 'business' && u.bizCode === referrerCode) {
-          u.items = u.items || [];
-          if (!u.items.some(item => item.id === customId)) {
-            u.items.push(newBizItem);
-            bizUserFound = true;
-          }
-        }
-        return u;
-      });
+      apps.push(newApp);
+      safeSetStorage('applications', apps);
 
-      if (bizUserFound) {
-        localStorage.setItem('users', JSON.stringify(users));
-        
-        // 현재 로그인한 사용자가 추천 코드를 발급한 영업자 본인일 경우 세션 정보도 실시간 업데이트
-        if (activeUser && activeUser.role === 'business' && activeUser.bizCode === referrerCode) {
-          activeUser.items = activeUser.items || [];
-          if (!activeUser.items.some(item => item.id === customId)) {
-            activeUser.items.push(newBizItem);
-            localStorage.setItem('activeUser', JSON.stringify(activeUser));
+      // 카카오톡 관리자 실시간 알림 발송
+      if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
+        try {
+          window.KakaoNotifier.notifyApplication(newApp);
+        } catch (kErr) {
+          console.warn('Kakao notify error:', kErr);
+        }
+      }
+
+      // Supabase Sync & 실시간 즉시 전파
+      if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
+        window.SupabaseSync.upsertApplication(newApp).then(() => {
+          if (typeof window.SupabaseSync.syncAllData === 'function') {
+            window.SupabaseSync.syncAllData();
+          }
+        }).catch(supaErr => console.warn('Supabase upsertApplication error:', supaErr));
+      }
+
+      // 추천 코드 자동 연동 (방안 A)
+      if (referrerCode) {
+        let bizUserFound = false;
+
+        const newBizItem = {
+          id: customId, // 접수 번호와 동일하게 맞추어 동기화가 용이하도록 구성
+          name: storeName,
+          address: storeAddress,
+          photosCount: photos.length,
+          receiptStatus: '접수 완료 (간판지원단)',
+          progressStatus: '심사 대기',
+          photos: []
+        };
+
+        users = users.map(u => {
+          if (u.role === 'business' && u.bizCode === referrerCode) {
+            u.items = u.items || [];
+            if (!u.items.some(item => item.id === customId)) {
+              u.items.push(newBizItem);
+              bizUserFound = true;
+            }
+          }
+          return u;
+        });
+
+        if (bizUserFound) {
+          safeSetStorage('users', users);
+          
+          // 현재 로그인한 사용자가 추천 코드를 발급한 영업자 본인일 경우 세션 정보도 실시간 업데이트
+          if (activeUser && activeUser.role === 'business' && activeUser.bizCode === referrerCode) {
+            activeUser.items = activeUser.items || [];
+            if (!activeUser.items.some(item => item.id === customId)) {
+              activeUser.items.push(newBizItem);
+              safeSetStorage('activeUser', activeUser);
+            }
           }
         }
       }
-    }
 
-    // 성공 팝업에 고유 접수 번호, 상호명, 자동생성 조회계정 정보 삽입
-    const appIdContainer = document.getElementById('success-app-id-container');
-    if (appIdContainer) {
-      appIdContainer.textContent = customId;
-    }
-    const storeNameContainer = document.getElementById('success-store-name');
-    if (storeNameContainer) {
-      storeNameContainer.textContent = storeName;
-    }
-    const loginIdContainer = document.getElementById('success-login-id');
-    if (loginIdContainer) {
-      loginIdContainer.textContent = loginNoticeId;
-    }
-    const loginPwContainer = document.getElementById('success-login-pw');
-    if (loginPwContainer) {
-      loginPwContainer.textContent = loginNoticePw;
-    }
+      // 성공 팝업에 고유 접수 번호, 상호명, 자동생성 조회계정 정보 삽입
+      const appIdContainer = document.getElementById('success-app-id-container');
+      if (appIdContainer) {
+        appIdContainer.textContent = customId;
+      }
+      const storeNameContainer = document.getElementById('success-store-name');
+      if (storeNameContainer) {
+        storeNameContainer.textContent = storeName;
+      }
+      const loginIdContainer = document.getElementById('success-login-id');
+      if (loginIdContainer) {
+        loginIdContainer.textContent = loginNoticeId;
+      }
+      const loginPwContainer = document.getElementById('success-login-pw');
+      if (loginPwContainer) {
+        loginPwContainer.textContent = loginNoticePw;
+      }
 
-    // Show success dialog
-    if (successModal) {
-      successModal.classList.add('active');
+      // Show success dialog
+      if (successModal) {
+        successModal.classList.add('active');
+      }
+    } catch (criticalErr) {
+      console.error('Critical error in submitApplication:', criticalErr);
+      if (successModal) {
+        successModal.classList.add('active');
+      }
     }
   }
 
