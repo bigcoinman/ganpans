@@ -184,11 +184,42 @@ async function downloadApplicationPhotos(appOrId) {
     return;
   }
 
-  // B. 사진이 2장 이상인 경우: 표준 DOS STORE 포맷 ZIP 압축 파일 생성 후 일괄 다운로드
+  // 2장 이상인 경우: 사진 다운로드 전용 팝업 모달 표시
+  showPhotoDownloadModal(app);
+}
+window.downloadApplicationPhotos = downloadApplicationPhotos;
+
+// ZIP 압축 파일 생성 다운로드 함수
+async function downloadZipFile(appOrId) {
+  let app = appOrId;
+  if (typeof appOrId === 'string' || typeof appOrId === 'number') {
+    const localApps = JSON.parse(localStorage.getItem('applications')) || [];
+    app = localApps.find(a => String(a.id) === String(appOrId));
+  }
+  if (!app) {
+    alert('신청서 정보를 찾을 수 없습니다.');
+    return;
+  }
+
+  const storeName = app.storeName || app.shopName || app.ownerName || '신청점포';
+  const safeStoreName = storeName.replace(/[\\/:*?"<>|]/g, '_').trim() || '신청점포';
+  let photos = [];
+
+  if (Array.isArray(app.photos) && app.photos.length > 0) {
+    photos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+  }
+  if (photos.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
+    photos = [app.fileData];
+  }
+
+  if (photos.length === 0) {
+    alert('다운로드 가능한 현장 사진이 없습니다.');
+    return;
+  }
+
   if (typeof JSZip !== 'undefined') {
     try {
       const zip = new JSZip();
-      const safeStoreName = storeName.replace(/[\\/:*?"<>|]/g, '_').trim() || '신청점포';
 
       for (let idx = 0; idx < photos.length; idx++) {
         const photoData = photos[idx];
@@ -209,11 +240,9 @@ async function downloadApplicationPhotos(appOrId) {
             bytes[i] = byteString.charCodeAt(i);
           }
 
-          const photoFileName = `${safeStoreName}_현장사진_${idx + 1}.${ext}`;
-          zip.file(photoFileName, bytes, {
-            binary: true,
-            date: new Date()
-          });
+          // 영문+숫자 안전 인코딩 파일명으로 zip 내부 충돌 방지
+          const photoFileName = `photo_${idx + 1}.${ext}`;
+          zip.file(photoFileName, bytes, { date: new Date() });
         } catch (eConv) {
           console.warn('Image convert error on photo ' + idx, eConv);
         }
@@ -237,31 +266,15 @@ async function downloadApplicationPhotos(appOrId) {
       setTimeout(() => URL.revokeObjectURL(zipUrl), 30000);
     } catch (zipErr) {
       console.error('ZIP generation error:', zipErr);
-      // Fallback: 개별 순차 다운로드
-      photos.forEach((p, idx) => {
-        const a = document.createElement('a');
-        a.href = p;
-        a.download = `${storeName}_현장사진_${idx + 1}.jpg`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      });
+      downloadIndividualPhotos(app);
     }
   } else {
-    // JSZip 미로드 시 순차 다운로드
-    photos.forEach((p, idx) => {
-      const a = document.createElement('a');
-      a.href = p;
-      a.download = `${storeName}_현장사진_${idx + 1}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    });
+    downloadIndividualPhotos(app);
   }
 }
-window.downloadApplicationPhotos = downloadApplicationPhotos;
+window.downloadZipFile = downloadZipFile;
 
-// 압축 해제 없이 모든 사진을 브라우저에서 즉시 개별 다운로드하는 함수
+// 압축 해제 없이 모든 사진을 브라우저에서 즉시 개별 다운로드하는 함수 (보안 경고 0%)
 function downloadIndividualPhotos(appOrId) {
   let app = appOrId;
   if (typeof appOrId === 'string' || typeof appOrId === 'number') {
@@ -304,10 +317,120 @@ function downloadIndividualPhotos(appOrId) {
     setTimeout(() => {
       a.click();
       document.body.removeChild(a);
-    }, idx * 300); // 브라우저 팝업 차단 방지 간격
+    }, idx * 250); // 순차 다운로드
   });
 }
 window.downloadIndividualPhotos = downloadIndividualPhotos;
+
+// 사진 다운로드 & 갤러리 모달 팝업 표시
+function showPhotoDownloadModal(appOrId) {
+  let app = appOrId;
+  if (typeof appOrId === 'string' || typeof appOrId === 'number') {
+    const localApps = JSON.parse(localStorage.getItem('applications')) || [];
+    app = localApps.find(a => String(a.id) === String(appOrId));
+  }
+  if (!app) {
+    alert('신청서 정보를 찾을 수 없습니다.');
+    return;
+  }
+
+  const storeName = app.storeName || app.shopName || app.ownerName || '신청점포';
+  const safeStoreName = storeName.replace(/[\\/:*?"<>|]/g, '_').trim() || '신청점포';
+  let photos = [];
+
+  if (Array.isArray(app.photos) && app.photos.length > 0) {
+    photos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+  }
+  if (photos.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
+    photos = [app.fileData];
+  }
+  if (photos.length === 0 && app.image_url && typeof app.image_url === 'string') {
+    if (app.image_url.startsWith('[') && app.image_url.includes('data:')) {
+      try {
+        const parsed = JSON.parse(app.image_url);
+        if (Array.isArray(parsed)) {
+          photos = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+        }
+      } catch (e) {}
+    } else if (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) {
+      photos = [app.image_url];
+    }
+  }
+
+  if (photos.length === 0) {
+    alert('등록된 현장 사진이 없습니다.');
+    return;
+  }
+
+  if (photos.length === 1) {
+    const a = document.createElement('a');
+    a.href = photos[0];
+    a.download = `${safeStoreName}_현장사진_1.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return;
+  }
+
+  let modal = document.getElementById('photo-download-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'photo-download-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.65);backdrop-filter:blur(4px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div style="background:#ffffff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid #e2e8f0;">
+      <div style="padding:16px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">
+            <i class="fa-solid fa-images"></i>
+          </div>
+          <div>
+            <h3 style="margin:0;font-size:1.02rem;font-weight:700;color:#1e293b;">${escapeHtml(storeName)} 현장사진 다운로드</h3>
+            <p style="margin:2px 0 0;font-size:0.8rem;color:#64748b;">총 ${photos.length}장의 사진이 등록되어 있습니다</p>
+          </div>
+        </div>
+        <button type="button" onclick="document.getElementById('photo-download-modal').style.display='none'" style="background:none;border:none;font-size:1.4rem;color:#94a3b8;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;" title="닫기">&times;</button>
+      </div>
+
+      <div style="padding:20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button type="button" onclick="window.downloadIndividualPhotos('${app.id}');document.getElementById('photo-download-modal').style.display='none';" style="padding:13px 16px;background:linear-gradient(135deg, #2563eb, #1d4ed8);color:#ffffff;border:none;border-radius:10px;font-size:0.92rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 6px -1px rgba(37,99,235,0.25);transition:all 0.15s;">
+            <i class="fa-solid fa-cloud-arrow-down" style="font-size:1.05rem;"></i> 전체 사진 바로 저장 (압축해제 불필요 · 보안경고 없음)
+          </button>
+          <button type="button" onclick="window.downloadZipFile('${app.id}');" style="padding:10px 16px;background:#f8fafc;color:#334155;border:1.5px solid #cbd5e1;border-radius:10px;font-size:0.86rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.15s;">
+            <i class="fa-solid fa-file-zipper" style="color:#64748b;"></i> ZIP 압축 파일로 받기 (${photos.length}장 묶음)
+          </button>
+        </div>
+
+        <div>
+          <div style="font-size:0.84rem;font-weight:700;color:#475569;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+            <i class="fa-regular fa-image"></i> 사진 미리보기 및 개별 저장
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(95px, 1fr));gap:8px;max-height:220px;overflow-y:auto;padding:2px;">
+            ${photos.map((p, idx) => `
+              <div style="position:relative;border-radius:8px;overflow:hidden;border:1px solid #cbd5e1;background:#f8fafc;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;">
+                <img src="${sanitizeUrl(p)}" alt="사진 ${idx + 1}" style="width:100%;height:100%;object-fit:cover;">
+                <a href="${sanitizeUrl(p)}" download="${safeStoreName}_현장사진_${idx + 1}.jpg" style="position:absolute;bottom:4px;right:4px;background:rgba(15,23,42,0.85);color:#ffffff;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:0.72rem;text-decoration:none;box-shadow:0 2px 4px rgba(0,0,0,0.3);" title="이 사진만 다운로드">
+                  <i class="fa-solid fa-download"></i>
+                </a>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:12px 20px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;">
+        <button type="button" onclick="document.getElementById('photo-download-modal').style.display='none'" style="padding:7px 18px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;font-size:0.84rem;font-weight:600;cursor:pointer;">닫기</button>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+}
+window.showPhotoDownloadModal = showPhotoDownloadModal;
 
 // ========================================================
 // 5. 로그인 상태 유지 및 1시간 미사용 시 자동 로그아웃 관리

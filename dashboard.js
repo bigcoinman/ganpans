@@ -2995,8 +2995,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (targetApp) {
           targetApp.fileData = base64Data;
           targetApp.fileName = fileName;
-          targetApp.photos = [base64Data];
-          targetApp.photosCount = 1;
+          if (!Array.isArray(targetApp.photos)) {
+            targetApp.photos = [];
+          }
+          targetApp.photos.push(base64Data);
+          targetApp.photosCount = targetApp.photos.length;
           localStorage.setItem('applications', JSON.stringify(curApps));
         }
 
