@@ -251,10 +251,14 @@
                                     </div>
                                 </div>
 
-                                <h3
-                                    style="margin-bottom: 20px; color: var(--accent-primary); display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
-                                    <i class="fa-solid fa-list-check"></i> 최근 신청한 업체
-                                </h3>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                                    <h3 style="margin: 0; color: var(--accent-primary); display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
+                                        <i class="fa-solid fa-list-check"></i> 최근 신청한 업체
+                                    </h3>
+                                    <button type="button" id="btn-export-biz-recent-excel" style="background: #15803d; color: #ffffff; border: 1px solid #166534; padding: 6px 14px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s ease;" title="내 영업물건 목록 엑셀(CSV) 다운로드">
+                                        <i class="fa-solid fa-file-excel"></i> 엑셀 다운로드
+                                    </button>
+                                </div>
                                 <div class="biz-items-list" id="biz-items-list">
                                     <div class="empty-list-msg">
                                         <i class="fa-solid fa-folder-open"
@@ -403,8 +407,11 @@
                                 <i class="fa-solid fa-file-signature"></i> 내 온라인 간편 지원 신청 내역
                                 <span id="user-apps-toggle-badge" style="font-size: 0.78rem; padding: 3px 10px; border-radius: 9999px; background: #0f172a; color: #ffffff; font-weight: 700; margin-left: 4px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: all 0.2s;"><i class="fa-solid fa-chevron-down"></i> 전체 펼치기</span>
                             </h3>
-                            <div style="max-width: 320px; width: 100%;">
-                                <input type="text" id="search-user-apps-input" placeholder="상호명 / 코드 / 성명 / 주소 검색" maxlength="30" style="padding: 7px 12px; font-size: 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; width: 100%; background: #ffffff; box-sizing: border-box; font-weight: 500;">
+                            <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex-shrink: 0;">
+                                <input type="text" id="search-user-apps-input" placeholder="상호명 / 코드 / 성명 / 주소 검색" maxlength="30" style="padding: 7px 12px; font-size: 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; width: 230px; background: #ffffff; box-sizing: border-box; font-weight: 500;">
+                                <button type="button" id="btn-export-user-apps-excel" style="background: #15803d !important; color: #ffffff !important; border: 1.5px solid #166534 !important; padding: 7px 14px !important; border-radius: 8px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important; transition: all 0.2s ease !important; height: 35px !important; flex-shrink: 0 !important;" title="내 신청내역 목록 엑셀(CSV) 다운로드">
+                                    <i class="fa-solid fa-file-excel"></i> 엑셀 다운로드
+                                </button>
                             </div>
                         </div>
                         <div id="user-apps-content-body">
@@ -444,8 +451,11 @@
                                     <i class="fa-solid fa-circle-check"></i> 실제 공단/진흥원에 신청접수된 물건만 등록관리
                                 </div>
                             </div>
-                            <div style="max-width: 320px; width: 100%;">
-                                <input type="text" id="search-biz-table-input" placeholder="상호명 / 코드 / 성명 / 주소 검색" maxlength="30" style="padding: 7px 12px; font-size: 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; width: 100%; background: #ffffff; box-sizing: border-box; font-weight: 500;">
+                            <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex-shrink: 0;">
+                                <input type="text" id="search-biz-table-input" placeholder="상호명 / 코드 / 성명 / 주소 검색" maxlength="30" style="padding: 7px 12px; font-size: 0.85rem; border-radius: 8px; border: 1.5px solid #cbd5e1; width: 230px; background: #ffffff; box-sizing: border-box; font-weight: 500;">
+                                <button type="button" id="btn-export-biz-items-excel" style="background: #15803d !important; color: #ffffff !important; border: 1.5px solid #166534 !important; padding: 7px 14px !important; border-radius: 8px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important; transition: all 0.2s ease !important; height: 35px !important; flex-shrink: 0 !important;" title="내 영업물건 목록 엑셀(CSV) 다운로드">
+                                    <i class="fa-solid fa-file-excel"></i> 엑셀 다운로드
+                                </button>
                             </div>
                         </div>
                         <div id="biz-table-content-body">
@@ -637,8 +647,11 @@
                             <div style="background: rgba(255,255,255,0.7); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
                                 <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; gap: 12px; flex-wrap: wrap;" onclick="window.toggleAdminSection('sec-container-items', this, event)">
                                     <h4 class="manager-section-title" style="margin: 0; font-size: 0.96rem; white-space: nowrap;"><i class="fa-solid fa-sliders" style="color: var(--accent-secondary);"></i> 영업 물건 접수/진행 상태 수동 조작</h4>
-                                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 360px; justify-content: flex-end;" onclick="event.stopPropagation();">
+                                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 440px; justify-content: flex-end;" onclick="event.stopPropagation();">
                                         <input type="text" id="search-manager-items-input" placeholder="아이디/이름/코드검색" maxlength="30" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; border: 1.5px solid #fed7aa; width: 100%; background: #fff; box-shadow: inset 0 1px 2px rgba(0,0,0,0.04); font-weight: 500;">
+                                        <button type="button" id="btn-export-manager-items-excel" style="background: #15803d; color: #ffffff; border: 1px solid #166534; padding: 6px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s ease;" title="영업 물건 전체 목록 엑셀(CSV) 다운로드">
+                                            <i class="fa-solid fa-file-excel"></i> 엑셀 다운로드
+                                        </button>
                                     </div>
                                     <button type="button" class="btn-toggle-admin" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
                                         <span class="toggle-text">펼치기</span> <i class="fa-solid fa-chevron-down toggle-icon"></i>
@@ -674,8 +687,8 @@
                                                 <th style="padding: 14px 16px; white-space: nowrap; min-width: 120px;">신청자 (연락처)</th>
                                                 <th style="padding: 14px 16px;">상호명 (설치 주소)</th>
                                                 <th style="padding: 14px 16px; white-space: nowrap; width: 140px;">담당자</th>
-                                                <th style="padding: 14px 16px; width: 110px;">첨부 파일</th>
-                                                <th style="padding: 14px 16px; text-align: center; min-width: 360px;">심사 상태 변경 / 영업물건 변경 / 삭제</th>
+                                                <th style="padding: 14px 16px; width: 120px; text-align: center; white-space: nowrap;">현장사진</th>
+                                                <th style="padding: 14px 16px; text-align: center; min-width: 360px;">심사 상태 / 영업물건 변경 / 삭제</th>
                                             </tr>
                                         </thead>
                                         <tbody id="applications-table-body">
@@ -1092,7 +1105,7 @@
     <script src="supabase-config.js?v=20260818_0155"></script>
     <script src="security-utils.js?v=20260818_0155"></script>
     <script src="kakao-notify.js?v=20260818_0155"></script>
-    <script src="dashboard.js?v=20260818_0155"></script>
+    <script src="dashboard.js?v=20260819_1333"></script>
 </body>
 
 </html>

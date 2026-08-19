@@ -527,8 +527,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               updatedProgress = '승인 완료';
             }
-          } else if (matchingApp.status === 'rejected') {
+          } else if (matchingApp.status === 'rejected' || matchingApp.status === '지원사업 탈락' || matchingApp.status === '지원사업탈락') {
             updatedProgress = '반려됨';
+          } else if (matchingApp.status === 'giveup' || matchingApp.status === '지원사업 포기' || matchingApp.status === '지원사업포기') {
+            updatedProgress = '지원사업 포기';
           } else {
             updatedProgress = '심사 대기';
           }
@@ -676,7 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
         address: targetApp.storeAddress,
         photosCount: targetApp.fileName && targetApp.fileName !== '업로드 파일 없음' ? 1 : 0,
         receiptStatus: '접수 완료 (간판지원단)',
-        progressStatus: targetApp.status === 'approved' ? '승인 완료' : (targetApp.status === 'rejected' ? '반려됨' : '심사 대기'),
+        progressStatus: (targetApp.status === 'approved' || targetApp.status === '서류제출 & 접수예정') ? '승인 완료' : ((targetApp.status === 'rejected' || targetApp.status === '지원사업 탈락' || targetApp.status === '지원사업탈락') ? '반려됨' : ((targetApp.status === 'giveup' || targetApp.status === '지원사업 포기' || targetApp.status === '지원사업포기') ? '지원사업 포기' : '심사 대기')),
         photos: targetApp.fileData ? [targetApp.fileData] : []
       };
 
@@ -1292,6 +1294,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // 영업 물건 엑셀 다운로드 이벤트 바인딩
+  const btnExportManagerItemsExcel = document.getElementById('btn-export-manager-items-excel');
+  if (btnExportManagerItemsExcel) {
+    btnExportManagerItemsExcel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportManagerItemsToExcel();
+    });
+  }
+
   // 온라인 간편 지원 신청 목록 검색 이벤트 바인딩 (아이디/이름/코드검색)
   const searchManagerAppsInput = document.getElementById('search-manager-apps-input');
   if (searchManagerAppsInput) {
@@ -1327,12 +1338,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // 온라인 간편 지원 신청 내역 엑셀 다운로드 이벤트
+  const btnExportUserAppsExcel = document.getElementById('btn-export-user-apps-excel');
+  if (btnExportUserAppsExcel) {
+    btnExportUserAppsExcel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportUserApplicationsToExcel();
+    });
+  }
+
   // 영업물건 현황 테이블 검색 이벤트
   const searchBizTableInput = document.getElementById('search-biz-table-input');
   if (searchBizTableInput) {
     searchBizTableInput.addEventListener('input', () => {
       bizTableCurrentPage = 1;
       renderBizRegisteredTable();
+    });
+  }
+
+  // 영업물건 엑셀 다운로드 이벤트
+  const btnExportBizItemsExcel = document.getElementById('btn-export-biz-items-excel');
+  if (btnExportBizItemsExcel) {
+    btnExportBizItemsExcel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportBizRegisteredItemsToExcel();
+    });
+  }
+
+  // 영업자 전용 대시보드 상단 '최근 신청한 업체' 엑셀 다운로드 이벤트
+  const btnExportBizRecentExcel = document.getElementById('btn-export-biz-recent-excel');
+  if (btnExportBizRecentExcel) {
+    btnExportBizRecentExcel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportBizRegisteredItemsToExcel();
     });
   }
 
@@ -1646,6 +1684,112 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSessionUI();
   };
   window.deleteManagerItem = deleteManagerItem;
+
+  // --- 영업 물건 목록 엑셀(CSV) 다운로드 기능 ---
+  const exportManagerItemsToExcel = () => {
+    if (!activeUser || activeUser.role !== 'admin') {
+      alert('최고 관리자만 데이터를 다운로드할 수 있습니다.');
+      return;
+    }
+
+    const curUsers = JSON.parse(localStorage.getItem('users')) || users || [];
+    const curApps = JSON.parse(localStorage.getItem('applications')) || [];
+
+    let allBusinessItems = [];
+    curUsers.forEach(u => {
+      if (u.items && Array.isArray(u.items)) {
+        u.items.forEach(item => {
+          allBusinessItems.push({
+            user: u,
+            item: item
+          });
+        });
+      }
+    });
+
+    if (allBusinessItems.length === 0) {
+      alert('다운로드할 영업 물건 데이터가 없습니다.');
+      return;
+    }
+
+    // CSV Headers
+    const headers = [
+      '신청일자',
+      '물건번호(ID)',
+      '상호명',
+      '설치주소',
+      '연락처',
+      '담당영업자',
+      '영업자코드/아이디',
+      '접수상태',
+      '진행상태',
+      '배정시공사',
+      '현장사진유무'
+    ];
+
+    const escapeCsv = (str) => {
+      if (str === null || str === undefined) return '""';
+      const s = String(str).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
+    const rows = allBusinessItems.map(({ user: u, item }) => {
+      const matchingApp = curApps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
+      const rawDate = item.createdAt || item.registeredAt || item.appliedAt || item.date || (matchingApp ? (matchingApp.appliedAt || matchingApp.createdAt) : '') || '';
+      let dateText = '-';
+      if (rawDate) {
+        const d = new Date(rawDate);
+        if (!isNaN(d.getTime())) {
+          const padZero = (n) => String(n).padStart(2, '0');
+          dateText = `${d.getFullYear()}-${padZero(d.getMonth() + 1)}-${padZero(d.getDate())}`;
+        } else {
+          dateText = String(rawDate).slice(0, 10).replace(/\./g, '-');
+        }
+      }
+
+      const itemId = String(item.id || item.appRefId || '-');
+      const itemName = item.name || (matchingApp ? matchingApp.storeName : '') || '-';
+      const itemAddr = item.address || (matchingApp ? matchingApp.storeAddress : '') || '-';
+      const itemPhone = item.phone || (matchingApp ? (matchingApp.ownerPhone || '') : '') || '-';
+      const userName = u.name || '-';
+      const userCode = u.bizCode || u.id || '-';
+      const receiptStatus = item.receiptStatus || '접수예정';
+      const progressStatus = item.progressStatus || '지원대기중';
+      const constructorName = item.assignedConstructorName || (item.assignedConstructorId ? item.assignedConstructorId : '-');
+      const hasPhoto = (item.photos && item.photos.length > 0) || item.fileData || (matchingApp && (matchingApp.fileData || (matchingApp.photos && matchingApp.photos.length > 0))) ? '등록됨' : '미등록';
+
+      return [
+        escapeCsv(dateText),
+        escapeCsv(itemId),
+        escapeCsv(itemName),
+        escapeCsv(itemAddr),
+        escapeCsv(itemPhone),
+        escapeCsv(userName),
+        escapeCsv(userCode),
+        escapeCsv(receiptStatus),
+        escapeCsv(progressStatus),
+        escapeCsv(constructorName),
+        escapeCsv(hasPhoto)
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const ymd = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `간판지원단_영업물건_진행목록_${ymd}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+  window.exportManagerItemsToExcel = exportManagerItemsToExcel;
 
   const approveUserConversion = (uid) => {
     if (activeUser.role !== 'admin') return;
@@ -2222,8 +2366,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Status mapping
       const isApproved = (app.status === 'approved' || app.status === '서류제출 & 접수예정');
-      const isRejected = (app.status === 'rejected' || app.status === '지원사업 탈락');
-      const isPending = !isApproved && !isRejected;
+      const isRejected = (app.status === 'rejected' || app.status === '지원사업 탈락' || app.status === '지원사업탈락');
+      const isGiveup = (app.status === 'giveup' || app.status === '지원사업 포기' || app.status === '지원사업포기');
+      const isPending = !isApproved && !isRejected && !isGiveup;
 
       // Status select styling
       let statusColor = '#475569';
@@ -2237,6 +2382,10 @@ document.addEventListener('DOMContentLoaded', () => {
         statusColor = '#b91c1c';
         statusBg = '#fef2f2';
         statusBorder = '#fca5a5';
+      } else if (isGiveup) {
+        statusColor = '#b45309';
+        statusBg = '#fffbeb';
+        statusBorder = '#fde68a';
       }
 
       // Actions buttons: 상태 변경 캐럿 드롭다운, 영업물건으로 변경(토글), 삭제
@@ -2249,6 +2398,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사 대기</option>
             <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
             <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
+            <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
           </select>
         </div>
       `;
@@ -2309,35 +2459,26 @@ document.addEventListener('DOMContentLoaded', () => {
             ${escapeHtml(String(app.id || ''))}
           </div>
         </td>
-        <td style="padding: 14px 16px; color: var(--text-secondary); max-width: 160px;">
+        <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">
           ${(() => {
             const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '');
-            if (photoSrc) {
-              return `
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <a href="${sanitizeUrl(photoSrc)}" target="_blank" style="display: block; width: 44px; height: 44px; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; flex-shrink: 0; background: #f8fafc;" title="사진 크게 보기">
-                    <img src="${sanitizeUrl(photoSrc)}" alt="현장사진" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='간판지원단 로고-2.png'">
+            const hasPhoto = Boolean(photoSrc);
+            return `
+              <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
+                <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.76rem; font-weight: 700; color: #16a34a; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 6px; cursor: pointer; width: 88px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="${hasPhoto ? '현장사진 변경/재등록' : '현장사진 등록'}">
+                  <i class="fa-solid fa-camera" style="font-size: 0.76rem;"></i> 사진 등록
+                </button>
+                ${hasPhoto ? `
+                  <a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(app.fileName) || '현장사진.jpg'}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.74rem; font-weight: 600; color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; text-decoration: none; cursor: pointer; width: 88px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="현장사진 다운로드">
+                    <i class="fa-solid fa-download" style="font-size: 0.72rem;"></i> 다운로드
                   </a>
-                  <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
-                    <a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(app.fileName) || '현장사진.jpg'}" style="color: var(--accent-primary); font-weight: 600; font-size: 0.78rem; text-decoration: underline; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;" title="다운로드">
-                      <i class="fa-solid fa-download"></i> 다운로드
-                    </a>
-                    <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 2px 6px; font-size: 0.7rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; width: fit-content;" title="사진 변경">
-                      <i class="fa-solid fa-camera"></i> 변경
-                    </button>
-                  </div>
-                </div>
-              `;
-            } else {
-              return `
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                  <span style="color: #94a3b8; font-size: 0.76rem;">미등록</span>
-                  <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="padding: 3px 6px; font-size: 0.72rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; width: fit-content; font-weight: 700;" title="현장사진 등록">
-                    <i class="fa-solid fa-camera"></i> 사진 등록
+                ` : `
+                  <button type="button" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.74rem; font-weight: 500; color: #94a3b8; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; cursor: not-allowed; width: 88px; height: 28px; box-sizing: border-box;" title="등록된 사진 없음">
+                    <i class="fa-solid fa-download" style="font-size: 0.72rem;"></i> 다운로드
                   </button>
-                </div>
-              `;
-            }
+                `}
+              </div>
+            `;
           })()}
         </td>
         <td style="padding: 14px 16px; text-align: center;">${actionButtons}</td>
@@ -2919,7 +3060,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let statusLabel = '심사 대기';
     if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') statusLabel = '서류제출 & 접수예정';
-    else if (newStatus === 'rejected' || newStatus === '지원사업 탈락') statusLabel = '지원사업 탈락';
+    else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') statusLabel = '지원사업 탈락';
+    else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') statusLabel = '지원사업 포기';
 
     alert(`[${targetApp ? (targetApp.storeName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`);
     updateSessionUI();
@@ -3059,8 +3201,10 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         return `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-check"></i> 승인 완료</span>`;
       }
-    } else if (app.status === 'rejected') {
-      return `<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-xmark"></i> 반려됨</span>`;
+    } else if (app.status === 'rejected' || app.status === '지원사업 탈락' || app.status === '지원사업탈락') {
+      return `<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>`;
+    } else if (app.status === 'giveup' || app.status === '지원사업 포기' || app.status === '지원사업포기') {
+      return `<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-ban"></i> 지원사업 포기</span>`;
     } else {
       return `<span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-clock"></i> 심사 대기</span>`;
     }
@@ -3102,8 +3246,30 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!activeUser) return;
     const myApps = apps.filter(app => app.userId === activeUser.id);
 
-    // 검색 필터링
+    // 검색 필터링 및 엑셀 버튼 동적 보장
     const searchInput = document.getElementById('search-user-apps-input');
+    if (searchInput) {
+      const parent = searchInput.parentElement;
+      let btnExport = document.getElementById('btn-export-user-apps-excel');
+      if (!btnExport && parent) {
+        btnExport = document.createElement('button');
+        btnExport.type = 'button';
+        btnExport.id = 'btn-export-user-apps-excel';
+        btnExport.style.cssText = 'background: #15803d !important; color: #ffffff !important; border: 1.5px solid #166534 !important; padding: 7px 14px !important; border-radius: 8px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important; height: 35px !important; flex-shrink: 0 !important; margin-left: 8px;';
+        btnExport.innerHTML = '<i class="fa-solid fa-file-excel"></i> 엑셀 다운로드';
+        btnExport.addEventListener('click', (e) => {
+          e.stopPropagation();
+          exportUserApplicationsToExcel();
+        });
+        parent.style.display = 'flex';
+        parent.style.alignItems = 'center';
+        parent.style.justifyContent = 'flex-end';
+        parent.style.flexShrink = '0';
+        searchInput.style.width = '230px';
+        searchInput.style.maxWidth = '230px';
+        parent.appendChild(btnExport);
+      }
+    }
     const q = (searchInput ? searchInput.value.trim().toLowerCase() : '').slice(0, 30);
 
     let filteredApps = myApps;
@@ -3279,8 +3445,30 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // 검색 필터링
+    // 검색 필터링 및 엑셀 버튼 동적 보장
     const searchInput = document.getElementById('search-biz-table-input');
+    if (searchInput) {
+      const parent = searchInput.parentElement;
+      let btnExport = document.getElementById('btn-export-biz-items-excel');
+      if (!btnExport && parent) {
+        btnExport = document.createElement('button');
+        btnExport.type = 'button';
+        btnExport.id = 'btn-export-biz-items-excel';
+        btnExport.style.cssText = 'background: #15803d !important; color: #ffffff !important; border: 1.5px solid #166534 !important; padding: 7px 14px !important; border-radius: 8px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important; height: 35px !important; flex-shrink: 0 !important; margin-left: 8px;';
+        btnExport.innerHTML = '<i class="fa-solid fa-file-excel"></i> 엑셀 다운로드';
+        btnExport.addEventListener('click', (e) => {
+          e.stopPropagation();
+          exportBizRegisteredItemsToExcel();
+        });
+        parent.style.display = 'flex';
+        parent.style.alignItems = 'center';
+        parent.style.justifyContent = 'flex-end';
+        parent.style.flexShrink = '0';
+        searchInput.style.width = '230px';
+        searchInput.style.maxWidth = '230px';
+        parent.appendChild(btnExport);
+      }
+    }
     const q = (searchInput ? searchInput.value.trim().toLowerCase() : '').slice(0, 30);
 
     let filteredList = bizList;
@@ -3380,6 +3568,215 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   };
+
+  // --- 영업자 전용: 내 영업물건 목록 엑셀(CSV) 다운로드 ---
+  const exportBizRegisteredItemsToExcel = () => {
+    if (!activeUser || (activeUser.role !== 'business' && activeUser.role !== 'admin')) {
+      alert('영업 관리자만 데이터를 다운로드할 수 있습니다.');
+      return;
+    }
+
+    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let myItems = activeUser.items || [];
+
+    let bizList = [];
+
+    // 1) applications 중 추천인코드가 내 영업자코드이거나 userId가 나인 경우
+    apps.forEach(app => {
+      const isMyReferrer = activeUser.bizCode && app.referrerCode === activeUser.bizCode;
+      const isMyItem = myItems.some(i => i.id === app.id);
+      if (isMyReferrer || isMyItem) {
+        bizList.push({
+          id: app.id,
+          date: app.appliedAt || new Date().toISOString(),
+          ownerName: app.ownerName || app.name || '-',
+          ownerPhone: app.ownerPhone || app.phone || '',
+          storeName: app.storeName || app.name || '-',
+          storeAddress: app.storeAddress || app.address || '',
+          statusObj: app
+        });
+      }
+    });
+
+    // 2) myItems 중 applications에 아직 없는 순수 로컬 items도 추가
+    myItems.forEach(item => {
+      if (!bizList.some(b => b.id === item.id)) {
+        bizList.push({
+          id: item.id,
+          date: item.registeredAt || new Date().toISOString(),
+          ownerName: item.name || '-',
+          ownerPhone: item.phone || '',
+          storeName: item.name || '-',
+          storeAddress: item.address || '',
+          statusObj: {
+            status: item.receiptStatus === '승인완료' ? 'approved' : 'pending',
+            constructionStatus: item.progressStatus
+          }
+        });
+      }
+    });
+
+    if (bizList.length === 0) {
+      alert('다운로드할 내 영업 물건 데이터가 없습니다.');
+      return;
+    }
+
+    // 최신순 정렬
+    bizList.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
+    const headers = [
+      '신청일자',
+      '접수신청코드(ID)',
+      '신청자명',
+      '연락처',
+      '상호명',
+      '설치주소',
+      '진행상태'
+    ];
+
+    const escapeCsv = (str) => {
+      if (str === null || str === undefined) return '""';
+      const s = String(str).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
+    const getProgressStatusLabel = (statusObj) => {
+      if (!statusObj) return '심사 대기';
+      const status = statusObj.status || statusObj.receiptStatus || '';
+      const constStatus = statusObj.constructionStatus || statusObj.progressStatus || '';
+      if (constStatus === '간판시공완료' || constStatus === '시공 완료' || constStatus === '정산 완료' || constStatus === 'completed') return '정산 종결 (최종 완료)';
+      if (constStatus === '간판시공 준비중' || constStatus === 'in_construction') return '시공 진행 중';
+      if (constStatus === '대상자선정' || constStatus === 'before_construction') return '시공사 배정 (시공 전)';
+      if (status === 'approved' || status === '서류제출 & 접수예정' || status === '승인 완료') return '승인 완료';
+      if (status === 'rejected' || status === '지원사업 탈락' || status === '반려됨' || status === '지원사업탈락') return '지원사업 탈락';
+      if (status === 'giveup' || status === '지원사업 포기' || status === '지원사업포기') return '지원사업 포기';
+      return '심사 대기';
+    };
+
+    const rows = bizList.map(item => {
+      const dateOnly = formatDateOnly(item.date);
+      const itemId = String(item.id || '-');
+      const ownerName = item.ownerName || '-';
+      const ownerPhone = item.ownerPhone || '-';
+      const storeName = item.storeName || '-';
+      const storeAddress = item.storeAddress || '-';
+      const progressLabel = getProgressStatusLabel(item.statusObj);
+
+      return [
+        escapeCsv(dateOnly),
+        escapeCsv(itemId),
+        escapeCsv(ownerName),
+        escapeCsv(ownerPhone),
+        escapeCsv(storeName),
+        escapeCsv(storeAddress),
+        escapeCsv(progressLabel)
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const ymd = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `간판지원단_내영업물건_진행목록_${ymd}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+  window.exportBizRegisteredItemsToExcel = exportBizRegisteredItemsToExcel;
+
+  // --- 일반/영업자 회원: 내 온라인 간편 신청 내역 엑셀 다운로드 ---
+  const exportUserApplicationsToExcel = () => {
+    if (!activeUser) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    const curApps = JSON.parse(localStorage.getItem('applications')) || [];
+    let myApps = [];
+    if (activeUser.role === 'admin') {
+      myApps = curApps;
+    } else {
+      myApps = curApps.filter(app => {
+        const isOwner = (app.userId && app.userId === activeUser.id) || (app.ownerPhone && app.ownerPhone === activeUser.phone);
+        const isReferrer = activeUser.bizCode && app.referrerCode === activeUser.bizCode;
+        return isOwner || isReferrer;
+      });
+    }
+
+    if (myApps.length === 0) {
+      alert('다운로드할 신청 내역 데이터가 없습니다.');
+      return;
+    }
+
+    myApps.sort((a, b) => new Date(b.appliedAt || b.createdAt || 0).getTime() - new Date(a.appliedAt || a.createdAt || 0).getTime());
+
+    const headers = [
+      '신청일자',
+      '접수신청코드(ID)',
+      '신청자명',
+      '연락처',
+      '상호명',
+      '설치주소',
+      '진행상태'
+    ];
+
+    const escapeCsv = (str) => {
+      if (str === null || str === undefined) return '""';
+      const s = String(str).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
+    const getStatusText = (app) => {
+      if (app.status === 'approved' || app.status === '서류제출 & 접수예정' || app.status === '승인 완료') return '승인 완료';
+      if (app.status === 'rejected' || app.status === '지원사업 탈락' || app.status === '반려됨' || app.status === '지원사업탈락') return '지원사업 탈락';
+      if (app.status === 'giveup' || app.status === '지원사업 포기' || app.status === '지원사업포기') return '지원사업 포기';
+      return '심사 대기';
+    };
+
+    const rows = myApps.map(app => {
+      const dateOnly = formatDateOnly(app.appliedAt || app.createdAt || new Date().toISOString());
+      const appId = String(app.id || '-');
+      const ownerName = app.ownerName || app.name || '-';
+      const ownerPhone = app.ownerPhone || app.phone || '-';
+      const storeName = app.storeName || app.shopName || app.name || '-';
+      const storeAddress = app.storeAddress || app.address || '-';
+      const statusText = getStatusText(app);
+
+      return [
+        escapeCsv(dateOnly),
+        escapeCsv(appId),
+        escapeCsv(ownerName),
+        escapeCsv(ownerPhone),
+        escapeCsv(storeName),
+        escapeCsv(storeAddress),
+        escapeCsv(statusText)
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const ymd = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `간판지원단_온라인신청내역_${ymd}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+  window.exportUserApplicationsToExcel = exportUserApplicationsToExcel;
 
   // --- Visitor Tracking Logic (실제 접속자 기준 통계) ---
   const trackVisitor = async () => {
