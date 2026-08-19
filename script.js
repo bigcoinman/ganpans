@@ -1605,7 +1605,7 @@ function initWizard() {
           photosCount: photos.length,
           receiptStatus: '접수 완료 (간판지원단)',
           progressStatus: '심사 대기',
-          photos: []
+          photos: photos
         };
 
         users = users.map(u => {

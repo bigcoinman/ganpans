@@ -974,27 +974,19 @@ window.SupabaseSync = {
             appsChanged = true;
           } else {
             const cur = localApps[idx];
-            const preservedFileData = cur.fileData || mapped.fileData || '';
-            const preservedPhotos = (cur.photos && cur.photos.length > 0) ? cur.photos : (mapped.photos || (preservedFileData ? [preservedFileData] : []));
-            const preservedFileName = cur.fileName && cur.fileName !== '현장사진' ? cur.fileName : (mapped.fileName || '현장사진.jpg');
+            const finalFileData = mapped.fileData || cur.fileData || '';
+            const finalPhotos = (mapped.photos && mapped.photos.length > 0) ? mapped.photos : ((cur.photos && cur.photos.length > 0) ? cur.photos : (finalFileData ? [finalFileData] : []));
+            const finalFileName = (mapped.fileName && mapped.fileName !== '현장사진' && !mapped.fileName.startsWith('data:')) ? mapped.fileName : (cur.fileName || '현장사진.jpg');
 
-            if (cur.status !== mapped.status || 
-                cur.constructionStatus !== mapped.constructionStatus ||
-                cur.assignedConstructorId !== mapped.assignedConstructorId ||
-                cur.storeName !== mapped.storeName ||
-                cur.storeAddress !== mapped.storeAddress ||
-                cur.ownerName !== mapped.ownerName ||
-                cur.ownerPhone !== mapped.ownerPhone ||
-                (!cur.fileData && mapped.fileData)) {
-              localApps[idx] = {
-                ...cur,
-                ...mapped,
-                fileData: preservedFileData,
-                photos: preservedPhotos,
-                fileName: preservedFileName
-              };
-              appsChanged = true;
-            }
+            localApps[idx] = {
+              ...cur,
+              ...mapped,
+              fileData: finalFileData,
+              photos: finalPhotos,
+              photosCount: finalPhotos.length,
+              fileName: finalFileName
+            };
+            appsChanged = true;
           }
         });
 
