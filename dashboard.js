@@ -2297,7 +2297,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchAppKeyword = searchManagerAppsInput ? searchManagerAppsInput.value.trim().slice(0, 30).toLowerCase() : '';
 
     // Sort applications by applied date descending (latest first)
-    const sortedApps = [...apps].sort((a, b) => b.id - a.id);
+    const sortedApps = [...apps].sort((a, b) => {
+      const timeA = new Date(a.appliedAt || a.createdAt || a.created_at || 0).getTime();
+      const timeB = new Date(b.appliedAt || b.createdAt || b.created_at || 0).getTime();
+      if (timeB !== timeA && !isNaN(timeA) && !isNaN(timeB)) {
+        return timeB - timeA;
+      }
+      return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true, sensitivity: 'base' });
+    });
 
     let filteredApps = sortedApps;
     if (searchAppKeyword) {

@@ -2279,8 +2279,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const searchAppsInput = document.getElementById('search-apps-input-mob');
             const qApps = searchAppsInput && searchAppsInput.value ? searchAppsInput.value.trim().slice(0, 30).toLowerCase() : '';
 
-            // Sort applications by applied date descending
-            let sortedApps = [...applications].sort((a, b) => String(b.id || '').localeCompare(String(a.id || '')) || String(b.appliedAt || '').localeCompare(String(a.appliedAt || '')));
+            // Sort applications by applied date descending (latest first)
+            let sortedApps = [...applications].sort((a, b) => {
+                const timeA = new Date(a.appliedAt || a.createdAt || a.created_at || 0).getTime();
+                const timeB = new Date(b.appliedAt || b.createdAt || b.created_at || 0).getTime();
+                if (timeB !== timeA && !isNaN(timeA) && !isNaN(timeB)) {
+                    return timeB - timeA;
+                }
+                return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true, sensitivity: 'base' });
+            });
 
             if (qApps) {
                 sortedApps = sortedApps.filter(app => {
