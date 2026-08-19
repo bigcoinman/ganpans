@@ -1359,6 +1359,14 @@ function initWizard() {
   });
 
   function submitApplication() {
+    const agreeTerms = document.getElementById('agree-terms');
+    if (agreeTerms && !agreeTerms.checked) {
+      alert('개인정보 수집 및 심사 규정 동의에 체크해 주세요.');
+      return;
+    }
+
+    const now = new Date();
+
     // Save application to localStorage
     const ownerName = document.getElementById('owner-name')?.value.trim() || '';
     const ownerPhone = document.getElementById('owner-phone')?.value.trim() || '';
@@ -1485,16 +1493,16 @@ function initWizard() {
       const ownerPhoneEl = document.getElementById('owner-phone');
       if (ownerNameEl) ownerNameEl.value = '';
       if (ownerPhoneEl) { ownerPhoneEl.value = ''; ownerPhoneEl.disabled = false; }
-      document.getElementById('app-shop-name').value = '';
-      document.getElementById('store-address').value = '';
+      const shopNameEl = document.getElementById('app-shop-name');
+      if (shopNameEl) shopNameEl.value = '';
+      const addressEl = document.getElementById('store-address');
+      if (addressEl) addressEl.value = '';
       if (document.getElementById('referrer-code')) {
         document.getElementById('referrer-code').value = '';
       }
-      uploadInput.value = '';
-      uploadedFileBase64 = '';
-      if (fileNameDisplay) {
-        fileNameDisplay.style.display = 'none';
-      }
+      if (uploadInput) uploadInput.value = '';
+      uploadedPhotos = [];
+      renderPhotosPreview();
 
       // 본인인증 상태 초기화
       isOwnerPhoneVerified = false;
