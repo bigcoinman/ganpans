@@ -10,6 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 회원가입 아이디: 영문 대/소문자, 숫자만 허용 (실시간 필터링)
+    const signupIdInput = document.getElementById('signup-id');
+    if (signupIdInput) {
+        signupIdInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+        });
+    }
+
 
     let users = JSON.parse(localStorage.getItem('users')) || [];
     let activeUser = getActiveUser() || null;

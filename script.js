@@ -1904,9 +1904,9 @@ function initAuthAndDashboard() {
       idCheckMsg.textContent = '';
       return;
     }
-    if (idVal.length < 8) {
+    if (idVal.length < 6) {
       idCheckMsg.className = 'form-helper error';
-      idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 8자 이상이어야 합니다.';
+      idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 6자 이상이어야 합니다.';
     } else {
       idCheckMsg.textContent = '';
     }
@@ -1918,9 +1918,9 @@ function initAuthAndDashboard() {
       alert('아이디를 입력해 주세요.');
       return;
     }
-    if (idVal.length < 8) {
+    if (idVal.length < 6) {
       idCheckMsg.className = 'form-helper error';
-      idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 8자 이상 20자 이하로 입력해 주세요.';
+      idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 6자 이상 20자 이하로 입력해 주세요.';
       signupIdInput.focus();
       return;
     }
