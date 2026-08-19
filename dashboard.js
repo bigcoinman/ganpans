@@ -1,5 +1,38 @@
 // dashboard.js - My Page & Business Dashboard Logic
 
+// --- Collapsible Sections Toggle for PC Admin Dashboard (Global Definition) ---
+function toggleAdminSection(containerId, headerEl, event) {
+  if (event) {
+    const target = event.target;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'BUTTON' || target.tagName === 'A' || target.tagName === 'SELECT' || target.closest('input') || target.closest('button:not(.btn-toggle-admin)') || target.closest('a') || target.closest('select'))) {
+      return;
+    }
+  }
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const currentDisplay = window.getComputedStyle(container).display;
+  const isHidden = (currentDisplay === 'none' || container.style.display === 'none');
+  const toggleBtn = headerEl ? headerEl.querySelector('.btn-toggle-admin') : null;
+  const textSpan = toggleBtn ? toggleBtn.querySelector('.toggle-text') : null;
+  const iconEl = toggleBtn ? toggleBtn.querySelector('.toggle-icon') : null;
+
+  if (isHidden) {
+    container.style.display = 'block';
+    if (textSpan) textSpan.textContent = '접기';
+    if (iconEl) {
+      iconEl.className = 'fa-solid fa-chevron-up toggle-icon';
+    }
+  } else {
+    container.style.display = 'none';
+    if (textSpan) textSpan.textContent = '펼치기';
+    if (iconEl) {
+      iconEl.className = 'fa-solid fa-chevron-down toggle-icon';
+    }
+  }
+}
+window.toggleAdminSection = toggleAdminSection;
+
 document.addEventListener('DOMContentLoaded', () => {
   // Load State from LocalStorage
   let users = JSON.parse(localStorage.getItem('users')) || [];
