@@ -4637,18 +4637,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Password Visibility Toggle (Profile Edit & General) ---
     document.querySelectorAll('.pw-toggle-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        if (btn.dataset.pwToggleInit === 'true') return;
+        btn.dataset.pwToggleInit = 'true';
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             const targetId = btn.getAttribute('data-target');
             const input = document.getElementById(targetId);
             const icon = btn.querySelector('i');
             if (!input) return;
             if (input.type === 'password') {
                 input.type = 'text';
-                if (icon) icon.classList.replace('fa-eye-slash', 'fa-eye');
+                if (icon) {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
                 btn.setAttribute('aria-pressed', 'true');
             } else {
                 input.type = 'password';
-                if (icon) icon.classList.replace('fa-eye', 'fa-eye-slash');
+                if (icon) {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                }
                 btn.setAttribute('aria-pressed', 'false');
             }
         });

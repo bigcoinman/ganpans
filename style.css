@@ -5117,13 +5117,16 @@ footer {
     cursor: pointer !important;
     color: var(--text-secondary) !important;
     font-size: 1.15rem !important;
-    padding: 6px !important;
+    padding: 6px 10px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    z-index: 5 !important;
+    z-index: 10 !important;
     line-height: 1 !important;
     opacity: 0.8 !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
     transition: color 0.2s, opacity 0.2s !important;
 }
 #profile-edit-modal .pw-toggle-btn:hover {
