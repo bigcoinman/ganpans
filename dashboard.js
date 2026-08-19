@@ -4909,8 +4909,8 @@ function initAIAssistant() {
       if (phoneVal.length > 20) {
         alert('휴대폰 번호는 최대 20자까지 입력 가능합니다.'); return;
       }
-      if (addressVal.length > 35) {
-        alert('주소는 최대 35자까지 입력 가능합니다.'); return;
+      if (addressVal.length > 100) {
+        alert('주소는 최대 100자까지 입력 가능합니다.'); return;
       }
 
       // 비밀번호 변경 시 확인
@@ -4934,22 +4934,29 @@ function initAIAssistant() {
 
         const updatedUser = users[idx];
         const storage = localStorage.getItem('activeUser') ? localStorage : sessionStorage;
-        storage.setItem('activeUser', JSON.stringify(sanitizeUser ? sanitizeUser(updatedUser) : updatedUser));
+        storage.setItem('activeUser', JSON.stringify(typeof sanitizeUser === 'function' ? sanitizeUser(updatedUser) : updatedUser));
 
         activeUser = getActiveUser();
 
-        // Supabase Sync
+        // Supabase Sync (주소 및 모든 변경 필드 포함)
         if (window.supabaseClient) {
           const updatePayload = {
             name: nameVal || users[idx].name,
             email: emailVal !== undefined ? emailVal : users[idx].email,
-            phone: phoneVal || users[idx].phone
+            phone: phoneVal || users[idx].phone,
+            address: addressVal !== undefined ? addressVal : (users[idx].address || '')
           };
           if (newPw) {
             updatePayload.password_hash = sha256(newPw);
           }
           window.supabaseClient.from('users').update(updatePayload).eq('id', user.id).then(({ error }) => {
-            if (error) console.error('Supabase Profile Update Error:', error.message);
+            if (error) {
+              console.error('Supabase Profile Update Error:', error.message);
+            } else {
+              if (window.SupabaseSync && typeof window.SupabaseSync.syncAllData === 'function') {
+                window.SupabaseSync.syncAllData();
+              }
+            }
           });
         }
       }

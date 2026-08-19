@@ -554,6 +554,7 @@ window.SupabaseSync = {
       name: user.name || '',
       email: user.email || '',
       phone: user.phone || '',
+      address: user.address || '',
       role: user.role || 'normal',
       biz_code: user.bizCode || user.biz_code || null,
       const_code: user.constCode || user.const_code || null,
@@ -831,8 +832,28 @@ window.SupabaseSync = {
             usersChanged = true;
           } else {
             const cur = localUsers[idx];
-            // DB 값이 최신 변경사항(전환상태, 권한, 승인코드 등)을 포함할 때 병합
+            // DB 값이 최신 변경사항(전환상태, 권한, 승인코드, 이름, 연락처, 주소 등)을 포함할 때 병합
             let needsUpdate = false;
+            if (mapped.name && cur.name !== mapped.name) {
+              cur.name = mapped.name;
+              needsUpdate = true;
+            }
+            if (mapped.phone !== undefined && mapped.phone !== null && cur.phone !== mapped.phone) {
+              cur.phone = mapped.phone;
+              needsUpdate = true;
+            }
+            if (mapped.email !== undefined && mapped.email !== null && cur.email !== mapped.email) {
+              cur.email = mapped.email;
+              needsUpdate = true;
+            }
+            if (mapped.address !== undefined && mapped.address !== null && cur.address !== mapped.address) {
+              cur.address = mapped.address;
+              needsUpdate = true;
+            }
+            if (mapped.pw && cur.pw !== mapped.pw) {
+              cur.pw = mapped.pw;
+              needsUpdate = true;
+            }
             if (mapped.conversionStatus !== 'none' && cur.conversionStatus !== mapped.conversionStatus) {
               cur.conversionStatus = mapped.conversionStatus;
               needsUpdate = true;
@@ -857,14 +878,6 @@ window.SupabaseSync = {
               cur.pendingLicenseNumber = mapped.pendingLicenseNumber;
               needsUpdate = true;
             }
-            if (mapped.address && !cur.address) {
-              cur.address = mapped.address;
-              needsUpdate = true;
-            }
-            if (mapped.phone && !cur.phone) {
-              cur.phone = mapped.phone;
-              needsUpdate = true;
-            }
             if (Array.isArray(mapped.items) && mapped.items.length > (cur.items || []).length) {
               cur.items = mapped.items;
               needsUpdate = true;
@@ -873,6 +886,16 @@ window.SupabaseSync = {
             if (needsUpdate) {
               localUsers[idx] = cur;
               usersChanged = true;
+
+              // 만약 현재 로그인된 사용자 정보가 갱신된 것이라면 세션 activeUser도 즉시 동기화
+              try {
+                const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')));
+                if (activeUser && activeUser.id === cur.id) {
+                  const storage = localStorage.getItem('activeUser') ? localStorage : sessionStorage;
+                  const sanitized = typeof sanitizeUser === 'function' ? sanitizeUser(cur) : cur;
+                  storage.setItem('activeUser', JSON.stringify(sanitized));
+                }
+              } catch (eSession) {}
             }
           }
         });
