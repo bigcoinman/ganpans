@@ -1979,7 +1979,7 @@
                         <label for="find-pw-new">새 비밀번호</label>
                         <div class="pw-wrapper">
                             <input type="password" id="find-pw-new" class="form-input-auth"
-                                placeholder="영문, 숫자, 특수문자 조합 8자리 이상">
+                                placeholder="영문 소문자·숫자·특수문자 조합 8~20자" maxlength="20">
                             <button type="button" class="pw-toggle-btn" data-target="find-pw-new"
                                 aria-label="비밀번호 보기/숨기기" tabindex="-1">
                                 <i class="fa-solid fa-eye-slash"></i>
@@ -2010,15 +2010,14 @@
                         <label for="signup-pw">비밀번호</label>
                         <div class="pw-wrapper">
                             <input type="password" id="signup-pw" class="form-input-auth" placeholder="비밀번호를 입력하세요"
-                                required>
+                                maxlength="20" required>
                             <button type="button" class="pw-toggle-btn" data-target="signup-pw" aria-label="비밀번호 보기/숨기기"
                                 tabindex="-1">
                                 <i class="fa-solid fa-eye-slash"></i>
                             </button>
                         </div>
                         <span class="form-helper-text"
-                            style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">영문,
-                            숫자, 특수문자 조합으로 8자리 이상 입력해 주세요.</span>
+                            style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">영문 소문자·숫자·특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.</span>
                         <span class="form-helper" id="pw-check-msg"></span>
                     </div>
                     <div class="form-group-auth">

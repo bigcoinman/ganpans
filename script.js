@@ -1803,9 +1803,9 @@ function initAuthAndDashboard() {
   document.getElementById('btn-reset-pw').addEventListener('click', () => {
     if (!foundPwUser) return;
     const newPw = document.getElementById('find-pw-new').value;
-    const pwRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const pwRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\]{8,20}$/;
     if (!pwRegex.test(newPw)) {
-      alert('비밀번호는 영문, 숫자, 특수문자 조합 8자 이상이어야 합니다.');
+      alert('비밀번호는 영문 소문자·숫자·특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.');
       return;
     }
     // localStorage 반영
@@ -1947,8 +1947,8 @@ function initAuthAndDashboard() {
   // Password Complexity Check
   signupPwInput.addEventListener('input', () => {
     const pwVal = signupPwInput.value;
-    // English letters, numbers, special characters combination, minimum 8 characters
-    const pwRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    // 소문자 1개 이상, 숫자 1개 이상, 특수문자 1개 이상, 8~20자
+    const pwRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\]{8,20}$/;
 
     if (!pwVal) {
       pwCheckMsg.textContent = '';
@@ -1960,7 +1960,7 @@ function initAuthAndDashboard() {
       pwCheckMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> 사용 가능한 비밀번호입니다.';
     } else {
       pwCheckMsg.className = 'form-helper error';
-      pwCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 영문, 숫자, 특수문자 조합 8자 이상이어야 합니다.';
+      pwCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 영문 소문자·숫자·특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.';
     }
   });
 
@@ -2043,9 +2043,9 @@ function initAuthAndDashboard() {
       return;
     }
 
-    const pwRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const pwRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\]{8,20}$/;
     if (!pwRegex.test(pwVal)) {
-      alert('비밀번호는 영문, 숫자, 특수문자 조합 8자 이상이어야 합니다.');
+      alert('비밀번호는 영문 소문자·숫자·특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.');
       return;
     }
 
