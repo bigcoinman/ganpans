@@ -98,7 +98,12 @@ const KakaoNotifier = (function () {
     const title = '📑 온라인 간편 지원금 신청서 접수!';
     const referrerText = app.referrerCode ? `• 담당 영업자: ${app.referrerCode}\n` : '• 접수 경로: 일반 포털 온라인 직접 접수\n';
     
-    const message = `• 접수 번호: ${app.id}\n• 점포 상호명: ${app.storeName}\n• 대표자명: ${app.ownerName} (${app.ownerPhone})\n• 설치 주소: ${app.storeAddress}\n• 간판 종류: ${app.signType || '플렉스'}\n${referrerText}• 첨부 사진: ${app.fileName || '현장 사진 첨부됨'}`;
+    let accountText = '';
+    if (app.autoAccount) {
+      accountText = `\n■ 내 진행상황 조회 계정 안내:\n  - 아이디: ${app.autoAccount.id}\n  - 임시 비밀번호: ${app.autoAccount.pw}\n`;
+    }
+
+    const message = `[간판지원단] 간판 교체 지원사업 신청이 정상 접수되었습니다.\n■ 접수 번호: ${app.id}\n■ 신청 상호: ${app.storeName}\n■ 대표자명: ${app.ownerName} (${app.ownerPhone})\n■ 설치 주소: ${app.storeAddress}\n${referrerText}• 첨부 사진: ${app.fileName || '현장 사진 첨부됨'}${accountText}\n언제든 로그인하여 실시간 심사 및 시공 진행 상태를 확인하실 수 있습니다.`;
 
     return sendToMe(title, message, 'https://ganpans.com/dashboard.html');
   }

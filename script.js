@@ -1411,10 +1411,65 @@ function initWizard() {
     const referrerCode = document.getElementById('referrer-code')?.value.trim() || '';
 
     const activeUser = getActiveUser() || null;
-    const userId = activeUser ? activeUser.id : 'guest';
-
-    const apps = JSON.parse(localStorage.getItem('applications')) || [];
     let users = JSON.parse(localStorage.getItem('users')) || [];
+    const apps = JSON.parse(localStorage.getItem('applications')) || [];
+
+    // 휴대폰 번호 기반 자동 계정 생성 규격
+    const phoneDigits = ownerPhone.replace(/[^0-9]/g, '');
+    const autoPw = 'G-' + (phoneDigits.length >= 8 ? phoneDigits.slice(-8) : phoneDigits.padStart(8, '0'));
+
+    let userId = '';
+    let loginNoticeId = '';
+    let loginNoticePw = '';
+    let isNewAccount = false;
+
+    if (activeUser) {
+      // 1) 이미 로그인된 회원이 신청한 경우
+      userId = activeUser.id;
+      loginNoticeId = activeUser.id;
+      loginNoticePw = '(기존 회원 비밀번호)';
+    } else {
+      // 2) 미로그인 상태인 경우: 기존 회원 DB에서 휴대폰/아이디 일치 여부 확인
+      const existingUser = users.find(u => {
+        const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
+        return (uPhoneDigits && uPhoneDigits === phoneDigits) || (u.id && u.id.toLowerCase() === phoneDigits.toLowerCase());
+      });
+
+      if (existingUser) {
+        // 기존 가입 회원 보호: 비밀번호는 변경하지 않고 기존 계정에 연결
+        userId = existingUser.id;
+        loginNoticeId = existingUser.id;
+        loginNoticePw = '(기존 비밀번호로 로그인)';
+      } else {
+        // 신규 신청자: 휴대폰 번호(숫자만) 아이디 및 G-XXXXXX 임시 비밀번호로 자동 계정 생성
+        isNewAccount = true;
+        userId = phoneDigits || ('guest_' + Date.now());
+        loginNoticeId = phoneDigits;
+        loginNoticePw = autoPw;
+
+        const hashedPassword = typeof sha256 === 'function' ? sha256(autoPw) : autoPw;
+        const newUser = {
+          id: phoneDigits,
+          name: ownerName,
+          phone: ownerPhone,
+          email: document.getElementById('owner-email')?.value.trim() || '',
+          address: storeAddress,
+          pw: hashedPassword,
+          role: 'normal',
+          conversionStatus: 'none',
+          items: [],
+          createdAt: now.toISOString()
+        };
+
+        users.push(newUser);
+        localStorage.setItem('users', JSON.stringify(users));
+
+        if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
+          window.SupabaseSync.upsertUser(newUser);
+        }
+      }
+    }
+
     let customId = '';
 
     if (referrerCode) {
@@ -1439,14 +1494,19 @@ function initWizard() {
       ownerPhone,
       storeName,
       storeAddress,
-      signType: '',
+      signType: '간판지원신청',
       fileName,
       fileData,
       photos,
       photosCount: photos.length,
       appliedAt: now.toISOString(),
       status: 'pending', // pending, approved, rejected
-      referrerCode
+      referrerCode,
+      autoAccount: {
+        id: loginNoticeId,
+        pw: loginNoticePw,
+        isNew: isNewAccount
+      }
     };
 
     apps.push(newApp);
@@ -1468,7 +1528,6 @@ function initWizard() {
 
     // 추천 코드 자동 연동 (방안 A)
     if (referrerCode) {
-      let users = JSON.parse(localStorage.getItem('users')) || [];
       let bizUserFound = false;
 
       const newBizItem = {
@@ -1506,10 +1565,22 @@ function initWizard() {
       }
     }
 
-    // 성공 팝업에 고유 접수 번호 삽입
+    // 성공 팝업에 고유 접수 번호, 상호명, 자동생성 조회계정 정보 삽입
     const appIdContainer = document.getElementById('success-app-id-container');
     if (appIdContainer) {
       appIdContainer.textContent = customId;
+    }
+    const storeNameContainer = document.getElementById('success-store-name');
+    if (storeNameContainer) {
+      storeNameContainer.textContent = storeName;
+    }
+    const loginIdContainer = document.getElementById('success-login-id');
+    if (loginIdContainer) {
+      loginIdContainer.textContent = loginNoticeId;
+    }
+    const loginPwContainer = document.getElementById('success-login-pw');
+    if (loginPwContainer) {
+      loginPwContainer.textContent = loginNoticePw;
     }
 
     // Show success dialog
@@ -2247,6 +2318,7 @@ function initAuthAndDashboard() {
     }
 
     const hashedPassword = sha256(pwVal);
+    const cleanDigits = idVal.replace(/[^0-9]/g, '');
     let user = null;
 
     // 1. Supabase 실물 DB 로그인 조회
@@ -2257,6 +2329,15 @@ function initAuthAndDashboard() {
           .select('*')
           .eq('id', idVal)
           .maybeSingle();
+
+        if (!data && cleanDigits) {
+          const { data: phoneData } = await window.supabaseClient
+            .from('users')
+            .select('*')
+            .or(`id.eq.${cleanDigits},phone.eq.${idVal},phone.eq.${cleanDigits}`)
+            .maybeSingle();
+          if (phoneData) data = phoneData;
+        }
 
         // 대소문자 차이 대응 fallback
         if (!data) {
@@ -2274,7 +2355,14 @@ function initAuthAndDashboard() {
             user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : sanitizeUser(data);
           } else if (!data.password_hash) {
             // 구버전 계정: 로컬스토리지 비밀번호 검증 후 Supabase 업데이트
-            const localUser = users.find(u => u.id.toLowerCase() === idVal.toLowerCase() && (u.pw === hashedPassword || u.pw === pwVal));
+            const localUser = users.find(u => {
+              const uId = (u.id || '').toLowerCase();
+              const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
+              const isMatchUser = (uId === idVal.toLowerCase()) || 
+                                  (cleanDigits && uId === cleanDigits) || 
+                                  (cleanDigits && uPhoneDigits === cleanDigits);
+              return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
+            });
             if (localUser) {
               user = sanitizeUser(localUser);
               if (window.SupabaseSync) {
@@ -2292,7 +2380,14 @@ function initAuthAndDashboard() {
 
     // 2. 로컬 스토리지 로그인 fallback (오프라인 / Supabase 미연결 시)
     if (!user) {
-      const localUser = users.find(u => u.id.toLowerCase() === idVal.toLowerCase() && (u.pw === hashedPassword || u.pw === pwVal));
+      const localUser = users.find(u => {
+        const uId = (u.id || '').toLowerCase();
+        const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
+        const isMatchUser = (uId === idVal.toLowerCase()) || 
+                            (cleanDigits && uId === cleanDigits) || 
+                            (cleanDigits && uPhoneDigits === cleanDigits);
+        return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
+      });
       if (localUser) user = sanitizeUser(localUser);
     }
 
