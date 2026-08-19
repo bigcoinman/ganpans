@@ -184,66 +184,49 @@ async function downloadApplicationPhotos(appOrId) {
     return;
   }
 
-  // B. 사진이 2장 이상인 경우: ZIP 압축 파일 생성 후 일괄 다운로드
+  // B. 사진이 2장 이상인 경우: 표준 DOS STORE 포맷 ZIP 압축 파일 생성 후 일괄 다운로드
   if (typeof JSZip !== 'undefined') {
     try {
       const zip = new JSZip();
+      const safeStoreName = storeName.replace(/[\\/:*?"<>|]/g, '_').trim() || '신청점포';
 
       for (let idx = 0; idx < photos.length; idx++) {
         const photoData = photos[idx];
         let ext = 'jpg';
-        let mime = 'image/jpeg';
         if (photoData.startsWith('data:image/')) {
           const matches = photoData.match(/^data:image\/([a-zA-Z0-9+]+);/);
           if (matches && matches[1]) {
             ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-            mime = `image/${matches[1]}`;
           }
         }
 
-        let blob = null;
-        if (photoData.startsWith('data:') || photoData.startsWith('blob:')) {
-          try {
-            const res = await fetch(photoData);
-            blob = await res.blob();
-          } catch (eFetch) {
-            const base64Clean = photoData.replace(/^data:image\/[a-zA-Z0-9+]+;base64,/, '').trim();
-            const byteString = atob(base64Clean);
-            const ab = new ArrayBuffer(byteString.length);
-            const ia = new Uint8Array(ab);
-            for (let i = 0; i < byteString.length; i++) {
-              ia[i] = byteString.charCodeAt(i);
-            }
-            blob = new Blob([ab], { type: mime });
+        try {
+          const base64Clean = photoData.replace(/^data:image\/[a-zA-Z0-9+]+;base64,/, '').replace(/\s/g, '');
+          const byteString = atob(base64Clean);
+          const len = byteString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = byteString.charCodeAt(i);
           }
-        } else if (photoData.startsWith('http')) {
-          try {
-            const res = await fetch(photoData);
-            blob = await res.blob();
-          } catch (eHttp) {}
-        } else {
-          try {
-            const byteString = atob(photoData.trim());
-            const ab = new ArrayBuffer(byteString.length);
-            const ia = new Uint8Array(ab);
-            for (let i = 0; i < byteString.length; i++) {
-              ia[i] = byteString.charCodeAt(i);
-            }
-            blob = new Blob([ab], { type: mime });
-          } catch (eB64) {}
-        }
 
-        if (blob) {
-          zip.file(`${storeName}_현장사진_${idx + 1}.${ext}`, blob);
+          const photoFileName = `${safeStoreName}_현장사진_${idx + 1}.${ext}`;
+          zip.file(photoFileName, bytes, {
+            binary: true,
+            date: new Date()
+          });
+        } catch (eConv) {
+          console.warn('Image convert error on photo ' + idx, eConv);
         }
       }
 
       const content = await zip.generateAsync({
         type: 'blob',
-        compression: 'DEFLATE',
-        compressionOptions: { level: 6 }
+        mimeType: 'application/zip',
+        compression: 'STORE',
+        platform: 'DOS'
       });
-      const zipFileName = `${storeName}_현장사진_전체(${photos.length}장).zip`;
+
+      const zipFileName = `${safeStoreName}_현장사진_전체(${photos.length}장).zip`;
       const zipUrl = URL.createObjectURL(content);
       const a = document.createElement('a');
       a.href = zipUrl;
@@ -251,7 +234,7 @@ async function downloadApplicationPhotos(appOrId) {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(zipUrl), 10000);
+      setTimeout(() => URL.revokeObjectURL(zipUrl), 30000);
     } catch (zipErr) {
       console.error('ZIP generation error:', zipErr);
       // Fallback: 개별 순차 다운로드
@@ -277,6 +260,54 @@ async function downloadApplicationPhotos(appOrId) {
   }
 }
 window.downloadApplicationPhotos = downloadApplicationPhotos;
+
+// 압축 해제 없이 모든 사진을 브라우저에서 즉시 개별 다운로드하는 함수
+function downloadIndividualPhotos(appOrId) {
+  let app = appOrId;
+  if (typeof appOrId === 'string' || typeof appOrId === 'number') {
+    const localApps = JSON.parse(localStorage.getItem('applications')) || [];
+    app = localApps.find(a => String(a.id) === String(appOrId));
+  }
+  if (!app) {
+    alert('신청서 정보를 찾을 수 없습니다.');
+    return;
+  }
+
+  const storeName = app.storeName || app.shopName || app.ownerName || '신청점포';
+  const safeStoreName = storeName.replace(/[\\/:*?"<>|]/g, '_').trim() || '신청점포';
+  let photos = [];
+
+  if (Array.isArray(app.photos) && app.photos.length > 0) {
+    photos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+  }
+  if (photos.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
+    photos = [app.fileData];
+  }
+
+  if (photos.length === 0) {
+    alert('다운로드 가능한 현장 사진이 없습니다.');
+    return;
+  }
+
+  photos.forEach((photoData, idx) => {
+    let ext = 'jpg';
+    if (photoData.startsWith('data:image/')) {
+      const matches = photoData.match(/^data:image\/([a-zA-Z0-9+]+);/);
+      if (matches && matches[1]) {
+        ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+      }
+    }
+    const a = document.createElement('a');
+    a.href = photoData;
+    a.download = `${safeStoreName}_현장사진_${idx + 1}.${ext}`;
+    document.body.appendChild(a);
+    setTimeout(() => {
+      a.click();
+      document.body.removeChild(a);
+    }, idx * 300); // 브라우저 팝업 차단 방지 간격
+  });
+}
+window.downloadIndividualPhotos = downloadIndividualPhotos;
 
 // ========================================================
 // 5. 로그인 상태 유지 및 1시간 미사용 시 자동 로그아웃 관리
