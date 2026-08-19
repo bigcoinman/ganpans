@@ -4585,8 +4585,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 비밀번호 변경 시 확인
             if (newPw || newPwConf) {
-                if (newPw.length < 6) { alert('비밀번호는 최소 6자 이상이어야 합니다.'); return; }
-                if (newPw.length > 25) { alert('비밀번호는 최대 25자까지 입력 가능합니다.'); return; }
+                const pwRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",./<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",./<>?~|\\]{8,20}$/;
+                if (!pwRegex.test(newPw)) { alert('비밀번호는 영문 소문자·숫자·특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.'); return; }
                 if (newPw !== newPwConf) { alert('새 비밀번호가 일치하지 않습니다.'); return; }
             }
 
