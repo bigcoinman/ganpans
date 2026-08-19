@@ -586,10 +586,7 @@ function initSimulator() {
     useSimulatedDesignBtn.addEventListener('click', () => {
       // Prefill Application Form fields
       const shopNameField = document.getElementById('app-shop-name');
-      const signTypeField = document.getElementById('app-sign-type');
-
       if (shopNameField) shopNameField.value = state.shopName;
-      if (signTypeField) signTypeField.value = state.signType.toUpperCase();
 
       // Scroll to application wizard
       const appSection = document.getElementById('apply-section');
@@ -1125,13 +1122,14 @@ function initWizard() {
   }
 
   let currentStep = 0;
-  let uploadedFileBase64 = '';
+  let uploadedPhotos = []; // [{ name: string, dataUrl: string }]
+
+  const photosPreviewContainer = document.getElementById('uploaded-photos-preview');
 
   // =================================================
   // 신청서 1단계: 신청인 본인인증 로직 (선택적)
   // =================================================
   let isOwnerPhoneVerified = true;
-
 
   if (uploadArea && uploadInput) {
     ['dragenter', 'dragover'].forEach(eventName => {
@@ -1151,33 +1149,103 @@ function initWizard() {
     uploadArea.addEventListener('drop', (e) => {
       const dt = e.dataTransfer;
       const files = dt.files;
-      if (files.length) {
-        uploadInput.files = files;
-        showFileName(files[0].name);
+      if (files && files.length) {
+        handlePhotoFiles(files);
       }
     });
 
     uploadInput.addEventListener('change', (e) => {
-      if (e.target.files.length) {
-        showFileName(e.target.files[0].name);
+      if (e.target.files && e.target.files.length) {
+        handlePhotoFiles(e.target.files);
       }
+      uploadInput.value = '';
     });
   }
 
-  function showFileName(name) {
-    if (fileNameDisplay) {
-      fileNameDisplay.textContent = `✓ 업로드됨: ${name}`;
-      fileNameDisplay.style.display = 'block';
+  async function handlePhotoFiles(fileList) {
+    const validExtensions = ['jpg', 'jpeg', 'png'];
+    const validMimes = ['image/jpeg', 'image/png'];
+    const newFiles = Array.from(fileList);
+
+    // 1. 확장자 및 규격 검증 (JPG, PNG만 허용)
+    const invalidFiles = newFiles.filter(f => {
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      return !validExtensions.includes(ext) && !validMimes.includes(f.type);
+    });
+
+    if (invalidFiles.length > 0) {
+      alert('사진 파일은 JPG 및 PNG 형식만 업로드 가능합니다.');
+      return;
     }
-    
-    // Read file and convert to base64 with 2MB forced compression
-    if (uploadInput && uploadInput.files.length > 0) {
-      const file = uploadInput.files[0];
-      compressImageToBase64(file, 2 * 1024 * 1024).then(base64 => {
-        uploadedFileBase64 = base64;
+
+    // 2. 최대 10장 한도 검증
+    if (uploadedPhotos.length + newFiles.length > 10) {
+      alert(`사진은 최대 10장까지 업로드할 수 있습니다. (현재 ${uploadedPhotos.length}장 등록됨)`);
+    }
+
+    const availableSlots = 10 - uploadedPhotos.length;
+    if (availableSlots <= 0) return;
+
+    const filesToProcess = newFiles.slice(0, availableSlots);
+
+    // 3. 2MB 강제 압축 처리 및 배열 추가
+    for (const file of filesToProcess) {
+      try {
+        let base64 = '';
+        if (typeof compressImageToBase64 === 'function') {
+          base64 = await compressImageToBase64(file, 2 * 1024 * 1024);
+        } else {
+          base64 = await new Promise(res => {
+            const reader = new FileReader();
+            reader.onload = ev => res(ev.target.result);
+            reader.readAsDataURL(file);
+          });
+        }
+        uploadedPhotos.push({
+          name: file.name,
+          dataUrl: base64
+        });
+      } catch (err) {
+        console.error('Image compression error:', err);
+      }
+    }
+
+    renderPhotosPreview();
+  }
+
+  function renderPhotosPreview() {
+    if (fileNameDisplay) {
+      if (uploadedPhotos.length > 0) {
+        fileNameDisplay.textContent = `✓ 업로드된 사진 (${uploadedPhotos.length}/10장): ${uploadedPhotos.map(p => p.name).join(', ')}`;
+        fileNameDisplay.style.display = 'block';
+      } else {
+        fileNameDisplay.textContent = '';
+        fileNameDisplay.style.display = 'none';
+      }
+    }
+
+    if (photosPreviewContainer) {
+      photosPreviewContainer.innerHTML = '';
+      uploadedPhotos.forEach((photo, idx) => {
+        const item = document.createElement('div');
+        item.className = 'uploaded-photo-item';
+        item.innerHTML = `
+          <img src="${photo.dataUrl}" alt="${escapeHtml(photo.name)}" title="${escapeHtml(photo.name)}">
+          <button type="button" class="uploaded-photo-remove" data-index="${idx}" title="삭제">&times;</button>
+        `;
+        photosPreviewContainer.appendChild(item);
       });
-    } else {
-      uploadedFileBase64 = '';
+
+      photosPreviewContainer.querySelectorAll('.uploaded-photo-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const removeIdx = parseInt(btn.getAttribute('data-index'), 10);
+          if (!isNaN(removeIdx)) {
+            uploadedPhotos.splice(removeIdx, 1);
+            renderPhotosPreview();
+          }
+        });
+      });
     }
   }
 
@@ -1237,18 +1305,18 @@ function initWizard() {
     const ownerPhone = document.getElementById('owner-phone')?.value || '-';
     const storeName = document.getElementById('app-shop-name')?.value || '-';
     const storeAddress = document.getElementById('store-address')?.value || '-';
-    const signType = document.getElementById('app-sign-type')?.value || '-';
-    const fileUploaded = uploadInput.files.length > 0 ? uploadInput.files[0].name : '업로드 파일 없음';
+    const fileUploaded = uploadedPhotos.length > 0
+      ? `${uploadedPhotos.length}장 첨부됨 (${uploadedPhotos.map(p => p.name).join(', ')})`
+      : '업로드 파일 없음';
     const referrerVal = document.getElementById('referrer-code')?.value.trim() || '-';
 
     // Set preview values
-    document.getElementById('sum-owner-name').textContent = ownerName;
-    document.getElementById('sum-owner-phone').textContent = ownerPhone;
-    document.getElementById('sum-store-name').textContent = storeName;
-    document.getElementById('sum-store-address').textContent = storeAddress;
-    document.getElementById('sum-sign-type').textContent = signType;
-    document.getElementById('sum-file-name').textContent = fileUploaded;
-    document.getElementById('sum-referrer-code').textContent = referrerVal;
+    if (document.getElementById('sum-owner-name')) document.getElementById('sum-owner-name').textContent = ownerName;
+    if (document.getElementById('sum-owner-phone')) document.getElementById('sum-owner-phone').textContent = ownerPhone;
+    if (document.getElementById('sum-store-name')) document.getElementById('sum-store-name').textContent = storeName;
+    if (document.getElementById('sum-store-address')) document.getElementById('sum-store-address').textContent = storeAddress;
+    if (document.getElementById('sum-file-name')) document.getElementById('sum-file-name').textContent = fileUploaded;
+    if (document.getElementById('sum-referrer-code')) document.getElementById('sum-referrer-code').textContent = referrerVal;
   }
 
   function validateStep(step) {
@@ -1296,8 +1364,9 @@ function initWizard() {
     const ownerPhone = document.getElementById('owner-phone')?.value.trim() || '';
     const storeName = document.getElementById('app-shop-name')?.value.trim() || '';
     const storeAddress = document.getElementById('store-address')?.value.trim() || '';
-    const signType = document.getElementById('app-sign-type')?.value || '';
-    const fileName = uploadInput && uploadInput.files.length > 0 ? uploadInput.files[0].name : '업로드 파일 없음';
+    const photos = uploadedPhotos.map(p => p.dataUrl);
+    const fileName = uploadedPhotos.length > 0 ? uploadedPhotos.map(p => p.name).join(', ') : '업로드 파일 없음';
+    const fileData = photos[0] || '';
     const referrerCode = document.getElementById('referrer-code')?.value.trim() || '';
 
     const activeUser = getActiveUser() || null;
@@ -1329,9 +1398,11 @@ function initWizard() {
       ownerPhone,
       storeName,
       storeAddress,
-      signType,
+      signType: '',
       fileName,
-      fileData: uploadedFileBase64, // Save base64 string
+      fileData,
+      photos,
+      photosCount: photos.length,
       appliedAt: now.toISOString(),
       status: 'pending', // pending, approved, rejected
       referrerCode
@@ -1359,10 +1430,10 @@ function initWizard() {
         id: customId, // 접수 번호와 동일하게 맞추어 동기화가 용이하도록 구성
         name: storeName,
         address: storeAddress,
-        photosCount: uploadInput.files.length > 0 ? 1 : 0,
+        photosCount: photos.length,
         receiptStatus: '접수 완료 (간판지원단)',
         progressStatus: '심사 대기',
-        photos: uploadedFileBase64 ? [uploadedFileBase64] : []
+        photos: photos
       };
 
       users = users.map(u => {

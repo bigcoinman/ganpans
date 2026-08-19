@@ -902,31 +902,27 @@
                                     class="fa-solid fa-shop"></i> 단계 2:
                                 사업장(점포) 정보 및 현황</h3>
                             <div class="form-grid">
-                                <div class="form-group">
+                                <div class="form-group form-grid-full">
                                     <label for="app-shop-name">사업자 상호명</label>
                                     <input type="text" id="app-shop-name" class="form-input" placeholder="상호명 입력"
                                         maxlength="25" required>
                                 </div>
-                                <div class="form-group">
-                                    <label for="app-sign-type">선택한 간판 소재</label>
-                                    <input type="text" id="app-sign-type" class="form-input"
-                                        placeholder="예: 플렉스(기본형), LED" readonly>
-                                </div>
                                 <div class="form-group form-grid-full">
                                     <label for="store-address">설치 예정지 전체 주소</label>
                                     <input type="text" id="store-address" class="form-input"
-                                        placeholder="경기도 수원시 OO구 OO로 1" maxlength="35" required>
+                                        placeholder="경기도 수원시 OO구 OO로 1" maxlength="100" required>
                                 </div>
 
                                 <!-- Photo upload drag & drop area -->
                                 <div class="form-group form-grid-full">
-                                    <label>기존 노후 간판 정면 현장 촬영 사진</label>
+                                    <label>기존 노후 간판 정면 현장 촬영 사진 (최대 10장)</label>
                                     <div class="file-upload-area" id="file-upload-area">
                                         <i class="fa-solid fa-cloud-arrow-up"></i>
                                         <p>사진 파일을 드래그하여 드롭하거나 영역을 클릭해 선택하세요.</p>
-                                        <span>지원 규격: JPG, PNG (최대 10MB)</span>
-                                        <input type="file" id="store-photo" accept="image/*">
+                                        <span>지원 규격: JPG, PNG</span>
+                                        <input type="file" id="store-photo" accept=".jpg, .jpeg, .png, image/jpeg, image/png" multiple>
                                         <div id="uploaded-file-name" class="uploaded-file-name"></div>
+                                        <div id="uploaded-photos-preview" class="uploaded-photos-preview"></div>
                                     </div>
                                 </div>
                             </div>
@@ -958,10 +954,6 @@
                                     <div class="summary-item">
                                         <span>경기도 내 설치 주소</span>
                                         <strong id="sum-store-address">-</strong>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span>간판 형태</span>
-                                        <strong id="sum-sign-type">-</strong>
                                     </div>
                                     <div class="summary-item">
                                         <span>기존 사진 첨부</span>
