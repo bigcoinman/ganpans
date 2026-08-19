@@ -1338,10 +1338,33 @@ function initWizard() {
     return true;
   }
 
+  function scrollToActiveStep() {
+    setTimeout(() => {
+      const activePane = document.querySelector('.step-pane.active');
+      if (activePane) {
+        // 상단 헤더 네비게이션 높이를 감안하여 여백(90px) 확보 후 스크롤
+        const headerOffset = 90;
+        const elementPosition = activePane.getBoundingClientRect().top + window.pageYOffset;
+        const offsetPosition = elementPosition - headerOffset;
+
+        window.scrollTo({
+          top: Math.max(0, offsetPosition),
+          behavior: 'smooth'
+        });
+      } else {
+        const applySection = document.getElementById('apply-section') || document.getElementById('apply-form');
+        if (applySection) {
+          applySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    }, 50);
+  }
+
   prevBtn.addEventListener('click', () => {
     if (currentStep > 0) {
       currentStep--;
       renderWizard();
+      scrollToActiveStep();
     }
   });
 
@@ -1355,6 +1378,7 @@ function initWizard() {
     if (validateStep(currentStep)) {
       currentStep++;
       renderWizard();
+      scrollToActiveStep();
     }
   });
 
