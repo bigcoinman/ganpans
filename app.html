@@ -371,8 +371,63 @@
                             </div>
                         </div>
 
+                        <!-- Step Complete: Application submission complete view -->
+                        <div class="step-pane" data-step="complete" id="step-pane-complete">
+                            <div style="text-align: center; padding: 10px 6px;">
+                                <div style="display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 60px; border-radius: 50%; background: rgba(16, 185, 129, 0.12); color: var(--accent-success); margin-bottom: 14px;">
+                                    <i class="fa-solid fa-circle-check" style="font-size: 2.3rem;"></i>
+                                </div>
+                                <h3 style="margin-bottom: 8px; color: var(--text-primary); font-size: 1.35rem; font-weight: 800;">
+                                    단계 3: 간판 지원금 신청 완료!
+                                </h3>
+                                <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 20px;">
+                                    경기도 소상공인 경영환경개선사업(간판 교체) 신청서가 정상적으로 접수되었습니다.
+                                </p>
+
+                                <div class="summary-card" style="text-align: left; margin-bottom: 22px;">
+                                    <h4>신청 접수 정보</h4>
+                                    <div class="summary-list">
+                                        <div class="summary-item">
+                                            <span>접수 번호</span>
+                                            <strong id="complete-app-id" style="color: var(--accent-primary); font-family: 'Outfit', sans-serif; font-size: 1.05rem;">-</strong>
+                                        </div>
+                                        <div class="summary-item">
+                                            <span>신청 상호</span>
+                                            <strong id="complete-store-name">-</strong>
+                                        </div>
+                                        <div class="summary-item">
+                                            <span>대표 신청자</span>
+                                            <strong id="complete-owner-name">-</strong>
+                                        </div>
+                                        <div class="summary-item">
+                                            <span>연락처</span>
+                                            <strong id="complete-owner-phone">-</strong>
+                                        </div>
+                                        <div class="summary-item">
+                                            <span>설치 예정지</span>
+                                            <strong id="complete-store-address">-</strong>
+                                        </div>
+                                        <div class="summary-item" style="border-top: 1px dashed var(--border-color); padding-top: 8px; margin-top: 6px;">
+                                            <span>조회용 계정 아이디</span>
+                                            <strong id="complete-login-id" style="color: var(--text-primary); font-family: monospace;">-</strong>
+                                        </div>
+                                        <div class="summary-item">
+                                            <span>임시 비밀번호</span>
+                                            <strong id="complete-login-pw" style="color: var(--accent-success); font-family: monospace;">-</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                    <button type="button" class="btn btn-primary" id="btn-wizard-restart" style="padding: 12px 24px; font-weight: 700; border-radius: 8px; background: var(--accent-primary);">
+                                        <i class="fa-solid fa-rotate-right"></i> 새로운 신청서 작성
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Wizard controls -->
-                        <div class="wizard-buttons">
+                        <div class="wizard-buttons" id="wizard-buttons-area">
                             <button type="button" class="btn btn-secondary" id="prev-step">이전 단계</button>
                             <button type="button" class="btn btn-primary" id="next-step">다음 단계</button>
                         </div>
@@ -2351,13 +2406,13 @@
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Security utilities & Core App logic -->
-    <script src="supabase-config.js?v=20260820_0410"></script>
-    <script src="security-utils.js?v=20260820_0410"></script>
-    <script src="kakao-notify.js?v=20260820_0410"></script>
+    <script src="supabase-config.js?v=20260820_0418"></script>
+    <script src="security-utils.js?v=20260820_0418"></script>
+    <script src="kakao-notify.js?v=20260820_0418"></script>
     <!-- Load PC JavaScript first to run interactive components -->
-    <script src="script.js?v=20260820_0410"></script>
+    <script src="script.js?v=20260820_0418"></script>
     <!-- Load mobile drawer, tab, dashboard scripts -->
-    <script src="app.js?v=20260820_0410"></script>
+    <script src="app.js?v=20260820_0418"></script>
 </body>
 
 </html>

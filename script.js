@@ -1099,7 +1099,10 @@ function initReviews() {
 // 4. Application Wizard Logic
 // ==========================================
 function initWizard() {
-  const steps = document.querySelectorAll('.step-pane');
+  const steps = document.querySelectorAll('.step-pane[data-step="1"], .step-pane[data-step="2"], .step-pane[data-step="3"]');
+  const completePane = document.getElementById('step-pane-complete');
+  const wizardButtonsArea = document.getElementById('wizard-buttons-area') || document.querySelector('.wizard-buttons');
+  const restartBtn = document.getElementById('btn-wizard-restart');
   const stepNodes = document.querySelectorAll('.step-node');
   const progressBar = document.querySelector('.wizard-progress');
   const prevBtn = document.getElementById('prev-step');
@@ -1648,6 +1651,42 @@ function initWizard() {
         loginPwContainer.textContent = loginNoticePw;
       }
 
+      // 신청 완료 전용 화면(step-pane-complete) 필드 데이터 채우기
+      const compAppId = document.getElementById('complete-app-id');
+      if (compAppId) compAppId.textContent = customId;
+      const compStoreName = document.getElementById('complete-store-name');
+      if (compStoreName) compStoreName.textContent = storeName;
+      const compOwnerName = document.getElementById('complete-owner-name');
+      if (compOwnerName) compOwnerName.textContent = ownerName;
+      const compOwnerPhone = document.getElementById('complete-owner-phone');
+      if (compOwnerPhone) compOwnerPhone.textContent = ownerPhone;
+      const compStoreAddr = document.getElementById('complete-store-address');
+      if (compStoreAddr) compStoreAddr.textContent = storeAddress;
+      const compLoginId = document.getElementById('complete-login-id');
+      if (compLoginId) compLoginId.textContent = loginNoticeId;
+      const compLoginPw = document.getElementById('complete-login-pw');
+      if (compLoginPw) compLoginPw.textContent = loginNoticePw;
+
+      // 프로그레스 바를 3단계 완료(100% / 3개 노드 모두 체크)로 업데이트
+      stepNodes.forEach((node) => {
+        node.className = 'step-node complete';
+        node.innerHTML = '<i class="fas fa-check"></i>';
+      });
+      if (progressBar) {
+        progressBar.style.width = '100%';
+      }
+
+      // 하단 이전/다음 컨트롤 버튼 숨기기
+      if (wizardButtonsArea) {
+        wizardButtonsArea.style.display = 'none';
+      }
+
+      // 기존 1~3단계 입력 폼을 숨기고 신청 완료 화면 활성화
+      steps.forEach(pane => pane.classList.remove('active'));
+      if (completePane) {
+        completePane.classList.add('active');
+      }
+
       // Show success dialog
       if (successModal) {
         successModal.classList.add('active');
@@ -1660,42 +1699,56 @@ function initWizard() {
     }
   }
 
+  // 팝업 확인 버튼 클릭 시: 팝업 닫고 배경의 '단계 3: 신청 완료' 화면으로 스크롤
   if (successCloseBtn) {
     successCloseBtn.addEventListener('click', () => {
       if (successModal) {
         successModal.classList.remove('active');
       }
-
-      // Reset Wizard and fields
-      currentStep = 0;
-      const ownerNameEl = document.getElementById('owner-name');
-      const ownerPhoneEl = document.getElementById('owner-phone');
-      if (ownerNameEl) ownerNameEl.value = '';
-      if (ownerPhoneEl) { ownerPhoneEl.value = ''; ownerPhoneEl.disabled = false; }
-      const shopNameEl = document.getElementById('app-shop-name');
-      if (shopNameEl) shopNameEl.value = '';
-      const addressEl = document.getElementById('store-address');
-      if (addressEl) addressEl.value = '';
-      if (document.getElementById('referrer-code')) {
-        document.getElementById('referrer-code').value = '';
-      }
-      if (uploadInput) uploadInput.value = '';
-      uploadedPhotos = [];
-      renderPhotosPreview();
-
-      // 본인인증 상태 초기화
-      isOwnerPhoneVerified = false;
-      ownerSimulatedSmsCode = '';
-      if (ownerSmsTimerInterval) clearInterval(ownerSmsTimerInterval);
-      if (ownerSmsAuthGroup) ownerSmsAuthGroup.style.display = 'none';
-      if (btnOwnerSmsAuth) btnOwnerSmsAuth.disabled = false;
-      if (ownerPhoneCheckMsg) { ownerPhoneCheckMsg.textContent = ''; ownerPhoneCheckMsg.className = 'form-helper'; }
-
-      renderWizard();
-
-      // Scroll to top
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToActiveStep();
     });
+  }
+
+  // '새로운 신청서 작성' 버튼 클릭 시 폼 초기화 및 1단계 복귀
+  function resetWizardToStart() {
+    currentStep = 0;
+    const ownerNameEl = document.getElementById('owner-name');
+    const ownerPhoneEl = document.getElementById('owner-phone');
+    if (ownerNameEl) ownerNameEl.value = '';
+    if (ownerPhoneEl) { ownerPhoneEl.value = ''; ownerPhoneEl.disabled = false; }
+    const shopNameEl = document.getElementById('app-shop-name');
+    if (shopNameEl) shopNameEl.value = '';
+    const addressEl = document.getElementById('store-address');
+    if (addressEl) addressEl.value = '';
+    if (document.getElementById('referrer-code')) {
+      document.getElementById('referrer-code').value = '';
+    }
+    if (uploadInput) uploadInput.value = '';
+    uploadedPhotos = [];
+    renderPhotosPreview();
+
+    // 완료 화면 비활성화 및 마법사 버튼 복구
+    if (completePane) {
+      completePane.classList.remove('active');
+    }
+    if (wizardButtonsArea) {
+      wizardButtonsArea.style.display = 'flex';
+    }
+
+    // 본인인증 상태 초기화
+    isOwnerPhoneVerified = false;
+    ownerSimulatedSmsCode = '';
+    if (ownerSmsTimerInterval) clearInterval(ownerSmsTimerInterval);
+    if (ownerSmsAuthGroup) ownerSmsAuthGroup.style.display = 'none';
+    if (btnOwnerSmsAuth) btnOwnerSmsAuth.disabled = false;
+    if (ownerPhoneCheckMsg) { ownerPhoneCheckMsg.textContent = ''; ownerPhoneCheckMsg.className = 'form-helper'; }
+
+    renderWizard();
+    scrollToActiveStep();
+  }
+
+  if (restartBtn) {
+    restartBtn.addEventListener('click', resetWizardToStart);
   }
 
   // Initialize
