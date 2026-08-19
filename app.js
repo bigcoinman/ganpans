@@ -4635,6 +4635,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Password Visibility Toggle (Profile Edit & General) ---
+    document.querySelectorAll('.pw-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = btn.querySelector('i');
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (icon) icon.classList.replace('fa-eye-slash', 'fa-eye');
+                btn.setAttribute('aria-pressed', 'true');
+            } else {
+                input.type = 'password';
+                if (icon) icon.classList.replace('fa-eye', 'fa-eye-slash');
+                btn.setAttribute('aria-pressed', 'false');
+            }
+        });
+    });
+
     // --- 17. Mobile App Global Search Modal Logic ---
     const globalSearchModal = document.getElementById('global-search-modal');
     const searchModalClose = document.getElementById('search-modal-close');
