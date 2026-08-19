@@ -1416,7 +1416,7 @@ function initWizard() {
 
     // 휴대폰 번호 기반 자동 계정 생성 규격
     const phoneDigits = ownerPhone.replace(/[^0-9]/g, '');
-    const autoPw = 'G-' + (phoneDigits.length >= 8 ? phoneDigits.slice(-8) : phoneDigits.padStart(8, '0'));
+    const autoPw = 'g-' + (phoneDigits.length >= 8 ? phoneDigits.slice(-8) : phoneDigits.padStart(8, '0'));
 
     let userId = '';
     let loginNoticeId = '';
@@ -1441,7 +1441,7 @@ function initWizard() {
         loginNoticeId = existingUser.id;
         loginNoticePw = '(기존 비밀번호로 로그인)';
       } else {
-        // 신규 신청자: 휴대폰 번호(숫자만) 아이디 및 G-XXXXXX 임시 비밀번호로 자동 계정 생성
+        // 신규 신청자: 휴대폰 번호(숫자만) 아이디 및 g-XXXXXX 임시 비밀번호로 자동 계정 생성
         isNewAccount = true;
         userId = phoneDigits || ('guest_' + Date.now());
         loginNoticeId = phoneDigits;
