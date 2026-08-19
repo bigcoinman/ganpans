@@ -1474,6 +1474,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // 최근 신청 / 등록된 업체 최상단 정렬 (최신순 내림차순)
+    allBusinessItems.sort((a, b) => {
+      const timeA = new Date(a.item.registeredAt || a.item.appliedAt || a.item.createdAt || a.item.created_at || a.user.createdAt || 0).getTime();
+      const timeB = new Date(b.item.registeredAt || b.item.appliedAt || b.item.createdAt || b.item.created_at || b.user.createdAt || 0).getTime();
+      if (timeB !== timeA && !isNaN(timeA) && !isNaN(timeB)) {
+        return timeB - timeA;
+      }
+      return String(b.item.id || '').localeCompare(String(a.item.id || ''), undefined, { numeric: true, sensitivity: 'base' });
+    });
+
     // 검색어 필터링 (아이디/이름/코드검색, 최대 30자)
     const searchManagerItemsInput = document.getElementById('search-manager-items-input');
     const searchItemKeyword = searchManagerItemsInput ? searchManagerItemsInput.value.trim().slice(0, 30).toLowerCase() : '';
@@ -1698,6 +1708,13 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         });
       }
+    allBusinessItems.sort((a, b) => {
+      const timeA = new Date(a.item.registeredAt || a.item.appliedAt || a.item.createdAt || a.item.created_at || a.user.createdAt || 0).getTime();
+      const timeB = new Date(b.item.registeredAt || b.item.appliedAt || b.item.createdAt || b.item.created_at || b.user.createdAt || 0).getTime();
+      if (timeB !== timeA && !isNaN(timeA) && !isNaN(timeB)) {
+        return timeB - timeA;
+      }
+      return String(b.item.id || '').localeCompare(String(a.item.id || ''), undefined, { numeric: true, sensitivity: 'base' });
     });
 
     if (allBusinessItems.length === 0) {

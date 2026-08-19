@@ -2502,6 +2502,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            // 최근 신청 / 등록된 업체 최상단 정렬 (최신순 내림차순)
+            allBusinessItemsMob.sort((a, b) => {
+                const timeA = new Date(a.item.registeredAt || a.item.appliedAt || a.item.createdAt || a.item.created_at || a.user.createdAt || 0).getTime();
+                const timeB = new Date(b.item.registeredAt || b.item.appliedAt || b.item.createdAt || b.item.created_at || b.user.createdAt || 0).getTime();
+                if (timeB !== timeA && !isNaN(timeA) && !isNaN(timeB)) {
+                    return timeB - timeA;
+                }
+                return String(b.item.id || '').localeCompare(String(a.item.id || ''), undefined, { numeric: true, sensitivity: 'base' });
+            });
+
             let filteredItemsMob = allBusinessItemsMob;
             if (qItems) {
                 filteredItemsMob = allBusinessItemsMob.filter(({ user: u, item }) => {
