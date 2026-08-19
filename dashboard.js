@@ -2454,15 +2454,16 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
         <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">
           ${(() => {
-            const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '');
-            const hasPhoto = Boolean(photoSrc);
+            const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '') || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : '');
+            const hasPhoto = Boolean(photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:')));
+            const downloadName = (app.fileName && app.fileName !== '현장사진' && !app.fileName.startsWith('data:')) ? app.fileName : `${app.storeName || '신청점포'}_현장사진.jpg`;
             return `
               <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
                 <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.76rem; font-weight: 700; color: #16a34a; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 6px; cursor: pointer; width: 88px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="${hasPhoto ? '현장사진 변경/재등록' : '현장사진 등록'}">
                   <i class="fa-solid fa-camera" style="font-size: 0.76rem;"></i> 사진 등록
                 </button>
                 ${hasPhoto ? `
-                  <a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(app.fileName) || '현장사진.jpg'}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.74rem; font-weight: 600; color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; text-decoration: none; cursor: pointer; width: 88px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="현장사진 다운로드">
+                  <a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(downloadName)}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.74rem; font-weight: 600; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; text-decoration: none; cursor: pointer; width: 88px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="현장사진 다운로드">
                     <i class="fa-solid fa-download" style="font-size: 0.72rem;"></i> 다운로드
                   </a>
                 ` : `
@@ -2990,6 +2991,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await window.supabaseClient
               .from('applications')
               .update({
+                image_url: base64Data,
                 file_data: base64Data,
                 file_name: fileName,
                 updated_at: new Date().toISOString()

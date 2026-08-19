@@ -977,6 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         await window.supabaseClient
                             .from('applications')
                             .update({
+                                image_url: base64Data,
                                 file_data: base64Data,
                                 file_name: fileName,
                                 updated_at: new Date().toISOString()
@@ -2369,8 +2370,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // 현장사진 UI (PC 대시보드와 동일한 상하/좌우 2단 버튼 구조)
                     let fileAttachmentHtml = '';
-                    const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '');
-                    const hasPhoto = Boolean(photoSrc);
+                    const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '') || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : '');
+                    const hasPhoto = Boolean(photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:')));
+                    const downloadName = (app.fileName && app.fileName !== '현장사진' && !app.fileName.startsWith('data:')) ? app.fileName : `${app.shopName || app.storeName || '신청점포'}_현장사진.jpg`;
 
                     fileAttachmentHtml = `
                         <div style="margin-top: 10px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -2383,7 +2385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <i class="fa-solid fa-camera" style="font-size: 0.8rem;"></i> 사진 등록
                                 </button>
                                 ${hasPhoto ? `
-                                    <a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(app.fileName || '현장사진.jpg')}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 600; color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; text-decoration: none; cursor: pointer; height: 32px; box-sizing: border-box;" title="현장사진 다운로드">
+                                    <a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(downloadName)}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 600; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; text-decoration: none; cursor: pointer; height: 32px; box-sizing: border-box;" title="현장사진 다운로드">
                                         <i class="fa-solid fa-download" style="font-size: 0.76rem;"></i> 다운로드
                                     </a>
                                 ` : `

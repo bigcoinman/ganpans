@@ -585,9 +585,11 @@ window.SupabaseSync = {
   },
 
   // 지원 신청서 객체를 Supabase DB 컬럼으로 매핑
+  // 지원 신청서 객체를 Supabase DB 컬럼으로 매핑
   mapAppToDb(app) {
     if (!app) return null;
     const safeUserId = (app.userId && app.userId !== 'guest') ? (app.userId || app.user_id) : null;
+    const photoData = (app.photos && app.photos.length > 0) ? app.photos[0] : (app.fileData || (app.image_url && app.image_url.startsWith('data:') ? app.image_url : null));
     return {
       id: String(app.id),
       user_id: safeUserId,
@@ -596,7 +598,7 @@ window.SupabaseSync = {
       store_name: app.storeName || app.store_name || '',
       store_address: app.storeAddress || app.store_address || '',
       sign_type: app.signType || app.sign_type || '간판지원신청',
-      image_url: app.fileName || app.image_url || null,
+      image_url: photoData || app.fileName || null,
       referrer_code: app.referrerCode || app.referrer_code || '',
       status: app.status || 'pending',
       assigned_constructor_id: app.assignedConstructorId || app.assigned_constructor_id || null,
@@ -611,6 +613,7 @@ window.SupabaseSync = {
   mapAppToBaseDb(app) {
     if (!app) return null;
     const safeUserId = (app.userId && app.userId !== 'guest') ? (app.userId || app.user_id) : null;
+    const photoData = (app.photos && app.photos.length > 0) ? app.photos[0] : (app.fileData || (app.image_url && app.image_url.startsWith('data:') ? app.image_url : null));
     return {
       id: String(app.id),
       user_id: safeUserId,
@@ -619,7 +622,7 @@ window.SupabaseSync = {
       store_name: app.storeName || app.store_name || '',
       store_address: app.storeAddress || app.store_address || '',
       sign_type: app.signType || app.sign_type || '간판지원신청',
-      image_url: app.fileName || app.image_url || null,
+      image_url: photoData || app.fileName || null,
       referrer_code: app.referrerCode || app.referrer_code || '',
       status: app.status || 'pending'
     };
@@ -627,6 +630,9 @@ window.SupabaseSync = {
 
   mapDbToApp(dbApp) {
     if (!dbApp) return null;
+    const isDataOrHttpUrl = dbApp.image_url && (dbApp.image_url.startsWith('data:') || dbApp.image_url.startsWith('http') || dbApp.image_url.startsWith('blob:'));
+    const photoData = isDataOrHttpUrl ? dbApp.image_url : '';
+    const photoName = (!isDataOrHttpUrl && dbApp.image_url) ? dbApp.image_url : (dbApp.file_name || '현장사진.jpg');
     return {
       id: String(dbApp.id),
       userId: dbApp.user_id,
@@ -635,7 +641,10 @@ window.SupabaseSync = {
       storeName: dbApp.store_name,
       storeAddress: dbApp.store_address,
       signType: dbApp.sign_type,
-      fileName: dbApp.image_url || '현장사진',
+      fileName: photoName,
+      fileData: photoData,
+      photos: photoData ? [photoData] : [],
+      photosCount: photoData ? 1 : 0,
       appliedAt: dbApp.applied_at || dbApp.created_at || new Date().toISOString(),
       status: dbApp.status || 'pending',
       referrerCode: dbApp.referrer_code || '',
@@ -965,14 +974,25 @@ window.SupabaseSync = {
             appsChanged = true;
           } else {
             const cur = localApps[idx];
+            const preservedFileData = cur.fileData || mapped.fileData || '';
+            const preservedPhotos = (cur.photos && cur.photos.length > 0) ? cur.photos : (mapped.photos || (preservedFileData ? [preservedFileData] : []));
+            const preservedFileName = cur.fileName && cur.fileName !== '현장사진' ? cur.fileName : (mapped.fileName || '현장사진.jpg');
+
             if (cur.status !== mapped.status || 
                 cur.constructionStatus !== mapped.constructionStatus ||
                 cur.assignedConstructorId !== mapped.assignedConstructorId ||
                 cur.storeName !== mapped.storeName ||
                 cur.storeAddress !== mapped.storeAddress ||
                 cur.ownerName !== mapped.ownerName ||
-                cur.ownerPhone !== mapped.ownerPhone) {
-              localApps[idx] = { ...cur, ...mapped };
+                cur.ownerPhone !== mapped.ownerPhone ||
+                (!cur.fileData && mapped.fileData)) {
+              localApps[idx] = {
+                ...cur,
+                ...mapped,
+                fileData: preservedFileData,
+                photos: preservedPhotos,
+                fileName: preservedFileName
+              };
               appsChanged = true;
             }
           }
