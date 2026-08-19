@@ -119,6 +119,129 @@ function sanitizeUrl(url) {
   return escapeHtml(trimmed);
 }
 
+// 4-1. 현장 사진 다운로드 (1장이면 이미지 단일 다운로드, 2장 이상이면 ZIP 압축 파일 자동 일괄 다운로드)
+async function downloadApplicationPhotos(appOrId) {
+  let app = appOrId;
+  if (typeof appOrId === 'string' || typeof appOrId === 'number') {
+    const localApps = JSON.parse(localStorage.getItem('applications')) || [];
+    app = localApps.find(a => String(a.id) === String(appOrId));
+  }
+  if (!app) {
+    alert('신청서 정보를 찾을 수 없습니다.');
+    return;
+  }
+
+  const storeName = app.storeName || app.shopName || app.ownerName || '신청점포';
+  let photos = [];
+
+  // 1) photos 배열에서 추출
+  if (Array.isArray(app.photos) && app.photos.length > 0) {
+    photos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+  }
+
+  // 2) fileData 에서 보강
+  if (photos.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
+    photos = [app.fileData];
+  }
+
+  // 3) image_url 에서 JSON 배열 또는 단일 URL 파싱
+  if (photos.length === 0 && app.image_url && typeof app.image_url === 'string') {
+    if (app.image_url.startsWith('[') && app.image_url.includes('data:')) {
+      try {
+        const parsed = JSON.parse(app.image_url);
+        if (Array.isArray(parsed)) {
+          photos = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+        }
+      } catch (e) {}
+    } else if (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) {
+      photos = [app.image_url];
+    }
+  }
+
+  if (photos.length === 0) {
+    alert('다운로드 가능한 현장 사진이 없습니다.\n[사진 등록] 버튼으로 사진을 등록해 주세요.');
+    return;
+  }
+
+  // A. 사진이 1장인 경우: 원본 이미지 파일 즉시 다운로드
+  if (photos.length === 1) {
+    const singleData = photos[0];
+    let ext = 'jpg';
+    if (singleData.startsWith('data:image/')) {
+      const m = singleData.match(/^data:image\/([a-zA-Z0-9]+);/);
+      if (m && m[1]) ext = (m[1] === 'jpeg') ? 'jpg' : m[1];
+    }
+    const fileName = (app.fileName && !app.fileName.includes(',') && !app.fileName.startsWith('data:') && app.fileName !== '현장사진')
+      ? app.fileName
+      : `${storeName}_현장사진.${ext}`;
+
+    const a = document.createElement('a');
+    a.href = singleData;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return;
+  }
+
+  // B. 사진이 2장 이상인 경우: ZIP 압축 파일 생성 후 일괄 다운로드
+  if (typeof JSZip !== 'undefined') {
+    try {
+      const zip = new JSZip();
+      const folderName = `${storeName}_현장사진`;
+      const imgFolder = zip.folder(folderName) || zip;
+
+      photos.forEach((photoData, idx) => {
+        let ext = 'jpg';
+        let base64Part = photoData;
+        if (photoData.startsWith('data:image/')) {
+          const matches = photoData.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+          if (matches && matches.length === 3) {
+            ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+            base64Part = matches[2];
+          } else {
+            base64Part = photoData.replace(/^data:image\/[a-zA-Z0-9]+;base64,/, '');
+          }
+        }
+        imgFolder.file(`현장사진_${idx + 1}.${ext}`, base64Part, { base64: true });
+      });
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const zipFileName = `${storeName}_현장사진_전체(${photos.length}장).zip`;
+      const zipUrl = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = zipUrl;
+      a.download = zipFileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(zipUrl), 10000);
+    } catch (zipErr) {
+      console.error('ZIP generation error:', zipErr);
+      // Fallback: 개별 순차 다운로드
+      photos.forEach((p, idx) => {
+        const a = document.createElement('a');
+        a.href = p;
+        a.download = `${storeName}_현장사진_${idx + 1}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      });
+    }
+  } else {
+    // JSZip 미로드 시 순차 다운로드
+    photos.forEach((p, idx) => {
+      const a = document.createElement('a');
+      a.href = p;
+      a.download = `${storeName}_현장사진_${idx + 1}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+  }
+}
+window.downloadApplicationPhotos = downloadApplicationPhotos;
+
 // ========================================================
 // 5. 로그인 상태 유지 및 1시간 미사용 시 자동 로그아웃 관리
 // ========================================================
@@ -585,11 +708,22 @@ window.SupabaseSync = {
   },
 
   // 지원 신청서 객체를 Supabase DB 컬럼으로 매핑
-  // 지원 신청서 객체를 Supabase DB 컬럼으로 매핑
   mapAppToDb(app) {
     if (!app) return null;
     const safeUserId = (app.userId && app.userId !== 'guest') ? (app.userId || app.user_id) : null;
-    const photoData = (app.photos && app.photos.length > 0) ? app.photos[0] : (app.fileData || (app.image_url && app.image_url.startsWith('data:') ? app.image_url : null));
+    let photoData = null;
+    if (Array.isArray(app.photos) && app.photos.length > 0) {
+      const validPhotos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+      if (validPhotos.length > 1) {
+        photoData = JSON.stringify(validPhotos);
+      } else if (validPhotos.length === 1) {
+        photoData = validPhotos[0];
+      }
+    }
+    if (!photoData) {
+      photoData = app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http')) ? app.image_url : null);
+    }
+
     return {
       id: String(app.id),
       user_id: safeUserId,
@@ -613,7 +747,19 @@ window.SupabaseSync = {
   mapAppToBaseDb(app) {
     if (!app) return null;
     const safeUserId = (app.userId && app.userId !== 'guest') ? (app.userId || app.user_id) : null;
-    const photoData = (app.photos && app.photos.length > 0) ? app.photos[0] : (app.fileData || (app.image_url && app.image_url.startsWith('data:') ? app.image_url : null));
+    let photoData = null;
+    if (Array.isArray(app.photos) && app.photos.length > 0) {
+      const validPhotos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+      if (validPhotos.length > 1) {
+        photoData = JSON.stringify(validPhotos);
+      } else if (validPhotos.length === 1) {
+        photoData = validPhotos[0];
+      }
+    }
+    if (!photoData) {
+      photoData = app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http')) ? app.image_url : null);
+    }
+
     return {
       id: String(app.id),
       user_id: safeUserId,
@@ -630,9 +776,35 @@ window.SupabaseSync = {
 
   mapDbToApp(dbApp) {
     if (!dbApp) return null;
-    const isDataOrHttpUrl = dbApp.image_url && (dbApp.image_url.startsWith('data:') || dbApp.image_url.startsWith('http') || dbApp.image_url.startsWith('blob:'));
-    const photoData = isDataOrHttpUrl ? dbApp.image_url : '';
-    const photoName = (!isDataOrHttpUrl && dbApp.image_url) ? dbApp.image_url : (dbApp.file_name || '현장사진.jpg');
+    let photos = [];
+    let fileData = '';
+
+    if (dbApp.image_url) {
+      const imgStr = String(dbApp.image_url).trim();
+      if (imgStr.startsWith('[') && imgStr.includes('data:')) {
+        try {
+          const parsed = JSON.parse(imgStr);
+          if (Array.isArray(parsed)) {
+            photos = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+            fileData = photos[0] || '';
+          }
+        } catch (e) {
+          photos = [imgStr];
+          fileData = imgStr;
+        }
+      } else if (imgStr.startsWith('data:') || imgStr.startsWith('http') || imgStr.startsWith('blob:')) {
+        photos = [imgStr];
+        fileData = imgStr;
+      }
+    }
+
+    if (photos.length === 0 && dbApp.file_data) {
+      photos = [dbApp.file_data];
+      fileData = dbApp.file_data;
+    }
+
+    const photoName = (!fileData && dbApp.image_url) ? dbApp.image_url : (dbApp.file_name || '현장사진.jpg');
+
     return {
       id: String(dbApp.id),
       userId: dbApp.user_id,
@@ -642,9 +814,9 @@ window.SupabaseSync = {
       storeAddress: dbApp.store_address,
       signType: dbApp.sign_type,
       fileName: photoName,
-      fileData: photoData,
-      photos: photoData ? [photoData] : [],
-      photosCount: photoData ? 1 : 0,
+      fileData: fileData,
+      photos: photos,
+      photosCount: photos.length,
       appliedAt: dbApp.applied_at || dbApp.created_at || new Date().toISOString(),
       status: dbApp.status || 'pending',
       referrerCode: dbApp.referrer_code || '',
