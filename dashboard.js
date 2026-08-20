@@ -2561,14 +2561,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // Add event listeners to status select dropdown (서류제출 & 접수예정, 지원사업 탈락, 심사 대기)
-    document.querySelectorAll('.select-app-status-pc').forEach(select => {
-      select.addEventListener('change', (e) => {
-        const id = e.target.dataset.id;
-        const val = e.target.value;
-        updateApplicationStatus(id, val);
-      });
-    });
+    // Status select is handled directly by inline onchange="window.updateApplicationStatus(...)" for instant response
 
     document.querySelectorAll('.btn-toggle-bizitem').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -3099,7 +3092,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fileInput.click();
   };
 
-  const updateApplicationStatus = async (id, newStatus) => {
+  const updateApplicationStatus = (id, newStatus) => {
     if (!activeUser || activeUser.role !== 'admin') return;
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
     let targetApp = null;
@@ -3113,27 +3106,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     localStorage.setItem('applications', JSON.stringify(apps));
 
-    // Supabase DB에 상태 비동기 완전 동기화 (외래키/RLS 완벽 대응)
-    if (window.SupabaseSync) {
-      try {
-        await window.SupabaseSync.updateApplication(id, { status: newStatus });
-        if (targetApp) {
-          await window.SupabaseSync.upsertApplication(targetApp);
+    // 1) 영업자 대시보드(PC/모바일 공통) 실시간 동시 연동: users 목록 내 items 상태 동기화
+    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let usersUpdated = false;
+    if (targetApp) {
+      curUsers = curUsers.map(u => {
+        if (u.items && Array.isArray(u.items)) {
+          let itemMatched = false;
+          u.items = u.items.map(it => {
+            if (String(it.id) === String(targetApp.id) || String(it.appRefId) === String(targetApp.id)) {
+              let updatedProgress = '지원대기중';
+              if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') updatedProgress = '승인 완료';
+              else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') updatedProgress = '반려됨';
+              else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') updatedProgress = '지원사업 포기';
+
+              it.progressStatus = updatedProgress;
+              itemMatched = true;
+              usersUpdated = true;
+            }
+            return it;
+          });
         }
-      } catch (syncErr) {
-        console.warn('Supabase update status sync warning:', syncErr);
-      }
-    } else if (window.supabaseClient) {
-      try {
-        await window.supabaseClient
-          .from('applications')
-          .update({
-            status: newStatus,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', String(id));
-      } catch (err) {
-        console.warn('Supabase application status update notice:', err);
+        return u;
+      });
+
+      if (usersUpdated) {
+        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (activeUser && activeUser.role === 'business') {
+          const freshMe = curUsers.find(u => u.id === activeUser.id);
+          if (freshMe) {
+            activeUser.items = freshMe.items;
+            localStorage.setItem('activeUser', JSON.stringify(activeUser));
+          }
+        }
       }
     }
 
@@ -3142,8 +3147,42 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') statusLabel = '지원사업 탈락';
     else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') statusLabel = '지원사업 포기';
 
+    // 2) 즉각 UI 갱신 및 완료 알림 (0초 지연)
     alert(`[${targetApp ? (targetApp.storeName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`);
     updateSessionUI();
+
+    // 3) Supabase DB 백그라운드 비동기 영구 저장 (Non-blocking)
+    (async () => {
+      if (window.SupabaseSync) {
+        try {
+          await window.SupabaseSync.updateApplication(id, { status: newStatus });
+          if (targetApp) {
+            await window.SupabaseSync.upsertApplication(targetApp);
+          }
+          if (usersUpdated) {
+            curUsers.forEach(u => {
+              if (u.role === 'business' || u.role === 'admin') {
+                window.SupabaseSync.updateUser(u.id, { items: u.items || [] });
+              }
+            });
+          }
+        } catch (syncErr) {
+          console.warn('Supabase background update status sync warning:', syncErr);
+        }
+      } else if (window.supabaseClient) {
+        try {
+          await window.supabaseClient
+            .from('applications')
+            .update({
+              status: newStatus,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', String(id));
+        } catch (err) {
+          console.warn('Supabase application status update notice:', err);
+        }
+      }
+    })();
   };
   window.updateApplicationStatus = updateApplicationStatus;
 
