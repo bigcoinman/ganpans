@@ -3202,13 +3202,24 @@ document.addEventListener('DOMContentLoaded', () => {
     let curUsers = JSON.parse(localStorage.getItem('users')) || [];
 
     if (isNowBizItem) {
-      // 영업물건으로 등록/이동: 대상 영업자 찾기 (app.referrerCode 또는 app.userId 또는 첫 번째 business 유저)
+      // 영업물건으로 등록/이동: 대상 영업자 찾기 (bizCode, id, name, userId 등 정밀 탐색)
       let targetUser = null;
-      if (app.referrerCode) {
-        targetUser = curUsers.find(u => u.role === 'business' && u.bizCode === app.referrerCode);
+      const refCode = String(app.referrerCode || '').trim().toLowerCase();
+      const appUser = String(app.userId || '').trim().toLowerCase();
+
+      if (refCode) {
+        targetUser = curUsers.find(u => 
+          (u.role === 'business' || u.role === 'admin') && 
+          ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
+           (u.id && String(u.id).trim().toLowerCase() === refCode) ||
+           (u.name && String(u.name).trim().toLowerCase() === refCode))
+        );
       }
-      if (!targetUser && app.userId) {
-        targetUser = curUsers.find(u => u.id === app.userId && u.role === 'business');
+      if (!targetUser && appUser) {
+        targetUser = curUsers.find(u => 
+          (u.role === 'business' || u.role === 'admin') && 
+          (u.id && String(u.id).trim().toLowerCase() === appUser)
+        );
       }
       if (!targetUser) {
         targetUser = curUsers.find(u => u.role === 'business') || curUsers.find(u => u.role === 'admin');
@@ -3217,26 +3228,32 @@ document.addEventListener('DOMContentLoaded', () => {
       if (targetUser) {
         targetUser.items = targetUser.items || [];
         const existingItemIdx = targetUser.items.findIndex(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
+        const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
         const bizItem = {
           id: app.id,
-          name: app.storeName || app.shopName || app.ownerName,
+          name: app.storeName || app.shopName || app.ownerName || '영업물건',
           phone: app.ownerPhone || '',
           address: app.storeAddress || '',
-          photosCount: app.fileData ? 1 : 0,
-          receiptStatus: '접수예정',
-          progressStatus: '지원대기중',
-          photos: app.fileData ? [app.fileData] : [],
+          photosCount: photosList.length,
+          receiptStatus: app.receiptStatus || '접수예정',
+          progressStatus: (app.status === 'approved' ? '승인 완료' : (app.status === 'rejected' ? '반려됨' : (app.status === 'giveup' ? '지원사업 포기' : '지원대기중'))),
+          photos: photosList,
           appRefId: app.id
         };
 
         if (existingItemIdx >= 0) {
           targetUser.items[existingItemIdx] = { ...targetUser.items[existingItemIdx], ...bizItem };
         } else {
-          targetUser.items.push(bizItem);
+          targetUser.items.unshift(bizItem);
         }
 
         curUsers = curUsers.map(u => u.id === targetUser.id ? targetUser : u);
         localStorage.setItem('users', JSON.stringify(curUsers));
+
+        if (activeUser && activeUser.id === targetUser.id) {
+          activeUser.items = targetUser.items;
+          localStorage.setItem('activeUser', JSON.stringify(activeUser));
+        }
 
         if (window.SupabaseSync) {
           window.SupabaseSync.updateUser(targetUser.id, { items: targetUser.items });
@@ -3523,23 +3540,40 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!bizRegisteredTableBody) return;
     if (!activeUser || activeUser.role !== 'business') return;
 
+    // 0) 최신 users 데이터에서 activeUser 갱신하여 items 누락 방지
+    const curUsersList = JSON.parse(localStorage.getItem('users')) || [];
+    const freshUser = curUsersList.find(u => u.id === activeUser.id);
+    if (freshUser) {
+      activeUser = { ...activeUser, ...freshUser };
+      localStorage.setItem('activeUser', JSON.stringify(activeUser));
+    }
+
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
     let myItems = activeUser.items || [];
 
-    // 영업자 코드와 매칭되거나 activeUser.items에 등록된 물건들 취합
+    // 영업자 코드, 아이디, 이름, items와 매칭되는 영업물건들 취합
     let bizList = [];
 
-    // 1) applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 체크한 건만 수집
-    apps.forEach(app => {
-      if (app.isBizItem !== true) return; // 관리자 미체크 건은 절대 노출 금지
+    const myBizCode = String(activeUser.bizCode || '').trim().toLowerCase();
+    const myUserId = String(activeUser.id || '').trim().toLowerCase();
+    const myUserName = String(activeUser.name || '').trim().toLowerCase();
 
-      const isMyReferrer = activeUser.bizCode && app.referrerCode === activeUser.bizCode;
-      const isMyItem = myItems.some(i => String(i.id) === String(app.id));
-      const isMyUser = app.userId && app.userId === activeUser.id;
-      if (isMyReferrer || isMyItem || isMyUser) {
+    // 1) applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 체크한 건 수집
+    apps.forEach(app => {
+      const isApprovedBizItem = (app.isBizItem === true || String(app.isBizItem) === 'true');
+      if (!isApprovedBizItem) return; // 관리자 미체크 건은 제외
+
+      const refCode = String(app.referrerCode || '').trim().toLowerCase();
+      const appUser = String(app.userId || '').trim().toLowerCase();
+
+      const isMyReferrer = (myBizCode && refCode === myBizCode) || (myUserId && refCode === myUserId) || (myUserName && refCode === myUserName);
+      const isMyUser = (myUserId && appUser === myUserId);
+      const isMyItem = myItems.some(i => String(i.id) === String(app.id) || String(i.appRefId) === String(app.id));
+
+      if (isMyReferrer || isMyUser || isMyItem) {
         bizList.push({
           id: app.id,
-          date: app.appliedAt || new Date().toISOString(),
+          date: app.appliedAt || app.createdAt || new Date().toISOString(),
           ownerName: app.ownerName || app.name || '-',
           ownerPhone: app.ownerPhone || app.phone || '',
           storeName: app.storeName || app.shopName || app.name || '-',
@@ -3549,22 +3583,22 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // 2) myItems 중에서도 applications에 매칭되는 건이 있다면 isBizItem === true 인 경우만 허용
+    // 2) myItems 중에서도 applications에 매칭되는 건이 있다면 isBizItem === false 인 경우만 제외하고 모두 허용
     myItems.forEach(item => {
-      const matchingApp = apps.find(a => String(a.id) === String(item.id));
-      if (matchingApp && matchingApp.isBizItem !== true) return; // 관리자가 해제했거나 미승인 건은 제외
+      const matchingApp = apps.find(a => String(a.id) === String(item.id) || String(a.id) === String(item.appRefId));
+      if (matchingApp && (matchingApp.isBizItem === false || String(matchingApp.isBizItem) === 'false')) return; // 관리자가 명시적으로 해제한 건만 제외
 
       if (!bizList.some(b => String(b.id) === String(item.id))) {
         bizList.push({
           id: item.id,
-          date: item.registeredAt || new Date().toISOString(),
-          ownerName: item.name || '-',
-          ownerPhone: item.phone || '',
-          storeName: item.name || '-',
-          storeAddress: item.address || '',
-          statusObj: {
+          date: item.registeredAt || item.createdAt || new Date().toISOString(),
+          ownerName: item.name || item.ownerName || '-',
+          ownerPhone: item.phone || item.ownerPhone || '',
+          storeName: item.name || item.storeName || '-',
+          storeAddress: item.address || item.storeAddress || '',
+          statusObj: matchingApp || {
             status: item.receiptStatus === '승인완료' ? 'approved' : 'pending',
-            constructionStatus: item.progressStatus
+            constructionStatus: item.progressStatus || '지원대기중'
           }
         });
       }
