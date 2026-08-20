@@ -1570,6 +1570,17 @@ document.addEventListener('DOMContentLoaded', () => {
         renderBizRegisteredItemsMob();
     }
 
+    // 모바일 영업자 대시보드 [전체 펼치기 / 기본 3건만 접기] 글로벌 핸들러
+    window.toggleBizItemsMob = function() {
+        bizItemsMobExpanded = !bizItemsMobExpanded;
+        renderBizRegisteredItemsMob();
+    };
+
+    window.toggleUserAppsMob = function() {
+        userAppsMobExpanded = !userAppsMobExpanded;
+        renderUserApplicationsMob();
+    };
+
     // Sales representative manual link (방안 B)
     const btnLinkAppMob = document.getElementById('btn-link-app-mob');
     const linkAppIdInputMob = document.getElementById('link-app-id-mob');
