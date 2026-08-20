@@ -1641,6 +1641,19 @@ document.addEventListener('DOMContentLoaded', () => {
     renderInquiriesList();
   };
 
+  // --- PC 영업자 전용 대시보드 [전체 펼치기 / 기본 3건만 접기] 글로벌 핸들러 ---
+  window.toggleBizTablePC = function() {
+    bizTableExpanded = !bizTableExpanded;
+    bizTableCurrentPage = 1;
+    renderBizRegisteredTable();
+  };
+
+  window.toggleUserAppsPC = function() {
+    userAppsExpanded = !userAppsExpanded;
+    userAppsCurrentPage = 1;
+    renderUserApplicationsList();
+  };
+
   // --- Render All Users List (전체 회원 정보 관리) ---
   const renderAllUsersList = () => {
     if (activeUser.role !== 'admin') return;
@@ -4045,9 +4058,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
     let myItems = activeUser.items || [];
-
-    // 영업자 코드, 아이디, 이름, items와 매칭되는 영업물건들 취합
     let bizList = [];
+
+    const deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
+    const isPurgedItem = (it) => {
+      if (!it) return false;
+      const itId = String(it.id || '').trim();
+      const itRef = String(it.appRefId || '').trim();
+      const itName = String(it.name || it.storeName || it.shopName || '').replace(/\s+/g, '').toLowerCase();
+      return deletedBizItemIds.some(del => {
+        const cleanDel = String(del).replace(/\s+/g, '').toLowerCase();
+        return itId === del || itRef === del || (itName && cleanDel && (itName === cleanDel || itName.includes(cleanDel) || cleanDel.includes(itName)));
+      });
+    };
 
     const myBizCode = String(activeUser.bizCode || '').trim().toLowerCase();
     const myUserId = String(activeUser.id || '').trim().toLowerCase();
@@ -4055,6 +4078,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1) applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 체크한 건 수집
     apps.forEach(app => {
+      if (isPurgedItem(app)) return; // 삭제/정화된 물건 제외
       const isApprovedBizItem = (app.isBizItem === true || String(app.isBizItem) === 'true');
       if (!isApprovedBizItem) return; // 관리자 미체크 건은 제외
 
@@ -4080,6 +4104,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2) myItems 중에서도 applications에 매칭되는 건이 있다면 isBizItem === false 인 경우만 제외하고 모두 허용
     myItems.forEach(item => {
+      if (isPurgedItem(item)) return; // 삭제/정화된 물건 제외
       const matchingApp = apps.find(a => String(a.id) === String(item.id) || String(a.id) === String(item.appRefId));
       if (matchingApp && (matchingApp.isBizItem === false || String(matchingApp.isBizItem) === 'false')) return; // 관리자가 명시적으로 해제한 건만 제외
 
