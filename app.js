@@ -469,6 +469,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 150);
     };
 
+    // 로그아웃 / 세션 전환 시 현장 접수 폼 완전 초기화
+    const clearBizUploadFormMob = () => {
+        const form = document.getElementById('mobile-upload-form-mob');
+        if (form) form.reset();
+
+        // 사진 미리보기 & 카운터 초기화
+        const previews = document.getElementById('mob-photo-previews-mob');
+        if (previews) previews.innerHTML = '';
+        const counter = document.getElementById('mob-photo-count-mob');
+        if (counter) counter.textContent = '선택된 사진: 0 / 20장';
+
+        // file input 값 초기화
+        const photosInput = document.getElementById('mob-photos-input-mob');
+        if (photosInput) photosInput.value = '';
+        const cameraInput = document.getElementById('mob-camera-input-mob');
+        if (cameraInput) cameraInput.value = '';
+
+        // 전역 선택 사진 배열 비우기 (selectedPhotosMob은 이 스코프 아래 선언되어 있으므로 직접 접근 가능)
+        // — 아래 selectedPhotosMob 선언 이후 실제 초기화가 이루어지도록 flag 방식 사용
+        window._clearBizPhotosMob = true;
+    };
+    window.clearBizUploadFormMob = clearBizUploadFormMob;
+
     if (loginForm) loginForm.addEventListener('submit', handleSessionRefresh);
     if (signupForm) signupForm.addEventListener('submit', handleSessionRefresh);
 
@@ -478,6 +501,9 @@ document.addEventListener('DOMContentLoaded', () => {
         drawerLogoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
             
+            // 현장 접수 폼 즉시 초기화 (로그아웃 전 데이터 잔류 방지)
+            clearBizUploadFormMob();
+
             // Core Session Clean First
             clearActiveUser();
             alert('로그아웃 되었습니다.');
@@ -1463,6 +1489,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnChoiceGallery = document.getElementById('btn-choice-gallery');
     const btnChoiceCancel = document.getElementById('btn-choice-cancel');
     let selectedPhotosMob = []; // Array of { name: string, dataUrl: string }
+
+    // 로그아웃 시 clearBizUploadFormMob()가 설정한 flag를 체크하여 배열 즉시 비우기
+    if (window._clearBizPhotosMob) {
+        selectedPhotosMob = [];
+        window._clearBizPhotosMob = false;
+    }
+
+    // clearBizUploadFormMob 함수가 배열도 비울 수 있도록 wrapper를 재정의
+    window.clearBizUploadFormMob = () => {
+        const form = document.getElementById('mobile-upload-form-mob');
+        if (form) form.reset();
+
+        const previews = document.getElementById('mob-photo-previews-mob');
+        if (previews) previews.innerHTML = '';
+        const counter = document.getElementById('mob-photo-count-mob');
+        if (counter) counter.textContent = '선택된 사진: 0 / 20장';
+
+        const photosInput = document.getElementById('mob-photos-input-mob');
+        if (photosInput) photosInput.value = '';
+        const cameraInput = document.getElementById('mob-camera-input-mob');
+        if (cameraInput) cameraInput.value = '';
+
+        // 클로저 스코프의 selectedPhotosMob 직접 초기화
+        selectedPhotosMob = [];
+    };
 
     // 고화질 모바일 사진을 안전하고 가볍게(최대 1200px, 80% 품질) DataURL로 압축하는 유틸리티
     const fileToCompressedDataUrl = (file, maxDimension = 1200, quality = 0.8) => {
