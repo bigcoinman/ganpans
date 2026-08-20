@@ -5090,11 +5090,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isRefreshing) return;
         isRefreshing = true;
 
-        const refreshBtn = document.getElementById('mobile-header-refresh-btn');
+        const refreshBtn = document.getElementById('tab-btn-refresh') || document.getElementById('mobile-header-refresh-btn');
         if (refreshBtn && !isSilent) {
             refreshBtn.classList.add('spinning');
-            const span = refreshBtn.querySelector('span');
-            if (span) span.textContent = '동기화 중';
         }
 
         try {
@@ -5137,10 +5135,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (refreshBtn && !isSilent) {
                 setTimeout(() => {
                     refreshBtn.classList.remove('spinning');
-                    const span = refreshBtn.querySelector('span');
-                    if (span) span.textContent = '새로고침';
                     isRefreshing = false;
-                }, 400);
+                }, 500);
             } else {
                 isRefreshing = false;
             }
@@ -5148,10 +5144,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.triggerAppRefresh = triggerAppRefresh;
 
-    // 헤더 새로고침 버튼 이벤트 바인딩
-    const mobileHeaderRefreshBtn = document.getElementById('mobile-header-refresh-btn');
-    if (mobileHeaderRefreshBtn) {
-        mobileHeaderRefreshBtn.addEventListener('click', (e) => {
+    // 하단 탭 바 새로고침 버튼 이벤트 바인딩
+    const tabBtnRefresh = document.getElementById('tab-btn-refresh');
+    if (tabBtnRefresh) {
+        tabBtnRefresh.addEventListener('click', (e) => {
             e.preventDefault();
             triggerAppRefresh(false);
         });

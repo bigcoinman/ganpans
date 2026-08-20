@@ -49,10 +49,7 @@
         <div class="header-brand" onclick="switchTab('home')">
             <img src="간판지원단 로고-3.png" alt="간판지원단" style="height: 29px; width: auto; display: block;">
         </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-            <button class="app-header-refresh-btn" id="mobile-header-refresh-btn" title="최신 데이터 동기화 및 새로고침">
-                <i class="fa-solid fa-rotate-right"></i> <span>새로고침</span>
-            </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
             <button class="app-install-btn-header" id="mobile-header-install-btn">
                 <i class="fa-solid fa-share-nodes"></i> 앱 공유
             </button>
@@ -1870,6 +1867,10 @@
                 <i class="fa-solid fa-plus"></i>
             </div>
             <span class="nav-label">간편 신청</span>
+        </button>
+        <button class="nav-item" onclick="window.triggerAppRefresh && window.triggerAppRefresh(); return false;" id="tab-btn-refresh" title="최신 데이터 새로고침">
+            <i class="fa-solid fa-rotate-right nav-icon"></i>
+            <span class="nav-label">새로고침</span>
         </button>
     </nav>
 
