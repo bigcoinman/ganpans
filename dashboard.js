@@ -1645,13 +1645,17 @@ document.addEventListener('DOMContentLoaded', () => {
   window.toggleBizTablePC = function() {
     bizTableExpanded = !bizTableExpanded;
     bizTableCurrentPage = 1;
-    renderBizRegisteredTable();
+    if (typeof renderBizRegisteredTable === 'function') {
+      renderBizRegisteredTable();
+    }
   };
 
   window.toggleUserAppsPC = function() {
     userAppsExpanded = !userAppsExpanded;
     userAppsCurrentPage = 1;
-    renderUserApplicationsList();
+    if (typeof renderUserApplicationsList === 'function') {
+      renderUserApplicationsList();
+    }
   };
 
   // --- Render All Users List (전체 회원 정보 관리) ---
@@ -4046,7 +4050,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const bizRegisteredTableBody = document.getElementById('biz-registered-table-body');
     const paginationContainer = document.getElementById('pagination-biz-table');
     if (!bizRegisteredTableBody) return;
-    if (!activeUser || activeUser.role !== 'business') return;
+    if (!activeUser) return;
 
     // 0) 최신 users 데이터에서 activeUser 갱신하여 items 누락 방지
     const curUsersList = JSON.parse(localStorage.getItem('users')) || [];
@@ -4089,7 +4093,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const isMyUser = (myUserId && appUser === myUserId);
       const isMyItem = myItems.some(i => String(i.id) === String(app.id) || String(i.appRefId) === String(app.id));
 
-      if (isMyReferrer || isMyUser || isMyItem) {
+      if (isMyReferrer || isMyUser || isMyItem || activeUser.role === 'admin') {
         bizList.push({
           id: app.id,
           date: app.appliedAt || app.createdAt || new Date().toISOString(),
@@ -4162,11 +4166,31 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    const totalCount = filteredList.length;
+
+    // Toggle badge UI 동적 갱신
+    const bizItemsToggleBadge = document.getElementById('biz-items-toggle-badge');
+    if (bizItemsToggleBadge) {
+      bizItemsToggleBadge.style.transition = 'all 0.2s ease';
+      bizItemsToggleBadge.style.cursor = 'pointer';
+      if (bizTableExpanded) {
+        bizItemsToggleBadge.style.background = 'rgba(217, 119, 6, 0.18)';
+        bizItemsToggleBadge.style.color = '#d97706';
+        bizItemsToggleBadge.style.border = '1px solid rgba(217, 119, 6, 0.35)';
+        bizItemsToggleBadge.innerHTML = '<i class="fa-solid fa-chevron-up"></i> 기본 3건만 접기';
+      } else {
+        bizItemsToggleBadge.style.background = '#0f172a';
+        bizItemsToggleBadge.style.color = '#ffffff';
+        bizItemsToggleBadge.style.border = '1px solid #1e293b';
+        bizItemsToggleBadge.innerHTML = `<i class="fa-solid fa-chevron-down"></i> 전체 펼치기${totalCount > 3 ? ` (${totalCount}건)` : ''}`;
+      }
+    }
+
     if (filteredList.length === 0) {
-      const emptyMsg = q ? `검색어 [${escapeHtml(q)}] 에 일치하는 영업물건이 없습니다.` : '등록된 영업물건이 없습니다.';
+      const emptyMsg = q ? `검색어 [${escapeHtml(q)}] 에 일치하는 영업물건이 없습니다.` : '등록된 영업물건이 없습니다.<br><span style="font-size: 0.76rem; color: #94a3b8;">(최고관리자가 승인/영업물건으로 등록한 물건만 표시됩니다)</span>';
       bizRegisteredTableBody.innerHTML = `
         <tr>
-          <td colspan="6" class="text-muted" style="text-align: center; padding: 30px 0;">${emptyMsg}</td>
+          <td colspan="6" class="text-muted" style="text-align: center; padding: 30px 0; line-height: 1.6;">${emptyMsg}</td>
         </tr>
       `;
       if (paginationContainer) paginationContainer.innerHTML = '';
@@ -4178,16 +4202,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // 최신 등록순 정렬
     filteredList.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
-    const totalCount = filteredList.length;
-    const perPage = bizTableExpanded ? 10 : 3;
-    const totalPages = Math.ceil(totalCount / perPage);
-    if (bizTableCurrentPage > totalPages) bizTableCurrentPage = totalPages;
-    if (bizTableCurrentPage < 1) bizTableCurrentPage = 1;
+    // 전체 펼치기 시 모든 항목 노출, 접혔을 시 기본 3건 노출
+    const displayList = bizTableExpanded ? filteredList : filteredList.slice(0, 3);
 
-    const startIndex = (bizTableCurrentPage - 1) * perPage;
-    const paginatedList = filteredList.slice(startIndex, startIndex + perPage);
-
-    paginatedList.forEach(item => {
+    displayList.forEach(item => {
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid var(--border-color)';
       tr.style.transition = 'background 0.2s ease';
@@ -4216,25 +4234,8 @@ document.addEventListener('DOMContentLoaded', () => {
       bizRegisteredTableBody.appendChild(tr);
     });
 
-    // Toggle badge 업데이트
-    const bizItemsToggleBadge = document.getElementById('biz-items-toggle-badge');
-    if (bizItemsToggleBadge) {
-      bizItemsToggleBadge.style.background = '#0f172a';
-      bizItemsToggleBadge.style.color = '#ffffff';
-      bizItemsToggleBadge.style.border = '1px solid #1e293b';
-      if (bizTableExpanded) {
-        bizItemsToggleBadge.innerHTML = '<i class="fa-solid fa-chevron-up"></i> 기본 3건만 접기';
-      } else {
-        bizItemsToggleBadge.innerHTML = `<i class="fa-solid fa-chevron-down"></i> 전체 펼치기${totalCount > 3 ? ` (${totalCount}건)` : ''}`;
-      }
-    }
-
     if (paginationContainer) {
-      if (bizTableExpanded && totalCount > 10) {
-        paginationContainer.innerHTML = renderPaginationControls(totalCount, 10, bizTableCurrentPage, 'window.changeBizTablePage');
-      } else {
-        paginationContainer.innerHTML = '';
-      }
+      paginationContainer.innerHTML = '';
     }
 
     // Add click listeners to cancel buttons
@@ -4247,6 +4248,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   };
+  window.renderBizRegisteredTable = renderBizRegisteredTable;
 
   // --- 영업자 전용: 내 영업물건 목록 엑셀(CSV) 다운로드 ---
   const exportBizRegisteredItemsToExcel = () => {
