@@ -2837,8 +2837,18 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
+      // 영업물건(진흥원 접수 건) 등록 여부 정밀 확인: app.isBizItem 이거나 users.items에 이미 존재하는 경우
+      const isAlreadyInBizItems = Boolean(
+        app.isBizItem ||
+        curUsersList.some(u => (u.items || []).some(it => 
+          String(it.id) === String(app.id) || 
+          String(it.appRefId) === String(app.id) ||
+          (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()))
+        ))
+      );
+
       // 2. [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
-      if (app.isBizItem) {
+      if (isAlreadyInBizItems) {
         actionButtons += `
           <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="window.toggleBizItem('${app.id}'); return false;" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; height: 30px;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
         `;
@@ -3529,13 +3539,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (appIndex === -1) return;
 
     const app = apps[appIndex];
-    const isNowBizItem = !app.isBizItem;
+    let curUsers = JSON.parse(localStorage.getItem('users')) || users || [];
+
+    // 현재 영업물건 등록 여부 정밀 확인 (app.isBizItem 플래그 또는 users.items에 이미 존재하는지 여부)
+    const isCurrentlyBizItem = Boolean(
+      app.isBizItem ||
+      curUsers.some(u => (u.items || []).some(it => 
+        String(it.id) === String(app.id) || 
+        String(it.appRefId) === String(app.id) ||
+        (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()))
+      ))
+    );
+
+    const isNowBizItem = !isCurrentlyBizItem;
     app.isBizItem = isNowBizItem;
     apps[appIndex] = app;
     applications = apps;
     localStorage.setItem('applications', JSON.stringify(apps));
-
-    let curUsers = JSON.parse(localStorage.getItem('users')) || users || [];
 
     if (isNowBizItem) {
       // 영업물건으로 등록/이동: 대상 영업자 찾기 (bizCode, id, name, userId 등 정밀 탐색)
