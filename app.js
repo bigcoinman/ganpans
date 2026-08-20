@@ -1124,6 +1124,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 모바일 마이페이지 목록 접기/펼치기 상태 관리
+    let userAppsMobExpanded = false;
+    let bizItemsMobExpanded = false;
+
+    function toggleUserAppsMob() {
+        userAppsMobExpanded = !userAppsMobExpanded;
+        renderUserApplicationsMob();
+    }
+    window.toggleUserAppsMob = toggleUserAppsMob;
+
+    function toggleBizItemsMob() {
+        bizItemsMobExpanded = !bizItemsMobExpanded;
+        renderBizRegisteredItemsMob();
+    }
+    window.toggleBizItemsMob = toggleBizItemsMob;
+
     // 2. 내 온라인 간편 지원 신청 내역 (모바일 카드)
     function renderUserApplicationsMob() {
         const userAppsContainer = document.getElementById('user-apps-list-mobile');
@@ -1910,7 +1926,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleUserAppsMobHeader) {
         toggleUserAppsMobHeader.addEventListener('click', (e) => {
             e.preventDefault();
-            window.toggleUserAppsMob();
+            if (typeof window.toggleUserAppsMob === 'function') {
+                window.toggleUserAppsMob();
+            }
         });
     }
 
@@ -1918,7 +1936,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleBizItemsMobHeader) {
         toggleBizItemsMobHeader.addEventListener('click', (e) => {
             e.preventDefault();
-            window.toggleBizItemsMob();
+            if (typeof window.toggleBizItemsMob === 'function') {
+                window.toggleBizItemsMob();
+            }
         });
     }
 
