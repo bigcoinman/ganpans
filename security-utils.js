@@ -1301,6 +1301,7 @@ window.SupabaseSync = {
     try {
       // --- A. 회원(Users) 동기화 ---
       const defaultPurgedUserIds = [
+        'nubine22',
         'test_probe_user',
         'probe_const_code',
         'test_insert_probe_base'

@@ -2274,11 +2274,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const confirmSecond = confirm('최종 확인: 정말 탈퇴하시겠습니까?');
       if (!confirmSecond) return;
 
-      // Filter out this user from DB
-      users = users.filter(u => u.id !== activeUser.id);
+      const currentActive = getActiveUser() || activeUser;
+      if (!currentActive) return;
+
+      const deletedUid = String(currentActive.id);
+
+      // 1) deleted_user_ids에 영구 등록하여 동기화 부활 완전 차단
+      let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+      if (!deletedIds.includes(deletedUid)) {
+        deletedIds.push(deletedUid);
+        localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
+      }
+
+      // 2) 로컬 users에서 제거
+      users = users.filter(u => String(u.id) !== deletedUid);
       localStorage.setItem('users', JSON.stringify(users));
 
-      // Clear Session
+      // 3) Supabase DB에서 영구 삭제
+      if (window.SupabaseSync) {
+        window.SupabaseSync.deleteUser(deletedUid);
+      }
+
+      // 4) 세션 종료
       clearActiveUser();
 
       alert('회원탈퇴가 성공적으로 완료되었습니다. 이용해 주셔서 감사합니다.');

@@ -608,8 +608,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     users = JSON.parse(localStorage.getItem('users')) || [];
                     activeUser = getActiveUser() || null;
                     if (activeUser) {
-                        users = users.filter(u => u.id !== activeUser.id);
+                        const deletedUid = String(activeUser.id);
+
+                        // 1) deleted_user_ids 등록
+                        let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+                        if (!deletedIds.includes(deletedUid)) {
+                            deletedIds.push(deletedUid);
+                            localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
+                        }
+
+                        // 2) 로컬 users 제거
+                        users = users.filter(u => String(u.id) !== deletedUid);
                         localStorage.setItem('users', JSON.stringify(users));
+
+                        // 3) Supabase DB 영구 삭제
+                        if (window.SupabaseSync) {
+                            window.SupabaseSync.deleteUser(deletedUid);
+                        }
+
                         clearActiveUser();
                         activeUser = null;
                         

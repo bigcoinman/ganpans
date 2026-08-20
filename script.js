@@ -2443,6 +2443,14 @@ function initAuthAndDashboard() {
 
     const hashedPassword = sha256(pwVal);
     const cleanDigits = idVal.replace(/[^0-9]/g, '');
+    const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+
+    // 탈퇴/삭제된 계정 즉시 차단
+    if (deletedIds.includes(idVal) || (cleanDigits && deletedIds.includes(cleanDigits))) {
+      alert('존재하지 않는 회원 정보이거나 이미 탈퇴 처리된 계정입니다.');
+      return;
+    }
+
     let user = null;
 
     // 1. Supabase 실물 DB 로그인 조회
@@ -2474,6 +2482,12 @@ function initAuthAndDashboard() {
         }
 
         if (!error && data) {
+          // 조회된 유저가 deleted_user_ids에 포함된 경우 차단
+          if (deletedIds.includes(String(data.id))) {
+            alert('존재하지 않는 회원 정보이거나 이미 탈퇴 처리된 계정입니다.');
+            return;
+          }
+
           const isPwMatch = (data.password_hash === hashedPassword) || (data.password_hash === pwVal);
           if (isPwMatch) {
             user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : sanitizeUser(data);
