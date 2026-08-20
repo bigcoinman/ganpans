@@ -108,14 +108,14 @@ CREATE TABLE IF NOT EXISTS public.site_stats (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- 6. Row Level Security (RLS) 활성화
+-- 6. Row Level Security (RLS) 및 모든 권한 부여 (최고관리자 명령 무조건 복종 보장)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_stats ENABLE ROW LEVEL SECURITY;
 
--- 7. 기존 구버전 정책 정리 (중복 및 충돌 방지)
+-- 7. 기존 구버전 정책 완전 정리 (중복 및 충돌 방지)
 DROP POLICY IF EXISTS "Anyone can read reviews" ON public.reviews;
 DROP POLICY IF EXISTS "Anyone can insert reviews" ON public.reviews;
 DROP POLICY IF EXISTS "Anyone can update reviews" ON public.reviews;
@@ -135,36 +135,37 @@ DROP POLICY IF EXISTS "Anyone can delete users" ON public.users;
 DROP POLICY IF EXISTS "Enable all access for users" ON public.users;
 
 DROP POLICY IF EXISTS "Enable all access for inquiries" ON public.inquiries;
+DROP POLICY IF EXISTS "Enable all access for site_stats" ON public.site_stats;
 
--- 7. 통합 실시간 동기화 RLS 정책 설정 (SELECT, INSERT, UPDATE, DELETE 전체 허용)
--- users 테이블 보안 정책
+-- 8. 통합 무제한 접근 RLS 정책 설정 (SELECT, INSERT, UPDATE, DELETE 100% 무조건 허용)
 CREATE POLICY "Enable all access for users" 
 ON public.users FOR ALL 
 USING (true) 
 WITH CHECK (true);
 
--- applications 테이블 보안 정책
 CREATE POLICY "Enable all access for applications" 
 ON public.applications FOR ALL 
 USING (true) 
 WITH CHECK (true);
 
--- reviews 테이블 보안 정책
 CREATE POLICY "Enable all access for reviews" 
 ON public.reviews FOR ALL 
 USING (true) 
 WITH CHECK (true);
 
--- inquiries 테이블 보안 정책
 CREATE POLICY "Enable all access for inquiries" 
 ON public.inquiries FOR ALL 
 USING (true) 
 WITH CHECK (true);
 
--- site_stats 테이블 보안 정책
-DROP POLICY IF EXISTS "Enable all access for site_stats" ON public.site_stats;
 CREATE POLICY "Enable all access for site_stats" 
 ON public.site_stats FOR ALL 
 USING (true) 
 WITH CHECK (true);
+
+-- 9. PostgreSQL 역할(anon, authenticated, service_role)에 대한 전권 부여 (DB 거부 원천 차단)
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+
 
