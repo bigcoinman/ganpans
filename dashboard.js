@@ -577,6 +577,17 @@ document.addEventListener('DOMContentLoaded', () => {
       return item;
     });
 
+    // 만약 관리자가 applications에서 isBizItem을 해제(false)했다면 items 목록에서도 자동 제거
+    const cleanedItems = items.filter(item => {
+      const matchingApp = apps.find(app => String(app.id) === String(item.id));
+      if (matchingApp && matchingApp.isBizItem === false) {
+        itemsUpdated = true;
+        return false;
+      }
+      return true;
+    });
+    items = cleanedItems;
+
     if (itemsUpdated) {
       activeUser.items = items;
       users = users.map(u => u.id === activeUser.id ? { ...u, items } : u);
