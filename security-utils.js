@@ -1182,11 +1182,13 @@ window.SupabaseSync = {
     if (!inq) return null;
     return {
       id: String(inq.id),
-      name: inq.name || '',
-      phone: inq.phone || '',
-      category: inq.type || inq.category || 'other',
-      region: inq.message || inq.region || '',
-      status: inq.status || 'pending',
+      name: String(inq.name || ''),
+      phone: String(inq.phone || ''),
+      type: String(inq.type || inq.category || 'other'),
+      category: String(inq.category || inq.type || 'other'),
+      message: String(inq.message || inq.region || ''),
+      region: String(inq.region || inq.message || ''),
+      status: String(inq.status || 'pending'),
       created_at: inq.submittedAt || inq.created_at || new Date().toISOString()
     };
   },
@@ -1197,18 +1199,28 @@ window.SupabaseSync = {
       id: String(dbInq.id),
       name: dbInq.name || '',
       phone: dbInq.phone || '',
-      type: dbInq.category || dbInq.type || 'other',
+      type: dbInq.type || dbInq.category || 'other',
       message: dbInq.message || dbInq.region || '',
       status: dbInq.status || 'pending',
       submittedAt: dbInq.created_at || dbInq.submitted_at || new Date().toISOString()
     };
   },
 
-  // 3초 간편문의 저장/갱신
+  // 3초 간편문의 저장/갱신 (upsert + direct update 이중 보장)
   async upsertInquiry(inq) {
     if (!window.supabaseClient || !inq || !inq.id) return false;
     const payload = this.mapInquiryToDb(inq);
     try {
+      // 1) 직접 상태 update 시도
+      await window.supabaseClient.from('inquiries').update({
+        status: payload.status,
+        name: payload.name,
+        phone: payload.phone,
+        type: payload.type,
+        message: payload.message
+      }).eq('id', String(inq.id));
+
+      // 2) upsert 실행
       const { error } = await window.supabaseClient.from('inquiries').upsert([payload], { onConflict: 'id' });
       if (!error) return true;
       console.warn('Supabase upsertInquiry warning:', error.message);
@@ -1428,7 +1440,10 @@ window.SupabaseSync = {
             inqChanged = true;
           } else {
             const cur = localInquiries[idx];
-            if (cur.status !== mapped.status || cur.message !== mapped.message) {
+            // 관리자가 로컬에서 이미 'resolved'(상담완료/확인완료)로 바꿨는데 DB에 pending이 남아있다면 로컬 상태 유지 및 DB 갱신
+            if (cur.status === 'resolved' && mapped.status === 'pending') {
+              window.supabaseClient.from('inquiries').update({ status: 'resolved' }).eq('id', String(cur.id)).then(() => {});
+            } else if (cur.status !== mapped.status || cur.message !== mapped.message) {
               localInquiries[idx] = { ...cur, ...mapped };
               inqChanged = true;
             }
