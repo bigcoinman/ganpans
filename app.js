@@ -120,8 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // 영업물건 기존 3건 및 오류 데이터 1회 영구 완전 삭제 및 초기화 (사용자 요청)
-    if (!localStorage.getItem('biz_items_purged_20260820_01')) {
+    // 영업물건 기존 3건 및 오류 데이터 강력 영구 완전 삭제 및 초기화 (대원감자탕, 우리나라곰탕 등 박멸)
+    if (!localStorage.getItem('biz_items_purged_20260820_03')) {
         const defaultPurgedBizItemIds = [
             'B-260802-0001',
             'B-260802-0002',
@@ -129,7 +129,9 @@ document.addEventListener('DOMContentLoaded', () => {
             '우리나라 곰탕',
             '우리나라곰탕',
             '대원감자탕',
-            '대박치킨'
+            '대원 감자탕',
+            '대박치킨',
+            '대박 치킨'
         ];
         let deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
         defaultPurgedBizItemIds.forEach(id => {
@@ -137,16 +139,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         localStorage.setItem('deleted_biz_item_ids', JSON.stringify(deletedBizItemIds));
 
+        const isMatchPurge = (it) => {
+            if (!it) return false;
+            const itId = String(it.id || '').trim();
+            const itRef = String(it.appRefId || '').trim();
+            const itName = String(it.name || it.storeName || it.shopName || '').replace(/\s+/g, '').toLowerCase();
+            return deletedBizItemIds.some(del => {
+                const cleanDel = String(del).replace(/\s+/g, '').toLowerCase();
+                return itId === del || itRef === del || (itName && cleanDel && (itName === cleanDel || itName.includes(cleanDel) || cleanDel.includes(itName)));
+            });
+        };
+
         let curUsers = JSON.parse(localStorage.getItem('users')) || [];
         curUsers = curUsers.map(u => {
             if (u.items && Array.isArray(u.items)) {
                 return {
                     ...u,
-                    items: u.items.filter(it => 
-                        !deletedBizItemIds.includes(String(it.id)) && 
-                        !deletedBizItemIds.includes(String(it.appRefId)) && 
-                        !deletedBizItemIds.includes(String(it.name || '').trim())
-                    )
+                    items: u.items.filter(it => !isMatchPurge(it))
                 };
             }
             return u;
@@ -155,15 +164,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let activeU = getActiveUser() || null;
         if (activeU && activeU.items) {
-            activeU.items = activeU.items.filter(it => 
-                !deletedBizItemIds.includes(String(it.id)) && 
-                !deletedBizItemIds.includes(String(it.appRefId)) && 
-                !deletedBizItemIds.includes(String(it.name || '').trim())
-            );
+            activeU.items = activeU.items.filter(it => !isMatchPurge(it));
             localStorage.setItem('activeUser', JSON.stringify(activeU));
         }
 
-        localStorage.setItem('biz_items_purged_20260820_01', 'true');
+        // applications 에서도 isBizItem 해제
+        let curApps = JSON.parse(localStorage.getItem('applications')) || [];
+        curApps = curApps.map(app => {
+            if (isMatchPurge(app)) {
+                return { ...app, isBizItem: false };
+            }
+            return app;
+        });
+        localStorage.setItem('applications', JSON.stringify(curApps));
+
+        localStorage.setItem('biz_items_purged_20260820_03', 'true');
     }
 
     let users = JSON.parse(localStorage.getItem('users')) || [];
@@ -1341,12 +1356,25 @@ document.addEventListener('DOMContentLoaded', () => {
         let myItems = activeUser.items || [];
         let bizList = [];
 
+        const deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
+        const isPurgedItem = (it) => {
+            if (!it) return false;
+            const itId = String(it.id || '').trim();
+            const itRef = String(it.appRefId || '').trim();
+            const itName = String(it.name || it.storeName || it.shopName || '').replace(/\s+/g, '').toLowerCase();
+            return deletedBizItemIds.some(del => {
+                const cleanDel = String(del).replace(/\s+/g, '').toLowerCase();
+                return itId === del || itRef === del || (itName && cleanDel && (itName === cleanDel || itName.includes(cleanDel) || cleanDel.includes(itName)));
+            });
+        };
+
         const myBizCode = String(activeUser.bizCode || '').trim().toLowerCase();
         const myUserId = String(activeUser.id || '').trim().toLowerCase();
         const myUserName = String(activeUser.name || '').trim().toLowerCase();
 
         // 1) applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 체크한 건 수집
         apps.forEach(app => {
+            if (isPurgedItem(app)) return; // 삭제/정화된 물건 제외
             const isApprovedBizItem = (app.isBizItem === true || String(app.isBizItem) === 'true');
             if (!isApprovedBizItem) return; // 관리자 미체크 건은 제외
 
@@ -1372,6 +1400,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 2) myItems 중에서도 applications에 매칭되는 건이 있다면 isBizItem === false 인 경우만 제외하고 모두 허용
         myItems.forEach(item => {
+            if (isPurgedItem(item)) return; // 삭제/정화된 물건 제외
             const matchingApp = apps.find(a => String(a.id) === String(item.id) || String(a.id) === String(item.appRefId));
             if (matchingApp && (matchingApp.isBizItem === false || String(matchingApp.isBizItem) === 'false')) return; // 관리자가 명시적으로 해제한 건만 제외
 
@@ -3809,16 +3838,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let targetItemName = '해당 영업 물건';
         let targetAppRefId = '';
-        const targetUser = users.find(u => String(u.id) === String(uid));
-        if (targetUser && targetUser.items) {
-            const found = targetUser.items.find(it => String(it.id) === String(itemId) || String(it.appRefId) === String(itemId));
-            if (found) {
-                if (found.name) targetItemName = found.name;
-                if (found.appRefId) targetAppRefId = found.appRefId;
+        let curUsers = JSON.parse(localStorage.getItem('users')) || users || [];
+        curUsers.forEach(u => {
+            if (u.items && Array.isArray(u.items)) {
+                const found = u.items.find(it => String(it.id) === String(itemId) || String(it.appRefId) === String(itemId));
+                if (found) {
+                    if (found.name) targetItemName = found.name;
+                    if (found.appRefId) targetAppRefId = found.appRefId;
+                }
             }
-        }
+        });
 
-        const ok = confirm(`정말 [${targetItemName}] 영업 물건을 영구 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 등록된 현장 사진 및 진행 상태 정보가 모두 삭제됩니다.`);
+        const ok = confirm(`정말 [${targetItemName}] 영업 물건을 영구 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 모든 영업자 및 관리자 화면에서 즉시 영구 제거됩니다.`);
         if (!ok) return;
 
         // 1) deleted_biz_item_ids 등록
@@ -3830,37 +3861,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         localStorage.setItem('deleted_biz_item_ids', JSON.stringify(deletedBizItemIds));
 
-        // 2) 로컬 users에서 제거
-        users = users.map(u => {
-            if (String(u.id) === String(uid)) {
-                const remainingItems = (u.items || []).filter(item => 
-                    String(item.id) !== String(itemId) && 
-                    String(item.appRefId) !== String(itemId) &&
-                    String(item.name || '').trim() !== targetItemName.trim()
-                );
-                return { ...u, items: remainingItems };
+        const isMatchTarget = (it) => {
+            if (!it) return false;
+            const itId = String(it.id || '').trim();
+            const itRef = String(it.appRefId || '').trim();
+            const itName = String(it.name || it.storeName || it.shopName || '').replace(/\s+/g, '').toLowerCase();
+            const targetClean = String(targetItemName).replace(/\s+/g, '').toLowerCase();
+            return itId === String(itemId) || 
+                   (targetAppRefId && itId === String(targetAppRefId)) ||
+                   itRef === String(itemId) || 
+                   (targetAppRefId && itRef === String(targetAppRefId)) ||
+                   (targetClean && itName && (itName === targetClean || itName.includes(targetClean) || targetClean.includes(itName)));
+        };
+
+        // 2) 모든 유저의 items에서 해당 물건 완전 제거
+        curUsers = curUsers.map(u => {
+            if (u.items && Array.isArray(u.items)) {
+                return {
+                    ...u,
+                    items: u.items.filter(it => !isMatchTarget(it))
+                };
             }
             return u;
         });
+        users = curUsers;
+        localStorage.setItem('users', JSON.stringify(curUsers));
 
-        localStorage.setItem('users', JSON.stringify(users));
-
-        if (activeUser && activeUser.id === uid) {
-            const myUser = users.find(u => u.id === uid);
-            if (myUser) {
-                activeUser.items = myUser.items || [];
-                localStorage.setItem('activeUser', JSON.stringify(activeUser));
-            }
+        // 3) activeUser 세션 갱신
+        let activeU = getActiveUser() || activeUser;
+        if (activeU && activeU.items) {
+            activeU.items = activeU.items.filter(it => !isMatchTarget(it));
+            localStorage.setItem('activeUser', JSON.stringify(activeU));
+            activeUser = activeU;
         }
 
-        // 3) Supabase DB Sync
-        if (window.SupabaseSync) {
-            const updatedUser = users.find(u => String(u.id) === String(uid));
-            if (updatedUser) {
-                window.SupabaseSync.updateUser(uid, {
-                    items: updatedUser.items || []
-                });
+        // 4) applications 에서도 isBizItem 해제
+        let curApps = JSON.parse(localStorage.getItem('applications')) || [];
+        curApps = curApps.map(app => {
+            if (isMatchTarget(app)) {
+                return { ...app, isBizItem: false };
             }
+            return app;
+        });
+        applications = curApps;
+        localStorage.setItem('applications', JSON.stringify(curApps));
+
+        // 5) Supabase DB Sync
+        if (window.SupabaseSync) {
+            curUsers.forEach(u => {
+                if (u.role === 'business' || u.role === 'admin') {
+                    window.SupabaseSync.updateUser(u.id, { items: u.items || [] });
+                }
+            });
             window.SupabaseSync.deleteApplication(itemId);
             if (targetAppRefId) {
                 window.SupabaseSync.deleteApplication(targetAppRefId);
