@@ -1441,9 +1441,14 @@ window.SupabaseSync = {
               cur.pendingLicenseNumber = mapped.pendingLicenseNumber;
               needsUpdate = true;
             }
-            // 로컬에서 관리자가 삭제하거나 수정한 items가 최우선 (DB의 이전 데이터로 덮어쓰기 원천 차단)
-            if (cur.items && mapped.items && JSON.stringify(cur.items) !== JSON.stringify(mapped.items)) {
-              window.supabaseClient.from('users').update({ items: cur.items }).eq('id', cur.id).then(() => {});
+            // items 최신 동기화: 로컬에 items가 있으면 유지하며 DB를 갱신하고, DB에만 items가 있으면 로컬로 가져옴
+            if (cur.items && cur.items.length > 0) {
+              if (!mapped.items || JSON.stringify(cur.items) !== JSON.stringify(mapped.items)) {
+                window.supabaseClient.from('users').update({ items: cur.items }).eq('id', cur.id).then(() => {});
+              }
+            } else if (mapped.items && mapped.items.length > 0) {
+              cur.items = mapped.items;
+              needsUpdate = true;
             }
 
             if (needsUpdate) {
@@ -1507,15 +1512,31 @@ window.SupabaseSync = {
             const finalPhotos = (mapped.photos && mapped.photos.length > 0) ? mapped.photos : ((cur.photos && cur.photos.length > 0) ? cur.photos : (finalFileData ? [finalFileData] : []));
             const finalFileName = (mapped.fileName && mapped.fileName !== '현장사진' && !mapped.fileName.startsWith('data:')) ? mapped.fileName : (cur.fileName || '현장사진.jpg');
 
+            // isBizItem 및 referrerCode는 로컬에서 이미 설정된 경우 DB의 빈값으로 덮어쓰지 않고 보호
+            const finalIsBizItem = (cur.isBizItem === true || mapped.isBizItem === true);
+            const finalReferrerCode = cur.referrerCode || mapped.referrerCode || '';
+            const finalReceiptStatus = cur.receiptStatus || mapped.receiptStatus || '접수예정';
+
             localApps[idx] = {
-              ...cur,
               ...mapped,
+              ...cur,
+              isBizItem: finalIsBizItem,
+              referrerCode: finalReferrerCode,
+              receiptStatus: finalReceiptStatus,
               fileData: finalFileData,
               photos: finalPhotos,
               photosCount: finalPhotos.length,
               fileName: finalFileName
             };
             appsChanged = true;
+
+            // 로컬에 isBizItem: true가 있으나 DB에 미반영된 경우 백그라운드 DB 갱신
+            if (finalIsBizItem && (!sa.memo || !sa.memo.includes('"isBizItem":true'))) {
+              window.supabaseClient.from('applications').update({
+                memo: JSON.stringify({ isBizItem: true, receiptStatus: finalReceiptStatus }),
+                referrer_code: finalReferrerCode
+              }).eq('id', String(cur.id)).then(() => {});
+            }
           }
         });
 
