@@ -1257,8 +1257,13 @@ window.SupabaseSync = {
     try {
       localStorage.setItem('inquiries', JSON.stringify([]));
       localStorage.setItem('deleted_inquiry_ids', JSON.stringify([]));
+      localStorage.setItem('inquiries_purged_flag', 'true');
       if (window.supabaseClient) {
-        await window.supabaseClient.from('inquiries').delete().neq('id', '___EMPTY___');
+        const { data } = await window.supabaseClient.from('inquiries').select('id');
+        if (data && data.length > 0) {
+          const ids = data.map(d => String(d.id));
+          await window.supabaseClient.from('inquiries').delete().in('id', ids);
+        }
       }
       return true;
     } catch (e) {
@@ -1435,48 +1440,55 @@ window.SupabaseSync = {
 
       // --- C. 3초 간편문의(Inquiries) 동기화 ---
       let localInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+      const isPurged = localStorage.getItem('inquiries_purged_flag') === 'true';
       const deletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
       const { data: supaInq, error: inqErr } = await window.supabaseClient.from('inquiries').select('*');
 
       if (!inqErr && Array.isArray(supaInq)) {
-        // 1) Supabase에 있는 문의 데이터를 로컬에 병합 (삭제된 문의는 부활 차단)
-        for (const si of supaInq) {
-          const mapped = this.mapDbToInquiry(si);
-          if (deletedInqIds.includes(String(mapped.id))) {
-            // DB에 아직 남아있는 삭제된 문의는 DB에서 다시 확실히 제거
-            window.supabaseClient.from('inquiries').delete().eq('id', String(mapped.id)).then(() => {});
-            continue;
+        if (isPurged && localInquiries.length === 0) {
+          if (supaInq.length > 0) {
+            const ids = supaInq.map(d => String(d.id));
+            window.supabaseClient.from('inquiries').delete().in('id', ids).then(() => {});
           }
-
-          const idx = localInquiries.findIndex(i => String(i.id) === String(mapped.id));
-
-          if (idx === -1) {
-            localInquiries.push(mapped);
-            inqChanged = true;
-          } else {
-            const cur = localInquiries[idx];
-            // 로컬에서 관리자가 지정한 status가 최우선이므로 DB 상태가 다르면 DB를 업데이트하고 로컬 유지
-            if (cur.status && cur.status !== mapped.status) {
-              window.supabaseClient.from('inquiries').update({ status: cur.status }).eq('id', String(cur.id)).then(() => {});
+        } else {
+          // 1) Supabase에 있는 문의 데이터를 로컬에 병합 (삭제된 문의는 부활 차단)
+          for (const si of supaInq) {
+            const mapped = this.mapDbToInquiry(si);
+            if (deletedInqIds.includes(String(mapped.id))) {
+              window.supabaseClient.from('inquiries').delete().eq('id', String(mapped.id)).then(() => {});
+              continue;
             }
-            if (cur.message !== mapped.message || cur.name !== mapped.name || cur.phone !== mapped.phone) {
-              localInquiries[idx] = { ...cur, ...mapped, status: cur.status || mapped.status };
+
+            const idx = localInquiries.findIndex(i => String(i.id) === String(mapped.id));
+
+            if (idx === -1) {
+              localInquiries.push(mapped);
               inqChanged = true;
+            } else {
+              const cur = localInquiries[idx];
+              // 로컬에서 관리자가 지정한 status가 최우선이므로 DB 상태가 다르면 DB를 업데이트하고 로컬 유지
+              if (cur.status && cur.status !== mapped.status) {
+                window.supabaseClient.from('inquiries').update({ status: cur.status }).eq('id', String(cur.id)).then(() => {});
+              }
+              if (cur.message !== mapped.message || cur.name !== mapped.name || cur.phone !== mapped.phone) {
+                localInquiries[idx] = { ...cur, ...mapped, status: cur.status || mapped.status };
+                inqChanged = true;
+              }
             }
           }
-        }
 
-        // 2) 로컬에만 있는 문의를 Supabase로 업로드 (삭제된 것은 제외)
-        for (const li of localInquiries) {
-          if (deletedInqIds.includes(String(li.id))) continue;
-          const inSupa = supaInq.find(si => String(si.id) === String(li.id));
-          if (!inSupa) {
-            await this.upsertInquiry(li);
+          // 2) 로컬에만 있는 문의를 Supabase로 업로드 (삭제된 것은 제외)
+          for (const li of localInquiries) {
+            if (deletedInqIds.includes(String(li.id))) continue;
+            const inSupa = supaInq.find(si => String(si.id) === String(li.id));
+            if (!inSupa) {
+              await this.upsertInquiry(li);
+            }
           }
-        }
 
-        if (inqChanged) {
-          localStorage.setItem('inquiries', JSON.stringify(localInquiries));
+          if (inqChanged) {
+            localStorage.setItem('inquiries', JSON.stringify(localInquiries));
+          }
         }
       }
 
