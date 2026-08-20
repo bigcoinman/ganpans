@@ -2786,19 +2786,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         handleApplicationPhotoUploadMob(id);
                     });
                 });
-                // Status select is handled directly by inline onchange="window.updateApplicationStatusMob(...)" for instant response
-                appsList.querySelectorAll('.btn-toggle-bizitem-mob').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const id = e.target.closest('button').dataset.id;
-                        toggleBizItemMob(id);
-                    });
-                });
-                appsList.querySelectorAll('.btn-delete-app-mob').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const id = e.target.closest('button').dataset.id;
-                        deleteApplicationMob(id);
-                    });
-                });
+                // Action buttons are handled directly by inline onclick/onchange for instant single response
                 appsList.querySelectorAll('.btn-approve-settlement-mob').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const id = e.target.closest('button').dataset.id;
