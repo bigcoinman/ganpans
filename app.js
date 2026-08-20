@@ -1891,6 +1891,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const toggleBizItemsMobHeader = document.getElementById('toggle-biz-items-mob-header');
+    if (toggleBizItemsMobHeader) {
+        toggleBizItemsMobHeader.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.toggleBizItemsMob();
+        });
+    }
+
     const searchBizItemsMobInput = document.getElementById('search-biz-items-mob');
     if (searchBizItemsMobInput) {
         searchBizItemsMobInput.addEventListener('input', () => {
