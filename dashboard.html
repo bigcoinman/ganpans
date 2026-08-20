@@ -737,9 +737,14 @@
                         <div class="manager-inquiries-section" style="margin-top: 25px; border-top: 1px dashed var(--border-color); padding-top: 20px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; margin-bottom: 12px; background: rgba(241, 245, 249, 0.7); padding: 10px 16px; border-radius: 10px; border: 1px solid #e2e8f0;" onclick="window.toggleAdminSection('sec-container-inquiries', this, event)">
                                 <h4 class="manager-section-title" style="margin: 0; font-size: 1.02rem;"><i class="fa-solid fa-comments" style="color: #6366f1;"></i> 3초 간편 문의 접수 목록 (Q&A 상담 문의건)</h4>
-                                <button type="button" class="btn-toggle-admin" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 4px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
-                                    <span class="toggle-text">접기</span> <i class="fa-solid fa-chevron-up toggle-icon"></i>
-                                </button>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <button type="button" class="btn btn-sm" onclick="window.clearAllInquiriesAdmin(); event.stopPropagation();" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="fa-solid fa-trash-can"></i> 전체 비우기
+                                    </button>
+                                    <button type="button" class="btn-toggle-admin" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 4px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
+                                        <span class="toggle-text">접기</span> <i class="fa-solid fa-chevron-up toggle-icon"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div id="sec-container-inquiries" style="display: block;">
                                 <div class="manager-table-container" style="overflow-x: auto; background: rgba(255,255,255,0.75); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03); backdrop-filter: blur(5px);">
@@ -1110,10 +1115,10 @@
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Dashboard Core Script -->
-    <script src="supabase-config.js?v=20260820_0625"></script>
-    <script src="security-utils.js?v=20260820_0625"></script>
-    <script src="kakao-notify.js?v=20260820_0625"></script>
-    <script src="dashboard.js?v=20260820_0625"></script>
+    <script src="supabase-config.js?v=20260820_0640"></script>
+    <script src="security-utils.js?v=20260820_0640"></script>
+    <script src="kakao-notify.js?v=20260820_0640"></script>
+    <script src="dashboard.js?v=20260820_0640"></script>
 </body>
 
 </html>

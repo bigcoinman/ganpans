@@ -89,6 +89,20 @@ window.deleteInquiryAdmin = function(id, btnEl) {
   }
 };
 
+// --- 3초 간편문의 전체 초기화 글로벌 핸들러 ---
+window.clearAllInquiriesAdmin = function() {
+  if (!confirm('정말로 모든 3초 간편 문의 접수 내역을 영구 삭제하고 초기화하시겠습니까?\n삭제 후 복구할 수 없습니다.')) return;
+  localStorage.setItem('inquiries', JSON.stringify([]));
+  localStorage.setItem('deleted_inquiry_ids', JSON.stringify([]));
+  if (window.SupabaseSync) {
+    window.SupabaseSync.clearAllInquiries();
+  }
+  alert('모든 간편 문의 내역이 성공적으로 초기화되었습니다.');
+  if (typeof window.renderInquiriesList === 'function') {
+    window.renderInquiriesList();
+  }
+};
+
 // --- 회원 강제 탈퇴/삭제 글로벌 핸들러 ---
 window.deleteUserAdmin = function(uid, btnEl) {
   if (!uid) return;
@@ -150,6 +164,16 @@ function toggleAdminSection(containerId, headerEl, event) {
 window.toggleAdminSection = toggleAdminSection;
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 3초 간편문의 기존 오류 데이터 1회 강제 완전 초기화 (사용자 요청)
+  if (!localStorage.getItem('inquiries_cleared_20260820_01')) {
+    localStorage.setItem('inquiries', JSON.stringify([]));
+    localStorage.setItem('deleted_inquiry_ids', JSON.stringify([]));
+    localStorage.setItem('inquiries_cleared_20260820_01', 'true');
+    if (window.SupabaseSync) {
+      window.SupabaseSync.clearAllInquiries();
+    }
+  }
+
   // Load State from LocalStorage
   let users = JSON.parse(localStorage.getItem('users')) || [];
   let activeUser = getActiveUser() || null;

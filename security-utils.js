@@ -1252,6 +1252,21 @@ window.SupabaseSync = {
     }
   },
 
+  // 3초 간편문의 전체 영구 초기화 (로컬 + DB 완전 삭제)
+  async clearAllInquiries() {
+    try {
+      localStorage.setItem('inquiries', JSON.stringify([]));
+      localStorage.setItem('deleted_inquiry_ids', JSON.stringify([]));
+      if (window.supabaseClient) {
+        await window.supabaseClient.from('inquiries').delete().neq('id', '___EMPTY___');
+      }
+      return true;
+    } catch (e) {
+      console.error('Supabase clearAllInquiries error:', e);
+      return false;
+    }
+  },
+
   // 7. 전체 양방향 동기화 (Supabase <-> LocalStorage)
   async syncAllData() {
     if (!window.supabaseClient) {
