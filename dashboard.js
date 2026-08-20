@@ -113,65 +113,17 @@ window.clearAllInquiriesAdmin = function() {
   alert('모든 간편 문의 내역이 성공적으로 초기화되었습니다.');
 };
 
-// --- 회원 강제 탈퇴/삭제 글로벌 핸들러 ---
+// --- 통합 DataStore 브릿지 핸들러 ---
 window.deleteUserAdmin = function(uid, btnEl) {
-  if (!uid) return;
-  if (!confirm(`[주의] 회원 ID [${uid}]을(를) 정말로 강제 탈퇴/삭제 처리하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
-
-  let curUsers = JSON.parse(localStorage.getItem('users')) || [];
-  curUsers = curUsers.filter(u => String(u.id) !== String(uid));
-  localStorage.setItem('users', JSON.stringify(curUsers));
-
-  if (btnEl) {
-    const row = btnEl.closest('tr');
-    if (row) row.remove();
-  }
-
-  if (window.SupabaseSync) {
-    window.SupabaseSync.deleteUser(uid);
-  }
-
-  alert(`회원 [${uid}]이(가) 정상적으로 탈퇴/삭제되었습니다.`);
-  if (typeof window.renderAllUsersList === 'function') {
-    window.renderAllUsersList();
-  }
-  if (typeof window.renderManagerPanel === 'function') {
-    window.renderManagerPanel();
-  }
+  if (window.DataStore) return window.DataStore.deleteUser(uid, btnEl);
 };
 
-// --- 온라인 간편 지원 신청서 강제 삭제 글로벌 핸들러 ---
+window.toggleBizItem = function(appId, btnEl) {
+  if (window.DataStore) return window.DataStore.toggleBizItem(appId);
+};
+
 window.deleteApplicationAdmin = function(appId, btnEl) {
-  if (!appId) return;
-  if (!confirm(`[주의] 지원 신청 접수 건 [${appId}]을(를) 정말로 영구 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
-
-  // 1) 0초 즉각 DOM 행 제거
-  if (btnEl) {
-    const row = btnEl.closest('tr');
-    if (row) row.remove();
-  }
-
-  // 2) deleted_application_ids 등록
-  let deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
-  if (!deletedAppIds.includes(String(appId))) {
-    deletedAppIds.push(String(appId));
-    localStorage.setItem('deleted_application_ids', JSON.stringify(deletedAppIds));
-  }
-
-  // 3) 로컬 applications에서 제거
-  let apps = JSON.parse(localStorage.getItem('applications')) || [];
-  apps = apps.filter(a => String(a.id) !== String(appId));
-  localStorage.setItem('applications', JSON.stringify(apps));
-
-  // 4) Supabase DB 영구 삭제
-  if (window.SupabaseSync) {
-    window.SupabaseSync.deleteApplication(appId);
-  }
-
-  alert(`지원 신청 접수 건 [${appId}]이(가) 정상적으로 영구 삭제되었습니다.`);
-  if (typeof window.renderApplicationsList === 'function') {
-    window.renderApplicationsList();
-  }
+  if (window.DataStore) return window.DataStore.deleteApplication(appId, btnEl);
 };
 
 // --- Collapsible Sections Toggle for PC Admin Dashboard (Global Definition) ---
@@ -208,88 +160,10 @@ function toggleAdminSection(containerId, headerEl, event) {
 window.toggleAdminSection = toggleAdminSection;
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 3초 간편문의 기존 5건 및 오류 데이터 1회 영구 삭제 및 완전 초기화 (사용자 요청)
-  if (!localStorage.getItem('inquiries_cleared_20260820_02')) {
-    const defaultIdsToPurge = [
-      'INQ-20260817-001',
-      'INQ-1786920993324',
-      'INQ-1786871032835',
-      'INQ-1786920450983',
-      'INQ-1786920628397'
-    ];
-    let deletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
-    defaultIdsToPurge.forEach(id => {
-      if (!deletedInqIds.includes(id)) deletedInqIds.push(id);
-    });
-    localStorage.setItem('deleted_inquiry_ids', JSON.stringify(deletedInqIds));
-    localStorage.setItem('inquiries', JSON.stringify([]));
-    localStorage.setItem('inquiries_purged_flag', 'true');
-    localStorage.setItem('inquiries_cleared_20260820_02', 'true');
-    if (window.SupabaseSync) {
-      window.SupabaseSync.clearAllInquiries();
-    }
-  }
-
-  // 영업물건 기존 3건 및 오류 데이터 강력 영구 완전 삭제 및 초기화 (대원감자탕, 우리나라곰탕 등 박멸)
-  if (!localStorage.getItem('biz_items_purged_20260820_03')) {
-    const defaultPurgedBizItemIds = [
-      'B-260802-0001',
-      'B-260802-0002',
-      'B-260802-0003',
-      '우리나라 곰탕',
-      '우리나라곰탕',
-      '대원감자탕',
-      '대원 감자탕',
-      '대박치킨',
-      '대박 치킨'
-    ];
-    let deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
-    defaultPurgedBizItemIds.forEach(id => {
-      if (!deletedBizItemIds.includes(id)) deletedBizItemIds.push(id);
-    });
-    localStorage.setItem('deleted_biz_item_ids', JSON.stringify(deletedBizItemIds));
-
-    const isMatchPurge = (it) => {
-      if (!it) return false;
-      const itId = String(it.id || '').trim();
-      const itRef = String(it.appRefId || '').trim();
-      const itName = String(it.name || it.storeName || it.shopName || '').replace(/\s+/g, '').toLowerCase();
-      return deletedBizItemIds.some(del => {
-        const cleanDel = String(del).replace(/\s+/g, '').toLowerCase();
-        return itId === del || itRef === del || (itName && cleanDel && (itName === cleanDel || itName.includes(cleanDel) || cleanDel.includes(itName)));
-      });
-    };
-
-    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
-    curUsers = curUsers.map(u => {
-      if (u.items && Array.isArray(u.items)) {
-        return {
-          ...u,
-          items: u.items.filter(it => !isMatchPurge(it))
-        };
-      }
-      return u;
-    });
-    localStorage.setItem('users', JSON.stringify(curUsers));
-
-    let activeU = typeof getActiveUser === 'function' ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')));
-    if (activeU && activeU.items) {
-      activeU.items = activeU.items.filter(it => !isMatchPurge(it));
-      if (localStorage.getItem('activeUser')) localStorage.setItem('activeUser', JSON.stringify(activeU));
-      if (sessionStorage.getItem('activeUser')) sessionStorage.setItem('activeUser', JSON.stringify(activeU));
-    }
-
-    // applications 에서도 isBizItem 해제
-    let curApps = JSON.parse(localStorage.getItem('applications')) || [];
-    curApps = curApps.map(app => {
-      if (isMatchPurge(app)) {
-        return { ...app, isBizItem: false };
-      }
-      return app;
-    });
-    localStorage.setItem('applications', JSON.stringify(curApps));
-
-    localStorage.setItem('biz_items_purged_20260820_03', 'true');
+  // 영업물건 삭제 캐시 정화 (상호명 블랙리스트 제거하여 신규 등록 보장)
+  if (!localStorage.getItem('biz_items_cache_cleaned_v2')) {
+    localStorage.removeItem('deleted_biz_item_ids');
+    localStorage.setItem('biz_items_cache_cleaned_v2', 'true');
   }
 
   // Load State from LocalStorage
@@ -1524,7 +1398,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Render All Users List (전체 회원 정보 관리) ---
   const renderAllUsersList = () => {
-    if (activeUser.role !== 'admin') return;
+    const curAct=(typeof getActiveUser==='function'?getActiveUser():null)||activeUser||JSON.parse(localStorage.getItem('activeUser'))||JSON.parse(sessionStorage.getItem('activeUser')); if(!curAct||curAct.role!=='admin') return;
     const allUsersTableBody = document.getElementById('all-users-table-body');
     const allUsersCountEl = document.getElementById('all-users-count');
     const paginationContainer = document.getElementById('pagination-manager-all-users');
@@ -2944,6 +2818,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
+    window.renderApplicationsList = renderApplicationsList;
+
     // Action buttons (Status change, Toggle Biz Item, Delete) are handled directly by inline onclick/onchange for instant single response
 
     document.querySelectorAll('.btn-approve-settlement').forEach(btn => {
@@ -3531,174 +3407,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   window.updateApplicationStatus = updateApplicationStatus;
 
-  const toggleBizItem = (appId) => {
-    if (activeUser.role !== 'admin') return;
-
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
-    const appIndex = apps.findIndex(a => String(a.id) === String(appId));
-    if (appIndex === -1) return;
-
-    const app = apps[appIndex];
-    let curUsers = JSON.parse(localStorage.getItem('users')) || users || [];
-
-    // 현재 영업물건 등록 여부 정밀 확인 (app.isBizItem 플래그 또는 users.items에 이미 존재하는지 여부)
-    const isCurrentlyBizItem = Boolean(
-      app.isBizItem ||
-      curUsers.some(u => (u.items || []).some(it => 
-        String(it.id) === String(app.id) || 
-        String(it.appRefId) === String(app.id) ||
-        (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()))
-      ))
-    );
-
-    const isNowBizItem = !isCurrentlyBizItem;
-    app.isBizItem = isNowBizItem;
-
-    if (isNowBizItem) {
-      // 영업물건으로 등록/이동: 대상 영업자 찾기 (bizCode, id, name, userId 등 정밀 탐색)
-      let targetUser = null;
-      const refCode = String(app.referrerCode || '').trim().toLowerCase();
-      const appUser = String(app.userId || '').trim().toLowerCase();
-
-      if (refCode) {
-        targetUser = curUsers.find(u => 
-          (u.role === 'business' || u.role === 'admin') && 
-          ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
-           (u.id && String(u.id).trim().toLowerCase() === refCode) ||
-           (u.name && String(u.name).trim().toLowerCase() === refCode))
-        );
-      }
-      if (!targetUser && appUser) {
-        targetUser = curUsers.find(u => 
-          (u.role === 'business' || u.role === 'admin') && 
-          (u.id && String(u.id).trim().toLowerCase() === appUser)
-        );
-      }
-      if (!targetUser) {
-        targetUser = curUsers.find(u => u.role === 'business') || curUsers.find(u => u.role === 'admin');
-      }
-
-      const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
-      const bizItem = {
-        id: app.id,
-        name: app.storeName || app.shopName || app.ownerName || '영업물건',
-        phone: app.ownerPhone || '',
-        address: app.storeAddress || '',
-        photosCount: photosList.length,
-        receiptStatus: app.receiptStatus || '접수예정',
-        progressStatus: (app.status === 'approved' ? '승인 완료' : (app.status === 'rejected' ? '반려됨' : (app.status === 'giveup' ? '지원사업 포기' : '지원대기중'))),
-        photos: photosList,
-        appRefId: app.id
-      };
-
-      // 모든 영업자(business)와 관리자(admin)의 items에 영업물건 추가/갱신 (어떤 영업자가 로그인해도 100% 노출 보장)
-      curUsers = curUsers.map(u => {
-        if (u.role === 'business' || u.role === 'admin' || (targetUser && u.id === targetUser.id)) {
-          const uItems = u.items || [];
-          const existingItemIdx = uItems.findIndex(it => 
-            String(it.id) === String(app.id) || 
-            String(it.appRefId) === String(app.id) ||
-            (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()))
-          );
-          if (existingItemIdx >= 0) {
-            uItems[existingItemIdx] = { ...uItems[existingItemIdx], ...bizItem };
-          } else {
-            uItems.unshift(bizItem);
-          }
-          if (window.SupabaseSync) {
-            window.SupabaseSync.updateUser(u.id, { items: uItems });
-          }
-          return { ...u, items: uItems };
-        }
-        return u;
-      });
-
-      users = curUsers;
-      localStorage.setItem('users', JSON.stringify(curUsers));
-
-      if (activeUser) {
-        const myFreshUser = curUsers.find(u => u.id === activeUser.id);
-        if (myFreshUser) {
-          activeUser.items = myFreshUser.items;
-          localStorage.setItem('activeUser', JSON.stringify(activeUser));
-        }
-      }
-
-      apps[appIndex] = app;
-      applications = apps;
-      localStorage.setItem('applications', JSON.stringify(apps));
-
-      if (window.supabaseClient) {
-        window.supabaseClient.from('applications').update({
-          memo: JSON.stringify({ isBizItem: true, receiptStatus: app.receiptStatus || '접수예정' }),
-          referrer_code: app.referrerCode || ''
-        }).eq('id', String(app.id)).then(() => {});
-      }
-
-      alert(`[${app.storeName || app.ownerName}] 건이 '영업물건'으로 변경되었습니다.\n진흥원 접수 및 영업자 대시보드로 실시간 동시 연동됩니다.`);
-    } else {
-      // 영업물건에서 해제/철회: 모든 사용자의 items에서 완벽 제거 (ID, appRefId, 상호명, 주소 정밀 매칭)
-      curUsers = curUsers.map(u => {
-        if (u.items && u.items.length > 0) {
-          const filteredItems = u.items.filter(it => {
-            const matchId = String(it.id) === String(app.id);
-            const matchAppRef = String(it.appRefId) === String(app.id);
-            const matchName = (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()));
-            const matchAddr = (it.address && app.storeAddress && String(it.address).trim() === String(app.storeAddress).trim());
-            return !matchId && !matchAppRef && !matchName && !matchAddr;
-          });
-          return { ...u, items: filteredItems };
-        }
-        return u;
-      });
-      users = curUsers;
-      localStorage.setItem('users', JSON.stringify(curUsers));
-
-      if (activeUser && (activeUser.role === 'business' || activeUser.role === 'admin')) {
-        const myUser = curUsers.find(u => u.id === activeUser.id);
-        if (myUser) {
-          activeUser.items = myUser.items || [];
-          localStorage.setItem('activeUser', JSON.stringify(activeUser));
-        }
-      }
-
-      apps[appIndex] = app;
-      applications = apps;
-      localStorage.setItem('applications', JSON.stringify(apps));
-
-      if (window.SupabaseSync) {
-        curUsers.forEach(u => {
-          if (u.role === 'business' || u.role === 'admin') {
-            window.SupabaseSync.updateUser(u.id, { items: u.items || [] });
-          }
-        });
-      }
-
-      alert(`[${app.storeName || app.ownerName}] 건의 '영업물건' 등록이 해제/철회되었습니다.\n영업물건 수동조작 목록에서 즉시 제거되었습니다.`);
-    }
-
-    if (window.SupabaseSync) {
-      window.SupabaseSync.upsertApplication(app);
-    }
-
-    if (typeof renderManagerPanel === 'function') {
-      renderManagerPanel();
-    }
-    if (typeof renderApplicationsList === 'function') {
-      renderApplicationsList();
-    }
-    if (typeof renderBizRegisteredTable === 'function') {
-      renderBizRegisteredTable();
-    }
-    if (typeof renderBusinessDashboard === 'function') {
-      renderBusinessDashboard();
-    }
-    updateSessionUI();
-
-    // 실시간 동시 연동 이벤트 발화
-    window.dispatchEvent(new Event('supabase-data-synced'));
-  };
-  window.toggleBizItem = toggleBizItem;
+  
 
   const deleteApplication = (id) => {
     if (activeUser.role !== 'admin') return;
@@ -3789,7 +3498,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (!activeUser) return;
-    const myApps = apps.filter(app => app.userId === activeUser.id);
+    const myApps = apps.filter(app => {
+      const isMyId = app.userId === activeUser.id;
+      const isMyPhone = activeUser.phone && app.ownerPhone && app.ownerPhone.replace(/[^0-9]/g, '') === activeUser.phone.replace(/[^0-9]/g, '');
+      const isMyName = activeUser.name && app.ownerName === activeUser.name;
+      const isMyBizCode = activeUser.bizCode && app.referrerCode && (app.referrerCode === activeUser.bizCode || app.referrerCode === activeUser.id || app.referrerCode === activeUser.name);
+      return isMyId || isMyPhone || isMyName || isMyBizCode;
+    });
 
     // 검색 필터링 및 엑셀 버튼 동적 보장
     const searchInput = document.getElementById('search-user-apps-input');

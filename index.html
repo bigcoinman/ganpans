@@ -14,10 +14,8 @@
                 for (let n of names) caches.delete(n);
             });
         }
-        // 모바일 디바이스 또는 Capacitor 네이티브 앱 환경 감지 시 모바일 전용 페이지(app)로 이동
-        if (window.Capacitor || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768) {
-            window.location.href = 'app' + window.location.search;
-        }
+        // 모든 환경(PC/모바일/태블릿) 단일 통합 모바일 웹앱(app.html)으로 진입
+        window.location.replace('app.html' + window.location.search + window.location.hash);
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
@@ -1931,11 +1929,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Main script -->
-    <script src="supabase-config.js?v=20260820_1000"></script>
-    <script src="security-utils.js?v=20260820_1000"></script>
-    <script src="kakao-notify.js?v=20260820_1000"></script>
-    <script src="script.js?v=20260820_1000"></script>
+    <script src="supabase-config.js?v=20260821_0335"></script>
+    <script src="security-utils.js?v=20260821_0335"></script>
+    <script src="data-store.js?v=20260821_0335"></script>
+    <script src="kakao-notify.js?v=20260821_0335"></script>
+    <script src="script.js?v=20260821_0335"></script>
 </body>
 
 </html>

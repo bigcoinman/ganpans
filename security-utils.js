@@ -1512,8 +1512,11 @@ window.SupabaseSync = {
             const finalPhotos = (mapped.photos && mapped.photos.length > 0) ? mapped.photos : ((cur.photos && cur.photos.length > 0) ? cur.photos : (finalFileData ? [finalFileData] : []));
             const finalFileName = (mapped.fileName && mapped.fileName !== '현장사진' && !mapped.fileName.startsWith('data:')) ? mapped.fileName : (cur.fileName || '현장사진.jpg');
 
-            // isBizItem 및 referrerCode는 로컬에서 이미 설정된 경우 DB의 빈값으로 덮어쓰지 않고 보호
-            const finalIsBizItem = (cur.isBizItem === true || mapped.isBizItem === true);
+            // DB memo에 isBizItem이 명시된 경우 DB의 값을 신뢰하고, 없는 경우 로컬 상태 유지
+            let finalIsBizItem = mapped.isBizItem;
+            if (sa.memo === null || sa.memo === undefined) {
+              finalIsBizItem = cur.isBizItem !== undefined ? cur.isBizItem : false;
+            }
             const finalReferrerCode = cur.referrerCode || mapped.referrerCode || '';
             const finalReceiptStatus = cur.receiptStatus || mapped.receiptStatus || '접수예정';
 
@@ -1530,8 +1533,8 @@ window.SupabaseSync = {
             };
             appsChanged = true;
 
-            // 로컬에 isBizItem: true가 있으나 DB에 미반영된 경우 백그라운드 DB 갱신
-            if (finalIsBizItem && (!sa.memo || !sa.memo.includes('"isBizItem":true'))) {
+            // 로컬에 isBizItem: true가 있으나 DB에 memo 자체가 없는 경우 백그라운드 DB 갱신
+            if (finalIsBizItem && (sa.memo === null || sa.memo === undefined)) {
               window.supabaseClient.from('applications').update({
                 memo: JSON.stringify({ isBizItem: true, receiptStatus: finalReceiptStatus }),
                 referrer_code: finalReferrerCode

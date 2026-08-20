@@ -31,7 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- 9. Mobile Bottom Navigation ---
   initMobileBottomNav();
 
-  // --- 10. PWA Initialization ---
+  // --- 10. AI Assistant ---
+  initAIAssistant();
+
+  // --- 11. Inquiry, Policy & Global Search ---
+  initModalsAndSearch();
+
+  // --- 12. PWA Initialization ---
   initPWA();
 });
 
@@ -297,12 +303,10 @@ function initBuildingGallery() {
     }
   };
 
-  // Update details panel
   function showDetails(shopId) {
     const data = merchantData[shopId];
     if (!data) return;
 
-    // Highlight active slot
     shopSlots.forEach(slot => {
       if (slot.dataset.shop === shopId) {
         slot.classList.add('active-shop');
@@ -311,7 +315,6 @@ function initBuildingGallery() {
       }
     });
 
-    // Fill details
     document.getElementById('detail-title').textContent = data.title;
     document.getElementById('detail-category').textContent = data.category;
     document.getElementById('detail-support').textContent = data.support;
@@ -320,7 +323,6 @@ function initBuildingGallery() {
     document.getElementById('detail-satisfaction').textContent = data.satisfaction;
     document.getElementById('detail-desc').textContent = data.desc;
 
-    // Fade animation transition
     placeholder.style.display = 'none';
     content.style.display = 'block';
     content.style.opacity = 0;
@@ -331,23 +333,15 @@ function initBuildingGallery() {
     }, 50);
   }
 
-  // Hook event listeners
   shopSlots.forEach(slot => {
     const shopId = slot.dataset.shop;
-
-    // Hover event
-    slot.addEventListener('mouseenter', () => {
-      showDetails(shopId);
-    });
-
-    // Click/Touch event
+    slot.addEventListener('mouseenter', () => showDetails(shopId));
     slot.addEventListener('click', (e) => {
       e.stopPropagation();
       showDetails(shopId);
     });
   });
 
-  // Light toggle listener (controls scroll viewport background)
   if (lightToggle) {
     lightToggle.addEventListener('change', (e) => {
       const isNight = e.target.checked;
@@ -358,14 +352,12 @@ function initBuildingGallery() {
       }
     });
   }
-
 }
 
 // ==========================================
 // 2. Signboard Simulator Logic
 // ==========================================
 function initSimulator() {
-  // Elements
   const textInput = document.getElementById('shop-name-input');
   const fontSelect = document.getElementById('font-select');
   const sizeInput = document.getElementById('text-size-input');
@@ -382,25 +374,23 @@ function initSimulator() {
 
   if (!liveSignText) return;
 
-  // Simulator State
   let state = {
     shopName: '청춘카페',
     fontFamily: "'Nanum Pen Script', sans-serif",
-    fontSize: 2.2, // rem
-    signType: 'neon', // neon, led, wood, metal
-    textColor: '#ec4899', // Default pink neon
-    bgColor: '#1e293b', // Dark background
+    fontSize: 2.2,
+    signType: 'neon',
+    textColor: '#ec4899',
+    bgColor: '#1e293b',
     isNight: false
   };
 
-  // Preset Configurations
   const presets = {
     cafe: {
       shopName: '청춘카페',
       fontFamily: "'Nanum Pen Script', sans-serif",
       fontSize: 2.5,
       signType: 'neon',
-      textColor: '#a855f7', // Purple neon
+      textColor: '#a855f7',
       bgColor: '#0f172a'
     },
     bakery: {
@@ -408,7 +398,7 @@ function initSimulator() {
       fontFamily: "'Black Han Sans', sans-serif",
       fontSize: 1.8,
       signType: 'neon',
-      textColor: '#f59e0b', // Amber/orange neon
+      textColor: '#f59e0b',
       bgColor: '#0f172a'
     },
     flower: {
@@ -416,7 +406,7 @@ function initSimulator() {
       fontFamily: "'East Sea Dokdo', sans-serif",
       fontSize: 2.8,
       signType: 'neon',
-      textColor: '#10b981', // Emerald green neon
+      textColor: '#10b981',
       bgColor: '#0f172a'
     },
     salon: {
@@ -424,21 +414,19 @@ function initSimulator() {
       fontFamily: "'Montserrat', sans-serif",
       fontSize: 1.6,
       signType: 'neon',
-      textColor: '#3b82f6', // Blue neon
+      textColor: '#3b82f6',
       bgColor: '#0f172a'
     }
   };
 
-  // Sync Input Elements with initial state
   const syncInputs = () => {
-    textInput.value = state.shopName;
-    fontSelect.value = state.fontFamily;
-    sizeInput.value = state.fontSize;
-    sizeVal.textContent = `${state.fontSize}x`;
-    signTypeSelect.value = state.signType;
-    nightToggle.checked = state.isNight;
+    if (textInput) textInput.value = state.shopName;
+    if (fontSelect) fontSelect.value = state.fontFamily;
+    if (sizeInput) sizeInput.value = state.fontSize;
+    if (sizeVal) sizeVal.textContent = `${state.fontSize}x`;
+    if (signTypeSelect) signTypeSelect.value = state.signType;
+    if (nightToggle) nightToggle.checked = state.isNight;
 
-    // Sync active color button
     colorBtns.forEach(btn => {
       if (btn.dataset.color === state.textColor) {
         btn.classList.add('active');
@@ -448,19 +436,15 @@ function initSimulator() {
     });
   };
 
-  // Render Simulator UI changes
   const render = () => {
-    // 1. Text Content & Font Family
     liveSignText.textContent = state.shopName;
     liveSignText.style.fontFamily = state.fontFamily;
     liveSignText.style.fontSize = `${state.fontSize}rem`;
 
-    // Set variables for glows
     liveSignboard.style.setProperty('--glow-color', state.textColor);
     liveSignText.style.setProperty('--glow-color', state.textColor);
 
-    // 2. Signboard Background Style & Border based on Sign Type
-    liveSignboard.className = 'live-signboard'; // Reset
+    liveSignboard.className = 'live-signboard';
 
     if (state.signType === 'neon') {
       liveSignboard.style.backgroundColor = state.bgColor;
@@ -475,11 +459,10 @@ function initSimulator() {
         liveSignboard.classList.remove('glow-border-active');
         liveSignText.classList.remove('glow-text-active');
       }
-    }
-    else if (state.signType === 'led') {
+    } else if (state.signType === 'led') {
       liveSignboard.style.backgroundColor = state.bgColor;
       liveSignboard.style.backgroundImage = 'none';
-      liveSignboard.style.border = '3px solid #64748b'; // metal frame
+      liveSignboard.style.border = '3px solid #64748b';
       liveSignText.style.color = state.textColor;
 
       if (state.isNight) {
@@ -488,23 +471,18 @@ function initSimulator() {
       } else {
         liveSignText.classList.remove('glow-text-active');
       }
-    }
-    else if (state.signType === 'wood') {
-      // Wood gradient
+    } else if (state.signType === 'wood') {
       liveSignboard.style.backgroundImage = 'linear-gradient(90deg, #b45309 0%, #78350f 100%)';
       liveSignboard.style.border = '2px solid #451a03';
       liveSignText.style.color = state.textColor;
       liveSignText.classList.remove('glow-text-active');
       liveSignboard.classList.remove('glow-border-active');
-    }
-    else if (state.signType === 'metal') {
-      // Brushed metal gradient
+    } else if (state.signType === 'metal') {
       liveSignboard.style.backgroundImage = 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 50%, #94a3b8 100%)';
       liveSignboard.style.border = '2px solid #475569';
       liveSignText.style.color = state.textColor;
 
       if (state.isNight) {
-        // Backlit effect (halo glow behind signboard)
         liveSignboard.classList.add('glow-border-active');
         liveSignText.classList.remove('glow-text-active');
       } else {
@@ -513,7 +491,6 @@ function initSimulator() {
       }
     }
 
-    // 3. Environment Lighting (Day / Night)
     if (state.isNight) {
       simScreen.classList.add('night');
     } else {
@@ -521,41 +498,49 @@ function initSimulator() {
     }
   };
 
-  // Event Listeners
-  textInput.addEventListener('input', (e) => {
-    state.shopName = e.target.value || '간판지원단';
-    render();
-  });
+  if (textInput) {
+    textInput.addEventListener('input', (e) => {
+      state.shopName = e.target.value || '간판지원단';
+      render();
+    });
+  }
 
-  fontSelect.addEventListener('change', (e) => {
-    state.fontFamily = e.target.value;
-    render();
-  });
+  if (fontSelect) {
+    fontSelect.addEventListener('change', (e) => {
+      state.fontFamily = e.target.value;
+      render();
+    });
+  }
 
-  sizeInput.addEventListener('input', (e) => {
-    state.fontSize = parseFloat(e.target.value);
-    sizeVal.textContent = `${state.fontSize}x`;
-    render();
-  });
+  if (sizeInput) {
+    sizeInput.addEventListener('input', (e) => {
+      state.fontSize = parseFloat(e.target.value);
+      if (sizeVal) sizeVal.textContent = `${state.fontSize}x`;
+      render();
+    });
+  }
 
-  signTypeSelect.addEventListener('change', (e) => {
-    state.signType = e.target.value;
-    // Set sensible default backgrounds
-    if (state.signType === 'wood') {
-      state.textColor = '#3f200c';
-    } else if (state.signType === 'metal') {
-      state.textColor = '#0f172a';
-    } else if (state.textColor === '#3f200c' || state.textColor === '#0f172a') {
-      state.textColor = '#ec4899'; // reset to neon pink if changing back
-    }
-    syncInputs();
-    render();
-  });
+  if (signTypeSelect) {
+    signTypeSelect.addEventListener('change', (e) => {
+      state.signType = e.target.value;
+      if (state.signType === 'wood') {
+        state.textColor = '#3f200c';
+      } else if (state.signType === 'metal') {
+        state.textColor = '#0f172a';
+      } else if (state.textColor === '#3f200c' || state.textColor === '#0f172a') {
+        state.textColor = '#ec4899';
+      }
+      syncInputs();
+      render();
+    });
+  }
 
-  nightToggle.addEventListener('change', (e) => {
-    state.isNight = e.target.checked;
-    render();
-  });
+  if (nightToggle) {
+    nightToggle.addEventListener('change', (e) => {
+      state.isNight = e.target.checked;
+      render();
+    });
+  }
 
   colorBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -580,15 +565,12 @@ function initSimulator() {
     });
   });
 
-  // Apply to design form on simulator save/apply
   const useSimulatedDesignBtn = document.getElementById('apply-design-btn');
   if (useSimulatedDesignBtn) {
     useSimulatedDesignBtn.addEventListener('click', () => {
-      // Prefill Application Form fields
       const shopNameField = document.getElementById('app-shop-name');
       if (shopNameField) shopNameField.value = state.shopName;
 
-      // Scroll to application wizard
       const appSection = document.getElementById('apply-section');
       if (appSection) {
         appSection.scrollIntoView({ behavior: 'smooth' });
@@ -596,7 +578,6 @@ function initSimulator() {
     });
   }
 
-  // Initial Sync and Render
   syncInputs();
   render();
 }
@@ -609,14 +590,11 @@ function initFAQ() {
 
   faqItems.forEach(item => {
     const trigger = item.querySelector('.faq-trigger');
+    if (!trigger) return;
 
     trigger.addEventListener('click', () => {
       const isActive = item.classList.contains('active');
-
-      // Close all other items
       faqItems.forEach(i => i.classList.remove('active'));
-
-      // Open clicked item if it wasn't open
       if (!isActive) {
         item.classList.add('active');
       }
@@ -639,13 +617,15 @@ function initReviews() {
 
   if (!reviewsGrid || !moreBtn) return;
 
-  // 1. Initial Reviews Data setup in localStorage
   const existingReviews = localStorage.getItem('reviews');
   if (existingReviews) {
-    const list = JSON.parse(existingReviews);
-    // 한글 실명이 남아있는 구버전 데이터라면 로컬스토리지에서 삭제하고 갱신을 진행합니다.
-    if (list.length > 0 && list.some(r => r.name && r.name.includes('김성우'))) {
-      localStorage.removeItem('reviews');
+    try {
+      const list = JSON.parse(existingReviews);
+      if (list.length > 0 && list.some(r => r.name && r.name.includes('김성우'))) {
+        localStorage.removeItem('reviews');
+      }
+    } catch (e) {
+      console.warn('Reviews parse error:', e);
     }
   }
 
@@ -735,10 +715,9 @@ function initReviews() {
     localStorage.setItem('reviews', JSON.stringify(initialReviews));
   }
 
-  let reviewsList = JSON.parse(localStorage.getItem('reviews'));
+  let reviewsList = JSON.parse(localStorage.getItem('reviews')) || [];
   let isExpanded = false;
 
-  // 1.5. Supabase에서 후기 목록 비동기 조회
   async function fetchSupabaseReviews() {
     if (window.supabaseClient) {
       try {
@@ -789,7 +768,6 @@ function initReviews() {
 
   fetchSupabaseReviews();
 
-  // 2. Render reviews from database
   function renderReviews() {
     reviewsGrid.innerHTML = '';
 
@@ -798,7 +776,6 @@ function initReviews() {
       const card = document.createElement('div');
       card.className = `review-card glass-panel ${isHidden ? 'hidden-review' : ''}`;
 
-      // Star HTML builder
       let starsHTML = '';
       for (let i = 1; i <= 5; i++) {
         if (i <= review.stars) {
@@ -808,20 +785,19 @@ function initReviews() {
         }
       }
 
-      // Default avatar icon if none specified
       const avatarIcon = review.avatar || 'fa-store';
 
       card.innerHTML = `
         <div class="review-card-header">
             <span class="review-stars">${starsHTML}</span>
-            <span class="review-date">${escapeHtml(review.date)}</span>
+            <span class="review-date">${typeof escapeHtml === 'function' ? escapeHtml(review.date) : review.date}</span>
         </div>
-        <p class="review-text">"${escapeHtml(review.text)}"</p>
+        <p class="review-text">"${typeof escapeHtml === 'function' ? escapeHtml(review.text) : review.text}"</p>
         <div class="review-author">
             <div class="review-avatar"><i class="fa-solid ${avatarIcon}"></i></div>
             <div class="review-info">
-                <div class="review-name">${escapeHtml(review.name)}</div>
-                <div class="review-shop">${escapeHtml(review.shop)}</div>
+                <div class="review-name">${typeof escapeHtml === 'function' ? escapeHtml(review.name) : review.name}</div>
+                <div class="review-shop">${typeof escapeHtml === 'function' ? escapeHtml(review.shop) : review.shop}</div>
             </div>
         </div>
       `;
@@ -829,7 +805,6 @@ function initReviews() {
       reviewsGrid.appendChild(card);
     });
 
-    // Reset expand state
     isExpanded = false;
     const btnText = moreBtn.querySelector('span');
     const btnIcon = moreBtn.querySelector('i');
@@ -839,7 +814,6 @@ function initReviews() {
 
   renderReviews();
 
-  // 3. More Reviews Button Click handler
   moreBtn.addEventListener('click', () => {
     isExpanded = !isExpanded;
     const hiddenReviews = reviewsGrid.querySelectorAll('.review-card.hidden-review');
@@ -869,16 +843,13 @@ function initReviews() {
     }
   });
 
-  // 4. Write Review Modal open handler
   if (writeBtn && reviewModal) {
     writeBtn.addEventListener('click', () => {
-      // Pre-fill user data if logged in
-      const activeUser = getActiveUser();
+      const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : null;
       const authorNameInput = document.getElementById('review-author-name');
       const shopNameInput = document.getElementById('review-shop-name');
       const contentInput = document.getElementById('review-content');
 
-      // 로그인 안되어있으면 로그인 모달 오픈 유도
       if (!activeUser) {
         if (confirm('후기 작성을 위해서는 로그인이 필요합니다. 로그인 화면으로 이동하시겠습니까?')) {
           const authModal = document.getElementById('auth-modal');
@@ -887,13 +858,13 @@ function initReviews() {
         return;
       }
 
-      // 로그인된 사용자 아이디 적용 및 수정 불가 설정
-      authorNameInput.value = activeUser.id;
-      authorNameInput.readOnly = true;
-      authorNameInput.style.backgroundColor = '#f1f5f9';
-      authorNameInput.style.cursor = 'not-allowed';
+      if (authorNameInput) {
+        authorNameInput.value = activeUser.id;
+        authorNameInput.readOnly = true;
+        authorNameInput.style.backgroundColor = '#f1f5f9';
+        authorNameInput.style.cursor = 'not-allowed';
+      }
 
-      // Find store name from activeUser's application if available
       let storeInfo = '';
       if (activeUser.items && activeUser.items.length > 0) {
         const appItem = activeUser.items[0];
@@ -903,30 +874,25 @@ function initReviews() {
         const city = activeUser.address ? activeUser.address.split(' ')[1] : '경기도';
         storeInfo = `${city} · 소상공인`;
       }
-      shopNameInput.value = storeInfo;
+      if (shopNameInput) shopNameInput.value = storeInfo;
 
-      // Reset fields
-      contentInput.value = '';
+      if (contentInput) contentInput.value = '';
       resetStarRating();
 
-      // 글자수 카운터 초기값 갱신
       const shopCounter = document.getElementById('review-shop-char-count');
       const contentCounter = document.getElementById('review-content-char-count');
-      if (shopCounter) shopCounter.textContent = shopNameInput.value.length;
+      if (shopCounter && shopNameInput) shopCounter.textContent = shopNameInput.value.length;
       if (contentCounter) contentCounter.textContent = '0';
 
-      // Show modal
       reviewModal.classList.add('active');
     });
   }
 
-  // 5. Close Review Modal
   if (reviewCloseBtn && reviewModal) {
     reviewCloseBtn.addEventListener('click', () => {
       reviewModal.classList.remove('active');
     });
 
-    // Close modal on background click
     reviewModal.addEventListener('click', (e) => {
       if (e.target === reviewModal) {
         reviewModal.classList.remove('active');
@@ -934,13 +900,12 @@ function initReviews() {
     });
   }
 
-  // 6. Interactive Star Rating selector
   if (ratingStarsSelect) {
     const starItems = ratingStarsSelect.querySelectorAll('.star-select-item');
     starItems.forEach(star => {
       star.addEventListener('click', () => {
         const rating = parseInt(star.getAttribute('data-value'));
-        ratingValInput.value = rating;
+        if (ratingValInput) ratingValInput.value = rating;
 
         starItems.forEach(s => {
           const val = parseInt(s.getAttribute('data-value'));
@@ -954,7 +919,6 @@ function initReviews() {
         });
       });
 
-      // Star hover effects
       star.addEventListener('mouseenter', () => {
         const rating = parseInt(star.getAttribute('data-value'));
         starItems.forEach(s => {
@@ -969,7 +933,7 @@ function initReviews() {
     });
 
     ratingStarsSelect.addEventListener('mouseleave', () => {
-      const currentRating = parseInt(ratingValInput.value);
+      const currentRating = ratingValInput ? parseInt(ratingValInput.value) : 5;
       starItems.forEach(s => {
         const val = parseInt(s.getAttribute('data-value'));
         if (val <= currentRating) {
@@ -982,17 +946,17 @@ function initReviews() {
   }
 
   function resetStarRating() {
-    ratingValInput.value = 5;
-    const starItems = ratingStarsSelect.querySelectorAll('.star-select-item');
-    starItems.forEach(s => {
-      s.style.color = '#fbbf24';
-      s.classList.add('active');
-    });
+    if (ratingValInput) ratingValInput.value = 5;
+    if (ratingStarsSelect) {
+      const starItems = ratingStarsSelect.querySelectorAll('.star-select-item');
+      starItems.forEach(s => {
+        s.style.color = '#fbbf24';
+        s.classList.add('active');
+      });
+    }
   }
 
-  // 7. Submit Review form
   if (reviewForm) {
-    // ID 마스킹 헬퍼 함수
     const maskId = (id) => {
       if (!id) return '';
       if (id.length <= 3) return id.substring(0, 1) + '*'.repeat(id.length - 1);
@@ -1002,23 +966,21 @@ function initReviews() {
     reviewForm.addEventListener('submit', (e) => {
       e.preventDefault();
 
-      const rating = parseInt(ratingValInput.value);
-      const name = document.getElementById('review-author-name').value.trim();
-      const shop = document.getElementById('review-shop-name').value.trim();
-      const text = document.getElementById('review-content').value.trim();
+      const rating = ratingValInput ? parseInt(ratingValInput.value) : 5;
+      const name = document.getElementById('review-author-name')?.value.trim() || '';
+      const shop = document.getElementById('review-shop-name')?.value.trim() || '';
+      const text = document.getElementById('review-content')?.value.trim() || '';
 
       if (!name || !shop || !text) {
         alert('모든 항목을 입력해주세요.');
         return;
       }
 
-      // Generate date format (YYYY.MM)
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const dateStr = `${year}.${month}`;
 
-      // Pick avatar class based on shop name keyword
       let avatar = 'fa-store';
       if (shop.includes('카페') || shop.includes('커피') || shop.includes('디저트')) avatar = 'fa-mug-hot';
       else if (shop.includes('헤어') || shop.includes('미용')) avatar = 'fa-scissors';
@@ -1030,7 +992,6 @@ function initReviews() {
       else if (shop.includes('빵') || shop.includes('베이커리')) avatar = 'fa-bread-slice';
       else if (shop.includes('정육') || shop.includes('고기')) avatar = 'fa-cow';
 
-      // 로그인된 ID면 마스킹 처리하여 "ooo*** 사장님" 형식으로 저장
       const maskedName = maskId(name) + ' 사장님';
 
       const newReview = {
@@ -1042,14 +1003,12 @@ function initReviews() {
         shop: shop
       };
 
-      // Add to beginning of database
       reviewsList = JSON.parse(localStorage.getItem('reviews')) || [];
       reviewsList.unshift(newReview);
       localStorage.setItem('reviews', JSON.stringify(reviewsList));
 
-      // Supabase Sync
       if (window.supabaseClient) {
-        const activeUser = getActiveUser();
+        const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : null;
         window.supabaseClient.from('reviews').insert([{
           author_id: activeUser ? activeUser.id : null,
           author_name: maskedName,
@@ -1061,14 +1020,11 @@ function initReviews() {
         });
       }
 
-      // Close modal & Render
-      reviewModal.classList.remove('active');
+      if (reviewModal) reviewModal.classList.remove('active');
       renderReviews();
 
-      // Show success alert
       alert('후기가 성공적으로 등록되었습니다. 감사합니다!');
 
-      // Scroll to reviews section to see the new review
       const reviewsSection = document.getElementById('reviews');
       if (reviewsSection) {
         reviewsSection.scrollIntoView({ behavior: 'smooth' });
@@ -1076,7 +1032,6 @@ function initReviews() {
     });
   }
 
-  // 후기 지역/상호명 및 경험담 글자수 실시간 계산 연동
   const shopNameInput = document.getElementById('review-shop-name');
   const shopCounter = document.getElementById('review-shop-char-count');
   const contentInput = document.getElementById('review-content');
@@ -1116,7 +1071,6 @@ function initWizard() {
 
   if (steps.length === 0) return;
 
-  // URL ref param parsing (auto referrer code fill)
   const urlParams = new URLSearchParams(window.location.search);
   const refCode = urlParams.get('ref');
   const referrerInput = document.getElementById('referrer-code');
@@ -1125,14 +1079,8 @@ function initWizard() {
   }
 
   let currentStep = 0;
-  let uploadedPhotos = []; // [{ name: string, dataUrl: string }]
-
+  let uploadedPhotos = [];
   const photosPreviewContainer = document.getElementById('uploaded-photos-preview');
-
-  // =================================================
-  // 신청서 1단계: 신청인 본인인증 로직 (선택적)
-  // =================================================
-  let isOwnerPhoneVerified = true;
 
   if (uploadArea && uploadInput) {
     ['dragenter', 'dragover'].forEach(eventName => {
@@ -1170,7 +1118,6 @@ function initWizard() {
     const validMimes = ['image/jpeg', 'image/png'];
     const newFiles = Array.from(fileList);
 
-    // 1. 확장자 및 규격 검증 (JPG, PNG만 허용)
     const invalidFiles = newFiles.filter(f => {
       const ext = (f.name.split('.').pop() || '').toLowerCase();
       return !validExtensions.includes(ext) && !validMimes.includes(f.type);
@@ -1181,7 +1128,6 @@ function initWizard() {
       return;
     }
 
-    // 2. 최대 10장 한도 검증
     if (uploadedPhotos.length + newFiles.length > 10) {
       alert(`사진은 최대 10장까지 업로드할 수 있습니다. (현재 ${uploadedPhotos.length}장 등록됨)`);
     }
@@ -1191,7 +1137,6 @@ function initWizard() {
 
     const filesToProcess = newFiles.slice(0, availableSlots);
 
-    // 3. 2MB 강제 압축 처리 및 배열 추가
     for (const file of filesToProcess) {
       try {
         let base64 = '';
@@ -1233,7 +1178,7 @@ function initWizard() {
         const item = document.createElement('div');
         item.className = 'uploaded-photo-item';
         item.innerHTML = `
-          <img src="${photo.dataUrl}" alt="${escapeHtml(photo.name)}" title="${escapeHtml(photo.name)}">
+          <img src="${photo.dataUrl}" alt="${typeof escapeHtml === 'function' ? escapeHtml(photo.name) : photo.name}" title="${typeof escapeHtml === 'function' ? escapeHtml(photo.name) : photo.name}">
           <button type="button" class="uploaded-photo-remove" data-index="${idx}" title="삭제">&times;</button>
         `;
         photosPreviewContainer.appendChild(item);
@@ -1252,7 +1197,6 @@ function initWizard() {
     }
   }
 
-  // Render Wizard Progress and Current Pane
   function renderWizard() {
     steps.forEach((pane, idx) => {
       if (idx === currentStep) {
@@ -1275,35 +1219,35 @@ function initWizard() {
       }
     });
 
-    // Progress bar width percentage
     const percent = (currentStep / (steps.length - 1)) * 100;
     if (progressBar) {
       progressBar.style.width = `${percent}%`;
     }
 
-    // Toggle button texts/visibility
-    if (currentStep === 0) {
-      prevBtn.style.visibility = 'hidden';
-    } else {
-      prevBtn.style.visibility = 'visible';
+    if (prevBtn) {
+      if (currentStep === 0) {
+        prevBtn.style.visibility = 'hidden';
+      } else {
+        prevBtn.style.visibility = 'visible';
+      }
     }
 
-    if (currentStep === steps.length - 1) {
-      nextBtn.textContent = '신청서 제출';
-      nextBtn.className = 'btn btn-primary btn-success';
-    } else {
-      nextBtn.textContent = '다음 단계';
-      nextBtn.className = 'btn btn-primary';
+    if (nextBtn) {
+      if (currentStep === steps.length - 1) {
+        nextBtn.textContent = '신청서 제출';
+        nextBtn.className = 'btn btn-primary btn-success';
+      } else {
+        nextBtn.textContent = '다음 단계';
+        nextBtn.className = 'btn btn-primary';
+      }
     }
 
-    // If step is Summary (Step 3 / Index 2), compile input values
     if (currentStep === 2) {
       compileSummary();
     }
   }
 
   function compileSummary() {
-    // Read input values
     const ownerName = document.getElementById('owner-name')?.value || '-';
     const ownerPhone = document.getElementById('owner-phone')?.value || '-';
     const storeName = document.getElementById('app-shop-name')?.value || '-';
@@ -1313,7 +1257,6 @@ function initWizard() {
       : '업로드 파일 없음';
     const referrerVal = document.getElementById('referrer-code')?.value.trim() || '-';
 
-    // Set preview values
     if (document.getElementById('sum-owner-name')) document.getElementById('sum-owner-name').textContent = ownerName;
     if (document.getElementById('sum-owner-phone')) document.getElementById('sum-owner-phone').textContent = ownerPhone;
     if (document.getElementById('sum-store-name')) document.getElementById('sum-store-name').textContent = storeName;
@@ -1346,10 +1289,7 @@ function initWizard() {
       const activePane = document.querySelector('.step-pane.active');
       const targetHeader = activePane ? (activePane.querySelector('h3') || activePane) : null;
       if (targetHeader) {
-        // 1. 네이티브 scrollIntoView (CSS scroll-margin-top: 110px 적용)
         targetHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-        // 2. 브라우저 호환성을 위한 좌표 기반 스크롤 계산 보정
         const headerOffset = 100;
         const rect = targetHeader.getBoundingClientRect();
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
@@ -1372,27 +1312,30 @@ function initWizard() {
     setTimeout(doScroll, 200);
   }
 
-  prevBtn.addEventListener('click', () => {
-    if (currentStep > 0) {
-      currentStep--;
-      renderWizard();
-      scrollToActiveStep();
-    }
-  });
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      if (currentStep > 0) {
+        currentStep--;
+        renderWizard();
+        scrollToActiveStep();
+      }
+    });
+  }
 
-  nextBtn.addEventListener('click', () => {
-    // If last step, handle submit
-    if (currentStep === steps.length - 1) {
-      submitApplication();
-      return;
-    }
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      if (currentStep === steps.length - 1) {
+        submitApplication();
+        return;
+      }
 
-    if (validateStep(currentStep)) {
-      currentStep++;
-      renderWizard();
-      scrollToActiveStep();
-    }
-  });
+      if (validateStep(currentStep)) {
+        currentStep++;
+        renderWizard();
+        scrollToActiveStep();
+      }
+    });
+  }
 
   function safeSetStorage(key, value) {
     try {
@@ -1441,8 +1384,6 @@ function initWizard() {
       }
 
       const now = new Date();
-
-      // Save application to localStorage
       const ownerName = document.getElementById('owner-name')?.value.trim() || '';
       const ownerPhone = document.getElementById('owner-phone')?.value.trim() || '';
       const storeName = document.getElementById('app-shop-name')?.value.trim() || '';
@@ -1465,30 +1406,26 @@ function initWizard() {
       let users = JSON.parse(localStorage.getItem('users')) || [];
       const apps = JSON.parse(localStorage.getItem('applications')) || [];
 
-      // 휴대폰 번호 기반 자동 계정 생성 규격
       const phoneDigits = ownerPhone.replace(/[^0-9]/g, '');
       const autoPw = 'g-' + (phoneDigits.length >= 8 ? phoneDigits.slice(-8) : phoneDigits.padStart(8, '0'));
       const hashedPassword = (typeof sha256 === 'function') ? sha256(autoPw) : autoPw;
 
       let userId = phoneDigits || ('guest_' + Date.now());
       let loginNoticeId = phoneDigits;
-      let loginNoticePw = autoPw; // 항상 g-XXXXXXXX 임시 비밀번호 표시
+      let loginNoticePw = autoPw;
       let isNewAccount = false;
 
       if (activeUser && activeUser.role !== 'normal') {
-        // 관리자/영업자/시공사 계정으로 로그인된 상태에서 신청한 경우
         userId = activeUser.id;
         loginNoticeId = activeUser.id;
         loginNoticePw = autoPw;
       } else {
-        // 일반 신청자: 전화번호 기반 계정 조회 및 생성/업데이트
         const existingIdx = users.findIndex(u => {
           const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
           return (uPhoneDigits && uPhoneDigits === phoneDigits) || (u.id && u.id.toLowerCase() === phoneDigits.toLowerCase());
         });
 
         if (existingIdx !== -1) {
-          // 기존 계정이 있는 경우: 비밀번호를 g-XXXXXXXX로 최신화하여 언제든 로그인 가능하도록 보장
           const existing = users[existingIdx];
           userId = existing.id;
           loginNoticeId = existing.id;
@@ -1506,7 +1443,6 @@ function initWizard() {
             }
           }
         } else {
-          // 신규 신청자: 휴대폰 번호(숫자만) 아이디 및 g-XXXXXX 임시 비밀번호로 자동 계정 생성
           isNewAccount = true;
           userId = phoneDigits || ('guest_' + Date.now());
           loginNoticeId = phoneDigits;
@@ -1537,7 +1473,6 @@ function initWizard() {
       let customId = '';
 
       if (referrerCode) {
-        // 추천인 / 영업자 코드가 입력된 경우: {영업자코드}-0001 형식으로 자동 발급 (예: B-260712-0013)
         const bizUser = users.find(u => u.role === 'business' && u.bizCode === referrerCode);
         const bizItems = bizUser ? (bizUser.items || []) : [];
         if (typeof generateBizItemId === 'function') {
@@ -1547,7 +1482,6 @@ function initWizard() {
           customId = `${referrerCode}-${nextNum}`;
         }
       } else {
-        // 추천 코드 없이 일반 신청한 경우: P-YYMMDD001 형식으로 자동 발급
         customId = typeof generateApplicationId === 'function' ? generateApplicationId(apps) : `P-${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}001`;
       }
 
@@ -1564,7 +1498,7 @@ function initWizard() {
         photos,
         photosCount: photos.length,
         appliedAt: now.toISOString(),
-        status: 'pending', // pending, approved, rejected
+        status: 'pending',
         referrerCode,
         autoAccount: {
           id: loginNoticeId,
@@ -1576,7 +1510,6 @@ function initWizard() {
       apps.push(newApp);
       safeSetStorage('applications', apps);
 
-      // 카카오톡 관리자 실시간 알림 발송
       if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
         try {
           window.KakaoNotifier.notifyApplication(newApp);
@@ -1585,7 +1518,6 @@ function initWizard() {
         }
       }
 
-      // Supabase Sync & 실시간 즉시 전파
       if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
         window.SupabaseSync.upsertApplication(newApp).then(() => {
           if (typeof window.SupabaseSync.syncAllData === 'function') {
@@ -1594,12 +1526,11 @@ function initWizard() {
         }).catch(supaErr => console.warn('Supabase upsertApplication error:', supaErr));
       }
 
-      // 추천 코드 자동 연동 (방안 A)
       if (referrerCode) {
         let bizUserFound = false;
 
         const newBizItem = {
-          id: customId, // 접수 번호와 동일하게 맞추어 동기화가 용이하도록 구성
+          id: customId,
           name: storeName,
           address: storeAddress,
           photosCount: photos.length,
@@ -1622,7 +1553,6 @@ function initWizard() {
         if (bizUserFound) {
           safeSetStorage('users', users);
 
-          // 현재 로그인한 사용자가 추천 코드를 발급한 영업자 본인일 경우 세션 정보도 실시간 업데이트
           if (activeUser && activeUser.role === 'business' && activeUser.bizCode === referrerCode) {
             activeUser.items = activeUser.items || [];
             if (!activeUser.items.some(item => item.id === customId)) {
@@ -1633,25 +1563,15 @@ function initWizard() {
         }
       }
 
-      // 성공 팝업에 고유 접수 번호, 상호명, 자동생성 조회계정 정보 삽입
       const appIdContainer = document.getElementById('success-app-id-container');
-      if (appIdContainer) {
-        appIdContainer.textContent = customId;
-      }
+      if (appIdContainer) appIdContainer.textContent = customId;
       const storeNameContainer = document.getElementById('success-store-name');
-      if (storeNameContainer) {
-        storeNameContainer.textContent = storeName;
-      }
+      if (storeNameContainer) storeNameContainer.textContent = storeName;
       const loginIdContainer = document.getElementById('success-login-id');
-      if (loginIdContainer) {
-        loginIdContainer.textContent = loginNoticeId;
-      }
+      if (loginIdContainer) loginIdContainer.textContent = loginNoticeId;
       const loginPwContainer = document.getElementById('success-login-pw');
-      if (loginPwContainer) {
-        loginPwContainer.textContent = loginNoticePw;
-      }
+      if (loginPwContainer) loginPwContainer.textContent = loginNoticePw;
 
-      // 신청 완료 전용 화면(step-pane-complete) 필드 데이터 채우기
       const compAppId = document.getElementById('complete-app-id');
       if (compAppId) compAppId.textContent = customId;
       const compStoreName = document.getElementById('complete-store-name');
@@ -1667,7 +1587,6 @@ function initWizard() {
       const compLoginPw = document.getElementById('complete-login-pw');
       if (compLoginPw) compLoginPw.textContent = loginNoticePw;
 
-      // 프로그레스 바를 3단계 완료(100% / 3개 노드 모두 체크)로 업데이트
       stepNodes.forEach((node) => {
         node.className = 'step-node complete';
         node.innerHTML = '<i class="fas fa-check"></i>';
@@ -1676,18 +1595,15 @@ function initWizard() {
         progressBar.style.width = '100%';
       }
 
-      // 하단 이전/다음 컨트롤 버튼 숨기기
       if (wizardButtonsArea) {
         wizardButtonsArea.style.display = 'none';
       }
 
-      // 기존 1~3단계 입력 폼을 숨기고 신청 완료 화면 활성화
       steps.forEach(pane => pane.classList.remove('active'));
       if (completePane) {
         completePane.classList.add('active');
       }
 
-      // Show success dialog
       if (successModal) {
         successModal.classList.add('active');
       }
@@ -1699,7 +1615,6 @@ function initWizard() {
     }
   }
 
-  // 팝업 확인 버튼 클릭 시: 팝업 닫고 배경의 '단계 3: 신청 완료' 화면으로 스크롤
   if (successCloseBtn) {
     successCloseBtn.addEventListener('click', () => {
       if (successModal) {
@@ -1709,7 +1624,6 @@ function initWizard() {
     });
   }
 
-  // '새로운 신청서 작성' 버튼 클릭 시 폼 초기화 및 1단계 복귀
   function resetWizardToStart() {
     currentStep = 0;
     const ownerNameEl = document.getElementById('owner-name');
@@ -1727,21 +1641,23 @@ function initWizard() {
     uploadedPhotos = [];
     renderPhotosPreview();
 
-    // 완료 화면 비활성화 및 마법사 버튼 복구
-    if (completePane) {
-      completePane.classList.remove('active');
-    }
-    if (wizardButtonsArea) {
-      wizardButtonsArea.style.display = 'flex';
-    }
+    if (completePane) completePane.classList.remove('active');
+    if (wizardButtonsArea) wizardButtonsArea.style.display = 'flex';
 
-    // 본인인증 상태 초기화
-    isOwnerPhoneVerified = false;
-    ownerSimulatedSmsCode = '';
-    if (ownerSmsTimerInterval) clearInterval(ownerSmsTimerInterval);
+    // 미선언 변수 방어 처리 (Element 안전 참조)
+    const ownerSmsAuthGroup = document.getElementById('owner-sms-auth-group');
+    const btnOwnerSmsAuth = document.getElementById('btn-owner-sms-auth');
+    const ownerPhoneCheckMsg = document.getElementById('owner-phone-check-msg');
+
+    if (typeof ownerSmsTimerInterval !== 'undefined' && ownerSmsTimerInterval) {
+      clearInterval(ownerSmsTimerInterval);
+    }
     if (ownerSmsAuthGroup) ownerSmsAuthGroup.style.display = 'none';
     if (btnOwnerSmsAuth) btnOwnerSmsAuth.disabled = false;
-    if (ownerPhoneCheckMsg) { ownerPhoneCheckMsg.textContent = ''; ownerPhoneCheckMsg.className = 'form-helper'; }
+    if (ownerPhoneCheckMsg) {
+      ownerPhoneCheckMsg.textContent = '';
+      ownerPhoneCheckMsg.className = 'form-helper';
+    }
 
     renderWizard();
     scrollToActiveStep();
@@ -1751,7 +1667,6 @@ function initWizard() {
     restartBtn.addEventListener('click', resetWizardToStart);
   }
 
-  // Initialize
   renderWizard();
 }
 
@@ -1779,16 +1694,13 @@ function initChecklist() {
     const checkbox = card.querySelector('input[type="checkbox"]');
     if (!checkbox) return;
 
-    // Set class depending on initial checkbox state
     if (checkbox.checked) {
       card.classList.add('checked');
     } else {
       card.classList.remove('checked');
     }
 
-    // Toggle on card click
     card.addEventListener('click', (e) => {
-      // Prevent double trigger when clicking the input itself
       if (e.target !== checkbox) {
         checkbox.checked = !checkbox.checked;
       }
@@ -1809,7 +1721,6 @@ function initChecklist() {
 // 6. User Auth & Dashboard Logic
 // ==========================================
 function initAuthAndDashboard() {
-  // Migrate existing plaintext passwords in localStorage to SHA-256 hashes
   const storedUsersStr = localStorage.getItem('users');
   if (storedUsersStr) {
     try {
@@ -1817,8 +1728,10 @@ function initAuthAndDashboard() {
       let updated = false;
       parsedUsers.forEach(u => {
         if (u.pw && u.pw.length !== 64 && !u.isSNS) {
-          u.pw = sha256(u.pw);
-          updated = true;
+          if (typeof sha256 === 'function') {
+            u.pw = sha256(u.pw);
+            updated = true;
+          }
         }
       });
       if (updated) {
@@ -1829,12 +1742,11 @@ function initAuthAndDashboard() {
     }
   }
 
-  // Initialize Local Storage Databases
   if (!localStorage.getItem('users')) {
     const defaultUsers = [
       {
         id: 'testuser',
-        pw: 'e1dddc844ca8ad19718295dbf2f0ed6746b459c2e3582ef8bf909812a24d9fe7', // test123!
+        pw: 'e1dddc844ca8ad19718295dbf2f0ed6746b459c2e3582ef8bf909812a24d9fe7',
         name: '홍길동',
         address: '경기도 수원시 영통구 청명남로 10',
         email: 'hong@naver.com',
@@ -1847,7 +1759,7 @@ function initAuthAndDashboard() {
       },
       {
         id: 'bizuser',
-        pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756', // biz123!
+        pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
         name: '김영업',
         address: '경기도 성남시 분당구 판교역로 235',
         email: 'kim@naver.com',
@@ -1870,7 +1782,7 @@ function initAuthAndDashboard() {
       },
       {
         id: 'admin',
-        pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7', // admin123!
+        pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
         name: '최고관리자',
         address: '경기도 수원시 영통구 청명남로 10',
         email: 'admin@ganpan.go.kr',
@@ -1883,7 +1795,7 @@ function initAuthAndDashboard() {
       },
       {
         id: 'constuser',
-        pw: 'const123!', // Will be auto-hashed by migration script below
+        pw: typeof sha256 === 'function' ? sha256('const123!') : 'const123!',
         name: '박시공',
         address: '경기도 수원시 권선구 권선로 301',
         email: 'park@naver.com',
@@ -1901,14 +1813,12 @@ function initAuthAndDashboard() {
     localStorage.setItem('users', JSON.stringify(defaultUsers));
   }
 
-  // State Management
-  let users = JSON.parse(localStorage.getItem('users'));
+  let users = JSON.parse(localStorage.getItem('users')) || [];
 
-  // Ensure admin user exists in existing localStorage users database
   if (users && !users.some(u => u.id === 'admin')) {
     users.push({
       id: 'admin',
-      pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7', // admin123!
+      pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
       name: '최고관리자',
       address: '경기도 수원시 영통구 청명남로 10',
       email: 'admin@ganpan.go.kr',
@@ -1922,11 +1832,10 @@ function initAuthAndDashboard() {
     localStorage.setItem('users', JSON.stringify(users));
   }
 
-  // Ensure constructor user exists in existing localStorage users database
   if (users && !users.some(u => u.id === 'constuser')) {
     users.push({
       id: 'constuser',
-      pw: sha256('const123!'),
+      pw: typeof sha256 === 'function' ? sha256('const123!') : 'const123!',
       name: '박시공',
       address: '경기도 수원시 권선구 권선로 301',
       email: 'park@naver.com',
@@ -1943,15 +1852,13 @@ function initAuthAndDashboard() {
     localStorage.setItem('users', JSON.stringify(users));
   }
 
-  let activeUser = getActiveUser() || null;
+  let activeUser = (typeof getActiveUser === 'function') ? (getActiveUser() || null) : null;
 
-  // DOM Elements
   const authBtn = document.getElementById('auth-btn');
   const logoutBtn = document.getElementById('logout-btn');
   const userInfoArea = document.getElementById('user-info-area');
   const headerUserName = document.getElementById('header-user-name');
   const navDashboard = document.getElementById('nav-dashboard');
-  const dashboardSection = document.getElementById('dashboard-section');
 
   const authModal = document.getElementById('auth-modal');
   const authCloseBtn = document.getElementById('auth-close-btn');
@@ -1960,11 +1867,9 @@ function initAuthAndDashboard() {
   const loginPane = document.getElementById('login-pane');
   const signupPane = document.getElementById('signup-pane');
 
-  // Forms
   const loginForm = document.getElementById('login-form');
   const signupForm = document.getElementById('signup-form');
 
-  // Signup fields
   const signupIdInput = document.getElementById('signup-id');
   const signupPwInput = document.getElementById('signup-pw');
   const signupPwConfirmInput = document.getElementById('signup-pw-confirm');
@@ -1973,18 +1878,14 @@ function initAuthAndDashboard() {
   const signupEmailInput = document.getElementById('signup-email');
   const signupPhoneInput = document.getElementById('signup-phone');
 
-  // Signup Helpers & Validation Status
   let isIdChecked = false;
   let isIdAvailable = false;
-  // isPhoneVerified 는 회원가입에서 제거 → 신청 시 본인인증(isOwnerPhoneVerified)으로 이동
 
   const idCheckMsg = document.getElementById('id-check-msg');
   const pwCheckMsg = document.getElementById('pw-check-msg');
   const pwConfirmMsg = document.getElementById('pw-confirm-msg');
-  const phoneCheckMsg = document.getElementById('phone-check-msg');
   const btnCheckId = document.getElementById('btn-check-id');
 
-  // --- Password Visibility Toggle ---
   document.querySelectorAll('.pw-toggle-btn').forEach(btn => {
     if (btn.dataset.pwToggleInit === 'true') return;
     btn.dataset.pwToggleInit = 'true';
@@ -2013,49 +1914,53 @@ function initAuthAndDashboard() {
     });
   });
 
-  // --- Find ID / Find Password Logic ---
-  const findIdPane = document.getElementById('find-id-pane');
-  const findPwPane = document.getElementById('find-pw-pane');
   const authTabs = document.querySelector('.auth-tabs');
-
   const allPanes = () => document.querySelectorAll('.auth-pane');
 
   const showPane = (paneId, hideTabsBar = false) => {
     allPanes().forEach(p => p.classList.remove('active'));
-    document.getElementById(paneId).classList.add('active');
-    authTabs.style.display = hideTabsBar ? 'none' : '';
+    const target = document.getElementById(paneId);
+    if (target) target.classList.add('active');
+    if (authTabs) authTabs.style.display = hideTabsBar ? 'none' : '';
   };
 
   const backToLogin = () => {
-    authTabs.style.display = '';
+    if (authTabs) authTabs.style.display = '';
     allPanes().forEach(p => p.classList.remove('active'));
-    loginPane.classList.add('active');
-    tabLoginBtn.classList.add('active');
-    tabSignupBtn.classList.remove('active');
-    // reset find forms
-    document.getElementById('find-id-form').reset();
-    document.getElementById('find-id-result').style.display = 'none';
-    document.getElementById('find-pw-form').reset();
-    document.getElementById('find-pw-reset-group').style.display = 'none';
-    document.getElementById('find-pw-result').style.display = 'none';
-    document.getElementById('find-pw-new-msg').textContent = '';
+    if (loginPane) loginPane.classList.add('active');
+    if (tabLoginBtn) tabLoginBtn.classList.add('active');
+    if (tabSignupBtn) tabSignupBtn.classList.remove('active');
+
+    const findIdForm = document.getElementById('find-id-form');
+    if (findIdForm) findIdForm.reset();
+    const findIdRes = document.getElementById('find-id-result');
+    if (findIdRes) findIdRes.style.display = 'none';
+
+    const findPwForm = document.getElementById('find-pw-form');
+    if (findPwForm) findPwForm.reset();
+    const findPwResetGroup = document.getElementById('find-pw-reset-group');
+    if (findPwResetGroup) findPwResetGroup.style.display = 'none';
+    const findPwRes = document.getElementById('find-pw-result');
+    if (findPwRes) findPwRes.style.display = 'none';
+    const findPwNewMsg = document.getElementById('find-pw-new-msg');
+    if (findPwNewMsg) findPwNewMsg.textContent = '';
   };
 
-  document.getElementById('btn-find-id').addEventListener('click', () => showPane('find-id-pane', true));
-  document.getElementById('btn-find-pw').addEventListener('click', () => showPane('find-pw-pane', true));
-  document.getElementById('btn-back-from-find-id').addEventListener('click', backToLogin);
-  document.getElementById('btn-back-from-find-pw').addEventListener('click', backToLogin);
+  document.getElementById('btn-find-id')?.addEventListener('click', () => showPane('find-id-pane', true));
+  document.getElementById('btn-find-pw')?.addEventListener('click', () => showPane('find-pw-pane', true));
+  document.getElementById('btn-back-from-find-id')?.addEventListener('click', backToLogin);
+  document.getElementById('btn-back-from-find-pw')?.addEventListener('click', backToLogin);
 
-  // 아이디 찾기 — 이름 + 전화번호
-  document.getElementById('find-id-form').addEventListener('submit', () => {
-    const name = document.getElementById('find-id-name').value.trim();
-    const phone = document.getElementById('find-id-phone').value.trim();
+  document.getElementById('find-id-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('find-id-name')?.value.trim();
+    const phone = document.getElementById('find-id-phone')?.value.trim();
     const result = document.getElementById('find-id-result');
+    if (!result) return;
 
     const found = users.find(u => u.name === name && u.phone === phone && !u.isSNS);
     result.style.display = 'block';
     if (found) {
-      // 아이디 마스킹: 앞 3자만 표시, 나머지 *
       const masked = found.id.length <= 3
         ? found.id + '***'
         : found.id.slice(0, 3) + '*'.repeat(found.id.length - 3);
@@ -2067,35 +1972,40 @@ function initAuthAndDashboard() {
     }
   });
 
-  // 비밀번호 찾기 — 아이디 + 전화번호 → 계정 확인
   let foundPwUser = null;
-  document.getElementById('find-pw-form').addEventListener('submit', () => {
-    const id = document.getElementById('find-pw-id').value.trim();
-    const phone = document.getElementById('find-pw-phone').value.trim();
+  document.getElementById('find-pw-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('find-pw-id')?.value.trim();
+    const phone = document.getElementById('find-pw-phone')?.value.trim();
     const result = document.getElementById('find-pw-result');
     const resetGroup = document.getElementById('find-pw-reset-group');
+    if (!result || !resetGroup) return;
+
     foundPwUser = users.find(u => u.id === id && u.phone === phone && !u.isSNS);
     result.style.display = 'block';
     resetGroup.style.display = 'none';
-    document.getElementById('find-pw-new').value = '';
-    document.getElementById('find-pw-new-msg').textContent = '';
+    const findPwNew = document.getElementById('find-pw-new');
+    if (findPwNew) findPwNew.value = '';
+    const findPwNewMsg = document.getElementById('find-pw-new-msg');
+    if (findPwNewMsg) findPwNewMsg.textContent = '';
 
     if (foundPwUser) {
       result.className = 'find-result-box success';
       result.innerHTML = `<i class="fa-solid fa-circle-check"></i> 계정이 확인되었습니다. 아래에서 새 비밀번호를 설정해 주세요.`;
       resetGroup.style.display = 'block';
-      // 새 비밀번호 toggle 버튼 초기화
+
       const newPwToggle = document.querySelector('[data-target="find-pw-new"]');
       if (newPwToggle) {
         newPwToggle.addEventListener('click', () => {
           const inp = document.getElementById('find-pw-new');
           const icon = newPwToggle.querySelector('i');
+          if (!inp) return;
           if (inp.type === 'password') {
             inp.type = 'text';
-            icon.classList.replace('fa-eye-slash', 'fa-eye');
+            if (icon) icon.classList.replace('fa-eye-slash', 'fa-eye');
           } else {
             inp.type = 'password';
-            icon.classList.replace('fa-eye', 'fa-eye-slash');
+            if (icon) icon.classList.replace('fa-eye', 'fa-eye-slash');
           }
         }, { once: true });
       }
@@ -2105,10 +2015,10 @@ function initAuthAndDashboard() {
     }
   });
 
-  // 새 비밀번호 실시간 유효성 검사
-  document.getElementById('find-pw-new').addEventListener('input', () => {
+  document.getElementById('find-pw-new')?.addEventListener('input', () => {
     const val = document.getElementById('find-pw-new').value;
     const msg = document.getElementById('find-pw-new-msg');
+    if (!msg) return;
     const pwRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!val) { msg.textContent = ''; return; }
     if (pwRegex.test(val)) {
@@ -2120,40 +2030,40 @@ function initAuthAndDashboard() {
     }
   });
 
-  // 비밀번호 변경 완료
-  document.getElementById('btn-reset-pw').addEventListener('click', () => {
+  document.getElementById('btn-reset-pw')?.addEventListener('click', () => {
     if (!foundPwUser) return;
-    const newPw = document.getElementById('find-pw-new').value;
+    const newPw = document.getElementById('find-pw-new')?.value || '';
     const pwRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\]{8,20}$/;
     if (!pwRegex.test(newPw)) {
       alert('비밀번호는 영문 소문자·숫자·특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.');
       return;
     }
-    // localStorage 반영
-    users = JSON.parse(localStorage.getItem('users'));
+
+    users = JSON.parse(localStorage.getItem('users')) || [];
     const idx = users.findIndex(u => u.id === foundPwUser.id);
     if (idx !== -1) {
-      users[idx].pw = sha256(newPw);
+      users[idx].pw = typeof sha256 === 'function' ? sha256(newPw) : newPw;
       localStorage.setItem('users', JSON.stringify(users));
     }
     const result = document.getElementById('find-pw-result');
-    result.className = 'find-result-box success';
-    result.innerHTML = '<i class="fa-solid fa-circle-check"></i> 비밀번호가 성공적으로 변경되었습니다.<br>새 비밀번호로 로그인해 주세요.';
-    document.getElementById('find-pw-reset-group').style.display = 'none';
+    if (result) {
+      result.className = 'find-result-box success';
+      result.innerHTML = '<i class="fa-solid fa-circle-check"></i> 비밀번호가 성공적으로 변경되었습니다.<br>새 비밀번호로 로그인해 주세요.';
+    }
+    const resetGroup = document.getElementById('find-pw-reset-group');
+    if (resetGroup) resetGroup.style.display = 'none';
     foundPwUser = null;
     setTimeout(backToLogin, 2200);
   });
 
-  // --- Session Management & Login UI ---
   const updateSessionUI = () => {
-    users = JSON.parse(localStorage.getItem('users'));
-    activeUser = getActiveUser();
+    users = JSON.parse(localStorage.getItem('users')) || [];
+    activeUser = (typeof getActiveUser === 'function') ? getActiveUser() : null;
 
     if (activeUser) {
-      // Find latest status of active user from DB
       const currentDbUser = users.find(u => u.id === activeUser.id);
       if (currentDbUser) {
-        activeUser = sanitizeUser(currentDbUser);
+        activeUser = typeof sanitizeUser === 'function' ? sanitizeUser(currentDbUser) : currentDbUser;
         localStorage.setItem('activeUser', JSON.stringify(activeUser));
       }
 
@@ -2183,15 +2093,14 @@ function initAuthAndDashboard() {
     }
   };
 
-  // --- Modal Open/Close & Tab Switch ---
-  if (authBtn) {
+  if (authBtn && authModal) {
     authBtn.addEventListener('click', () => {
       authModal.classList.add('active');
       switchTab('login');
     });
   }
 
-  if (authCloseBtn) {
+  if (authCloseBtn && authModal) {
     authCloseBtn.addEventListener('click', () => {
       authModal.classList.remove('active');
       resetSignupState();
@@ -2200,109 +2109,116 @@ function initAuthAndDashboard() {
 
   const switchTab = (tab) => {
     if (tab === 'login') {
-      tabLoginBtn.classList.add('active');
-      tabSignupBtn.classList.remove('active');
-      loginPane.classList.add('active');
-      signupPane.classList.remove('active');
+      if (tabLoginBtn) tabLoginBtn.classList.add('active');
+      if (tabSignupBtn) tabSignupBtn.classList.remove('active');
+      if (loginPane) loginPane.classList.add('active');
+      if (signupPane) signupPane.classList.remove('active');
     } else {
-      tabLoginBtn.classList.remove('active');
-      tabSignupBtn.classList.add('active');
-      loginPane.classList.remove('active');
-      signupPane.classList.add('active');
+      if (tabLoginBtn) tabLoginBtn.classList.remove('active');
+      if (tabSignupBtn) tabSignupBtn.classList.add('active');
+      if (loginPane) loginPane.classList.remove('active');
+      if (signupPane) signupPane.classList.add('active');
     }
   };
 
-  tabLoginBtn.addEventListener('click', () => switchTab('login'));
-  tabSignupBtn.addEventListener('click', () => switchTab('signup'));
+  if (tabLoginBtn) tabLoginBtn.addEventListener('click', () => switchTab('login'));
+  if (tabSignupBtn) tabSignupBtn.addEventListener('click', () => switchTab('signup'));
 
-  // --- Signup Logic ---
+  if (signupIdInput) {
+    signupIdInput.addEventListener('input', () => {
+      isIdChecked = false;
+      const idVal = signupIdInput.value;
+      if (!idCheckMsg) return;
+      if (!idVal) {
+        idCheckMsg.textContent = '';
+        return;
+      }
+      if (idVal.length < 6) {
+        idCheckMsg.className = 'form-helper error';
+        idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 6자 이상이어야 합니다.';
+      } else {
+        idCheckMsg.textContent = '';
+      }
+    });
+  }
 
-  // ID Check
-  signupIdInput.addEventListener('input', () => {
-    isIdChecked = false;
-    const idVal = signupIdInput.value;
-    if (!idVal) {
-      idCheckMsg.textContent = '';
-      return;
-    }
-    if (idVal.length < 6) {
-      idCheckMsg.className = 'form-helper error';
-      idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 6자 이상이어야 합니다.';
-    } else {
-      idCheckMsg.textContent = '';
-    }
-  });
-
-  btnCheckId.addEventListener('click', async () => {
-    const idVal = signupIdInput.value.trim();
-    if (!idVal) {
-      alert('아이디를 입력해 주세요.');
-      return;
-    }
-    if (idVal.length < 6) {
-      idCheckMsg.className = 'form-helper error';
-      idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 6자 이상 20자 이하로 입력해 주세요.';
-      signupIdInput.focus();
-      return;
-    }
-
-    let exists = false;
-    if (window.supabaseClient) {
-      try {
-        const { data, error } = await window.supabaseClient
-          .from('users')
-          .select('id')
-          .eq('id', idVal)
-          .maybeSingle();
-
-        if (error) {
-          console.error('Supabase query error:', error.message);
-          exists = users.some(u => u.id === idVal);
-        } else if (data) {
-          exists = true;
+  if (btnCheckId && signupIdInput) {
+    btnCheckId.addEventListener('click', async () => {
+      const idVal = signupIdInput.value.trim();
+      if (!idVal) {
+        alert('아이디를 입력해 주세요.');
+        return;
+      }
+      if (idVal.length < 6) {
+        if (idCheckMsg) {
+          idCheckMsg.className = 'form-helper error';
+          idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 6자 이상 20자 이하로 입력해 주세요.';
         }
-      } catch (e) {
-        console.error(e);
+        signupIdInput.focus();
+        return;
+      }
+
+      let exists = false;
+      if (window.supabaseClient) {
+        try {
+          const { data, error } = await window.supabaseClient
+            .from('users')
+            .select('id')
+            .eq('id', idVal)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Supabase query error:', error.message);
+            exists = users.some(u => u.id === idVal);
+          } else if (data) {
+            exists = true;
+          }
+        } catch (e) {
+          console.error(e);
+          exists = users.some(u => u.id === idVal);
+        }
+      } else {
         exists = users.some(u => u.id === idVal);
       }
-    } else {
-      exists = users.some(u => u.id === idVal);
-    }
 
-    isIdChecked = true;
-    if (exists) {
-      isIdAvailable = false;
-      idCheckMsg.className = 'form-helper error';
-      idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 이미 사용 중인 아이디입니다.';
-    } else {
-      isIdAvailable = true;
-      idCheckMsg.className = 'form-helper success';
-      idCheckMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> 사용 가능한 아이디입니다.';
-    }
-  });
+      isIdChecked = true;
+      if (idCheckMsg) {
+        if (exists) {
+          isIdAvailable = false;
+          idCheckMsg.className = 'form-helper error';
+          idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 이미 사용 중인 아이디입니다.';
+        } else {
+          isIdAvailable = true;
+          idCheckMsg.className = 'form-helper success';
+          idCheckMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> 사용 가능한 아이디입니다.';
+        }
+      }
+    });
+  }
 
-  // Password Complexity Check
-  signupPwInput.addEventListener('input', () => {
-    const pwVal = signupPwInput.value;
-    // 소문자 1개 이상, 숫자 1개 이상, 특수문자 1개 이상, 8~20자
-    const pwRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\]{8,20}$/;
+  if (signupPwInput) {
+    signupPwInput.addEventListener('input', () => {
+      const pwVal = signupPwInput.value;
+      const pwRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\]{8,20}$/;
 
-    if (!pwVal) {
-      pwCheckMsg.textContent = '';
-      return;
-    }
+      if (!pwCheckMsg) return;
+      if (!pwVal) {
+        pwCheckMsg.textContent = '';
+        return;
+      }
 
-    if (pwRegex.test(pwVal)) {
-      pwCheckMsg.className = 'form-helper success';
-      pwCheckMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> 사용 가능한 비밀번호입니다.';
-    } else {
-      pwCheckMsg.className = 'form-helper error';
-      pwCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 영문 소문자·숫자·특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.';
-    }
-  });
+      if (pwRegex.test(pwVal)) {
+        pwCheckMsg.className = 'form-helper success';
+        pwCheckMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> 사용 가능한 비밀번호입니다.';
+      } else {
+        pwCheckMsg.className = 'form-helper error';
+        pwCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 영문 소문자·숫자·특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.';
+      }
+    });
+  }
 
-  // Password Confirm Check
   const checkPwConfirm = () => {
+    if (!signupPwInput || !signupPwConfirmInput || !pwConfirmMsg) return;
     const pwVal = signupPwInput.value;
     const confirmVal = signupPwConfirmInput.value;
     if (!confirmVal) {
@@ -2318,257 +2234,250 @@ function initAuthAndDashboard() {
     }
   };
 
-  signupPwConfirmInput.addEventListener('input', checkPwConfirm);
-  signupPwInput.addEventListener('input', () => {
-    if (signupPwConfirmInput.value) checkPwConfirm();
-  });
-
+  if (signupPwConfirmInput) signupPwConfirmInput.addEventListener('input', checkPwConfirm);
+  if (signupPwInput) {
+    signupPwInput.addEventListener('input', () => {
+      if (signupPwConfirmInput && signupPwConfirmInput.value) checkPwConfirm();
+    });
+  }
 
   const resetSignupState = () => {
-    signupForm.reset();
+    if (signupForm) signupForm.reset();
     isIdChecked = false;
     isIdAvailable = false;
-    signupPhoneInput.disabled = false;
-    idCheckMsg.textContent = '';
-    pwCheckMsg.textContent = '';
-    pwConfirmMsg.textContent = '';
-    phoneCheckMsg.textContent = '';
+    if (signupPhoneInput) signupPhoneInput.disabled = false;
+    if (idCheckMsg) idCheckMsg.textContent = '';
+    if (pwCheckMsg) pwCheckMsg.textContent = '';
+    if (pwConfirmMsg) pwConfirmMsg.textContent = '';
   };
 
-  // Signup Submit
-  signupForm.addEventListener('submit', async () => {
-    const idVal = signupIdInput.value.trim();
-    const pwVal = signupPwInput.value;
-    const nameVal = escapeHtml(signupNameInput.value.trim());
-    const addressVal = escapeHtml(signupAddressInput.value.trim());
-    const emailVal = escapeHtml(signupEmailInput.value.trim());
-    const phoneVal = escapeHtml(signupPhoneInput.value.trim());
+  if (signupForm) {
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const idVal = signupIdInput ? signupIdInput.value.trim() : '';
+      const pwVal = signupPwInput ? signupPwInput.value : '';
+      const nameVal = typeof escapeHtml === 'function' ? escapeHtml(signupNameInput?.value.trim()) : (signupNameInput?.value.trim() || '');
+      const addressVal = typeof escapeHtml === 'function' ? escapeHtml(signupAddressInput?.value.trim()) : (signupAddressInput?.value.trim() || '');
+      const emailVal = typeof escapeHtml === 'function' ? escapeHtml(signupEmailInput?.value.trim()) : (signupEmailInput?.value.trim() || '');
+      const phoneVal = typeof escapeHtml === 'function' ? escapeHtml(signupPhoneInput?.value.trim()) : (signupPhoneInput?.value.trim() || '');
 
-    if (!isIdChecked || !isIdAvailable) {
-      alert('아이디 중복 확인(사용 가능 검색)을 완료해 주세요.');
-      return;
-    }
+      if (!isIdChecked || !isIdAvailable) {
+        alert('아이디 중복 확인(사용 가능 검색)을 완료해 주세요.');
+        return;
+      }
 
-    // 이름 유효성 검사 (최소 2자 ~ 최대 20자)
-    if (nameVal.length < 2 || nameVal.length > 20) {
-      alert('이름은 최소 2자에서 최대 20자까지 입력해 주세요.');
-      return;
-    }
+      if (nameVal.length < 2 || nameVal.length > 20) {
+        alert('이름은 최소 2자에서 최대 20자까지 입력해 주세요.');
+        return;
+      }
 
-    // 휴대폰 번호 유효성 검사 (최소 9자 ~ 최대 15자)
-    if (phoneVal.length < 9 || phoneVal.length > 15) {
-      alert('휴대폰 번호는 최소 9자에서 최대 15자까지 입력해 주세요.');
-      return;
-    }
+      if (phoneVal.length < 9 || phoneVal.length > 15) {
+        alert('휴대폰 번호는 최소 9자에서 최대 15자까지 입력해 주세요.');
+        return;
+      }
 
-    // 주소 글자 수 검사 (선택 항목, 입력 시 최대 100자)
-    if (addressVal.length > 100) {
-      alert('주소는 최대 100자까지 입력할 수 있습니다.');
-      return;
-    }
+      if (addressVal.length > 100) {
+        alert('주소는 최대 100자까지 입력할 수 있습니다.');
+        return;
+      }
 
-    // 이메일 주소 글자 수 검사 (선택 항목, 입력 시 최대 50자)
-    if (emailVal.length > 50) {
-      alert('이메일 주소는 최대 50자까지 입력할 수 있습니다.');
-      return;
-    }
+      if (emailVal.length > 50) {
+        alert('이메일 주소는 최대 50자까지 입력할 수 있습니다.');
+        return;
+      }
 
-    // 휴대폰 번호 형식 정규식 검증
-    const phoneRegex = /^[0-9+\s-]+$/;
-    if (!phoneRegex.test(phoneVal)) {
-      alert('휴대폰 번호에는 숫자, 대시(-), 플러스(+) 및 공백만 입력할 수 있습니다.');
-      return;
-    }
+      const phoneRegex = /^[0-9+\s-]+$/;
+      if (!phoneRegex.test(phoneVal)) {
+        alert('휴대폰 번호에는 숫자, 대시(-), 플러스(+) 및 공백만 입력할 수 있습니다.');
+        return;
+      }
 
-    const pwRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\]{8,20}$/;
-    if (!pwRegex.test(pwVal)) {
-      alert('비밀번호는 영문 소문자·숫자·특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.');
-      return;
-    }
+      const pwRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\]{8,20}$/;
+      if (!pwRegex.test(pwVal)) {
+        alert('비밀번호는 영문 소문자·숫자·특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.');
+        return;
+      }
 
-    const pwConfirmVal = signupPwConfirmInput.value;
-    if (pwVal !== pwConfirmVal) {
-      alert('비밀번호 확인이 일치하지 않습니다. 다시 확인해 주세요.');
-      signupPwConfirmInput.focus();
-      return;
-    }
+      const pwConfirmVal = signupPwConfirmInput ? signupPwConfirmInput.value : '';
+      if (pwVal !== pwConfirmVal) {
+        alert('비밀번호 확인이 일치하지 않습니다. 다시 확인해 주세요.');
+        signupPwConfirmInput?.focus();
+        return;
+      }
 
-    // Save New User
-    const newUser = {
-      id: idVal,
-      pw: sha256(pwVal),
-      name: nameVal,
-      address: addressVal,
-      email: emailVal,
-      phone: phoneVal,
-      role: 'normal',
-      isSNS: false,
-      bizCode: null,
-      conversionStatus: 'none',
-      items: []
-    };
+      const newUser = {
+        id: idVal,
+        pw: typeof sha256 === 'function' ? sha256(pwVal) : pwVal,
+        name: nameVal,
+        address: addressVal,
+        email: emailVal,
+        phone: phoneVal,
+        role: 'normal',
+        isSNS: false,
+        bizCode: null,
+        conversionStatus: 'none',
+        items: []
+      };
 
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
+      users.push(newUser);
+      localStorage.setItem('users', JSON.stringify(users));
 
-    // Supabase Sync
-    if (window.SupabaseSync) {
-      await window.SupabaseSync.upsertUser(newUser);
-    }
+      if (window.SupabaseSync) {
+        await window.SupabaseSync.upsertUser(newUser);
+      }
 
-    // Auto Login (회원가입 기본 세션)
-    sessionStorage.setItem('activeUser', JSON.stringify(sanitizeUser(newUser)));
-    localStorage.removeItem('activeUser_remember');
-    localStorage.removeItem('activeUser');
-    if (typeof recordUserActivity === 'function') recordUserActivity();
+      const sanitized = typeof sanitizeUser === 'function' ? sanitizeUser(newUser) : newUser;
+      sessionStorage.setItem('activeUser', JSON.stringify(sanitized));
+      localStorage.removeItem('activeUser_remember');
+      localStorage.removeItem('activeUser');
+      if (typeof recordUserActivity === 'function') recordUserActivity();
 
-    alert('회원가입이 완료되었습니다! 자동 로그인됩니다.');
-    authModal.classList.remove('active');
-    resetSignupState();
-    updateSessionUI();
-  });
+      alert('회원가입이 완료되었습니다! 자동 로그인됩니다.');
+      if (authModal) authModal.classList.remove('active');
+      resetSignupState();
+      updateSessionUI();
+    });
+  }
 
-  // --- Login Logic ---
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault(); // prevent default form submission to handle async flow
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-    const idVal = document.getElementById('login-id').value.trim();
-    const pwVal = document.getElementById('login-pw').value;
-    const rememberMe = document.getElementById('login-remember-me') ? document.getElementById('login-remember-me').checked : false;
+      const idVal = document.getElementById('login-id')?.value.trim() || '';
+      const pwVal = document.getElementById('login-pw')?.value || '';
+      const rememberMe = document.getElementById('login-remember-me') ? document.getElementById('login-remember-me').checked : false;
 
-    if (!idVal || !pwVal) {
-      alert('아이디와 비밀번호를 모두 입력해 주세요.');
-      return;
-    }
+      if (!idVal || !pwVal) {
+        alert('아이디와 비밀번호를 모두 입력해 주세요.');
+        return;
+      }
 
-    const hashedPassword = sha256(pwVal);
-    const cleanDigits = idVal.replace(/[^0-9]/g, '');
-    const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+      const hashedPassword = typeof sha256 === 'function' ? sha256(pwVal) : pwVal;
+      const cleanDigits = idVal.replace(/[^0-9]/g, '');
+      const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
 
-    // 탈퇴/삭제된 계정 즉시 차단
-    if (deletedIds.includes(idVal) || (cleanDigits && deletedIds.includes(cleanDigits))) {
-      alert('존재하지 않는 회원 정보이거나 이미 탈퇴 처리된 계정입니다.');
-      return;
-    }
+      if (deletedIds.includes(idVal) || (cleanDigits && deletedIds.includes(cleanDigits))) {
+        alert('존재하지 않는 회원 정보이거나 이미 탈퇴 처리된 계정입니다.');
+        return;
+      }
 
-    let user = null;
+      let user = null;
 
-    // 1. Supabase 실물 DB 로그인 조회
-    if (window.supabaseClient) {
-      try {
-        let { data, error } = await window.supabaseClient
-          .from('users')
-          .select('*')
-          .eq('id', idVal)
-          .maybeSingle();
-
-        if (!data && cleanDigits) {
-          const { data: phoneData } = await window.supabaseClient
+      if (window.supabaseClient) {
+        try {
+          let { data, error } = await window.supabaseClient
             .from('users')
             .select('*')
-            .or(`id.eq.${cleanDigits},phone.eq.${idVal},phone.eq.${cleanDigits}`)
+            .eq('id', idVal)
             .maybeSingle();
-          if (phoneData) data = phoneData;
-        }
 
-        // 대소문자 차이 대응 fallback
-        if (!data) {
-          const { data: ilikeData } = await window.supabaseClient
-            .from('users')
-            .select('*')
-            .ilike('id', idVal)
-            .maybeSingle();
-          if (ilikeData) data = ilikeData;
-        }
-
-        if (!error && data) {
-          // 조회된 유저가 deleted_user_ids에 포함된 경우 차단
-          if (deletedIds.includes(String(data.id))) {
-            alert('존재하지 않는 회원 정보이거나 이미 탈퇴 처리된 계정입니다.');
-            return;
+          if (!data && cleanDigits) {
+            const { data: phoneData } = await window.supabaseClient
+              .from('users')
+              .select('*')
+              .or(`id.eq.${cleanDigits},phone.eq.${idVal},phone.eq.${cleanDigits}`)
+              .maybeSingle();
+            if (phoneData) data = phoneData;
           }
 
-          const isPwMatch = (data.password_hash === hashedPassword) || (data.password_hash === pwVal);
-          if (isPwMatch) {
-            user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : sanitizeUser(data);
-          } else if (!data.password_hash) {
-            // 구버전 계정: 로컬스토리지 비밀번호 검증 후 Supabase 업데이트
-            const localUser = users.find(u => {
-              const uId = (u.id || '').toLowerCase();
-              const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
-              const isMatchUser = (uId === idVal.toLowerCase()) ||
-                (cleanDigits && uId === cleanDigits) ||
-                (cleanDigits && uPhoneDigits === cleanDigits);
-              return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
-            });
-            if (localUser) {
-              user = sanitizeUser(localUser);
-              if (window.SupabaseSync) {
-                window.SupabaseSync.updateUser(data.id, { password_hash: hashedPassword });
+          if (!data) {
+            const { data: ilikeData } = await window.supabaseClient
+              .from('users')
+              .select('*')
+              .ilike('id', idVal)
+              .maybeSingle();
+            if (ilikeData) data = ilikeData;
+          }
+
+          if (!error && data) {
+            if (deletedIds.includes(String(data.id))) {
+              alert('존재하지 않는 회원 정보이거나 이미 탈퇴 처리된 계정입니다.');
+              return;
+            }
+
+            const isPwMatch = (data.password_hash === hashedPassword) || (data.password_hash === pwVal);
+            if (isPwMatch) {
+              user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : (typeof sanitizeUser === 'function' ? sanitizeUser(data) : data);
+            } else if (!data.password_hash) {
+              const localUser = users.find(u => {
+                const uId = (u.id || '').toLowerCase();
+                const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
+                const isMatchUser = (uId === idVal.toLowerCase()) ||
+                  (cleanDigits && uId === cleanDigits) ||
+                  (cleanDigits && uPhoneDigits === cleanDigits);
+                return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
+              });
+              if (localUser) {
+                user = typeof sanitizeUser === 'function' ? sanitizeUser(localUser) : localUser;
+                if (window.SupabaseSync) {
+                  window.SupabaseSync.updateUser(data.id, { password_hash: hashedPassword });
+                }
+              } else {
+                user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : (typeof sanitizeUser === 'function' ? sanitizeUser(data) : data);
               }
-            } else {
-              user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : sanitizeUser(data);
             }
           }
+        } catch (err) {
+          console.error('Login Supabase error:', err);
         }
-      } catch (err) {
-        console.error('Login Supabase error:', err);
-      }
-    }
-
-    // 2. 로컬 스토리지 로그인 fallback (오프라인 / Supabase 미연결 시)
-    if (!user) {
-      const localUser = users.find(u => {
-        const uId = (u.id || '').toLowerCase();
-        const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
-        const isMatchUser = (uId === idVal.toLowerCase()) ||
-          (cleanDigits && uId === cleanDigits) ||
-          (cleanDigits && uPhoneDigits === cleanDigits);
-        return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
-      });
-      if (localUser) user = sanitizeUser(localUser);
-    }
-
-    if (user) {
-      // 로컬 스토리지 사용자 목록 동기화 (새 브라우저 접속 지원)
-      if (!users.some(u => u.id.toLowerCase() === user.id.toLowerCase())) {
-        users.push(user);
-        localStorage.setItem('users', JSON.stringify(users));
       }
 
-      if (rememberMe) {
-        localStorage.setItem('activeUser', JSON.stringify(user));
-        localStorage.setItem('activeUser_remember', 'true');
-        sessionStorage.removeItem('activeUser');
-      } else {
-        sessionStorage.setItem('activeUser', JSON.stringify(user));
-        localStorage.removeItem('activeUser_remember');
-        localStorage.removeItem('activeUser');
-        if (typeof recordUserActivity === 'function') {
-          recordUserActivity();
+      if (!user) {
+        const localUser = users.find(u => {
+          const uId = (u.id || '').toLowerCase();
+          const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
+          const isMatchUser = (uId === idVal.toLowerCase()) ||
+            (cleanDigits && uId === cleanDigits) ||
+            (cleanDigits && uPhoneDigits === cleanDigits);
+          return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
+        });
+        if (localUser) user = typeof sanitizeUser === 'function' ? sanitizeUser(localUser) : localUser;
+      }
+
+      if (user) {
+        if (!users.some(u => u.id.toLowerCase() === user.id.toLowerCase())) {
+          users.push(user);
+          localStorage.setItem('users', JSON.stringify(users));
+        }
+
+        if (rememberMe) {
+          localStorage.setItem('activeUser', JSON.stringify(user));
+          localStorage.setItem('activeUser_remember', 'true');
+          sessionStorage.removeItem('activeUser');
         } else {
-          sessionStorage.setItem('last_active_time', Date.now().toString());
+          sessionStorage.setItem('activeUser', JSON.stringify(user));
+          localStorage.removeItem('activeUser_remember');
+          localStorage.removeItem('activeUser');
+          if (typeof recordUserActivity === 'function') {
+            recordUserActivity();
+          } else {
+            sessionStorage.setItem('last_active_time', Date.now().toString());
+          }
         }
+        alert(`${user.name}님, 반갑습니다!`);
+        if (authModal) authModal.classList.remove('active');
+        loginForm.reset();
+        updateSessionUI();
+      } else {
+        alert('아이디 또는 비밀번호가 올바르지 않습니다.');
       }
-      alert(`${user.name}님, 반갑습니다!`);
-      authModal.classList.remove('active');
-      loginForm.reset();
-      updateSessionUI();
-    } else {
-      alert('아이디 또는 비밀번호가 올바르지 않습니다.');
-    }
-  });
+    });
+  }
 
-  // --- Logout Logic ---
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-      clearActiveUser();
+      if (typeof clearActiveUser === 'function') {
+        clearActiveUser();
+      } else {
+        sessionStorage.removeItem('activeUser');
+        localStorage.removeItem('activeUser');
+        localStorage.removeItem('activeUser_remember');
+      }
       alert('로그아웃 되었습니다.');
       updateSessionUI();
     });
   }
 
-  // Sync state initially
   updateSessionUI();
 }
 
@@ -2598,48 +2507,38 @@ function initPopups() {
     localStorage.setItem('popups', JSON.stringify(popups));
   }
 
-  // Find active popups matching the posting period
   const todayStr = new Date().toISOString().split('T')[0];
   const activePopups = popups.filter(p => {
     if (!p.isActive) return false;
-
-    // Check if within period
     if (p.startDate && todayStr < p.startDate) return false;
     if (p.endDate && todayStr > p.endDate) return false;
-
     return true;
   });
 
   activePopups.forEach(popup => {
-    // Check if the user selected "do not show for 24 hours"
     const hideTime = localStorage.getItem(`hide_popup_${popup.id}`);
     if (hideTime) {
       const diff = Date.now() - parseInt(hideTime);
       if (diff < 24 * 60 * 60 * 1000) {
-        // Still within 24 hours, do not show
         return;
       } else {
-        // Expired, remove from localStorage
         localStorage.removeItem(`hide_popup_${popup.id}`);
       }
     }
 
-    // Create popup window DOM element
     const popupEl = document.createElement('div');
     popupEl.className = 'popup-window';
     popupEl.id = `popup-window-${popup.id}`;
 
-    // Apply width, height, position styles
     popupEl.style.width = `${popup.width}px`;
     popupEl.style.height = `${popup.height}px`;
     popupEl.style.top = `${popup.positionTop}px`;
     popupEl.style.left = `${popup.positionLeft}px`;
 
-    // Build popup content
     let imageHtml = '';
     if (popup.imageUrl) {
-      const safeImgUrl = sanitizeUrl(popup.imageUrl);
-      const safeLinkUrl = sanitizeUrl(popup.linkUrl);
+      const safeImgUrl = typeof sanitizeUrl === 'function' ? sanitizeUrl(popup.imageUrl) : popup.imageUrl;
+      const safeLinkUrl = typeof sanitizeUrl === 'function' ? sanitizeUrl(popup.linkUrl) : popup.linkUrl;
       if (popup.linkUrl) {
         imageHtml = `<a href="${safeLinkUrl}"><img src="${safeImgUrl}" class="popup-img" alt="팝업 이미지"></a>`;
       } else {
@@ -2648,9 +2547,9 @@ function initPopups() {
     }
 
     let contentHtml = '';
-    const safeContentText = escapeHtml(popup.content).replace(/\n/g, '<br>');
+    const safeContentText = (typeof escapeHtml === 'function' ? escapeHtml(popup.content) : popup.content).replace(/\n/g, '<br>');
     if (popup.linkUrl) {
-      const safeLinkUrl = sanitizeUrl(popup.linkUrl);
+      const safeLinkUrl = typeof sanitizeUrl === 'function' ? sanitizeUrl(popup.linkUrl) : popup.linkUrl;
       contentHtml = `<a href="${safeLinkUrl}" style="text-decoration: none; color: inherit;"><div class="popup-content">${safeContentText}</div></a>`;
     } else {
       contentHtml = `<div class="popup-content">${safeContentText}</div>`;
@@ -2658,7 +2557,7 @@ function initPopups() {
 
     popupEl.innerHTML = `
       <div class="popup-header">
-        <h5 class="popup-title">${escapeHtml(popup.title)}</h5>
+        <h5 class="popup-title">${typeof escapeHtml === 'function' ? escapeHtml(popup.title) : popup.title}</h5>
         <button class="popup-close-x" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="popup-body">
@@ -2674,17 +2573,14 @@ function initPopups() {
     `;
 
     document.body.appendChild(popupEl);
-
-    // Make popups draggable
     makeDraggable(popupEl);
 
-    // Attach close events
     const closeX = popupEl.querySelector('.popup-close-x');
     const closeBtn = popupEl.querySelector('.popup-close-btn');
     const hideTodayCheckbox = popupEl.querySelector('.popup-hide-today');
 
     const closePopup = () => {
-      if (hideTodayCheckbox.checked) {
+      if (hideTodayCheckbox && hideTodayCheckbox.checked) {
         localStorage.setItem(`hide_popup_${popup.id}`, Date.now().toString());
       }
       popupEl.style.opacity = '0';
@@ -2694,12 +2590,11 @@ function initPopups() {
       }, 300);
     };
 
-    closeX.addEventListener('click', closePopup);
-    closeBtn.addEventListener('click', closePopup);
+    if (closeX) closeX.addEventListener('click', closePopup);
+    if (closeBtn) closeBtn.addEventListener('click', closePopup);
   });
 }
 
-// Simple drag functionality for popups
 function makeDraggable(el) {
   const header = el.querySelector('.popup-header');
   if (!header) return;
@@ -2707,12 +2602,10 @@ function makeDraggable(el) {
   header.style.cursor = 'move';
 
   let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-
   header.onmousedown = dragMouseDown;
 
   function dragMouseDown(e) {
     e = e || window.event;
-    // Don't drag if clicking the close 'X' button or checkbox or footer button
     if (e.target.closest('.popup-close-x') || e.target.closest('.popup-footer')) return;
 
     e.preventDefault();
@@ -2733,7 +2626,6 @@ function makeDraggable(el) {
     let newTop = el.offsetTop - pos2;
     let newLeft = el.offsetLeft - pos1;
 
-    // Prevent dragging completely off-screen
     if (newTop < 0) newTop = 0;
     if (newLeft < 0) newLeft = 0;
 
@@ -2763,7 +2655,6 @@ if (typeof window !== 'undefined') {
 }
 
 function initPWA() {
-  // Service Worker Registration
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .then((reg) => {
@@ -2773,7 +2664,6 @@ function initPWA() {
       .catch((err) => console.warn('Service Worker registration failed:', err));
   }
 
-  // UI Elements
   const installModal = document.getElementById('install-modal');
   const btnClose = document.getElementById('install-modal-close');
   const btnNav = document.getElementById('nav-install-app');
@@ -2790,7 +2680,6 @@ function initPWA() {
 
   if (!installModal) return;
 
-  // Open Modal Logic (Website Custom Modal)
   const openModal = (e) => {
     if (e) e.preventDefault();
 
@@ -2810,7 +2699,6 @@ function initPWA() {
   if (btnNav) btnNav.addEventListener('click', openModal);
   if (btnFooter) btnFooter.addEventListener('click', openModal);
 
-  // Close Modal Logic
   const closeModal = () => {
     installModal.classList.remove('active');
   };
@@ -2820,13 +2708,11 @@ function initPWA() {
     if (e.target === installModal) closeModal();
   });
 
-  // Shortcut button (홈 화면 바로가기 버튼 만들기 - 원터치 자동 추가)
   if (pwaShortcutBtn) {
     pwaShortcutBtn.addEventListener('click', (e) => {
       e.preventDefault();
 
       if (globalDeferredPrompt) {
-        // Direct 1-Tap System Dialog
         globalDeferredPrompt.prompt();
         globalDeferredPrompt.userChoice.then((choiceResult) => {
           if (choiceResult.outcome === 'accepted') {
@@ -2869,7 +2755,6 @@ function initPWA() {
     });
   }
 
-  // PWA Share handling
   if (pwaShareBtn) {
     pwaShareBtn.addEventListener('click', () => {
       const shareData = {
@@ -2897,13 +2782,12 @@ function initPWA() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', initPWA);
-
-// --- 8. Visitor Tracking Logic (실제 접속자 기준 통계) ---
+// ==========================================
+// 8.5. Visitor Tracking Logic
+// ==========================================
 async function initVisitorTracking() {
   const RESET_KEY = 'visitor_reset_flag_20260817';
 
-  // 기존 하드코딩 가짜 수치(1420, 34 등) 초기화
   if (localStorage.getItem(RESET_KEY) !== 'done') {
     localStorage.removeItem('visitor_total');
     localStorage.removeItem('visitor_today');
@@ -2916,14 +2800,12 @@ async function initVisitorTracking() {
   let todayCount = parseInt(localStorage.getItem('visitor_today') || '0', 10);
   const lastDate = localStorage.getItem('visitor_last_date');
 
-  // 날짜가 바뀌었으면 오늘의 방문자 수 리셋
   if (lastDate !== todayStr) {
     todayCount = 0;
     localStorage.setItem('visitor_last_date', todayStr);
     localStorage.setItem('visitor_today', '0');
   }
 
-  // 세션 단위 중복 카운트 방지 (브라우저 접속 시 1회 카운트)
   if (!sessionStorage.getItem('visitor_session_counted_v2')) {
     sessionStorage.setItem('visitor_session_counted_v2', 'true');
     totalCount += 1;
@@ -2932,7 +2814,6 @@ async function initVisitorTracking() {
     localStorage.setItem('visitor_today', todayCount.toString());
     localStorage.setItem('visitor_last_date', todayStr);
 
-    // Supabase 실시간 동기화
     if (window.supabaseClient) {
       try {
         await window.supabaseClient.from('site_stats').upsert({
@@ -2949,7 +2830,9 @@ async function initVisitorTracking() {
   }
 }
 
-// --- 9. Mobile Bottom Navigation spy & actions ---
+// ==========================================
+// 9. Mobile Bottom Navigation Logic
+// ==========================================
 function initMobileBottomNav() {
   const mNavItems = {
     home: document.getElementById('m-nav-home'),
@@ -2964,7 +2847,6 @@ function initMobileBottomNav() {
     apply: document.getElementById('apply-section')
   };
 
-  // 1. Scrollspy to highlight active tab
   if (mNavItems.home && mNavItems.simulator && mNavItems.apply) {
     const handleScroll = () => {
       const scrollPos = window.scrollY + 180;
@@ -2991,10 +2873,9 @@ function initMobileBottomNav() {
     handleScroll();
   }
 
-  // 2. Click behaviors to check auth for dashboard/mypage tab
   if (mNavItems.dashboard) {
     mNavItems.dashboard.addEventListener('click', (e) => {
-      const activeUser = getActiveUser() || null;
+      const activeUser = (typeof getActiveUser === 'function') ? (getActiveUser() || null) : null;
       if (!activeUser) {
         e.preventDefault();
         const authModal = document.getElementById('auth-modal');
@@ -3005,184 +2886,179 @@ function initMobileBottomNav() {
       }
     });
   }
+}
 
-  // --- Initialize AI Assistant ---
-  initAIAssistant();
+// ==========================================
+// 10. AI Assistant Logic
+// ==========================================
+function initAIAssistant() {
+  const trigger = document.getElementById('ai-assistant-trigger');
+  const chatWindow = document.getElementById('ai-chat-window');
+  const closeBtn = document.getElementById('ai-chat-close');
+  const sendBtn = document.getElementById('ai-chat-send');
+  const chatInput = document.getElementById('ai-chat-input');
+  const chatMessages = document.getElementById('ai-chat-messages');
 
-  function initAIAssistant() {
-    const trigger = document.getElementById('ai-assistant-trigger');
-    const chatWindow = document.getElementById('ai-chat-window');
-    const closeBtn = document.getElementById('ai-chat-close');
-    const sendBtn = document.getElementById('ai-chat-send');
-    const chatInput = document.getElementById('ai-chat-input');
-    const chatMessages = document.getElementById('ai-chat-messages');
+  if (!trigger || !chatWindow || !chatInput || !chatMessages) return;
 
-    if (!trigger || !chatWindow) return;
+  trigger.addEventListener('click', () => {
+    chatWindow.classList.add('active');
+    trigger.style.display = 'none';
+    chatInput.focus();
+  });
 
-    // Toggle Chat Window
-    trigger.addEventListener('click', () => {
-      chatWindow.classList.add('active');
-      trigger.style.display = 'none';
-      chatInput.focus();
-    });
-
+  if (closeBtn) {
     closeBtn.addEventListener('click', () => {
       chatWindow.classList.remove('active');
       trigger.style.display = 'flex';
     });
-
-    // Handle Quick Reply Clicks
-    chatMessages.addEventListener('click', (e) => {
-      const btn = e.target.closest('.quick-reply-btn');
-      if (btn) {
-        const faqType = btn.getAttribute('data-faq');
-        const question = btn.innerText;
-        handleUserMessage(question, faqType);
-      }
-    });
-
-    // Send Message
-    function sendMessage() {
-      const text = chatInput.value.trim();
-      if (!text) return;
-      chatInput.value = '';
-      handleUserMessage(text);
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        sendMessage();
-      }
-    });
-
-    const faqDatabase = {
-      target: "💡 <strong>지원 대상 및 자격 기준</strong><br><br>" +
-        "• <strong>대상자</strong>: 공고일 현재 경기도 내에 사업장을 두고 영업 중인 <strong>창업 3년 이상</strong>(사업자등록 기준) 소상공인 사업자입니다.<br>" +
-        "• <strong>소상공인 상시 근로자 기준</strong>:<br>" +
-        "  - 도소매업, 음식점, 숙박업, 서비스업: 5인 미만<br>" +
-        "  - 광업, 제조업, 건설업, 운수업: 10인 미만<br>" +
-        "• <strong>지원 제외 대상</strong>: 대기업 프랜차이즈 직영점, 사치향락 업종(유흥주점 등), 무등록/휴폐업자, 지방세 체납자, 최근 3년 이내 경기도 및 시·군 유사 지원사업 수혜자는 신청할 수 없습니다.",
-      amount: "💰 <strong>지원 금액 및 품목 안내</strong><br><br>" +
-        "• <strong>지원 한도</strong>: 업체당 <strong>최대 200만원 한도</strong> (공급가의 100% 지원, 부가세 10% 및 200만원 초과 금액은 본인 부담)<br>" +
-        "  * 예: 견적서 공급가액이 220만원인 경우, 지원금 200만원 + 본인부담 20만원 + 부가세 별도 납부<br>" +
-        "• <strong>지원 품목</strong>: 간판(불법 간판 제외), 썬팅, 투광기 중 <strong>최대 2개 품목 이하</strong> 선택 가능<br>" +
-        "• <strong>시공 주의사항</strong>: 반드시 <strong>선정 후 견적서 승인</strong>을 먼저 받은 다음 시공을 진행해야 합니다. 승인 전 <strong>사전 시공 시 지원 대상에서 제외(선정 취소)</strong>되므로 절대 주의 바랍니다.",
-      documents: "📄 <strong>제출 서류 안내</strong><br><br>" +
-        "• <strong>필수 기본 서류</strong>:<br>" +
-        "  1. 신청서 및 추진계획서 (점포 사진 첨부 필수)<br>" +
-        "  2. 개인신용정보 제공 동의서<br>" +
-        "  3. 시공계획서<br>" +
-        "• <strong>증빙 서류 (※ 경기바로 공공마이데이터 간편 신청 동의 시 제출 생략 가능)</strong>:<br>" +
-        "  4. 사업자등록증 사본 1부<br>" +
-        "  5. 최근 2개년 부가세 과세표준증명원(또는 면세사업자 수입금액증명원)<br>" +
-        "  6. 소득금액증명원 (직전년도 기준)<br>" +
-        "• <strong>가점 증빙 (해당자만 제출)</strong>: 표창장(도지사 등), 자영업아카데미 수료증, 취약계층 증명서 등",
-      schedule: "📅 <strong>접수 일정 및 방법 안내</strong><br><br>" +
-        "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong> (공고는 3. 18 발표)<br>" +
-        "• <strong>신청 방법</strong>:<br>" +
-        "  - <strong>온라인 신청</strong>: 경기바로 홈페이지(www.ggbaro.kr)에서 공공마이데이터 연동 접수<br>" +
-        "  - <strong>방문 신청</strong>: 경기도시장상권진흥원(경상원) 각 지역센터 영업시간 내 방문 접수 (제출 서류 상담 가능)<br>" +
-        "  - <strong>※ 주의</strong>: 우편 신청 및 온/오프라인 중복 신청은 불가능합니다. 1인 1건만 신청 가능합니다.",
-      contact: "📞 <strong>문의처 및 접수 지역센터</strong><br><br>" +
-        "• <strong>경상원 종합상담 콜센터</strong>: <strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
-        "• <strong>지역센터별 관할 구역</strong>:<br>" +
-        "  - 남부센터(수원 소재): 수원, 용인, 군포, 의왕, 과천<br>" +
-        "  - 남부센터(화성 소재): 화성, 오산, 평택, 안성<br>" +
-        "  - 남동센터(광주 소재): 광주, 성남, 여주, 이천<br>" +
-        "  - 남서센터(시흥 소재): 시흥, 안양, 안산, 광명, 부천<br>" +
-        "  - 북부센터(남양주 소재): 남양주, 의정부, 포천, 구리, 가평, 하남, 양평<br>" +
-        "  - 북서센터(파주 소재): 파주, 고양, 양주, 동두천, 연천, 김포"
-    };
-
-    function handleUserMessage(messageText, faqType = null) {
-      // 1. Add User Message
-      appendMessage(messageText, 'user');
-
-      // Remove quick replies section if present to avoid screen cluttering
-      const quickReplies = chatMessages.querySelector('.ai-quick-replies');
-      if (quickReplies) {
-        quickReplies.remove();
-      }
-
-      // 2. Add Loading Indicator
-      const loadingId = appendLoading();
-
-      // 3. Simulate Thinking & Respond
-      setTimeout(() => {
-        removeLoading(loadingId);
-
-        let response = "";
-        if (faqType && faqDatabase[faqType]) {
-          response = faqDatabase[faqType];
-        } else {
-          // Keyword match logic
-          const cleaned = messageText.toLowerCase().replace(/\s+/g, '');
-          if (cleaned.includes('대상') || cleaned.includes('조건') || cleaned.includes('자격') || cleaned.includes('제한') || cleaned.includes('제외') || cleaned.includes('누가') || cleaned.includes('기준')) {
-            response = faqDatabase.target;
-          } else if (cleaned.includes('금액') || cleaned.includes('한도') || cleaned.includes('비용') || cleaned.includes('얼마') || cleaned.includes('지원금') || cleaned.includes('썬팅') || cleaned.includes('투광기') || cleaned.includes('인테리어')) {
-            response = faqDatabase.amount;
-          } else if (cleaned.includes('서류') || cleaned.includes('준비') || cleaned.includes('제출') || cleaned.includes('증명원') || cleaned.includes('동의서')) {
-            response = faqDatabase.documents;
-          } else if (cleaned.includes('일정') || cleaned.includes('기간') || cleaned.includes('날짜') || cleaned.includes('언제') || cleaned.includes('방법') || cleaned.includes('접수') || cleaned.includes('신청')) {
-            response = faqDatabase.schedule;
-          } else if (cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('콜센터') || cleaned.includes('번호') || cleaned.includes('문의') || cleaned.includes('주소') || cleaned.includes('경상원')) {
-            response = faqDatabase.contact;
-          } else if (cleaned.includes('안녕')) {
-            response = "안녕하세요! 경기도 소상공인 경영환경개선사업 AI비서입니다. 😊 무엇이든 물어보세요.<br><br>💡 <strong>예시 질문 키워드</strong>:<br>• '지원 자격', '제외 대상'<br>• '지원 금액', '신청 비용'<br>• '필수 서류', '공공마이데이터'<br>• '신청 일정', '접수 방법'<br>• '고객센터', '지역센터 전화번호'";
-          } else {
-            response = "죄송합니다. 질문하신 내용에 대한 정확한 정보를 찾지 못했습니다. 😢<br><br>아래 주요 지원사업 키워드를 참고하여 간략히 질문해 주시면 상세히 답변해 드릴 수 있습니다!<br><br>• <strong>'지원 자격'</strong> (창업 3년 이상 소상공인 여부)<br>• <strong>'지원 금액'</strong> (최대 200만원 한도 및 품목)<br>• <strong>'필수 서류'</strong> (제출 생략 가능 서류 등)<br>• <strong>'신청 일정'</strong> (3월 31일 ~ 4월 13일 일정)<br>• <strong>'고객센터'</strong> (대표번호 1600-8001 및 지역센터)";
-          }
-        }
-
-        appendMessage(response, 'bot');
-
-        // Re-append quick replies at the bottom so user can click other options
-        appendQuickReplies();
-
-      }, 800);
-    }
-
-    function appendMessage(text, sender) {
-      const bubble = document.createElement('div');
-      bubble.className = `chat-bubble ${sender}-message`;
-      bubble.innerHTML = text;
-      chatMessages.appendChild(bubble);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function appendLoading() {
-      const loading = document.createElement('div');
-      const id = 'loading-' + Date.now();
-      loading.id = id;
-      loading.className = 'chat-bubble bot-message chat-loading';
-      loading.innerHTML = '<span></span><span></span><span></span>';
-      chatMessages.appendChild(loading);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-      return id;
-    }
-
-    function removeLoading(id) {
-      const elem = document.getElementById(id);
-      if (elem) elem.remove();
-    }
-
-    function appendQuickReplies() {
-      const div = document.createElement('div');
-      div.className = 'ai-quick-replies';
-      div.innerHTML = `
-        <button class="quick-reply-btn" data-faq="target">💡 지원 자격 및 대상</button>
-        <button class="quick-reply-btn" data-faq="amount">💰 지원 금액 및 품목</button>
-        <button class="quick-reply-btn" data-faq="documents">📄 필수 제출 서류</button>
-        <button class="quick-reply-btn" data-faq="schedule">📅 신청 일정 및 방법</button>
-        <button class="quick-reply-btn" data-faq="contact">📞 고객센터 및 문의처</button>
-      `;
-      chatMessages.appendChild(div);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
   }
 
-  // --- 비회원 간편 문의 모달 연동 ---
+  chatMessages.addEventListener('click', (e) => {
+    const btn = e.target.closest('.quick-reply-btn');
+    if (btn) {
+      const faqType = btn.getAttribute('data-faq');
+      const question = btn.innerText;
+      handleUserMessage(question, faqType);
+    }
+  });
+
+  function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+    chatInput.value = '';
+    handleUserMessage(text);
+  }
+
+  if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      sendMessage();
+    }
+  });
+
+  const faqDatabase = {
+    target: "💡 <strong>지원 대상 및 자격 기준</strong><br><br>" +
+      "• <strong>대상자</strong>: 공고일 현재 경기도 내에 사업장을 두고 영업 중인 <strong>창업 3년 이상</strong>(사업자등록 기준) 소상공인 사업자입니다.<br>" +
+      "• <strong>소상공인 상시 근로자 기준</strong>:<br>" +
+      "  - 도소매업, 음식점, 숙박업, 서비스업: 5인 미만<br>" +
+      "  - 광업, 제조업, 건설업, 운수업: 10인 미만<br>" +
+      "• <strong>지원 제외 대상</strong>: 대기업 프랜차이즈 직영점, 사치향락 업종(유흥주점 등), 무등록/휴폐업자, 지방세 체납자, 최근 3년 이내 경기도 및 시·군 유사 지원사업 수혜자는 신청할 수 없습니다.",
+    amount: "💰 <strong>지원 금액 및 품목 안내</strong><br><br>" +
+      "• <strong>지원 한도</strong>: 업체당 <strong>최대 200만원 한도</strong> (공급가의 100% 지원, 부가세 10% 및 200만원 초과 금액은 본인 부담)<br>" +
+      "  * 예: 견적서 공급가액이 220만원인 경우, 지원금 200만원 + 본인부담 20만원 + 부가세 별도 납부<br>" +
+      "• <strong>지원 품목</strong>: 간판(불법 간판 제외), 썬팅, 투광기 중 <strong>최대 2개 품목 이하</strong> 선택 가능<br>" +
+      "• <strong>시공 주의사항</strong>: 반드시 <strong>선정 후 견적서 승인</strong>을 먼저 받은 다음 시공을 진행해야 합니다. 승인 전 <strong>사전 시공 시 지원 대상에서 제외(선정 취소)</strong>되므로 절대 주의 바랍니다.",
+    documents: "📄 <strong>제출 서류 안내</strong><br><br>" +
+      "• <strong>필수 기본 서류</strong>:<br>" +
+      "  1. 신청서 및 추진계획서 (점포 사진 첨부 필수)<br>" +
+      "  2. 개인신용정보 제공 동의서<br>" +
+      "  3. 시공계획서<br>" +
+      "• <strong>증빙 서류 (※ 경기바로 공공마이데이터 간편 신청 동의 시 제출 생략 가능)</strong>:<br>" +
+      "  4. 사업자등록증 사본 1부<br>" +
+      "  5. 최근 2개년 부가세 과세표준증명원(또는 면세사업자 수입금액증명원)<br>" +
+      "  6. 소득금액증명원 (직전년도 기준)<br>" +
+      "• <strong>가점 증빙 (해당자만 제출)</strong>: 표창장(도지사 등), 자영업아카데미 수료증, 취약계층 증명서 등",
+    schedule: "📅 <strong>접수 일정 및 방법 안내</strong><br><br>" +
+      "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong> (공고는 3. 18 발표)<br>" +
+      "• <strong>신청 방법</strong>:<br>" +
+      "  - <strong>온라인 신청</strong>: 경기바로 홈페이지(www.ggbaro.kr)에서 공공마이데이터 연동 접수<br>" +
+      "  - <strong>방문 신청</strong>: 경기도시장상권진흥원(경상원) 각 지역센터 영업시간 내 방문 접수 (제출 서류 상담 가능)<br>" +
+      "  - <strong>※ 주의</strong>: 우편 신청 및 온/오프라인 중복 신청은 불가능합니다. 1인 1건만 신청 가능합니다.",
+    contact: "📞 <strong>문의처 및 접수 지역센터</strong><br><br>" +
+      "• <strong>경상원 종합상담 콜센터</strong>: <strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
+      "• <strong>지역센터별 관할 구역</strong>:<br>" +
+      "  - 남부센터(수원 소재): 수원, 용인, 군포, 의왕, 과천<br>" +
+      "  - 남부센터(화성 소재): 화성, 오산, 평택, 안성<br>" +
+      "  - 남동센터(광주 소재): 광주, 성남, 여주, 이천<br>" +
+      "  - 남서센터(시흥 소재): 시흥, 안양, 안산, 광명, 부천<br>" +
+      "  - 북부센터(남양주 소재): 남양주, 의정부, 포천, 구리, 가평, 하남, 양평<br>" +
+      "  - 북서센터(파주 소재): 파주, 고양, 양주, 동두천, 연천, 김포"
+  };
+
+  function handleUserMessage(messageText, faqType = null) {
+    appendMessage(messageText, 'user');
+
+    const quickReplies = chatMessages.querySelector('.ai-quick-replies');
+    if (quickReplies) {
+      quickReplies.remove();
+    }
+
+    const loadingId = appendLoading();
+
+    setTimeout(() => {
+      removeLoading(loadingId);
+
+      let response = "";
+      if (faqType && faqDatabase[faqType]) {
+        response = faqDatabase[faqType];
+      } else {
+        const cleaned = messageText.toLowerCase().replace(/\s+/g, '');
+        if (cleaned.includes('대상') || cleaned.includes('조건') || cleaned.includes('자격') || cleaned.includes('제한') || cleaned.includes('제외') || cleaned.includes('누가') || cleaned.includes('기준')) {
+          response = faqDatabase.target;
+        } else if (cleaned.includes('금액') || cleaned.includes('한도') || cleaned.includes('비용') || cleaned.includes('얼마') || cleaned.includes('지원금') || cleaned.includes('썬팅') || cleaned.includes('투광기') || cleaned.includes('인테리어')) {
+          response = faqDatabase.amount;
+        } else if (cleaned.includes('서류') || cleaned.includes('준비') || cleaned.includes('제출') || cleaned.includes('증명원') || cleaned.includes('동의서')) {
+          response = faqDatabase.documents;
+        } else if (cleaned.includes('일정') || cleaned.includes('기간') || cleaned.includes('날짜') || cleaned.includes('언제') || cleaned.includes('방법') || cleaned.includes('접수') || cleaned.includes('신청')) {
+          response = faqDatabase.schedule;
+        } else if (cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('콜센터') || cleaned.includes('번호') || cleaned.includes('문의') || cleaned.includes('주소') || cleaned.includes('경상원')) {
+          response = faqDatabase.contact;
+        } else if (cleaned.includes('안녕')) {
+          response = "안녕하세요! 경기도 소상공인 경영환경개선사업 AI비서입니다. 😊 무엇이든 물어보세요.<br><br>💡 <strong>예시 질문 키워드</strong>:<br>• '지원 자격', '제외 대상'<br>• '지원 금액', '신청 비용'<br>• '필수 서류', '공공마이데이터'<br>• '신청 일정', '접수 방법'<br>• '고객센터', '지역센터 전화번호'";
+        } else {
+          response = "죄송합니다. 질문하신 내용에 대한 정확한 정보를 찾지 못했습니다. 😢<br><br>아래 주요 지원사업 키워드를 참고하여 간략히 질문해 주시면 상세히 답변해 드릴 수 있습니다!<br><br>• <strong>'지원 자격'</strong> (창업 3년 이상 소상공인 여부)<br>• <strong>'지원 금액'</strong> (최대 200만원 한도 및 품목)<br>• <strong>'필수 서류'</strong> (제출 생략 가능 서류 등)<br>• <strong>'신청 일정'</strong> (3월 31일 ~ 4월 13일 일정)<br>• <strong>'고객센터'</strong> (대표번호 1600-8001 및 지역센터)";
+        }
+      }
+
+      appendMessage(response, 'bot');
+      appendQuickReplies();
+    }, 800);
+  }
+
+  function appendMessage(text, sender) {
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${sender}-message`;
+    bubble.innerHTML = text;
+    chatMessages.appendChild(bubble);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function appendLoading() {
+    const loading = document.createElement('div');
+    const id = 'loading-' + Date.now();
+    loading.id = id;
+    loading.className = 'chat-bubble bot-message chat-loading';
+    loading.innerHTML = '<span></span><span></span><span></span>';
+    chatMessages.appendChild(loading);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return id;
+  }
+
+  function removeLoading(id) {
+    const elem = document.getElementById(id);
+    if (elem) elem.remove();
+  }
+
+  function appendQuickReplies() {
+    const div = document.createElement('div');
+    div.className = 'ai-quick-replies';
+    div.innerHTML = `
+      <button class="quick-reply-btn" data-faq="target">💡 지원 자격 및 대상</button>
+      <button class="quick-reply-btn" data-faq="amount">💰 지원 금액 및 품목</button>
+      <button class="quick-reply-btn" data-faq="documents">📄 필수 제출 서류</button>
+      <button class="quick-reply-btn" data-faq="schedule">📅 신청 일정 및 방법</button>
+      <button class="quick-reply-btn" data-faq="contact">📞 고객센터 및 문의처</button>
+    `;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+}
+
+// ==========================================
+// 11. Inquiry, Policy & Global Search Logic
+// ==========================================
+function initModalsAndSearch() {
   const inquiryModal = document.getElementById('inquiry-modal');
   const inquiryModalClose = document.getElementById('inquiry-modal-close');
   const inquiryForm = document.getElementById('inquiry-form');
@@ -3207,7 +3083,6 @@ function initMobileBottomNav() {
     inquiryModalClose.addEventListener('click', closeInquiryModal);
   }
 
-  // 하단 닫기 단추들도 클릭 핸들러 연동
   const extraInquiryCloseBtns = document.querySelectorAll('.inquiry-close-x-btn');
   extraInquiryCloseBtns.forEach(btn => {
     btn.addEventListener('click', closeInquiryModal);
@@ -3225,36 +3100,32 @@ function initMobileBottomNav() {
     inquiryForm.dataset.inquiryBound = 'true';
     inquiryForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const name = escapeHtml(document.getElementById('inquiry-name').value.trim());
-      const phone = escapeHtml(document.getElementById('inquiry-phone').value.trim());
-      const type = document.getElementById('inquiry-type').value;
-      const message = escapeHtml(document.getElementById('inquiry-message').value.trim());
+      const name = typeof escapeHtml === 'function' ? escapeHtml(document.getElementById('inquiry-name')?.value.trim()) : document.getElementById('inquiry-name')?.value.trim();
+      const phone = typeof escapeHtml === 'function' ? escapeHtml(document.getElementById('inquiry-phone')?.value.trim()) : document.getElementById('inquiry-phone')?.value.trim();
+      const type = document.getElementById('inquiry-type')?.value;
+      const message = typeof escapeHtml === 'function' ? escapeHtml(document.getElementById('inquiry-message')?.value.trim()) : document.getElementById('inquiry-message')?.value.trim();
 
       if (!name || !phone || !type || !message) {
         alert('필수 입력 항목을 모두 작성해 주세요.');
         return;
       }
 
-      // 성함 유효성 검사 (최소 2자 ~ 최대 20자)
       if (name.length < 2 || name.length > 20) {
         alert('성함은 최소 2자에서 최대 20자까지 입력해 주세요.');
         return;
       }
 
-      // 연락처 유효성 검사 (최소 9자 ~ 최대 15자)
       if (phone.length < 9 || phone.length > 15) {
         alert('연락처는 최소 9자에서 최대 15자까지 입력해 주세요.');
         return;
       }
 
-      // 연락처 형식 정규식 검증
       const phoneRegex = /^[0-9+\s-]+$/;
       if (!phoneRegex.test(phone)) {
         alert('연락처에는 숫자, 대시(-), 플러스(+) 및 공백만 입력할 수 있습니다.');
         return;
       }
 
-      // 문의내용 글자수 유효성 검사 (최대 300자)
       if (message.length > 300) {
         alert('문의 내용은 최대 300자까지 입력해 주세요.');
         return;
@@ -3273,12 +3144,10 @@ function initMobileBottomNav() {
       inquiries.push(newInquiry);
       localStorage.setItem('inquiries', JSON.stringify(inquiries));
 
-      // Supabase Sync
       if (window.SupabaseSync) {
         window.SupabaseSync.upsertInquiry(newInquiry);
       }
 
-      // 카카오톡 관리자 실시간 알림 발송
       if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyInquiry === 'function') {
         window.KakaoNotifier.notifyInquiry(newInquiry);
       }
@@ -3288,7 +3157,6 @@ function initMobileBottomNav() {
     });
   }
 
-  // 실시간 글자수 계산 및 동적 카운터 업데이트
   const inquiryMessage = document.getElementById('inquiry-message');
   const inquiryCharCount = document.getElementById('inquiry-char-count');
   if (inquiryMessage && inquiryCharCount) {
@@ -3311,7 +3179,6 @@ function initMobileBottomNav() {
     });
   }
 
-  // --- 약관 전문 데이터 정의 및 모달 제어 ---
   const LEGAL_POLICIES = {
     terms: `제1조 (목적)
 본 약관은 주식회사 가야애드(이하 "회사")가 제공하는 온라인 서비스(이하 "서비스")의 이용조건, 절차 및 회원과 회사 간의 권리와 의무 등 필요한 사항을 규정함을 목적으로 합니다.
@@ -3409,12 +3276,8 @@ function initMobileBottomNav() {
     policyModal.classList.add('active');
   };
 
-  if (policyModalClose) {
-    policyModalClose.addEventListener('click', closePolicyModal);
-  }
-  if (btnPolicyConfirm) {
-    btnPolicyConfirm.addEventListener('click', closePolicyModal);
-  }
+  if (policyModalClose) policyModalClose.addEventListener('click', closePolicyModal);
+  if (btnPolicyConfirm) btnPolicyConfirm.addEventListener('click', closePolicyModal);
   if (policyModal) {
     policyModal.addEventListener('click', (e) => {
       if (e.target === policyModal) {
@@ -3423,31 +3286,14 @@ function initMobileBottomNav() {
     });
   }
 
-  // 푸터 약관 링크 클릭 리스너 연결
   const linkPrivacy = document.getElementById('link-policy-privacy');
   const linkTerms = document.getElementById('link-policy-terms');
   const linkConsent = document.getElementById('link-policy-consent');
 
-  if (linkPrivacy) {
-    linkPrivacy.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.openPolicyModal('privacy');
-    });
-  }
-  if (linkTerms) {
-    linkTerms.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.openPolicyModal('terms');
-    });
-  }
-  if (linkConsent) {
-    linkConsent.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.openPolicyModal('consent');
-    });
-  }
+  if (linkPrivacy) linkPrivacy.addEventListener('click', (e) => { e.preventDefault(); window.openPolicyModal('privacy'); });
+  if (linkTerms) linkTerms.addEventListener('click', (e) => { e.preventDefault(); window.openPolicyModal('terms'); });
+  if (linkConsent) linkConsent.addEventListener('click', (e) => { e.preventDefault(); window.openPolicyModal('consent'); });
 
-  // --- 통합 검색 모달 (상호로 검색 / 번호로 검색) ---
   const globalSearchModal = document.getElementById('global-search-modal');
   const searchModalClose = document.getElementById('search-modal-close');
   const searchTabName = document.getElementById('search-tab-name');
@@ -3459,14 +3305,13 @@ function initMobileBottomNav() {
   const searchContentArea = document.getElementById('search-content-area');
   const searchResultsArea = document.getElementById('search-results-area');
 
-  let currentSearchMode = 'name'; // 'name' 또는 'code'
+  let currentSearchMode = 'name';
 
   function openGlobalSearchModal() {
     if (!globalSearchModal) return;
 
     const user = typeof getActiveUser === 'function' ? getActiveUser() : null;
 
-    // 비회원 체크
     if (!user) {
       if (searchAuthBlock) searchAuthBlock.style.display = 'block';
       if (searchContentArea) searchContentArea.style.display = 'none';
@@ -3533,14 +3378,9 @@ function initMobileBottomNav() {
     if (globalSearchInput) globalSearchInput.focus();
   }
 
-  if (searchTabName) {
-    searchTabName.addEventListener('click', () => setSearchMode('name'));
-  }
-  if (searchTabCode) {
-    searchTabCode.addEventListener('click', () => setSearchMode('code'));
-  }
+  if (searchTabName) searchTabName.addEventListener('click', () => setSearchMode('name'));
+  if (searchTabCode) searchTabCode.addEventListener('click', () => setSearchMode('code'));
 
-  // 상단 헤더 및 모바일 바텀바 검색 링크 연동
   const navSearchBtn = document.getElementById('nav-search-btn');
   if (navSearchBtn) {
     navSearchBtn.addEventListener('click', (e) => {
@@ -3548,6 +3388,7 @@ function initMobileBottomNav() {
       openGlobalSearchModal();
     });
   }
+
   const mNavSearch = document.getElementById('m-nav-search');
   if (mNavSearch) {
     mNavSearch.addEventListener('click', (e) => {
@@ -3556,19 +3397,17 @@ function initMobileBottomNav() {
     });
   }
 
-  if (searchModalClose) {
-    searchModalClose.addEventListener('click', closeGlobalSearchModal);
-  }
+  if (searchModalClose) searchModalClose.addEventListener('click', closeGlobalSearchModal);
   document.querySelectorAll('.search-modal-close-btn').forEach(btn => {
     btn.addEventListener('click', closeGlobalSearchModal);
   });
+
   if (globalSearchModal) {
     globalSearchModal.addEventListener('click', (e) => {
       if (e.target === globalSearchModal) closeGlobalSearchModal();
     });
   }
 
-  // 검색 모달 내 회원가입/로그인 이동 버튼
   document.querySelectorAll('.btn-search-go-auth').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -3583,7 +3422,6 @@ function initMobileBottomNav() {
     });
   });
 
-  // 검색 실행
   if (globalSearchForm) {
     globalSearchForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -3599,7 +3437,6 @@ function initMobileBottomNav() {
         return;
       }
 
-      // 글자수 유효성 검사
       if (currentSearchMode === 'name' && rawQuery.length > 25) {
         alert('상호명 검색은 최대 25자까지 입력 가능합니다.');
         return;
@@ -3610,14 +3447,11 @@ function initMobileBottomNav() {
       }
 
       const query = rawQuery.toLowerCase();
-
       const apps = JSON.parse(localStorage.getItem('applications')) || [];
       const users = JSON.parse(localStorage.getItem('users')) || [];
 
-      // 모든 신청 내역 및 영업물건 수집
       const allRecords = [];
 
-      // 1. 일반 신청 건
       apps.forEach(app => {
         allRecords.push({
           id: app.id,
@@ -3633,11 +3467,9 @@ function initMobileBottomNav() {
         });
       });
 
-      // 2. 영업물건 등록 건
       users.forEach(u => {
         if (u.items && Array.isArray(u.items)) {
           u.items.forEach(item => {
-            // 중복 방지 (이미 apps에 있는 ID 제외)
             if (!allRecords.some(r => r.id === item.id)) {
               allRecords.push({
                 id: item.id,
@@ -3656,7 +3488,6 @@ function initMobileBottomNav() {
         }
       });
 
-      // 검색 조건에 따른 필터링
       const matched = allRecords.filter(r => {
         if (currentSearchMode === 'name') {
           return r.storeName.toLowerCase().includes(query);
@@ -3686,7 +3517,7 @@ function initMobileBottomNav() {
         } else if (item.status === 'rejected' || item.status === '반려됨') {
           statusBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-xmark"></i> 반려됨</span>';
         } else if (item.status) {
-          statusBadge = `<span style="background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">${escapeHtml(item.status)}</span>`;
+          statusBadge = `<span style="background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">${typeof escapeHtml === 'function' ? escapeHtml(item.status) : item.status}</span>`;
         }
 
         const card = document.createElement('div');
@@ -3702,16 +3533,16 @@ function initMobileBottomNav() {
         card.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
             <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">
-              ${escapeHtml(item.storeName)}
-              <span style="font-size: 0.7rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 6px; border-radius: 4px; margin-left: 4px;">${escapeHtml(String(item.id))}</span>
+              ${typeof escapeHtml === 'function' ? escapeHtml(item.storeName) : item.storeName}
+              <span style="font-size: 0.7rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 6px; border-radius: 4px; margin-left: 4px;">${typeof escapeHtml === 'function' ? escapeHtml(String(item.id)) : String(item.id)}</span>
             </div>
             <div>${statusBadge}</div>
           </div>
           <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
-            <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> ${escapeHtml(item.storeAddress)}</div>
+            <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> ${typeof escapeHtml === 'function' ? escapeHtml(item.storeAddress) : item.storeAddress}</div>
             <div style="display: flex; gap: 12px; margin-top: 3px; font-size: 0.74rem; color: #64748b;">
-              <span><i class="fa-solid fa-user-shield"></i> 신청인: ${escapeHtml(maskedName)}</span>
-              ${maskedPhone ? `<span><i class="fa-solid fa-phone"></i> ${escapeHtml(maskedPhone)}</span>` : ''}
+              <span><i class="fa-solid fa-user-shield"></i> 신청인: ${typeof escapeHtml === 'function' ? escapeHtml(maskedName) : maskedName}</span>
+              ${maskedPhone ? `<span><i class="fa-solid fa-phone"></i> ${typeof escapeHtml === 'function' ? escapeHtml(maskedPhone) : maskedPhone}</span>` : ''}
             </div>
           </div>
         `;
@@ -3720,4 +3551,3 @@ function initMobileBottomNav() {
     });
   }
 }
-
