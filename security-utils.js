@@ -1075,11 +1075,33 @@ window.SupabaseSync = {
     return false;
   },
 
-  // 3. 회원 삭제
+  // 3. 회원 영구 삭제 (외래키 제약조건 23503 사전 방어 및 삭제 캐시 영구 관리)
   async deleteUser(uid) {
-    if (!window.supabaseClient || !uid) return;
+    if (!uid) return;
     try {
-      await window.supabaseClient.from('users').delete().eq('id', uid);
+      // 1) 로컬 삭제 목록에 등록하여 추후 syncAllData에서 부활 방지
+      let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+      if (!deletedIds.includes(String(uid))) {
+        deletedIds.push(String(uid));
+        localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
+      }
+
+      if (window.supabaseClient) {
+        // 2) 외래키 제약조건(applications, inquiries 등) 사전 null 해제
+        try {
+          await window.supabaseClient.from('applications').update({ user_id: null }).eq('user_id', String(uid));
+        } catch (eApp) {}
+
+        try {
+          await window.supabaseClient.from('inquiries').update({ user_id: null }).eq('user_id', String(uid));
+        } catch (eInq) {}
+
+        // 3) users 테이블에서 영구 삭제
+        const { error } = await window.supabaseClient.from('users').delete().eq('id', String(uid));
+        if (error) {
+          console.warn('Supabase deleteUser 1st attempt error:', error.message);
+        }
+      }
     } catch (e) {
       console.error('Supabase deleteUser error:', e);
     }
@@ -1221,12 +1243,19 @@ window.SupabaseSync = {
     try {
       // --- A. 회원(Users) 동기화 ---
       let localUsers = JSON.parse(localStorage.getItem('users')) || [];
+      const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
       const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
 
       if (!usersErr && Array.isArray(supaUsers)) {
-        // 1) Supabase에 있는 회원 데이터를 로컬스토리지에 반영/병합
-        supaUsers.forEach(su => {
+        // 1) Supabase에 있는 회원 데이터를 로컬스토리지에 반영/병합 (삭제된 회원은 부활 차단)
+        for (const su of supaUsers) {
           const mapped = this.mapDbToUser(su);
+          if (deletedIds.includes(String(mapped.id))) {
+            // DB에 아직 남아있는 삭제된 회원은 DB에서 다시 확실히 제거
+            window.supabaseClient.from('users').delete().eq('id', String(mapped.id)).then(() => {});
+            continue;
+          }
+
           const idx = localUsers.findIndex(u => u.id === mapped.id);
 
           if (idx === -1) {
@@ -1300,7 +1329,7 @@ window.SupabaseSync = {
               } catch (eSession) {}
             }
           }
-        });
+        }
 
         // 2) 로컬에만 있는 회원(모바일 등 로컬 가입자)을 Supabase로 업로드
         for (const lu of localUsers) {

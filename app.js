@@ -2281,7 +2281,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         currentUsers = currentUsers.filter(u => u.id !== uid);
                         localStorage.setItem('users', JSON.stringify(currentUsers));
 
-                        if (window.supabaseClient) {
+                        if (window.SupabaseSync) {
+                            window.SupabaseSync.deleteUser(uid);
+                        } else if (window.supabaseClient) {
                             window.supabaseClient.from('users').delete().eq('id', uid).then(({ error }) => {
                                 if (error) console.error('Supabase user delete error:', error.message);
                             });
