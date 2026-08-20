@@ -1039,92 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fileInput.click();
     }
 
-    // 1. 최근 신청한 업체 (최신 2개 업체 카드)
-    function renderRecentBizItemsMob() {
-        const recentListContainer = document.getElementById('recent-biz-items-mobile');
-        if (!recentListContainer) return;
-
-        let items = activeUser.items || [];
-        const apps = JSON.parse(localStorage.getItem('applications')) || [];
-
-        if (items.length === 0) {
-            recentListContainer.innerHTML = '<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.88rem; background: #f8fafc; border-radius: 8px;">최근 신청된 업체가 없습니다.</p>';
-            return;
-        }
-
-        const recentItems = [...items].slice(-2).reverse();
-        recentListContainer.innerHTML = '';
-
-        recentItems.forEach(item => {
-            const matchingApp = apps.find(app => String(app.id) === String(item.id) || String(app.id) === String(item.appRefId));
-            const storeName = item.name || (matchingApp ? (matchingApp.storeName || matchingApp.shopName) : '') || '-';
-            const storeAddress = item.address || (matchingApp ? matchingApp.storeAddress : '') || '-';
-            const applyDate = formatDateOnly(item.registeredAt || item.appliedAt || (matchingApp ? matchingApp.appliedAt : '') || new Date());
-            const ownerName = (matchingApp ? matchingApp.ownerName : '') || item.ownerName || item.name || '-';
-            const ownerPhone = item.phone || (matchingApp ? matchingApp.ownerPhone : '') || '-';
-
-            // Collect photos (up to 20)
-            let photoList = [];
-            if (item.photos && Array.isArray(item.photos)) {
-                photoList = photoList.concat(item.photos);
-            }
-            if (matchingApp) {
-                if (matchingApp.fileData && !photoList.includes(matchingApp.fileData)) {
-                    photoList.unshift(matchingApp.fileData);
-                }
-                if (matchingApp.photos && Array.isArray(matchingApp.photos)) {
-                    matchingApp.photos.forEach(p => {
-                        if (p && !photoList.includes(p)) photoList.push(p);
-                    });
-                }
-            }
-            photoList = photoList.filter(Boolean).slice(0, 20);
-
-            let photosHtml = '';
-            if (photoList.length > 0) {
-                photosHtml = `<div class="biz-card-photos" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;">`;
-                photoList.forEach(src => {
-                    photosHtml += `
-                        <a href="${src}" target="_blank" style="display: block; width: 38px; height: 38px; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; flex-shrink: 0; background: #f8fafc;">
-                            <img src="${src}" alt="사진" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='간판지원단 로고-2.png'">
-                        </a>
-                    `;
-                });
-                photosHtml += `</div>`;
-            }
-
-            const card = document.createElement('div');
-            card.className = 'biz-card-mob';
-            card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
-            card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                    <div>
-                        <h5 style="font-size: 1.36rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                            ${escapeHtml(storeName)}
-                            ${item.id ? `<span style="font-size: 0.94rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); padding: 2px 8px; border-radius: 4px; font-family: monospace;">${escapeHtml(String(item.id))}</span>` : ''}
-                        </h5>
-                    </div>
-                    <div style="display: flex; gap: 6px; flex-shrink: 0; margin-left: 8px;">
-                        <span style="font-size: 0.94rem; font-weight: 700; background: #ecfdf5; color: #10b981; padding: 3px 8px; border-radius: 4px;">${escapeHtml(item.receiptStatus || '접수예정')}</span>
-                        <span style="font-size: 0.94rem; font-weight: 700; background: #eef2ff; color: #6366f1; padding: 3px 8px; border-radius: 4px;">${escapeHtml(item.progressStatus || '지원대기중')}</span>
-                    </div>
-                </div>
-                <p style="font-size: 1.1rem; color: var(--text-secondary); margin: 0 0 6px 0; line-height: 1.4;">
-                    <i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> ${escapeHtml(storeAddress)}
-                </p>
-                <p style="font-size: 1.07rem; color: var(--text-secondary); margin: 0 0 5px 0;">
-                    <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 600;">${escapeHtml(applyDate)}</span>
-                </p>
-                <p style="font-size: 1.07rem; color: var(--text-secondary); margin: 0 0 6px 0;">
-                    <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 700;">${escapeHtml(ownerName)}</span> <span style="color: var(--text-secondary); font-size: 1.02rem;">(${escapeHtml(ownerPhone)})</span>
-                </p>
-                ${photosHtml}
-            `;
-            recentListContainer.appendChild(card);
-        });
-    }
-
-    // 2. 내 온라인 간편 지원 신청 내역 (모바일 카드)
+    // 1. 내 온라인 간편 지원 신청 내역 (모바일 카드)
     function renderUserApplicationsMob() {
         const userAppsContainer = document.getElementById('user-apps-list-mobile');
         if (!userAppsContainer) return;
@@ -1435,7 +1350,6 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('activeUser', JSON.stringify(activeUser));
         }
 
-        renderRecentBizItemsMob();
         renderUserApplicationsMob();
         renderBizRegisteredItemsMob();
     }
