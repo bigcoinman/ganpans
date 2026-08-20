@@ -3,12 +3,26 @@
 // --- 3초 간편문의 상태 변경 및 삭제 글로벌 핸들러 (최상단 즉시 정의) ---
 window.toggleInquiryStatus = function(id, btnEl) {
   let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
-  const inqIndex = currentInquiries.findIndex(i => String(i.id) === String(id));
+  let inqIndex = currentInquiries.findIndex(i => String(i.id) === String(id));
+  
+  // id 매칭 실패 시 전화번호/이름으로 2차 매칭
+  if (inqIndex === -1 && btnEl) {
+    const row = btnEl.closest('tr');
+    if (row) {
+      const phoneEl = row.querySelector('a[href^="tel:"]');
+      const phoneText = phoneEl ? phoneEl.textContent.replace(/[^0-9]/g, '') : '';
+      if (phoneText) {
+        inqIndex = currentInquiries.findIndex(i => (i.phone || '').replace(/[^0-9]/g, '') === phoneText);
+      }
+    }
+  }
+
   if (inqIndex >= 0) {
-    const curStatus = currentInquiries[inqIndex].status;
+    const target = currentInquiries[inqIndex];
+    const curStatus = target.status;
     const isNowResolved = (curStatus !== 'resolved' && curStatus !== 'completed' && curStatus !== '확인완료' && curStatus !== '상담완료');
     const newStatus = isNowResolved ? 'resolved' : 'pending';
-    currentInquiries[inqIndex].status = newStatus;
+    target.status = newStatus;
     localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
 
     // 0초 낙관적 DOM 즉시 갱신 (사용자 클릭 즉각 반응)
@@ -29,11 +43,12 @@ window.toggleInquiryStatus = function(id, btnEl) {
     }
 
     // 백그라운드 DB 동기화 (직접 update + upsert 병행)
-    if (window.supabaseClient) {
-      window.supabaseClient.from('inquiries').update({ status: newStatus }).eq('id', String(id)).then(() => {});
+    const targetId = target.id || id;
+    if (window.supabaseClient && targetId) {
+      window.supabaseClient.from('inquiries').update({ status: newStatus }).eq('id', String(targetId)).then(() => {});
     }
     if (window.SupabaseSync) {
-      window.SupabaseSync.upsertInquiry(currentInquiries[inqIndex]);
+      window.SupabaseSync.upsertInquiry(target);
     }
   }
 };
@@ -42,7 +57,21 @@ window.deleteInquiryAdmin = function(id, btnEl) {
   if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
 
   let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
-  currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
+  let inqToDelete = currentInquiries.find(i => String(i.id) === String(id));
+  
+  if (!inqToDelete && btnEl) {
+    const row = btnEl.closest('tr');
+    if (row) {
+      const phoneEl = row.querySelector('a[href^="tel:"]');
+      const phoneText = phoneEl ? phoneEl.textContent.replace(/[^0-9]/g, '') : '';
+      if (phoneText) {
+        inqToDelete = currentInquiries.find(i => (i.phone || '').replace(/[^0-9]/g, '') === phoneText);
+      }
+    }
+  }
+
+  const deleteTargetId = inqToDelete ? inqToDelete.id : id;
+  currentInquiries = currentInquiries.filter(i => String(i.id) !== String(deleteTargetId));
   localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
 
   if (btnEl) {
@@ -50,13 +79,40 @@ window.deleteInquiryAdmin = function(id, btnEl) {
     if (row) row.remove();
   }
 
-  if (window.SupabaseSync) {
-    window.SupabaseSync.deleteInquiry(id);
+  if (window.SupabaseSync && deleteTargetId) {
+    window.SupabaseSync.deleteInquiry(deleteTargetId);
   }
 
   alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
   if (typeof window.renderInquiriesList === 'function') {
     window.renderInquiriesList();
+  }
+};
+
+// --- 회원 강제 탈퇴/삭제 글로벌 핸들러 ---
+window.deleteUserAdmin = function(uid, btnEl) {
+  if (!uid) return;
+  if (!confirm(`[주의] 회원 ID [${uid}]을(를) 정말로 강제 탈퇴/삭제 처리하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+
+  let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+  curUsers = curUsers.filter(u => String(u.id) !== String(uid));
+  localStorage.setItem('users', JSON.stringify(curUsers));
+
+  if (btnEl) {
+    const row = btnEl.closest('tr');
+    if (row) row.remove();
+  }
+
+  if (window.SupabaseSync) {
+    window.SupabaseSync.deleteUser(uid);
+  }
+
+  alert(`회원 [${uid}]이(가) 정상적으로 탈퇴/삭제되었습니다.`);
+  if (typeof window.renderAllUsersList === 'function') {
+    window.renderAllUsersList();
+  }
+  if (typeof window.renderManagerPanel === 'function') {
+    window.renderManagerPanel();
   }
 };
 
@@ -1359,7 +1415,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const deleteBtn = u.role === 'admin' 
         ? '<span style="color:#cbd5e1; font-size:0.75rem;">-</span>'
-        : `<button class="btn btn-sm btn-delete-user-admin" data-uid="${u.id}" style="padding: 4px 8px; font-size: 0.72rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer;"><i class="fa-solid fa-trash-can"></i> 삭제</button>`;
+        : `<button type="button" class="btn btn-sm btn-delete-user-admin" onclick="window.deleteUserAdmin('${escapeHtml(u.id)}', this)" style="padding: 4px 8px; font-size: 0.72rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer;"><i class="fa-solid fa-trash-can"></i> 삭제</button>`;
 
       const userJoinDate = typeof formatUserDate === 'function' ? formatUserDate(u.createdAt || u.created_at) : (u.createdAt || u.created_at || '-');
 
@@ -1384,27 +1440,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (paginationContainer) {
       paginationContainer.innerHTML = renderPaginationControls(totalCount, allUsersPerPage, allUsersCurrentPage, 'window.changeAllUsersPage');
     }
-
-    // Delete user listener
-    allUsersTableBody.querySelectorAll('.btn-delete-user-admin').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const uid = e.target.closest('button').dataset.uid;
-        if (!confirm(`[주의] 회원 ID [${uid}]을(를) 정말로 강제 탈퇴/삭제 처리하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
-
-        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
-        curUsers = curUsers.filter(u => u.id !== uid);
-        localStorage.setItem('users', JSON.stringify(curUsers));
-
-        if (window.SupabaseSync) {
-          window.SupabaseSync.deleteUser(uid);
-        }
-
-        alert(`회원 [${uid}]이(가) 정상적으로 탈퇴/삭제되었습니다.`);
-        renderAllUsersList();
-        renderManagerPanel();
-      });
-    });
   };
+  window.renderAllUsersList = renderAllUsersList;
 
   // 회원 검색 이벤트 바인딩
   const searchAllUsersInput = document.getElementById('search-all-users-input');

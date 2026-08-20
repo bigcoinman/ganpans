@@ -1,5 +1,84 @@
 // app.js - Mobile App Shell & Interactive State Synchronizer
 
+// --- 모바일 전역 3초 간편문의 상태 변경 및 삭제 핸들러 (최상단 즉시 정의) ---
+window.toggleInquiryStatusMob = function(id, btnEl) {
+    let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+    let inqIndex = currentInquiries.findIndex(i => String(i.id) === String(id));
+    if (inqIndex === -1 && btnEl) {
+        const card = btnEl.closest('.admin-inquiry-card') || btnEl.closest('div');
+        if (card) {
+            const phoneEl = card.querySelector('a[href^="tel:"]');
+            const phoneText = phoneEl ? phoneEl.textContent.replace(/[^0-9]/g, '') : '';
+            if (phoneText) {
+                inqIndex = currentInquiries.findIndex(i => (i.phone || '').replace(/[^0-9]/g, '') === phoneText);
+            }
+        }
+    }
+
+    if (inqIndex >= 0) {
+        const target = currentInquiries[inqIndex];
+        const curStatus = target.status;
+        const isNowResolved = (curStatus !== 'resolved' && curStatus !== 'completed' && curStatus !== '확인완료' && curStatus !== '상담완료');
+        const newStatus = isNowResolved ? 'resolved' : 'pending';
+        target.status = newStatus;
+        localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+
+        if (btnEl) {
+            btnEl.style.background = isNowResolved ? '#f1f5f9' : '#15803d';
+            btnEl.style.color = isNowResolved ? '#475569' : '#ffffff';
+            btnEl.innerHTML = `<i class="fa-solid ${isNowResolved ? 'fa-rotate-left' : 'fa-check'}"></i> ${isNowResolved ? '대기로 변경' : '상담 완료'}`;
+        }
+
+        const targetId = target.id || id;
+        if (window.supabaseClient && targetId) {
+            window.supabaseClient.from('inquiries').update({ status: newStatus }).eq('id', String(targetId)).then(() => {});
+        }
+        if (window.SupabaseSync) {
+            window.SupabaseSync.upsertInquiry(target);
+        }
+        if (typeof renderAdminDashboardMob === 'function') {
+            renderAdminDashboardMob(true);
+        }
+    }
+};
+
+window.deleteInquiryAdminMob = function(id, btnEl) {
+    if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
+    let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+    currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
+    localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+    if (window.SupabaseSync) {
+        window.SupabaseSync.deleteInquiry(id);
+    }
+    alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
+    if (typeof renderAdminDashboardMob === 'function') {
+        renderAdminDashboardMob(true);
+    }
+};
+
+window.deleteUserAdminMob = function(uid, btnEl) {
+    if (!uid) return;
+    if (!confirm(`[주의] 회원 ID [${uid}]을(를) 정말로 강제 탈퇴/삭제 처리하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+
+    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    curUsers = curUsers.filter(u => String(u.id) !== String(uid));
+    localStorage.setItem('users', JSON.stringify(curUsers));
+
+    if (btnEl) {
+        const card = btnEl.closest('.user-card-mob');
+        if (card) card.remove();
+    }
+
+    if (window.SupabaseSync) {
+        window.SupabaseSync.deleteUser(uid);
+    }
+
+    alert(`회원 [${uid}]이(가) 정상적으로 탈퇴/삭제되었습니다.`);
+    if (typeof renderAdminDashboardMob === 'function') {
+        renderAdminDashboardMob(true);
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- State Variables ---
 
