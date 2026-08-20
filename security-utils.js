@@ -930,6 +930,7 @@ window.SupabaseSync = {
       construction_status: app.constructionStatus || app.construction_status || 'none',
       construction_photos: app.constructionPhotos || [],
       construction_invoice: app.invoicePhotos ? (app.invoicePhotos[0] || null) : (app.construction_invoice || null),
+      memo: JSON.stringify({ isBizItem: !!app.isBizItem, receiptStatus: app.receiptStatus || '접수예정' }),
       applied_at: app.appliedAt || app.created_at || new Date().toISOString()
     };
   },
@@ -960,7 +961,8 @@ window.SupabaseSync = {
       sign_type: app.signType || app.sign_type || '간판지원신청',
       image_url: photoData || app.fileName || null,
       referrer_code: app.referrerCode || app.referrer_code || '',
-      status: app.status || 'pending'
+      status: app.status || 'pending',
+      memo: JSON.stringify({ isBizItem: !!app.isBizItem, receiptStatus: app.receiptStatus || '접수예정' })
     };
   },
 
@@ -995,6 +997,18 @@ window.SupabaseSync = {
 
     const photoName = (!fileData && dbApp.image_url) ? dbApp.image_url : (dbApp.file_name || '현장사진.jpg');
 
+    let isBizItem = false;
+    let receiptStatus = '접수예정';
+    if (dbApp.memo) {
+      try {
+        const parsedMemo = typeof dbApp.memo === 'string' ? JSON.parse(dbApp.memo) : dbApp.memo;
+        if (parsedMemo && typeof parsedMemo === 'object') {
+          if (parsedMemo.isBizItem !== undefined) isBizItem = Boolean(parsedMemo.isBizItem);
+          if (parsedMemo.receiptStatus) receiptStatus = parsedMemo.receiptStatus;
+        }
+      } catch (e) {}
+    }
+
     return {
       id: String(dbApp.id),
       userId: dbApp.user_id,
@@ -1010,6 +1024,8 @@ window.SupabaseSync = {
       appliedAt: dbApp.applied_at || dbApp.created_at || new Date().toISOString(),
       status: dbApp.status || 'pending',
       referrerCode: dbApp.referrer_code || '',
+      isBizItem: isBizItem,
+      receiptStatus: receiptStatus,
       assignedConstructorId: dbApp.assigned_constructor_id || '',
       assignedConstructorName: dbApp.assigned_constructor_name || '',
       constructionStatus: dbApp.construction_status || 'none',

@@ -174,6 +174,142 @@ window.deleteApplicationAdmin = function(appId, btnEl) {
   }
 };
 
+// --- [영업물건으로 변경] 글로벌 핸들러 (PC웹 최상단 선언) ---
+window.toggleBizItem = function(appId) {
+  let activeU = typeof getActiveUser === 'function' ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')));
+  if (!activeU || activeU.role !== 'admin') {
+    alert('최고 관리자만 영업물건으로 변경/해제할 수 있습니다.');
+    return;
+  }
+
+  let apps = JSON.parse(localStorage.getItem('applications')) || [];
+  const appIndex = apps.findIndex(a => String(a.id) === String(appId));
+  if (appIndex === -1) return;
+
+  const app = apps[appIndex];
+  const isNowBizItem = !app.isBizItem;
+  app.isBizItem = isNowBizItem;
+  apps[appIndex] = app;
+  localStorage.setItem('applications', JSON.stringify(apps));
+
+  let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+
+  if (isNowBizItem) {
+    // 영업물건으로 등록: 대상 영업자 찾기
+    let targetUser = null;
+    const refCode = String(app.referrerCode || '').trim().toLowerCase();
+    const appUser = String(app.userId || '').trim().toLowerCase();
+
+    if (refCode) {
+      targetUser = curUsers.find(u => 
+        (u.role === 'business' || u.role === 'admin') && 
+        ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
+         (u.id && String(u.id).trim().toLowerCase() === refCode) ||
+         (u.name && String(u.name).trim().toLowerCase() === refCode))
+      );
+    }
+    if (!targetUser && appUser) {
+      targetUser = curUsers.find(u => 
+        (u.role === 'business' || u.role === 'admin') && 
+        (u.id && String(u.id).trim().toLowerCase() === appUser)
+      );
+    }
+    if (!targetUser) {
+      targetUser = curUsers.find(u => u.role === 'business') || curUsers.find(u => u.role === 'admin');
+    }
+
+    if (targetUser) {
+      targetUser.items = targetUser.items || [];
+      const existingItemIdx = targetUser.items.findIndex(it => 
+        String(it.id) === String(app.id) || 
+        String(it.appRefId) === String(app.id) ||
+        (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()))
+      );
+      const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
+      const bizItem = {
+        id: app.id,
+        name: app.storeName || app.shopName || app.ownerName || '영업물건',
+        phone: app.ownerPhone || '',
+        address: app.storeAddress || '',
+        photosCount: photosList.length,
+        receiptStatus: app.receiptStatus || '접수예정',
+        progressStatus: (app.status === 'approved' ? '승인 완료' : (app.status === 'rejected' ? '반려됨' : (app.status === 'giveup' ? '지원사업 포기' : '지원대기중'))),
+        photos: photosList,
+        appRefId: app.id
+      };
+
+      if (existingItemIdx >= 0) {
+        targetUser.items[existingItemIdx] = { ...targetUser.items[existingItemIdx], ...bizItem };
+      } else {
+        targetUser.items.unshift(bizItem);
+      }
+
+      curUsers = curUsers.map(u => u.id === targetUser.id ? targetUser : u);
+      localStorage.setItem('users', JSON.stringify(curUsers));
+
+      if (activeU && activeU.id === targetUser.id) {
+        activeU.items = targetUser.items;
+        localStorage.setItem('activeUser', JSON.stringify(activeU));
+      }
+
+      if (window.SupabaseSync) {
+        window.SupabaseSync.updateUser(targetUser.id, { items: targetUser.items });
+      }
+    }
+
+    alert(`[${app.storeName || app.ownerName}] 건이 '영업물건'으로 변경되었습니다.\n영업물건 진행사항 메뉴로 실시간 연동됩니다.`);
+  } else {
+    // 영업물건에서 해제
+    curUsers = curUsers.map(u => {
+      if (u.items && u.items.length > 0) {
+        const filteredItems = u.items.filter(it => {
+          const matchId = String(it.id) === String(app.id);
+          const matchAppRef = String(it.appRefId) === String(app.id);
+          const matchName = (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()));
+          const matchAddr = (it.address && app.storeAddress && String(it.address).trim() === String(app.storeAddress).trim());
+          return !matchId && !matchAppRef && !matchName && !matchAddr;
+        });
+        return { ...u, items: filteredItems };
+      }
+      return u;
+    });
+    localStorage.setItem('users', JSON.stringify(curUsers));
+
+    if (activeU && (activeU.role === 'business' || activeU.role === 'admin')) {
+      const myUser = curUsers.find(u => u.id === activeU.id);
+      if (myUser) {
+        activeU.items = myUser.items || [];
+        localStorage.setItem('activeUser', JSON.stringify(activeU));
+      }
+    }
+
+    if (window.SupabaseSync) {
+      curUsers.forEach(u => {
+        if (u.role === 'business' || u.role === 'admin') {
+          window.SupabaseSync.updateUser(u.id, { items: u.items || [] });
+        }
+      });
+    }
+
+    alert(`[${app.storeName || app.ownerName}] 건의 '영업물건' 등록이 해제되었습니다.\n영업물건 진행사항 목록에서 즉시 제거되었습니다.`);
+  }
+
+  if (window.SupabaseSync) {
+    window.SupabaseSync.upsertApplication(app);
+  }
+
+  // 실시간 화면 즉시 갱신
+  if (typeof window.renderApplicationsList === 'function') {
+    window.renderApplicationsList();
+  }
+  if (typeof window.renderManagerPanel === 'function') {
+    window.renderManagerPanel();
+  }
+  if (typeof window.updateSessionUI === 'function') {
+    window.updateSessionUI();
+  }
+};
+
 // --- Collapsible Sections Toggle for PC Admin Dashboard (Global Definition) ---
 function toggleAdminSection(containerId, headerEl, event) {
   if (event) {
@@ -584,6 +720,23 @@ document.addEventListener('DOMContentLoaded', () => {
       renderUserApplicationsList();
     } else if (activeUser) {
       renderUserApplicationsList();
+    }
+  });
+
+  // 다른 탭/창에서 데이터 변경 시 0초 즉각 갱신
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'applications' || e.key === 'users') {
+      users = JSON.parse(localStorage.getItem('users')) || [];
+      applications = JSON.parse(localStorage.getItem('applications')) || [];
+      if (activeUser && activeUser.role === 'admin') {
+        renderApplicationsList();
+        renderManagerPanel();
+        renderAdminStats();
+      } else if (activeUser && activeUser.role === 'business') {
+        renderBusinessDashboard();
+        renderUserApplicationsList();
+        renderBizRegisteredTable();
+      }
     }
   });
 
@@ -2771,11 +2924,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // 2. [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
       if (app.isBizItem) {
         actionButtons += `
-          <button class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; height: 30px;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
+          <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="window.toggleBizItem('${app.id}'); return false;" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; height: 30px;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
         `;
       } else {
         actionButtons += `
-          <button class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" style="padding: 5px 10px; font-size: 0.75rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="클릭 시 영업물건(진흥원 접수)으로 이동/등록"><i class="fa-solid fa-toggle-off"></i> 영업물건으로 변경</button>
+          <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="window.toggleBizItem('${app.id}'); return false;" style="padding: 5px 10px; font-size: 0.75rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="클릭 시 영업물건(진흥원 접수)으로 이동/등록"><i class="fa-solid fa-toggle-off"></i> 영업물건으로 변경</button>
         `;
       }
       

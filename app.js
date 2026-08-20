@@ -2228,6 +2228,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 다른 탭/창에서 데이터 변경 시 모바일 화면 0초 즉각 갱신
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'applications' || e.key === 'users') {
+            users = JSON.parse(localStorage.getItem('users')) || [];
+            applications = JSON.parse(localStorage.getItem('applications')) || [];
+            if (activeUser && activeUser.role === 'admin') {
+                renderAdminDashboardMob(true);
+            }
+        }
+    });
+
     async function syncAdminDataFromSupabaseMob() {
         if (window.SupabaseSync) {
             await window.SupabaseSync.syncAllData();
@@ -2647,7 +2658,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
                                 </select>
                             </div>
-                            <button class="btn btn-sm btn-toggle-bizitem-mob" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; height: 36px; ${app.isBizItem ? 'background: #0284c7; color: white; border: none;' : 'background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;'}">
+                            <button type="button" class="btn btn-sm btn-toggle-bizitem-mob" data-id="${app.id}" onclick="window.toggleBizItemMob('${app.id}'); return false;" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; height: 36px; ${app.isBizItem ? 'background: #0284c7; color: white; border: none;' : 'background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;'}">
                                 <i class="fa-solid ${app.isBizItem ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> ${app.isBizItem ? '영업물건 등록됨' : '영업물건으로 변경'}
                             </button>
                             <button type="button" class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" onclick="window.deleteApplicationAdminMob('${app.id}', this)" style="padding: 6px 10px; font-size: 0.85rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; height: 36px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
