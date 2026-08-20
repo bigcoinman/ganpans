@@ -3751,18 +3751,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let targetItemName = '해당 영업 물건';
+        let targetAppRefId = '';
         const targetUser = users.find(u => String(u.id) === String(uid));
         if (targetUser && targetUser.items) {
-            const found = targetUser.items.find(it => String(it.id) === String(itemId));
-            if (found && found.name) targetItemName = found.name;
+            const found = targetUser.items.find(it => String(it.id) === String(itemId) || String(it.appRefId) === String(itemId));
+            if (found) {
+                if (found.name) targetItemName = found.name;
+                if (found.appRefId) targetAppRefId = found.appRefId;
+            }
         }
 
         const ok = confirm(`정말 [${targetItemName}] 영업 물건을 영구 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 등록된 현장 사진 및 진행 상태 정보가 모두 삭제됩니다.`);
         if (!ok) return;
 
+        // 1) deleted_biz_item_ids 등록
+        let deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
+        if (!deletedBizItemIds.includes(String(itemId))) deletedBizItemIds.push(String(itemId));
+        if (targetAppRefId && !deletedBizItemIds.includes(String(targetAppRefId))) deletedBizItemIds.push(String(targetAppRefId));
+        if (targetItemName && targetItemName !== '해당 영업 물건' && !deletedBizItemIds.includes(targetItemName.trim())) {
+            deletedBizItemIds.push(targetItemName.trim());
+        }
+        localStorage.setItem('deleted_biz_item_ids', JSON.stringify(deletedBizItemIds));
+
+        // 2) 로컬 users에서 제거
         users = users.map(u => {
             if (String(u.id) === String(uid)) {
-                const remainingItems = (u.items || []).filter(item => String(item.id) !== String(itemId));
+                const remainingItems = (u.items || []).filter(item => 
+                    String(item.id) !== String(itemId) && 
+                    String(item.appRefId) !== String(itemId) &&
+                    String(item.name || '').trim() !== targetItemName.trim()
+                );
                 return { ...u, items: remainingItems };
             }
             return u;
@@ -3770,7 +3788,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         localStorage.setItem('users', JSON.stringify(users));
 
-        // Supabase DB Sync
+        if (activeUser && activeUser.id === uid) {
+            const myUser = users.find(u => u.id === uid);
+            if (myUser) {
+                activeUser.items = myUser.items || [];
+                localStorage.setItem('activeUser', JSON.stringify(activeUser));
+            }
+        }
+
+        // 3) Supabase DB Sync
         if (window.SupabaseSync) {
             const updatedUser = users.find(u => String(u.id) === String(uid));
             if (updatedUser) {
@@ -3779,9 +3805,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             window.SupabaseSync.deleteApplication(itemId);
+            if (targetAppRefId) {
+                window.SupabaseSync.deleteApplication(targetAppRefId);
+            }
         }
 
-        alert(`[${targetItemName}] 영업 물건이 안전하게 삭제되었습니다.`);
+        alert(`[${targetItemName}] 영업 물건이 안전하게 영구 삭제되었습니다.`);
         renderStatusTab();
     }
     window.deleteManagerItemMob = deleteManagerItemMob;

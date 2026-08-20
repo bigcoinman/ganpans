@@ -1308,13 +1308,23 @@ window.SupabaseSync = {
     let inqChanged = false;
 
     try {
-      // --- A. 회원(Users) 동기화 ---
+      // --- A. 회원(Users) 및 영업물건(Items) 동기화 ---
       const defaultPurgedUserIds = [
         'nubine22',
         'test_probe_user',
         'probe_const_code',
         'test_insert_probe_base'
       ];
+      const defaultPurgedBizItemIds = [
+        'B-260802-0001',
+        'B-260802-0002',
+        'B-260802-0003',
+        '우리나라 곰탕',
+        '우리나라곰탕',
+        '대원감자탕',
+        '대박치킨'
+      ];
+
       let localUsers = JSON.parse(localStorage.getItem('users')) || [];
       localUsers = localUsers.filter(lu => !defaultPurgedUserIds.includes(String(lu.id)));
 
@@ -1324,6 +1334,25 @@ window.SupabaseSync = {
       });
       localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
 
+      let deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
+      defaultPurgedBizItemIds.forEach(pbid => {
+        if (!deletedBizItemIds.includes(pbid)) deletedBizItemIds.push(pbid);
+      });
+      localStorage.setItem('deleted_biz_item_ids', JSON.stringify(deletedBizItemIds));
+
+      // 로컬 users의 items에서도 삭제된 영업물건 즉시 정제
+      localUsers = localUsers.map(u => {
+        if (u.items && u.items.length > 0) {
+          const cleanItems = u.items.filter(it => 
+            !deletedBizItemIds.includes(String(it.id)) && 
+            !deletedBizItemIds.includes(String(it.appRefId)) && 
+            !deletedBizItemIds.includes(String(it.name || '').trim())
+          );
+          return { ...u, items: cleanItems };
+        }
+        return u;
+      });
+
       const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
 
       if (!usersErr && Array.isArray(supaUsers)) {
@@ -1332,6 +1361,15 @@ window.SupabaseSync = {
           const mapped = this.mapDbToUser(su);
           if (defaultPurgedUserIds.includes(String(mapped.id)) || deletedIds.includes(String(mapped.id))) {
             continue;
+          }
+
+          // DB에서 내려온 items에서도 삭제된 영업물건 필터링
+          if (Array.isArray(mapped.items)) {
+            mapped.items = mapped.items.filter(it => 
+              !deletedBizItemIds.includes(String(it.id)) && 
+              !deletedBizItemIds.includes(String(it.appRefId)) && 
+              !deletedBizItemIds.includes(String(it.name || '').trim())
+            );
           }
 
           const idx = localUsers.findIndex(u => u.id === mapped.id);
@@ -1387,9 +1425,9 @@ window.SupabaseSync = {
               cur.pendingLicenseNumber = mapped.pendingLicenseNumber;
               needsUpdate = true;
             }
-            if (Array.isArray(mapped.items) && mapped.items.length > (cur.items || []).length) {
-              cur.items = mapped.items;
-              needsUpdate = true;
+            // 로컬에서 관리자가 삭제하거나 수정한 items가 최우선 (DB의 이전 데이터로 덮어쓰기 원천 차단)
+            if (cur.items && mapped.items && JSON.stringify(cur.items) !== JSON.stringify(mapped.items)) {
+              window.supabaseClient.from('users').update({ items: cur.items }).eq('id', cur.id).then(() => {});
             }
 
             if (needsUpdate) {
