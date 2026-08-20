@@ -574,11 +574,11 @@
 
                         <div class="manager-grid" style="gap: 25px;">
 
-                            <!-- 0. 전체 회원 정보 관리 (가입 회원 명부) -->
+                            <!-- 0. 회원 정보 관리 -->
                             <div style="background: rgba(255,255,255,0.7); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); grid-column: 1 / -1;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;" onclick="window.toggleAdminSection('sec-container-all-users', this, event)">
                                     <h4 class="manager-section-title" style="margin: 0; font-size: 1.02rem; line-height: 1.4; text-align: left;">
-                                        <i class="fa-solid fa-users-gear" style="color: #6366f1;"></i> 👥 전체 회원 정보 관리 (가입 회원 명부)
+                                        <i class="fa-solid fa-users-gear" style="color: #6366f1;"></i> 회원 정보 관리
                                     </h4>
                                     <button type="button" class="btn-toggle-admin" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; margin-left: 10px;">
                                         <span class="toggle-text">접기</span> <i class="fa-solid fa-chevron-up toggle-icon"></i>
@@ -618,14 +618,11 @@
                                 </div>
                             </div>
 
-                            <!-- 1. Conversion request list -->
+                            <!-- 1. 영업자 승인 및 시공사 승인 -->
                             <div style="background: rgba(255,255,255,0.7); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
                                 <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;" onclick="window.toggleAdminSection('sec-container-requests', this, event)">
                                     <h4 class="manager-section-title" style="margin: 0; font-size: 0.96rem; line-height: 1.4; text-align: left;">
-                                        <div style="display: inline-flex; flex-direction: column; align-items: center;">
-                                            <div style="text-align: left; width: 100%;"><i class="fa-solid fa-user-clock" style="color: var(--accent-primary);"></i> 영업자 회원 전환 및 시공업체 회원 전환 신청 목록</div>
-                                            <div style="font-size: 0.82rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px; width: 100%; text-align: center;">(매니저 승인 대기)</div>
-                                        </div>
+                                        <i class="fa-solid fa-user-clock" style="color: var(--accent-primary);"></i> 영업자 승인 및 시공사 승인
                                     </h4>
                                     <button type="button" class="btn-toggle-admin" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; margin-left: 10px;">
                                         <span class="toggle-text">접기</span> <i class="fa-solid fa-chevron-up toggle-icon"></i>
@@ -639,10 +636,10 @@
                                 </div>
                             </div>
 
-                            <!-- 2. Registered business items list and progress status change -->
+                            <!-- 2. 영업물건 진행사항 -->
                             <div style="background: rgba(255,255,255,0.7); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
                                 <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; gap: 12px; flex-wrap: wrap;" onclick="window.toggleAdminSection('sec-container-items', this, event)">
-                                    <h4 class="manager-section-title" style="margin: 0; font-size: 0.96rem; white-space: nowrap;"><i class="fa-solid fa-sliders" style="color: var(--accent-secondary);"></i> 영업 물건 접수/진행 상태 수동 조작</h4>
+                                    <h4 class="manager-section-title" style="margin: 0; font-size: 0.96rem; white-space: nowrap;"><i class="fa-solid fa-sliders" style="color: var(--accent-secondary);"></i> 영업물건 진행사항</h4>
                                     <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 440px; justify-content: flex-end;" onclick="event.stopPropagation();">
                                         <input type="text" id="search-manager-items-input" placeholder="아이디/이름/코드검색" maxlength="30" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; border: 1.5px solid #fed7aa; width: 100%; background: #fff; box-shadow: inset 0 1px 2px rgba(0,0,0,0.04); font-weight: 500;">
                                         <button type="button" id="btn-export-manager-items-excel" style="background: #15803d; color: #ffffff; border: 1px solid #166534; padding: 6px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s ease;" title="영업 물건 전체 목록 엑셀(CSV) 다운로드">
@@ -733,10 +730,10 @@
                             </div>
                         </div>
 
-                        <!-- 5. 3초 간편 문의 접수 목록 -->
+                        <!-- 5. 3초 간편 문의 목록 -->
                         <div class="manager-inquiries-section" style="margin-top: 25px; border-top: 1px dashed var(--border-color); padding-top: 20px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; margin-bottom: 12px; background: rgba(241, 245, 249, 0.7); padding: 10px 16px; border-radius: 10px; border: 1px solid #e2e8f0;" onclick="window.toggleAdminSection('sec-container-inquiries', this, event)">
-                                <h4 class="manager-section-title" style="margin: 0; font-size: 1.02rem;"><i class="fa-solid fa-comments" style="color: #6366f1;"></i> 3초 간편 문의 접수 목록 (Q&A 상담 문의건)</h4>
+                                <h4 class="manager-section-title" style="margin: 0; font-size: 1.02rem;"><i class="fa-solid fa-comments" style="color: #6366f1;"></i> 3초 간편 문의 목록</h4>
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                     <button type="button" class="btn btn-sm" onclick="window.clearAllInquiriesAdmin(); event.stopPropagation();" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
                                         <i class="fa-solid fa-trash-can"></i> 전체 비우기
@@ -772,7 +769,7 @@
 
                         <!-- 팝업창 관리 영역 -->
                         <div class="manager-popup-section" style="margin-top: 30px; border-top: 1px dashed var(--border-color); padding-top: 25px;">
-                            <h4 class="manager-section-title"><i class="fa-solid fa-window-restore"></i> 실시간 팝업창 관리 콘솔</h4>
+                            <h4 class="manager-section-title"><i class="fa-solid fa-window-restore"></i> 팝업창 관리</h4>
                             
                             <div class="manager-grid" style="grid-template-columns: 1.2fr 1fr; gap: 30px; margin-top: 15px;">
                                 <!-- 팝업 리스트 영역 -->
@@ -1115,10 +1112,10 @@
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Dashboard Core Script -->
-    <script src="supabase-config.js?v=20260820_0750"></script>
-    <script src="security-utils.js?v=20260820_0750"></script>
-    <script src="kakao-notify.js?v=20260820_0750"></script>
-    <script src="dashboard.js?v=20260820_0750"></script>
+    <script src="supabase-config.js?v=20260820_0800"></script>
+    <script src="security-utils.js?v=20260820_0800"></script>
+    <script src="kakao-notify.js?v=20260820_0800"></script>
+    <script src="dashboard.js?v=20260820_0800"></script>
 </body>
 
 </html>
