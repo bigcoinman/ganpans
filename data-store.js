@@ -295,7 +295,8 @@
     },
 
     // --- 3. 영업물건 토글 (최고관리자 전용 & 담당 영업자 1명만 단독 귀속) ---
-    toggleBizItem: function (appId) {
+    // --- 3. 영업물건 토글 (최고관리자 전용 & 0초 즉각 반응 & 백그라운드 비동기 DB 동기화) ---
+    toggleBizItem: function (appId, btnEl) {
       const active = this.getActiveUser();
       if (!this.isAdmin(active)) {
         alert('최고관리자만 영업물건으로 변경/해제할 수 있습니다.');
@@ -315,6 +316,23 @@
       const isCurrentlyBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
       const isNowBizItem = !isCurrentlyBizItem;
       app.isBizItem = isNowBizItem;
+
+      // 1) 0초 즉각 낙관적 UI 버튼 상태 갱신
+      if (btnEl) {
+        if (isNowBizItem) {
+          btnEl.style.background = '#0284c7';
+          btnEl.style.color = '#ffffff';
+          btnEl.style.border = 'none';
+          btnEl.innerHTML = '<i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨';
+        } else {
+          btnEl.style.background = '#f8fafc';
+          btnEl.style.color = '#475569';
+          btnEl.style.border = '1px solid #cbd5e1';
+          btnEl.innerHTML = '<i class="fa-solid fa-toggle-off"></i> 영업물건으로 변경';
+        }
+      }
+
+      let usersToSync = [];
 
       if (isNowBizItem) {
         // 영업물건 등록: 담당 영업자 1명 특정
@@ -350,7 +368,6 @@
           appRefId: String(app.id)
         };
 
-        // 타 영업자에게는 일절 배정하지 않고 담당자 및 최고관리자에게만 items 추가
         curUsers = curUsers.map(u => {
           const isTarget = targetUser && u.id === targetUser.id;
           const isAdmin = u.role === 'admin';
@@ -362,32 +379,13 @@
             } else {
               uItems.unshift(bizItem);
             }
-            if (window.SupabaseSync) {
-              window.SupabaseSync.updateUser(u.id, { items: uItems });
-            }
+            usersToSync.push({ id: u.id, items: uItems });
             return { ...u, items: uItems };
           }
           return u;
         });
-
-        this.saveUsers(curUsers);
-        apps[appIndex] = app;
-        this.saveApplications(apps);
-
-        if (window.supabaseClient) {
-          window.supabaseClient.from('applications').update({
-            memo: JSON.stringify({ isBizItem: true, receiptStatus: app.receiptStatus || '접수예정' }),
-            referrer_code: app.referrerCode || ''
-          }).eq('id', String(app.id)).then(() => {});
-        }
-
-        if (window.SupabaseSync) {
-          window.SupabaseSync.upsertApplication(app);
-        }
-
-        alert('[' + (app.storeName || app.ownerName) + '] 건이 영업물건으로 변경되었습니다.\n공단/진흥원 접수 및 담당 영업자 대시보드로 실시간 연동됩니다.');
       } else {
-        // 영업물건 해제: 모든 사용자의 items에서 완벽 제거 (ID, AppRefId, 상호명 일치 건 전수 제거)
+        // 영업물건 해제
         const targetStore = (app.storeName || app.shopName || app.name || '').trim().toLowerCase();
         const targetOwner = (app.ownerName || '').trim().toLowerCase();
         const targetPhone = (app.ownerPhone || app.phone || '').replace(/[^0-9]/g, '');
@@ -407,33 +405,50 @@
               return !isMatch;
             });
             if (filteredItems.length !== u.items.length) {
-              if (window.SupabaseSync) {
-                window.SupabaseSync.updateUser(u.id, { items: filteredItems });
-              }
+              usersToSync.push({ id: u.id, items: filteredItems });
             }
             return { ...u, items: filteredItems };
           }
           return u;
         });
-
-        this.saveUsers(curUsers);
-        apps[appIndex] = app;
-        this.saveApplications(apps);
-
-        if (window.supabaseClient) {
-          window.supabaseClient.from('applications').update({
-            memo: JSON.stringify({ isBizItem: false, receiptStatus: app.receiptStatus || '접수예정' })
-          }).eq('id', String(app.id)).then(() => {});
-        }
-
-        if (window.SupabaseSync) {
-          window.SupabaseSync.upsertApplication(app);
-        }
-
-        alert('[' + (app.storeName || app.ownerName) + '] 건의 영업물건 등록이 해제되었습니다.\n영업물건 진행사항 및 영업자 대시보드에서 즉시 제외됩니다.');
       }
 
+      // 2) 로컬스토리지 0초 즉각 저장
+      this.saveUsers(curUsers);
+      apps[appIndex] = app;
+      this.saveApplications(apps);
+
+      // 3) 전체 대시보드 화면 0초 즉각 브로드캐스트 (알림 전 UI 먼저 갱신)
       this.notifyAll();
+
+      // 4) Supabase DB 완전 비동기 백그라운드 저장 (Non-blocking)
+      (async () => {
+        try {
+          if (window.supabaseClient) {
+            await window.supabaseClient.from('applications').update({
+              memo: JSON.stringify({ isBizItem: isNowBizItem, receiptStatus: app.receiptStatus || '접수예정' }),
+              referrer_code: app.referrerCode || ''
+            }).eq('id', String(app.id));
+          }
+          if (window.SupabaseSync) {
+            await window.SupabaseSync.upsertApplication(app);
+            for (const itemUser of usersToSync) {
+              await window.SupabaseSync.updateUser(itemUser.id, { items: itemUser.items });
+            }
+          }
+        } catch (err) {
+          console.warn('[DataStore] toggleBizItem background sync notice:', err);
+        }
+      })();
+
+      // 5) 즉시 알림 표시 (0초 반응)
+      const storeLabel = app.storeName || app.ownerName || '해당';
+      if (isNowBizItem) {
+        alert('[' + storeLabel + '] 건이 영업물건으로 변경되었습니다.\n공단/진흥원 접수 및 담당 영업자 대시보드로 실시간 연동됩니다.');
+      } else {
+        alert('[' + storeLabel + '] 건의 영업물건 등록이 해제되었습니다.\n영업물건 진행사항 및 영업자 대시보드에서 즉시 제외됩니다.');
+      }
+
       return { success: true, isBizItem: isNowBizItem };
     },
 
