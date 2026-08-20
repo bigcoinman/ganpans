@@ -79,6 +79,35 @@ window.deleteUserAdminMob = function(uid, btnEl) {
     }
 };
 
+window.deleteApplicationAdminMob = function(appId, btnEl) {
+    if (!appId) return;
+    if (!confirm(`[주의] 지원 신청 접수 건 [${appId}]을(를) 정말로 영구 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+
+    if (btnEl) {
+        const card = btnEl.closest('.admin-app-card') || btnEl.closest('div[style*="border"]');
+        if (card) card.remove();
+    }
+
+    let deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
+    if (!deletedAppIds.includes(String(appId))) {
+        deletedAppIds.push(String(appId));
+        localStorage.setItem('deleted_application_ids', JSON.stringify(deletedAppIds));
+    }
+
+    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    apps = apps.filter(a => String(a.id) !== String(appId));
+    localStorage.setItem('applications', JSON.stringify(apps));
+
+    if (window.SupabaseSync) {
+        window.SupabaseSync.deleteApplication(appId);
+    }
+
+    alert(`지원 신청 접수 건 [${appId}]이(가) 정상적으로 영구 삭제되었습니다.`);
+    if (typeof renderAdminDashboardMob === 'function') {
+        renderAdminDashboardMob(true);
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- State Variables ---
 
@@ -2575,7 +2604,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button class="btn btn-sm btn-toggle-bizitem-mob" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; height: 36px; ${app.isBizItem ? 'background: #0284c7; color: white; border: none;' : 'background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;'}">
                                 <i class="fa-solid ${app.isBizItem ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> ${app.isBizItem ? '영업물건 등록됨' : '영업물건으로 변경'}
                             </button>
-                            <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 10px; font-size: 0.85rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; height: 36px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+                            <button type="button" class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" onclick="window.deleteApplicationAdminMob('${app.id}', this)" style="padding: 6px 10px; font-size: 0.85rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; height: 36px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
                         </div>
                     `;
 
@@ -3411,14 +3440,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function deleteApplicationMob(id) {
-        if (!confirm('정말로 이 지원 신청 접수 건을 삭제하시겠습니까?')) return;
-        applications = applications.filter(app => app.id !== id);
+        if (!id) return;
+        if (!confirm(`[주의] 지원 신청 접수 건 [${id}]을(를) 정말로 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+
+        let deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
+        if (!deletedAppIds.includes(String(id))) {
+            deletedAppIds.push(String(id));
+            localStorage.setItem('deleted_application_ids', JSON.stringify(deletedAppIds));
+        }
+
+        applications = applications.filter(app => String(app.id) !== String(id));
         localStorage.setItem('applications', JSON.stringify(applications));
 
         if (window.SupabaseSync) {
             window.SupabaseSync.deleteApplication(id);
         }
 
+        alert(`지원 신청 접수 건 [${id}]이(가) 정상적으로 삭제되었습니다.`);
         renderStatusTab();
     }
 

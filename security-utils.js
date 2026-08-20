@@ -1169,9 +1169,18 @@ window.SupabaseSync = {
 
   // 6. 지원 신청서 삭제
   async deleteApplication(appId) {
-    if (!window.supabaseClient || !appId) return;
+    if (!appId) return;
     try {
-      await window.supabaseClient.from('applications').delete().eq('id', String(appId));
+      // 1) 로컬 삭제 목록에 등록하여 syncAllData에서 부활 영구 차단
+      let deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
+      if (!deletedAppIds.includes(String(appId))) {
+        deletedAppIds.push(String(appId));
+        localStorage.setItem('deleted_application_ids', JSON.stringify(deletedAppIds));
+      }
+
+      if (window.supabaseClient) {
+        await window.supabaseClient.from('applications').delete().eq('id', String(appId));
+      }
     } catch (e) {
       console.error('Supabase deleteApplication error:', e);
     }
@@ -1422,11 +1431,17 @@ window.SupabaseSync = {
 
       // --- B. 지원 신청서(Applications) 동기화 ---
       let localApps = JSON.parse(localStorage.getItem('applications')) || [];
+      const deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
       const { data: supaApps, error: appsErr } = await window.supabaseClient.from('applications').select('*');
 
       if (!appsErr && Array.isArray(supaApps)) {
         supaApps.forEach(sa => {
           const mapped = this.mapDbToApp(sa);
+          if (deletedAppIds.includes(String(mapped.id))) {
+            window.supabaseClient.from('applications').delete().eq('id', String(mapped.id)).then(() => {});
+            return;
+          }
+
           const idx = localApps.findIndex(a => String(a.id) === String(mapped.id));
 
           if (idx === -1) {
@@ -1450,8 +1465,9 @@ window.SupabaseSync = {
           }
         });
 
-        // 로컬에만 있는 신청서를 Supabase로 업로드
+        // 로컬에만 있는 신청서를 Supabase로 업로드 (삭제된 것은 제외)
         for (const la of localApps) {
+          if (deletedAppIds.includes(String(la.id))) continue;
           const inSupa = supaApps.find(sa => String(sa.id) === String(la.id));
           if (!inSupa) {
             await this.upsertApplication(la);

@@ -140,6 +140,40 @@ window.deleteUserAdmin = function(uid, btnEl) {
   }
 };
 
+// --- 온라인 간편 지원 신청서 강제 삭제 글로벌 핸들러 ---
+window.deleteApplicationAdmin = function(appId, btnEl) {
+  if (!appId) return;
+  if (!confirm(`[주의] 지원 신청 접수 건 [${appId}]을(를) 정말로 영구 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+
+  // 1) 0초 즉각 DOM 행 제거
+  if (btnEl) {
+    const row = btnEl.closest('tr');
+    if (row) row.remove();
+  }
+
+  // 2) deleted_application_ids 등록
+  let deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
+  if (!deletedAppIds.includes(String(appId))) {
+    deletedAppIds.push(String(appId));
+    localStorage.setItem('deleted_application_ids', JSON.stringify(deletedAppIds));
+  }
+
+  // 3) 로컬 applications에서 제거
+  let apps = JSON.parse(localStorage.getItem('applications')) || [];
+  apps = apps.filter(a => String(a.id) !== String(appId));
+  localStorage.setItem('applications', JSON.stringify(apps));
+
+  // 4) Supabase DB 영구 삭제
+  if (window.SupabaseSync) {
+    window.SupabaseSync.deleteApplication(appId);
+  }
+
+  alert(`지원 신청 접수 건 [${appId}]이(가) 정상적으로 영구 삭제되었습니다.`);
+  if (typeof window.renderApplicationsList === 'function') {
+    window.renderApplicationsList();
+  }
+};
+
 // --- Collapsible Sections Toggle for PC Admin Dashboard (Global Definition) ---
 function toggleAdminSection(containerId, headerEl, event) {
   if (event) {
@@ -2669,9 +2703,9 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
       }
       
-      // 3. 삭제 버튼 (항상 노출)
+      // 3. 삭제 버튼 (항상 노출 - 최고관리자 영구 삭제)
       actionButtons += `
-        <button class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+        <button type="button" class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" onclick="window.deleteApplicationAdmin('${app.id}', this)" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
       </div>`;
 
       // 영업담당자 이름 매칭 (예: 김만석영업자)
