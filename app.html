@@ -49,7 +49,10 @@
         <div class="header-brand" onclick="switchTab('home')">
             <img src="간판지원단 로고-3.png" alt="간판지원단" style="height: 29px; width: auto; display: block;">
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <button class="app-header-refresh-btn" id="mobile-header-refresh-btn" title="최신 데이터 동기화 및 새로고침">
+                <i class="fa-solid fa-rotate-right"></i> <span>새로고침</span>
+            </button>
             <button class="app-install-btn-header" id="mobile-header-install-btn">
                 <i class="fa-solid fa-share-nodes"></i> 앱 공유
             </button>
@@ -59,6 +62,11 @@
             </button>
         </div>
     </header>
+
+    <!-- 새로고침 완료 알림 토스트 -->
+    <div id="app-refresh-toast" class="app-refresh-toast">
+        <i class="fa-solid fa-circle-check"></i> <span id="app-refresh-toast-text">최신 데이터로 동기화되었습니다.</span>
+    </div>
 
     <!-- Sliding Side Drawer Menu -->
     <div class="app-drawer-overlay" id="app-drawer-overlay"></div>
@@ -76,6 +84,7 @@
         <nav class="drawer-nav">
             <a href="#" id="drawer-item-home" onclick="switchTab('home'); closeDrawer(); return false;"><i class="fa-solid fa-house"></i> 홈 화면</a>
             <a href="#" id="drawer-item-status" onclick="switchTab('status'); closeDrawer(); return false;"><i class="fa-solid fa-list-check"></i> 신청/영업 현황</a>
+            <a href="#" id="drawer-item-refresh" onclick="window.triggerAppRefresh && window.triggerAppRefresh(); closeDrawer(); return false;"><i class="fa-solid fa-rotate-right"></i> 데이터 최신 새로고침</a>
             
             <!-- 영업자 전용: 간판바로 접수하기 버튼 -->
             <a href="#" id="drawer-item-direct-biz" class="drawer-btn-gold" style="display: none;" onclick="openDirectBizApplyMob(); return false;"><i class="fa-solid fa-camera-retro"></i> 간판바로 접수하기</a>

@@ -5071,6 +5071,110 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- 앱 최신 데이터 새로고침 및 동기화 기능 (PWA Standalone 지원) ---
+    let isRefreshing = false;
+    let lastRefreshTime = 0;
+
+    function showRefreshToast(msg = '최신 데이터로 동기화되었습니다.') {
+        const toast = document.getElementById('app-refresh-toast');
+        const toastText = document.getElementById('app-refresh-toast-text');
+        if (!toast) return;
+        if (toastText) toastText.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 2200);
+    }
+
+    async function triggerAppRefresh(isSilent = false) {
+        if (isRefreshing) return;
+        isRefreshing = true;
+
+        const refreshBtn = document.getElementById('mobile-header-refresh-btn');
+        if (refreshBtn && !isSilent) {
+            refreshBtn.classList.add('spinning');
+            const span = refreshBtn.querySelector('span');
+            if (span) span.textContent = '동기화 중';
+        }
+
+        try {
+            // 1. Supabase 클라우드 최신 DB 전체 동기화
+            if (window.SupabaseSync && typeof window.SupabaseSync.syncAllData === 'function') {
+                await window.SupabaseSync.syncAllData();
+            }
+
+            // 2. 로컬 스토리지 최신 데이터 재로딩
+            users = JSON.parse(localStorage.getItem('users')) || [];
+            applications = JSON.parse(localStorage.getItem('applications')) || [];
+            activeUser = getActiveUser() || null;
+
+            // 3. UI 컴포넌트 실시간 갱신
+            updateDrawerProfile();
+            updateHeaderAuthButton();
+            renderStatusTab();
+
+            // 역할별 대시보드 뷰 갱신
+            if (activeUser) {
+                if (activeUser.role === 'admin') {
+                    renderAdminDashboardMob(true);
+                } else if (activeUser.role === 'business') {
+                    if (typeof renderBusinessDashboardMob === 'function') renderBusinessDashboardMob();
+                } else if (activeUser.role === 'constructor') {
+                    if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
+                }
+            }
+
+            lastRefreshTime = Date.now();
+            if (!isSilent) {
+                showRefreshToast('최신 데이터로 새로고침되었습니다.');
+            }
+        } catch (err) {
+            console.warn('[새로고침 동기화 오류]', err);
+            if (!isSilent) {
+                showRefreshToast('데이터 갱신 완료 (로컬 동기화)');
+            }
+        } finally {
+            if (refreshBtn && !isSilent) {
+                setTimeout(() => {
+                    refreshBtn.classList.remove('spinning');
+                    const span = refreshBtn.querySelector('span');
+                    if (span) span.textContent = '새로고침';
+                    isRefreshing = false;
+                }, 400);
+            } else {
+                isRefreshing = false;
+            }
+        }
+    }
+    window.triggerAppRefresh = triggerAppRefresh;
+
+    // 헤더 새로고침 버튼 이벤트 바인딩
+    const mobileHeaderRefreshBtn = document.getElementById('mobile-header-refresh-btn');
+    if (mobileHeaderRefreshBtn) {
+        mobileHeaderRefreshBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            triggerAppRefresh(false);
+        });
+    }
+
+    // 홈 화면에서 앱으로 다시 복귀했을 때 (visibility / focus) 백그라운드 자동 동기화
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const elapsed = Date.now() - lastRefreshTime;
+            // 복귀 시 마지막 갱신 후 10초 이상 지났으면 조용히 최신 데이터 갱신
+            if (elapsed > 10000) {
+                triggerAppRefresh(true);
+            }
+        }
+    });
+
+    window.addEventListener('focus', () => {
+        const elapsed = Date.now() - lastRefreshTime;
+        if (elapsed > 15000) {
+            triggerAppRefresh(true);
+        }
+    });
+
     // 초기 로드 시 Supabase 최신 데이터 즉시 동기화 실행
     syncAdminDataFromSupabaseMob();
 
