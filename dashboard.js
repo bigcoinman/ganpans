@@ -2455,7 +2455,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 1. 상태 변경 셀렉트 (캐럿 아이콘 포함)
       actionButtons += `
         <div style="position: relative; display: inline-flex; align-items: center;">
-          <select class="status-select select-app-status-pc" data-id="${app.id}" style="padding: 5px 26px 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 4px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 30px; line-height: 1.2;">
+          <select class="status-select select-app-status-pc" data-id="${app.id}" onchange="window.updateApplicationStatus('${app.id}', this.value)" style="padding: 5px 26px 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 4px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 30px; line-height: 1.2; position: relative; z-index: 5;">
             <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사 대기</option>
             <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
             <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
@@ -3099,8 +3099,8 @@ document.addEventListener('DOMContentLoaded', () => {
     fileInput.click();
   };
 
-  const updateApplicationStatus = (id, newStatus) => {
-    if (activeUser.role !== 'admin') return;
+  const updateApplicationStatus = async (id, newStatus) => {
+    if (!activeUser || activeUser.role !== 'admin') return;
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
     let targetApp = null;
     apps = apps.map(app => {
@@ -3113,15 +3113,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     localStorage.setItem('applications', JSON.stringify(apps));
 
-    if (window.supabaseClient) {
+    // Supabase DB에 상태 비동기 완전 동기화 (외래키/RLS 완벽 대응)
+    if (window.SupabaseSync) {
       try {
-        window.supabaseClient
+        await window.SupabaseSync.updateApplication(id, { status: newStatus });
+        if (targetApp) {
+          await window.SupabaseSync.upsertApplication(targetApp);
+        }
+      } catch (syncErr) {
+        console.warn('Supabase update status sync warning:', syncErr);
+      }
+    } else if (window.supabaseClient) {
+      try {
+        await window.supabaseClient
           .from('applications')
           .update({
             status: newStatus,
             updated_at: new Date().toISOString()
           })
-          .eq('id', id);
+          .eq('id', String(id));
       } catch (err) {
         console.warn('Supabase application status update notice:', err);
       }
@@ -3135,6 +3145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     alert(`[${targetApp ? (targetApp.storeName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`);
     updateSessionUI();
   };
+  window.updateApplicationStatus = updateApplicationStatus;
 
   const toggleBizItem = (appId) => {
     if (activeUser.role !== 'admin') return;

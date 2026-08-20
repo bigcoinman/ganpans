@@ -2436,17 +2436,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     let actionsHtml = `
                         <div class="admin-action-row-mob" style="display:flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-top: 12px;">
                             <div style="position: relative; display: inline-flex; align-items: center;">
-                                <select class="status-select-mob select-app-status-mob" data-id="${app.id}" style="padding: 6px 26px 6px 8px; font-size: 0.85rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 4px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 34px; line-height: 1.2;">
+                                <select class="status-select-mob select-app-status-mob" data-id="${app.id}" onchange="window.updateApplicationStatusMob && window.updateApplicationStatusMob('${app.id}', this.value)" style="padding: 6px 28px 6px 10px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 6px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 36px; line-height: 1.2; position: relative; z-index: 10; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
                                     <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사 대기</option>
                                     <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
                                     <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
                                     <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
                                 </select>
                             </div>
-                            <button class="btn btn-sm btn-toggle-bizitem-mob" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; height: 34px; ${app.isBizItem ? 'background: #0284c7; color: white; border: none;' : 'background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;'}">
+                            <button class="btn btn-sm btn-toggle-bizitem-mob" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; height: 36px; ${app.isBizItem ? 'background: #0284c7; color: white; border: none;' : 'background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;'}">
                                 <i class="fa-solid ${app.isBizItem ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> ${app.isBizItem ? '영업물건 등록됨' : '영업물건으로 변경'}
                             </button>
-                            <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 10px; font-size: 0.85rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; height: 34px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+                            <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 10px; font-size: 0.85rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; height: 36px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
                         </div>
                     `;
 
@@ -3286,7 +3286,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderStatusTab();
     }
 
-    function updateApplicationStatusMob(id, newStatus) {
+    async function updateApplicationStatusMob(id, newStatus) {
+        if (!activeUser || activeUser.role !== 'admin') return;
         let targetApp = null;
         applications = applications.map(app => {
             if (String(app.id) === String(id)) {
@@ -3297,19 +3298,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         localStorage.setItem('applications', JSON.stringify(applications));
 
+        // Supabase DB에 비동기 완전 동기화 (외래키/RLS 완벽 대응)
         if (window.SupabaseSync) {
-            window.SupabaseSync.updateApplication(id, {
-                status: newStatus
-            });
+            try {
+                await window.SupabaseSync.updateApplication(id, {
+                    status: newStatus
+                });
+                if (targetApp) {
+                    await window.SupabaseSync.upsertApplication(targetApp);
+                }
+            } catch (syncErr) {
+                console.warn('Supabase mobile update status sync warning:', syncErr);
+            }
         } else if (window.supabaseClient) {
             try {
-                window.supabaseClient
+                await window.supabaseClient
                     .from('applications')
                     .update({
                         status: newStatus,
                         updated_at: new Date().toISOString()
                     })
-                    .eq('id', id);
+                    .eq('id', String(id));
             } catch (err) {
                 console.warn('Supabase application status update notice:', err);
             }
@@ -3323,6 +3332,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert(`[${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`);
         renderStatusTab();
     }
+    window.updateApplicationStatusMob = updateApplicationStatusMob;
 
     function toggleBizItemMob(appId) {
         if (!activeUser || activeUser.role !== 'admin') return;
