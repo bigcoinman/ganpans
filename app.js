@@ -3630,15 +3630,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
             alert(`[${app.storeName || app.ownerName}] 건이 '영업물건'으로 변경되었습니다.\n진흥원 접수 및 모바일 영업물건 진행사항 메뉴로 연동됩니다.`);
         } else {
-            // 영업물건에서 해제/제거
+            // 영업물건에서 해제/철회: 모든 사용자의 items에서 완벽 제거 (ID, appRefId, 상호명, 주소 정밀 매칭)
             curUsers = curUsers.map(u => {
                 if (u.items && u.items.length > 0) {
-                    const filteredItems = u.items.filter(it => String(it.id) !== String(app.id) && String(it.appRefId) !== String(app.id));
+                    const filteredItems = u.items.filter(it => {
+                        const matchId = String(it.id) === String(app.id);
+                        const matchAppRef = String(it.appRefId) === String(app.id);
+                        const matchName = (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()));
+                        const matchAddr = (it.address && app.storeAddress && String(it.address).trim() === String(app.storeAddress).trim());
+                        return !matchId && !matchAppRef && !matchName && !matchAddr;
+                    });
                     return { ...u, items: filteredItems };
                 }
                 return u;
             });
+            users = curUsers;
             localStorage.setItem('users', JSON.stringify(curUsers));
+
+            if (activeUser && (activeUser.role === 'business' || activeUser.role === 'admin')) {
+                const myUser = curUsers.find(u => u.id === activeUser.id);
+                if (myUser) {
+                    activeUser.items = myUser.items || [];
+                    localStorage.setItem('activeUser', JSON.stringify(activeUser));
+                }
+            }
 
             if (window.SupabaseSync) {
                 curUsers.forEach(u => {
@@ -3648,7 +3663,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            alert(`[${app.storeName || app.ownerName}] 건의 '영업물건' 등록이 해제되었습니다.`);
+            alert(`[${app.storeName || app.ownerName}] 건의 '영업물건' 등록이 해제/철회되었습니다.\n모바일 영업물건 진행사항 목록에서 즉시 제거되었습니다.`);
         }
 
         if (window.SupabaseSync) {
