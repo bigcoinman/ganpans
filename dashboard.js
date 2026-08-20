@@ -3470,7 +3470,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const paginationContainer = document.getElementById('pagination-user-apps');
     if (!userApplicationsTableBody) return;
 
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let apps = window.DataStore ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
     let updated = false;
 
     // Migrate/update applications without userId or with 'guest' userId

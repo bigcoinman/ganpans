@@ -1555,6 +1555,35 @@ window.SupabaseSync = {
         if (appsChanged) {
           localStorage.setItem('applications', JSON.stringify(localApps));
         }
+
+        // --- B-2. 최고관리자 대시보드 SSOT 절대 연동: 모든 users.items 중 삭제된 신청서 및 isBizItem 미승인 건 전수 박멸 ---
+        localUsers = localUsers.map(u => {
+          if (u.items && Array.isArray(u.items) && u.items.length > 0) {
+            const originalCount = u.items.length;
+            const cleanItems = u.items.filter(it => {
+              if (!it || !it.id) return false;
+              const itemId = String(it.id);
+              const refId = String(it.appRefId || '');
+              const matchingApp = localApps.find(a => String(a.id) === itemId || (refId && String(a.id) === refId));
+              if (!matchingApp) return false; // 최고관리자 대시보드에서 삭제된 건 100% 영구 제거
+              if (matchingApp.isBizItem !== true && String(matchingApp.isBizItem) !== 'true') return false; // 영업물건 미승인 건 100% 영구 제거
+              return true;
+            });
+
+            if (cleanItems.length !== originalCount) {
+              usersChanged = true;
+              if (window.supabaseClient) {
+                window.supabaseClient.from('users').update({ items: cleanItems }).eq('id', u.id).then(() => {});
+              }
+              return { ...u, items: cleanItems };
+            }
+          }
+          return u;
+        });
+
+        if (usersChanged) {
+          localStorage.setItem('users', JSON.stringify(localUsers));
+        }
       }
 
       // --- C. 3초 간편문의(Inquiries) 동기화 ---

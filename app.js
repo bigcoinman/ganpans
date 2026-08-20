@@ -1191,14 +1191,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const userAppsContainer = document.getElementById('user-apps-list-mobile');
         if (!userAppsContainer) return;
 
-        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+        let apps = window.DataStore ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
         if (!activeUser) return;
 
         const myApps = apps.filter(app => {
             const isMyId = app.userId === activeUser.id;
             const isMyPhone = activeUser.phone && app.ownerPhone && app.ownerPhone.replace(/[^0-9]/g, '') === activeUser.phone.replace(/[^0-9]/g, '');
             const isMyName = activeUser.name && app.ownerName === activeUser.name;
-            return isMyId || isMyPhone || isMyName;
+            const isMyBizCode = activeUser.bizCode && app.referrerCode && (app.referrerCode === activeUser.bizCode || app.referrerCode === activeUser.id || app.referrerCode === activeUser.name);
+            return isMyId || isMyPhone || isMyName || isMyBizCode;
         });
 
         // Search filtering
@@ -1384,75 +1385,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderBusinessDashboardMob() {
-        // Sync items status with main applications
-        let items = activeUser.items || [];
-        const apps = JSON.parse(localStorage.getItem('applications')) || [];
-        let itemsUpdated = false;
-
-        // applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 지정한 건만 items에 병합
-        apps.forEach(app => {
-            if (app.isBizItem !== true) return; // 관리자 미체크 건은 items에 자동 추가 안 함
-
-            const isMyBizApp = (app.referrerCode && activeUser.bizCode && app.referrerCode === activeUser.bizCode) ||
-                (app.userId && app.userId === activeUser.id);
-            if (isMyBizApp && !items.some(it => String(it.id) === String(app.id))) {
-                const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
-                items.unshift({
-                    id: app.id,
-                    name: app.storeName || app.shopName || app.ownerName || '영업물건',
-                    phone: app.ownerPhone || '',
-                    address: app.storeAddress || '',
-                    photos: photosList,
-                    receiptStatus: app.receiptStatus || '접수예정',
-                    progressStatus: (app.status === 'approved' ? '승인 완료' : (app.status === 'rejected' ? '반려됨' : '지원대기중')),
-                    createdAt: app.appliedAt || new Date().toISOString()
-                });
-                itemsUpdated = true;
-            }
-        });
-
-        // 만약 관리자가 applications에서 isBizItem을 해제(false)했다면 items 목록에서도 자동 제거
-        const cleanedItems = items.filter(item => {
-            const matchingApp = apps.find(app => String(app.id) === String(item.id));
-            if (matchingApp && matchingApp.isBizItem === false) {
-                itemsUpdated = true;
-                return false;
-            }
-            return true;
-        });
-        items = cleanedItems;
-
-        items = items.map(item => {
-            const matchingApp = apps.find(app => String(app.id) === String(item.id));
-            if (matchingApp) {
-                let updatedProgress = item.progressStatus;
-                if (matchingApp.status === 'approved' || matchingApp.status === '서류제출 & 접수예정') {
-                    updatedProgress = '승인 완료';
-                } else if (matchingApp.status === 'rejected' || matchingApp.status === '지원사업 탈락' || matchingApp.status === '지원사업탈락') {
-                    updatedProgress = '반려됨';
-                } else if (matchingApp.status === 'giveup' || matchingApp.status === '지원사업 포기' || matchingApp.status === '지원사업포기') {
-                    updatedProgress = '지원사업 포기';
-                }
-
-                // 사진이 items에는 없고 matchingApp에 있는 경우 자동 동기화
-                if ((!item.photos || item.photos.length === 0) && (matchingApp.fileData || (matchingApp.photos && matchingApp.photos.length > 0))) {
-                    item.photos = matchingApp.photos && matchingApp.photos.length > 0 ? matchingApp.photos : [matchingApp.fileData];
-                    itemsUpdated = true;
-                }
-
-                if (item.progressStatus !== updatedProgress) {
-                    item.progressStatus = updatedProgress;
-                    itemsUpdated = true;
-                }
-            }
-            return item;
-        });
-
-        if (itemsUpdated) {
-            activeUser.items = items;
-            users = users.map(u => u.id === activeUser.id ? { ...u, items } : u);
-            localStorage.setItem('users', JSON.stringify(users));
-            localStorage.setItem('activeUser', JSON.stringify(activeUser));
+        if (!activeUser || activeUser.role !== 'business') return;
+        if (window.DataStore && typeof window.DataStore.cleanGhostItems === 'function') {
+            window.DataStore.cleanGhostItems();
         }
 
         renderUserApplicationsMob();

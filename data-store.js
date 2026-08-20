@@ -116,13 +116,55 @@
       }
     },
 
-    // --- 2. 영업물건 전용 데이터 조회 (철저한 영업자 데이터 격리) ---
+    cleanGhostItems: function () {
+      try {
+        const apps = this.getApplications();
+        let users = this.getUsers();
+        let anyChanged = false;
+
+        users = users.map(u => {
+          if (u.items && Array.isArray(u.items) && u.items.length > 0) {
+            const originalLength = u.items.length;
+            const validItems = u.items.filter(item => {
+              if (!item || !item.id) return false;
+              const matchingApp = apps.find(a => String(a.id) === String(item.id) || String(a.id) === String(item.appRefId));
+              if (!matchingApp) return false; // 최고관리자 대시보드에 없는 삭제건 100% 영구 제거
+              if (matchingApp.isBizItem !== true && String(matchingApp.isBizItem) !== 'true') return false; // 미승인건 영구 제거
+              return true;
+            });
+
+            if (validItems.length !== originalLength) {
+              anyChanged = true;
+              if (window.SupabaseSync) {
+                window.SupabaseSync.updateUser(u.id, { items: validItems });
+              }
+              return { ...u, items: validItems };
+            }
+          }
+          return u;
+        });
+
+        if (anyChanged) {
+          this.saveUsers(users);
+          const active = this.getActiveUser();
+          if (active) {
+            const freshMe = users.find(u => String(u.id) === String(active.id));
+            if (freshMe) {
+              this.setActiveUser(freshMe);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[DataStore] cleanGhostItems error:', e);
+      }
+    },
+
+    // --- 2. 영업물건 전용 데이터 조회 (최고관리자 대시보드 절대 SSOT 기반) ---
     getBizItemsForUser: function (targetUser) {
       const user = targetUser || this.getActiveUser();
       if (!user) return [];
 
       const apps = this.getApplications();
-      const myItems = user.items || [];
       const deletedBizIds = this.getDeletedBizItemIds();
       const bizList = [];
 
@@ -136,8 +178,9 @@
       const myBizCode = String(user.bizCode || '').trim().toLowerCase();
       const myUserId = String(user.id || '').trim().toLowerCase();
       const myUserName = String(user.name || '').trim().toLowerCase();
+      const myPhone = String(user.phone || '').replace(/[^0-9]/g, '');
 
-      // 1) applications 중 isBizItem: true 인 건 수집
+      // 오직 applications 중 최고관리자가 isBizItem: true 로 승인한 실존 건만 수집 (부존재 일치 100%)
       apps.forEach(app => {
         if (isPurged(app)) return;
         const isApprovedBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
@@ -145,13 +188,16 @@
 
         const refCode = String(app.referrerCode || '').trim().toLowerCase();
         const appUser = String(app.userId || '').trim().toLowerCase();
+        const appOwner = String(app.ownerName || '').trim().toLowerCase();
+        const appPhone = String(app.ownerPhone || '').replace(/[^0-9]/g, '');
 
         const isMyReferrer = (myBizCode && refCode === myBizCode) || (myUserId && refCode === myUserId) || (myUserName && refCode === myUserName);
         const isMyUser = (myUserId && appUser === myUserId);
-        const isMyItem = myItems.some(i => String(i.id) === String(app.id) || String(i.appRefId) === String(app.id));
+        const isMyPhone = (myPhone && appPhone && myPhone === appPhone);
+        const isMyName = (myUserName && appOwner && myUserName === appOwner);
 
         // 최고관리자는 전체 조회, 영업자는 오직 본인 귀속 건만 조회
-        if (this.isAdmin(user) || isMyReferrer || isMyUser || isMyItem) {
+        if (this.isAdmin(user) || isMyReferrer || isMyUser || isMyPhone || isMyName) {
           if (!bizList.some(b => String(b.id) === String(app.id))) {
             bizList.push({
               id: app.id,
@@ -163,26 +209,6 @@
               statusObj: app
             });
           }
-        }
-      });
-
-      // 2) myItems 중에서도 applications에 실존하고 isBizItem: true 인 건만 허용 (관리자 대시보드에 없는 건 100% 제외)
-      myItems.forEach(item => {
-        if (isPurged(item)) return;
-        const matchingApp = apps.find(a => String(a.id) === String(item.id) || String(a.id) === String(item.appRefId));
-        if (!matchingApp) return; // 최고관리자 대시보드에 없는 건 완전 제외
-        if (matchingApp.isBizItem !== true && String(matchingApp.isBizItem) !== 'true') return; // 영업물건 미승인/해제 건 완전 제외
-
-        if (!bizList.some(b => String(b.id) === String(matchingApp.id) || String(b.id) === String(item.id))) {
-          bizList.push({
-            id: matchingApp.id,
-            date: matchingApp.appliedAt || matchingApp.createdAt || new Date().toISOString(),
-            ownerName: matchingApp.ownerName || matchingApp.name || '-',
-            ownerPhone: matchingApp.ownerPhone || matchingApp.phone || '',
-            storeName: matchingApp.storeName || matchingApp.shopName || matchingApp.name || '-',
-            storeAddress: matchingApp.storeAddress || matchingApp.address || '',
-            statusObj: matchingApp
-          });
         }
       });
 
