@@ -1372,31 +1372,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const myUserId = String(activeUser.id || '').trim().toLowerCase();
         const myUserName = String(activeUser.name || '').trim().toLowerCase();
 
-        // 1) applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 체크한 건 수집
+        // 1) applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 체크한 건 수집 (모든 영업자 대시보드 100% 동시 노출)
         apps.forEach(app => {
             if (isPurgedItem(app)) return; // 삭제/정화된 물건 제외
             const isApprovedBizItem = (app.isBizItem === true || String(app.isBizItem) === 'true');
             if (!isApprovedBizItem) return; // 관리자 미체크 건은 제외
 
-            const refCode = String(app.referrerCode || '').trim().toLowerCase();
-            const appUser = String(app.userId || '').trim().toLowerCase();
-
-            const isMyReferrer = (myBizCode && refCode === myBizCode) || (myUserId && refCode === myUserId) || (myUserName && refCode === myUserName);
-            const isMyUser = (myUserId && appUser === myUserId);
-            const isMyItem = myItems.some(i => String(i.id) === String(app.id) || String(i.appRefId) === String(app.id) || (i.name && (String(i.name).trim() === String(app.storeName || '').trim() || String(i.name).trim() === String(app.shopName || '').trim())));
-
-            if (isMyReferrer || isMyUser || isMyItem || activeUser.role === 'admin' || !refCode) {
-                if (!bizList.some(b => String(b.id) === String(app.id))) {
-                    bizList.push({
-                        id: app.id,
-                        date: app.appliedAt || app.createdAt || new Date().toISOString(),
-                        ownerName: app.ownerName || app.name || '-',
-                        ownerPhone: app.ownerPhone || app.phone || '',
-                        storeName: app.storeName || app.shopName || app.name || '-',
-                        storeAddress: app.storeAddress || app.address || '',
-                        statusObj: app
-                    });
-                }
+            if (!bizList.some(b => String(b.id) === String(app.id))) {
+                bizList.push({
+                    id: app.id,
+                    date: app.appliedAt || app.createdAt || new Date().toISOString(),
+                    ownerName: app.ownerName || app.name || '-',
+                    ownerPhone: app.ownerPhone || app.phone || '',
+                    storeName: app.storeName || app.shopName || app.name || '-',
+                    storeAddress: app.storeAddress || app.address || '',
+                    statusObj: app
+                });
             }
         });
 
@@ -3689,55 +3680,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 targetUser = curUsers.find(u => u.role === 'business') || curUsers.find(u => u.role === 'admin');
             }
 
-            if (targetUser) {
-                // 신청서에 영업자 코드/아이디 자동 귀속
-                if (!app.referrerCode && targetUser.bizCode) {
-                    app.referrerCode = targetUser.bizCode;
-                } else if (!app.referrerCode && targetUser.id) {
-                    app.referrerCode = targetUser.id;
+            const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
+            const bizItem = {
+                id: app.id,
+                name: app.storeName || app.shopName || app.ownerName || '영업물건',
+                phone: app.ownerPhone || '',
+                address: app.storeAddress || '',
+                photosCount: photosList.length,
+                receiptStatus: app.receiptStatus || '접수예정',
+                progressStatus: (app.status === 'approved' ? '승인 완료' : (app.status === 'rejected' ? '반려됨' : (app.status === 'giveup' ? '지원사업 포기' : '지원대기중'))),
+                photos: photosList,
+                appRefId: app.id
+            };
+
+            // 모든 영업자(business)와 관리자(admin)의 items에 영업물건 추가/갱신 (어떤 영업자가 로그인해도 100% 노출 보장)
+            curUsers = curUsers.map(u => {
+                if (u.role === 'business' || u.role === 'admin' || (targetUser && u.id === targetUser.id)) {
+                    const uItems = u.items || [];
+                    const existingItemIdx = uItems.findIndex(it => 
+                        String(it.id) === String(app.id) || 
+                        String(it.appRefId) === String(app.id) ||
+                        (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()))
+                    );
+                    if (existingItemIdx >= 0) {
+                        uItems[existingItemIdx] = { ...uItems[existingItemIdx], ...bizItem };
+                    } else {
+                        uItems.unshift(bizItem);
+                    }
+                    if (window.SupabaseSync) {
+                        window.SupabaseSync.updateUser(u.id, { items: uItems });
+                    }
+                    return { ...u, items: uItems };
                 }
+                return u;
+            });
 
-                targetUser.items = targetUser.items || [];
-                const existingItemIdx = targetUser.items.findIndex(it => 
-                    String(it.id) === String(app.id) || 
-                    String(it.appRefId) === String(app.id) ||
-                    (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()))
-                );
-                const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
-                const bizItem = {
-                    id: app.id,
-                    name: app.storeName || app.shopName || app.ownerName || '영업물건',
-                    phone: app.ownerPhone || '',
-                    address: app.storeAddress || '',
-                    photosCount: photosList.length,
-                    receiptStatus: app.receiptStatus || '접수예정',
-                    progressStatus: (app.status === 'approved' ? '승인 완료' : (app.status === 'rejected' ? '반려됨' : (app.status === 'giveup' ? '지원사업 포기' : '지원대기중'))),
-                    photos: photosList,
-                    appRefId: app.id
-                };
+            users = curUsers;
+            localStorage.setItem('users', JSON.stringify(curUsers));
 
-                if (existingItemIdx >= 0) {
-                    targetUser.items[existingItemIdx] = { ...targetUser.items[existingItemIdx], ...bizItem };
-                } else {
-                    targetUser.items.unshift(bizItem);
-                }
-
-                curUsers = curUsers.map(u => u.id === targetUser.id ? targetUser : u);
-                users = curUsers;
-                localStorage.setItem('users', JSON.stringify(curUsers));
-
-                if (activeUser && activeUser.id === targetUser.id) {
-                    activeUser.items = targetUser.items;
+            if (activeUser) {
+                const myFreshUser = curUsers.find(u => u.id === activeUser.id);
+                if (myFreshUser) {
+                    activeUser.items = myFreshUser.items;
                     localStorage.setItem('activeUser', JSON.stringify(activeUser));
-                }
-
-                if (window.SupabaseSync) {
-                    window.SupabaseSync.updateUser(targetUser.id, { items: targetUser.items });
                 }
             }
 
             applications[appIndex] = app;
             localStorage.setItem('applications', JSON.stringify(applications));
+
+            if (window.supabaseClient) {
+                window.supabaseClient.from('applications').update({
+                    memo: JSON.stringify({ isBizItem: true, receiptStatus: app.receiptStatus || '접수예정' }),
+                    referrer_code: app.referrerCode || ''
+                }).eq('id', String(app.id)).then(() => {});
+            }
 
             alert(`[${app.storeName || app.ownerName}] 건이 '영업물건'으로 변경되었습니다.\n진흥원 접수 및 모바일 영업자 대시보드로 실시간 동시 연동됩니다.`);
         } else {
