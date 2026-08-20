@@ -1440,11 +1440,12 @@ window.SupabaseSync = {
             inqChanged = true;
           } else {
             const cur = localInquiries[idx];
-            // 관리자가 로컬에서 이미 'resolved'(상담완료/확인완료)로 바꿨는데 DB에 pending이 남아있다면 로컬 상태 유지 및 DB 갱신
-            if (cur.status === 'resolved' && mapped.status === 'pending') {
-              window.supabaseClient.from('inquiries').update({ status: 'resolved' }).eq('id', String(cur.id)).then(() => {});
-            } else if (cur.status !== mapped.status || cur.message !== mapped.message) {
-              localInquiries[idx] = { ...cur, ...mapped };
+            // 로컬에서 관리자가 지정한 status가 최우선이므로 DB 상태가 다르면 DB를 업데이트하고 로컬 유지
+            if (cur.status && cur.status !== mapped.status) {
+              window.supabaseClient.from('inquiries').update({ status: cur.status }).eq('id', String(cur.id)).then(() => {});
+            }
+            if (cur.message !== mapped.message || cur.name !== mapped.name || cur.phone !== mapped.phone) {
+              localInquiries[idx] = { ...cur, ...mapped, status: cur.status || mapped.status };
               inqChanged = true;
             }
           }

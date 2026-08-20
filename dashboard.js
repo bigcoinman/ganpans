@@ -7,7 +7,8 @@ window.toggleInquiryStatus = function(id, btnEl) {
   if (inqIndex >= 0) {
     const curStatus = currentInquiries[inqIndex].status;
     const isNowResolved = (curStatus !== 'resolved' && curStatus !== 'completed' && curStatus !== '확인완료' && curStatus !== '상담완료');
-    currentInquiries[inqIndex].status = isNowResolved ? 'resolved' : 'pending';
+    const newStatus = isNowResolved ? 'resolved' : 'pending';
+    currentInquiries[inqIndex].status = newStatus;
     localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
 
     // 0초 낙관적 DOM 즉시 갱신 (사용자 클릭 즉각 반응)
@@ -27,13 +28,12 @@ window.toggleInquiryStatus = function(id, btnEl) {
       }
     }
 
-    // 백그라운드 DB 동기화
+    // 백그라운드 DB 동기화 (직접 update + upsert 병행)
+    if (window.supabaseClient) {
+      window.supabaseClient.from('inquiries').update({ status: newStatus }).eq('id', String(id)).then(() => {});
+    }
     if (window.SupabaseSync) {
       window.SupabaseSync.upsertInquiry(currentInquiries[inqIndex]);
-    }
-
-    if (typeof window.renderInquiriesList === 'function') {
-      window.renderInquiriesList();
     }
   }
 };
