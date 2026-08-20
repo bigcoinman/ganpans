@@ -1383,18 +1383,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const isMyReferrer = (myBizCode && refCode === myBizCode) || (myUserId && refCode === myUserId) || (myUserName && refCode === myUserName);
             const isMyUser = (myUserId && appUser === myUserId);
-            const isMyItem = myItems.some(i => String(i.id) === String(app.id) || String(i.appRefId) === String(app.id));
+            const isMyItem = myItems.some(i => String(i.id) === String(app.id) || String(i.appRefId) === String(app.id) || (i.name && (String(i.name).trim() === String(app.storeName || '').trim() || String(i.name).trim() === String(app.shopName || '').trim())));
 
-            if (isMyReferrer || isMyUser || isMyItem) {
-                bizList.push({
-                    id: app.id,
-                    date: app.appliedAt || app.createdAt || new Date().toISOString(),
-                    ownerName: app.ownerName || app.name || '-',
-                    ownerPhone: app.ownerPhone || app.phone || '',
-                    storeName: app.storeName || app.shopName || app.name || '-',
-                    storeAddress: app.storeAddress || app.address || '',
-                    statusObj: app
-                });
+            if (isMyReferrer || isMyUser || isMyItem || activeUser.role === 'admin' || !refCode) {
+                if (!bizList.some(b => String(b.id) === String(app.id))) {
+                    bizList.push({
+                        id: app.id,
+                        date: app.appliedAt || app.createdAt || new Date().toISOString(),
+                        ownerName: app.ownerName || app.name || '-',
+                        ownerPhone: app.ownerPhone || app.phone || '',
+                        storeName: app.storeName || app.shopName || app.name || '-',
+                        storeAddress: app.storeAddress || app.address || '',
+                        statusObj: app
+                    });
+                }
             }
         });
 
@@ -1404,7 +1406,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const matchingApp = apps.find(a => String(a.id) === String(item.id) || String(a.id) === String(item.appRefId));
             if (matchingApp && (matchingApp.isBizItem === false || String(matchingApp.isBizItem) === 'false')) return; // 관리자가 명시적으로 해제한 건만 제외
 
-            if (!bizList.some(b => String(b.id) === String(item.id))) {
+            if (!bizList.some(b => String(b.id) === String(item.id) || (item.appRefId && String(b.id) === String(item.appRefId)))) {
                 bizList.push({
                     id: item.id,
                     date: item.registeredAt || item.createdAt || new Date().toISOString(),
@@ -3688,8 +3690,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (targetUser) {
+                // 신청서에 영업자 코드/아이디 자동 귀속
+                if (!app.referrerCode && targetUser.bizCode) {
+                    app.referrerCode = targetUser.bizCode;
+                } else if (!app.referrerCode && targetUser.id) {
+                    app.referrerCode = targetUser.id;
+                }
+
                 targetUser.items = targetUser.items || [];
-                const existingItemIdx = targetUser.items.findIndex(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
+                const existingItemIdx = targetUser.items.findIndex(it => 
+                    String(it.id) === String(app.id) || 
+                    String(it.appRefId) === String(app.id) ||
+                    (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()))
+                );
                 const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
                 const bizItem = {
                     id: app.id,
@@ -3723,7 +3736,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            alert(`[${app.storeName || app.ownerName}] 건이 '영업물건'으로 변경되었습니다.\n진흥원 접수 및 모바일 영업물건 진행사항 메뉴로 연동됩니다.`);
+            applications[appIndex] = app;
+            localStorage.setItem('applications', JSON.stringify(applications));
+
+            alert(`[${app.storeName || app.ownerName}] 건이 '영업물건'으로 변경되었습니다.\n진흥원 접수 및 모바일 영업자 대시보드로 실시간 동시 연동됩니다.`);
         } else {
             // 영업물건에서 해제/철회: 모든 사용자의 items에서 완벽 제거 (ID, appRefId, 상호명, 주소 정밀 매칭)
             curUsers = curUsers.map(u => {
@@ -3750,6 +3766,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            applications[appIndex] = app;
+            localStorage.setItem('applications', JSON.stringify(applications));
+
             if (window.SupabaseSync) {
                 curUsers.forEach(u => {
                     if (u.role === 'business' || u.role === 'admin') {
@@ -3766,6 +3785,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         renderStatusTab();
+        if (typeof renderBusinessDashboardMob === 'function') renderBusinessDashboardMob();
+        if (typeof renderBizRegisteredItemsMob === 'function') renderBizRegisteredItemsMob();
+
+        // 실시간 동시 연동 이벤트 발화
+        window.dispatchEvent(new Event('supabase-data-synced'));
     }
     window.toggleBizItemMob = toggleBizItemMob;
 
