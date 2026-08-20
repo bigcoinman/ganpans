@@ -1300,17 +1300,27 @@ window.SupabaseSync = {
 
     try {
       // --- A. 회원(Users) 동기화 ---
+      const defaultPurgedUserIds = [
+        'test_probe_user',
+        'probe_const_code',
+        'test_insert_probe_base'
+      ];
       let localUsers = JSON.parse(localStorage.getItem('users')) || [];
-      const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+      localUsers = localUsers.filter(lu => !defaultPurgedUserIds.includes(String(lu.id)));
+
+      let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+      defaultPurgedUserIds.forEach(puid => {
+        if (!deletedIds.includes(puid)) deletedIds.push(puid);
+      });
+      localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
+
       const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
 
       if (!usersErr && Array.isArray(supaUsers)) {
         // 1) Supabase에 있는 회원 데이터를 로컬스토리지에 반영/병합 (삭제된 회원은 부활 차단)
         for (const su of supaUsers) {
           const mapped = this.mapDbToUser(su);
-          if (deletedIds.includes(String(mapped.id))) {
-            // DB에 아직 남아있는 삭제된 회원은 DB에서 다시 확실히 제거
-            window.supabaseClient.from('users').delete().eq('id', String(mapped.id)).then(() => {});
+          if (defaultPurgedUserIds.includes(String(mapped.id)) || deletedIds.includes(String(mapped.id))) {
             continue;
           }
 
