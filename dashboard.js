@@ -1966,15 +1966,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const updateItemStatus = (uid, itemId, type, value) => {
     if (!activeUser || activeUser.role !== 'admin') return;
+    let targetItem = null;
     users = users.map(u => {
       if (String(u.id) === String(uid)) {
         const updatedItems = (u.items || []).map(item => {
           if (String(item.id) === String(itemId)) {
             if (type === 'receipt') {
-              return { ...item, receiptStatus: value };
+              targetItem = { ...item, receiptStatus: value };
             } else {
-              return { ...item, progressStatus: value };
+              targetItem = { ...item, progressStatus: value };
             }
+            return targetItem;
           }
           return item;
         });
@@ -1985,15 +1987,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     localStorage.setItem('users', JSON.stringify(users));
 
-    // Supabase DB Sync
-    if (window.SupabaseSync) {
-      const updatedUser = users.find(u => String(u.id) === String(uid));
-      if (updatedUser) {
-        window.SupabaseSync.updateUser(uid, {
-          items: updatedUser.items || []
-        });
+    // applications 테이블에도 해당 ID의 신청서가 있다면 상태 양방향 동기화
+    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let appMatched = false;
+    let targetApp = null;
+    apps = apps.map(app => {
+      if (String(app.id) === String(itemId) || (targetItem && targetItem.appRefId && String(app.id) === String(targetItem.appRefId))) {
+        if (type === 'receipt') {
+          app.receiptStatus = value;
+        } else {
+          app.constructionStatus = value;
+          if (value === '지원대기중') app.status = 'pending';
+          else if (value === '승인 완료' || value === '대상자선정' || value === '간판시공 준비중' || value === '간판시공완료') app.status = 'approved';
+          else if (value === '반려됨') app.status = 'rejected';
+          else if (value === '지원사업 포기') app.status = 'giveup';
+        }
+        targetApp = app;
+        appMatched = true;
       }
+      return app;
+    });
+
+    if (appMatched) {
+      localStorage.setItem('applications', JSON.stringify(apps));
     }
+
+    // Supabase DB 비동기 백그라운드 완전 동기화 (Non-blocking)
+    (async () => {
+      if (window.SupabaseSync) {
+        try {
+          const updatedUser = users.find(u => String(u.id) === String(uid));
+          if (updatedUser) {
+            await window.SupabaseSync.updateUser(uid, { items: updatedUser.items || [] });
+          }
+          if (targetApp) {
+            await window.SupabaseSync.upsertApplication(targetApp);
+          }
+        } catch (err) {
+          console.warn('Supabase updateItemStatus sync notice:', err);
+        }
+      }
+    })();
 
     updateSessionUI();
   };
