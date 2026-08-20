@@ -556,6 +556,12 @@
       users = users.filter(u => String(u.id) !== targetId);
       this.saveUsers(users);
 
+      // 3.5) 현재 로그인 세션이 삭제된 회원이면 즉시 세션 파기
+      const active = this.getActiveUser();
+      if (active && String(active.id) === targetId) {
+        this.setActiveUser(null);
+      }
+
       // 4) Supabase DB 영구 삭제
       if (window.SupabaseSync) {
         window.SupabaseSync.deleteUser(targetId);
