@@ -2724,6 +2724,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!applicationsTableBody) return;
 
     const apps = JSON.parse(localStorage.getItem('applications')) || [];
+    const curUsersList = JSON.parse(localStorage.getItem('users')) || users || [];
     const paginationAppsContainer = document.getElementById('pagination-manager-apps');
 
     // 검색어 필터링 (아이디/이름/코드검색, 최대 30자)
@@ -2865,7 +2866,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 영업담당자 이름 매칭 (예: 김만석영업자)
       let bizUserName = '';
-      const curUsersList = JSON.parse(localStorage.getItem('users')) || users || [];
       if (app.referrerCode) {
         const matchedUser = curUsersList.find(u => u.bizCode === app.referrerCode || u.id === app.referrerCode);
         if (matchedUser && matchedUser.name) {
