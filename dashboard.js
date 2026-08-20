@@ -2701,10 +2701,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const actionButtons = `
         <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
-          <button class="btn btn-sm btn-toggle-inquiry-status" data-id="${inq.id}" style="padding: 5px 10px; font-size: 0.75rem; background: ${isResolved ? '#f1f5f9' : 'var(--accent-success)'}; color: ${isResolved ? '#475569' : '#fff'}; border: 1px solid ${isResolved ? '#cbd5e1' : 'transparent'}; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          <button type="button" class="btn btn-sm btn-toggle-inquiry-status" onclick="window.toggleInquiryStatus('${inq.id}')" style="padding: 5px 10px; font-size: 0.75rem; background: ${isResolved ? '#f1f5f9' : 'var(--accent-success)'}; color: ${isResolved ? '#475569' : '#fff'}; border: 1px solid ${isResolved ? '#cbd5e1' : 'transparent'}; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
             <i class="fa-solid ${isResolved ? 'fa-rotate-left' : 'fa-check'}"></i> ${isResolved ? '대기로 변경' : '상담 완료'}
           </button>
-          <button class="btn btn-sm btn-delete-inquiry" data-id="${inq.id}" style="padding: 5px 9px; font-size: 0.75rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+          <button type="button" class="btn btn-sm btn-delete-inquiry" onclick="window.deleteInquiryAdmin('${inq.id}')" style="padding: 5px 9px; font-size: 0.75rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
             <i class="fa-solid fa-trash-can"></i> 삭제
           </button>
         </div>
@@ -2733,37 +2733,37 @@ document.addEventListener('DOMContentLoaded', () => {
     if (paginationInquiriesContainer) {
       paginationInquiriesContainer.innerHTML = renderPaginationControls(totalInqCount, inquiriesPerPage, inquiriesCurrentPage, 'window.changeInquiriesPage');
     }
+  };
 
-    // Event listeners
-    document.querySelectorAll('.btn-toggle-inquiry-status').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = e.target.closest('button').dataset.id;
-        const currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
-        const target = currentInquiries.find(i => String(i.id) === String(id));
-        if (target) {
-          target.status = target.status === 'resolved' ? 'pending' : 'resolved';
-          localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
-          if (window.SupabaseSync) {
-            window.SupabaseSync.upsertInquiry(target);
-          }
-          renderInquiriesList();
-        }
-      });
-    });
+  // --- 전역 3초 간편문의 상태 변경 및 삭제 핸들러 ---
+  window.toggleInquiryStatus = (id) => {
+    if (!activeUser || activeUser.role !== 'admin') return;
+    const currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+    const target = currentInquiries.find(i => String(i.id) === String(id));
+    if (target) {
+      target.status = target.status === 'resolved' ? 'pending' : 'resolved';
+      localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+      if (window.SupabaseSync) {
+        window.SupabaseSync.upsertInquiry(target);
+      }
+      renderInquiriesList();
+    }
+  };
 
-    document.querySelectorAll('.btn-delete-inquiry').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = e.target.closest('button').dataset.id;
-        if (!confirm('정말로 이 간편 문의 내역을 삭제하시겠습니까?')) return;
-        let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
-        currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
-        localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
-        if (window.SupabaseSync) {
-          window.SupabaseSync.deleteInquiry(id);
-        }
-        renderInquiriesList();
-      });
-    });
+  window.deleteInquiryAdmin = (id) => {
+    if (!activeUser || activeUser.role !== 'admin') return;
+    if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
+
+    let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+    currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
+    localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+
+    if (window.SupabaseSync) {
+      window.SupabaseSync.deleteInquiry(id);
+    }
+
+    alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
+    renderInquiriesList();
   };
 
   // --- Render Manager Constructor Progress (시공업체 진행현황 관리자 뷰) ---
