@@ -120,6 +120,52 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
+    // 영업물건 기존 3건 및 오류 데이터 1회 영구 완전 삭제 및 초기화 (사용자 요청)
+    if (!localStorage.getItem('biz_items_purged_20260820_01')) {
+        const defaultPurgedBizItemIds = [
+            'B-260802-0001',
+            'B-260802-0002',
+            'B-260802-0003',
+            '우리나라 곰탕',
+            '우리나라곰탕',
+            '대원감자탕',
+            '대박치킨'
+        ];
+        let deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
+        defaultPurgedBizItemIds.forEach(id => {
+            if (!deletedBizItemIds.includes(id)) deletedBizItemIds.push(id);
+        });
+        localStorage.setItem('deleted_biz_item_ids', JSON.stringify(deletedBizItemIds));
+
+        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        curUsers = curUsers.map(u => {
+            if (u.items && Array.isArray(u.items)) {
+                return {
+                    ...u,
+                    items: u.items.filter(it => 
+                        !deletedBizItemIds.includes(String(it.id)) && 
+                        !deletedBizItemIds.includes(String(it.appRefId)) && 
+                        !deletedBizItemIds.includes(String(it.name || '').trim())
+                    )
+                };
+            }
+            return u;
+        });
+        localStorage.setItem('users', JSON.stringify(curUsers));
+
+        let activeU = getActiveUser() || null;
+        if (activeU && activeU.items) {
+            activeU.items = activeU.items.filter(it => 
+                !deletedBizItemIds.includes(String(it.id)) && 
+                !deletedBizItemIds.includes(String(it.appRefId)) && 
+                !deletedBizItemIds.includes(String(it.name || '').trim())
+            );
+            localStorage.setItem('activeUser', JSON.stringify(activeU));
+        }
+
+        localStorage.setItem('biz_items_purged_20260820_01', 'true');
+    }
+
     let users = JSON.parse(localStorage.getItem('users')) || [];
     let activeUser = getActiveUser() || null;
     let applications = JSON.parse(localStorage.getItem('applications')) || [];
