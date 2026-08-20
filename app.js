@@ -1649,9 +1649,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const formBizUploadMob = document.getElementById('mobile-upload-form-mob');
+    const btnSubmitBizItemMob = document.getElementById('btn-submit-biz-item-mob');
     if (formBizUploadMob) {
-        formBizUploadMob.addEventListener('submit', (e) => {
+        formBizUploadMob.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            // activeUser 세션 체크
+            activeUser = getActiveUser() || null;
+            if (!activeUser) {
+                alert('로그인이 필요합니다. 다시 로그인해 주세요.');
+                return;
+            }
+
             const nameVal = document.getElementById('mob-item-name-mob')?.value.trim();
             const phoneVal = document.getElementById('mob-item-phone-mob')?.value.trim() || '';
             const addressVal = document.getElementById('mob-item-address-mob')?.value.trim();
@@ -1661,87 +1670,147 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const base64PhotosList = selectedPhotosMob.map(p => p.dataUrl).filter(Boolean);
-            const mainPhoto = base64PhotosList.length > 0 ? base64PhotosList[0] : '';
-            const firstFileName = selectedPhotosMob.length > 0 ? selectedPhotosMob[0].name : '현장촬영사진.jpg';
-
-            let apps = JSON.parse(localStorage.getItem('applications')) || [];
-            const itemId = typeof generateBizItemId === 'function' ? generateBizItemId(activeUser.bizCode, apps) : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(4, '0')}`;
-
-            // 1. 최고관리자 [신청서 목록(applications)]에 등록
-            const newApp = {
-                id: itemId,
-                userId: activeUser.id,
-                ownerName: nameVal,
-                ownerPhone: phoneVal,
-                storeName: nameVal,
-                shopName: nameVal,
-                storeAddress: addressVal,
-                signType: '현장 카메라 접수',
-                fileName: firstFileName,
-                fileData: mainPhoto,
-                photos: base64PhotosList,
-                photosCount: base64PhotosList.length,
-                appliedAt: new Date().toISOString(),
-                status: 'pending',
-                isBizItem: false,
-                referrerCode: activeUser.bizCode || ''
-            };
-
-            if (!apps.some(a => a.id === itemId)) {
-                apps.unshift(newApp);
-            } else {
-                apps = apps.map(a => a.id === itemId ? newApp : a);
-            }
-            localStorage.setItem('applications', JSON.stringify(apps));
-
-            // 2. 영업자의 [내 관리 영업물건 현황(activeUser.items)]에도 즉시 등록하여 바로 표시되도록 연동
-            const newItem = {
-                id: itemId,
-                name: nameVal,
-                phone: phoneVal,
-                address: addressVal,
-                photos: base64PhotosList,
-                receiptStatus: '접수예정',
-                progressStatus: '지원대기중',
-                createdAt: new Date().toISOString()
-            };
-
-            if (!activeUser.items) activeUser.items = [];
-            const existingIdx = activeUser.items.findIndex(it => it.id === itemId);
-            if (existingIdx >= 0) {
-                activeUser.items[existingIdx] = newItem;
-            } else {
-                activeUser.items.unshift(newItem);
+            // 사진 처리 완료 대기 중 체크
+            if (btnSubmitBizItemMob) {
+                if (btnSubmitBizItemMob.disabled) return; // 중복 제출 방지
+                btnSubmitBizItemMob.disabled = true;
+                btnSubmitBizItemMob.textContent = '등록 중...';
             }
 
-            users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
-            localStorage.setItem('users', JSON.stringify(users));
-            localStorage.setItem('activeUser', JSON.stringify(activeUser));
+            try {
+                const base64PhotosList = selectedPhotosMob.map(p => p.dataUrl).filter(Boolean);
+                const mainPhoto = base64PhotosList.length > 0 ? base64PhotosList[0] : '';
+                const firstFileName = selectedPhotosMob.length > 0 ? selectedPhotosMob[0].name : '현장촬영사진.jpg';
 
-            // 3. Supabase 클라우드 DB 실시간 양방향 동기화
-            if (window.SupabaseSync) {
-                window.SupabaseSync.upsertApplication(newApp);
-                if (typeof window.SupabaseSync.updateUser === 'function') {
-                    window.SupabaseSync.updateUser(activeUser.id, { items: activeUser.items });
+                let apps = JSON.parse(localStorage.getItem('applications')) || [];
+                const itemId = typeof generateBizItemId === 'function'
+                    ? generateBizItemId(activeUser.bizCode, apps)
+                    : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(4, '0')}`;
+
+                // 1. 최고관리자 [신청서 목록(applications)]에 등록 (사진 데이터 포함)
+                const newApp = {
+                    id: itemId,
+                    userId: activeUser.id,
+                    ownerName: nameVal,
+                    ownerPhone: phoneVal,
+                    storeName: nameVal,
+                    shopName: nameVal,
+                    storeAddress: addressVal,
+                    signType: '현장 카메라 접수',
+                    fileName: firstFileName,
+                    fileData: mainPhoto,
+                    photos: base64PhotosList,
+                    photosCount: base64PhotosList.length,
+                    appliedAt: new Date().toISOString(),
+                    status: 'pending',
+                    isBizItem: false,
+                    referrerCode: activeUser.bizCode || ''
+                };
+
+                if (!apps.some(a => a.id === itemId)) {
+                    apps.unshift(newApp);
+                } else {
+                    apps = apps.map(a => a.id === itemId ? newApp : a);
+                }
+
+                // localStorage 저장 (QuotaExceededError 안전 처리)
+                try {
+                    localStorage.setItem('applications', JSON.stringify(apps));
+                } catch (quotaErr) {
+                    // 사진이 너무 많아 용량 초과 시 사진 없이 메타데이터만 저장
+                    console.warn('[저장 용량 초과] 사진 데이터를 제외하고 기본 정보만 저장합니다.', quotaErr);
+                    const appsLite = apps.map(a => a.id === itemId
+                        ? { ...a, photos: [], fileData: '', photosCount: 0 }
+                        : a
+                    );
+                    try {
+                        localStorage.setItem('applications', JSON.stringify(appsLite));
+                        alert('저장 공간이 부족하여 사진은 제외하고 기본 정보만 등록되었습니다.\n관리자에게 문의하거나 이전 데이터를 정리해 주세요.');
+                    } catch (e2) {
+                        alert('저장 공간이 부족합니다. 이전 데이터를 정리 후 다시 시도해 주세요.');
+                        return;
+                    }
+                }
+
+                // 2. 영업자 items에는 사진 메타데이터만 저장 (용량 절약)
+                const newItem = {
+                    id: itemId,
+                    name: nameVal,
+                    phone: phoneVal,
+                    address: addressVal,
+                    photos: base64PhotosList.slice(0, 3), // 미리보기용 최대 3장만
+                    photosCount: base64PhotosList.length,
+                    receiptStatus: '접수예정',
+                    progressStatus: '지원대기중',
+                    createdAt: new Date().toISOString()
+                };
+
+                if (!activeUser.items) activeUser.items = [];
+                const existingIdx = activeUser.items.findIndex(it => it.id === itemId);
+                if (existingIdx >= 0) {
+                    activeUser.items[existingIdx] = newItem;
+                } else {
+                    activeUser.items.unshift(newItem);
+                }
+
+                users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
+                try {
+                    localStorage.setItem('users', JSON.stringify(users));
+                    localStorage.setItem('activeUser', JSON.stringify(activeUser));
+                } catch (quotaErr2) {
+                    // users 저장 실패 시 사진 없이 저장
+                    const usersLite = users.map(u => {
+                        if (u.id !== activeUser.id) return u;
+                        const itemsLite = (u.items || []).map(it =>
+                            it.id === itemId ? { ...it, photos: [], photosCount: base64PhotosList.length } : it
+                        );
+                        return { ...u, items: itemsLite };
+                    });
+                    try {
+                        localStorage.setItem('users', JSON.stringify(usersLite));
+                        localStorage.setItem('activeUser', JSON.stringify({ ...activeUser, items: usersLite.find(u => u.id === activeUser.id)?.items || [] }));
+                    } catch (e3) {
+                        console.warn('[users 저장 실패]', e3);
+                    }
+                }
+
+                // 3. Supabase 클라우드 DB 실시간 양방향 동기화
+                if (window.SupabaseSync) {
+                    try {
+                        window.SupabaseSync.upsertApplication(newApp);
+                        if (typeof window.SupabaseSync.updateUser === 'function') {
+                            window.SupabaseSync.updateUser(activeUser.id, { items: activeUser.items });
+                        }
+                    } catch (syncErr) {
+                        console.warn('[Supabase 동기화 오류]', syncErr);
+                    }
+                }
+
+                // 4. 카카오톡 관리자 실시간 알림 발송
+                if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
+                    try { window.KakaoNotifier.notifyApplication(newApp); } catch (kakaoErr) {}
+                }
+
+                alert(`현장 간판 신청 물건 [${nameVal}] 등록이 완료되었습니다!\n신청번호: [${itemId}]\n(현장 사진이 최고관리자 대시보드 및 영업물건 현황에 즉시 자동 업로드되었습니다.)`);
+                formBizUploadMob.reset();
+                selectedPhotosMob = [];
+                renderMobilePhotoPreviewsMob();
+                renderBusinessDashboardMob();
+                renderStatusTab();
+                window.scrollTo(0, 0);
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+                updateHeaderAuthButton();
+
+            } catch (err) {
+                console.error('[현장 물건 등록 오류]', err);
+                alert(`등록 중 오류가 발생했습니다.\n오류 내용: ${err.message || err}\n\n잠시 후 다시 시도해 주세요.`);
+            } finally {
+                if (btnSubmitBizItemMob) {
+                    btnSubmitBizItemMob.disabled = false;
+                    btnSubmitBizItemMob.textContent = '현장 물건으로 등록';
                 }
             }
-
-            // 4. 카카오톡 관리자 실시간 알림 발송
-            if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
-                window.KakaoNotifier.notifyApplication(newApp);
-            }
-
-            alert(`현장 간판 신청 물건 [${nameVal}] 등록이 완료되었습니다!\n신청번호: [${itemId}]\n(현장 사진이 최고관리자 대시보드 및 영업물건 현황에 즉시 자동 업로드되었습니다.)`);
-            formBizUploadMob.reset();
-            selectedPhotosMob = [];
-            renderMobilePhotoPreviewsMob();
-            renderBusinessDashboardMob();
-            renderStatusTab();
-            window.scrollTo(0, 0);
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-            updateHeaderAuthButton();
         });
     }
 

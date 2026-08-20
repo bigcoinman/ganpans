@@ -1042,7 +1042,19 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         apps = apps.map(a => a.id === itemId ? newApp : a);
       }
-      localStorage.setItem('applications', JSON.stringify(apps));
+      try {
+        localStorage.setItem('applications', JSON.stringify(apps));
+      } catch (quotaErr) {
+        console.warn('[저장 용량 초과] 사진 데이터를 제외하고 기본 정보만 저장합니다.', quotaErr);
+        const appsLite = apps.map(a => a.id === itemId ? { ...a, fileData: '', photos: [], photosCount: 0 } : a);
+        try {
+          localStorage.setItem('applications', JSON.stringify(appsLite));
+          alert('저장 공간이 부족하여 사진은 제외하고 기본 정보만 등록되었습니다.\n관리자에게 문의하거나 이전 데이터를 정리해 주세요.');
+        } catch (e2) {
+          alert('저장 공간이 부족합니다. 이전 데이터를 정리 후 다시 시도해 주세요.');
+          return;
+        }
+      }
 
       // 영업자 본인의 items 에도 등록 (실제 촬영 사진 base64 포함)
       const newItem = {
@@ -1061,18 +1073,33 @@ document.addEventListener('DOMContentLoaded', () => {
         activeUser.items = activeUser.items.map(i => i.id === itemId ? newItem : i);
       }
       users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
-      localStorage.setItem('users', JSON.stringify(users));
-      localStorage.setItem('activeUser', JSON.stringify(activeUser));
+      try {
+        localStorage.setItem('users', JSON.stringify(users));
+        localStorage.setItem('activeUser', JSON.stringify(activeUser));
+      } catch (quotaErr2) {
+        console.warn('[users 저장 실패]', quotaErr2);
+        const usersLite = users.map(u => {
+          if (u.id !== activeUser.id) return u;
+          const itemsLite = (u.items || []).map(it => it.id === itemId ? { ...it, photos: [] } : it);
+          return { ...u, items: itemsLite };
+        });
+        try {
+          localStorage.setItem('users', JSON.stringify(usersLite));
+          localStorage.setItem('activeUser', JSON.stringify({ ...activeUser, items: usersLite.find(u => u.id === activeUser.id)?.items || [] }));
+        } catch (e3) { console.warn('[users 저장 실패]', e3); }
+      }
 
       // Supabase 클라우드 DB 실시간 양방향 동기화
       if (window.SupabaseSync) {
-        window.SupabaseSync.upsertApplication(newApp);
-        window.SupabaseSync.updateUser(activeUser.id, { items: activeUser.items });
+        try {
+          window.SupabaseSync.upsertApplication(newApp);
+          window.SupabaseSync.updateUser(activeUser.id, { items: activeUser.items });
+        } catch (syncErr) { console.warn('[Supabase 동기화 오류]', syncErr); }
       }
 
       // 카카오톡 관리자 실시간 알림 발송
       if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
-        window.KakaoNotifier.notifyApplication(newApp);
+        try { window.KakaoNotifier.notifyApplication(newApp); } catch (kakaoErr) {}
       }
 
       alert(`현장 간판 신청 물건 [${nameVal}] 등록이 성공적으로 접수되었습니다!\n신청번호: [${itemId}]\n(대시보드에 안전하게 등록되었습니다.)`);
