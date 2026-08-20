@@ -3468,26 +3468,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // 영업자 코드와 매칭되거나 activeUser.items에 등록된 물건들 취합
     let bizList = [];
 
-    // 1) applications 중 추천인코드가 내 영업자코드이거나 userId가 나인 경우
+    // 1) applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 체크한 건만 수집
     apps.forEach(app => {
+      if (app.isBizItem !== true) return; // 관리자 미체크 건은 절대 노출 금지
+
       const isMyReferrer = activeUser.bizCode && app.referrerCode === activeUser.bizCode;
-      const isMyItem = myItems.some(i => i.id === app.id);
-      if (isMyReferrer || isMyItem) {
+      const isMyItem = myItems.some(i => String(i.id) === String(app.id));
+      const isMyUser = app.userId && app.userId === activeUser.id;
+      if (isMyReferrer || isMyItem || isMyUser) {
         bizList.push({
           id: app.id,
           date: app.appliedAt || new Date().toISOString(),
           ownerName: app.ownerName || app.name || '-',
           ownerPhone: app.ownerPhone || app.phone || '',
-          storeName: app.storeName || app.name || '-',
+          storeName: app.storeName || app.shopName || app.name || '-',
           storeAddress: app.storeAddress || app.address || '',
           statusObj: app
         });
       }
     });
 
-    // 2) myItems 중 applications에 아직 없는 순수 로컬 items도 추가
+    // 2) myItems 중에서도 applications에 매칭되는 건이 있다면 isBizItem === true 인 경우만 허용
     myItems.forEach(item => {
-      if (!bizList.some(b => b.id === item.id)) {
+      const matchingApp = apps.find(a => String(a.id) === String(item.id));
+      if (matchingApp && matchingApp.isBizItem !== true) return; // 관리자가 해제했거나 미승인 건은 제외
+
+      if (!bizList.some(b => String(b.id) === String(item.id))) {
         bizList.push({
           id: item.id,
           date: item.registeredAt || new Date().toISOString(),
@@ -3639,26 +3645,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let bizList = [];
 
-    // 1) applications 중 추천인코드가 내 영업자코드이거나 userId가 나인 경우
+    // 1) applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 체크한 건만 수집
     apps.forEach(app => {
+      if (app.isBizItem !== true) return;
+
       const isMyReferrer = activeUser.bizCode && app.referrerCode === activeUser.bizCode;
-      const isMyItem = myItems.some(i => i.id === app.id);
-      if (isMyReferrer || isMyItem) {
+      const isMyItem = myItems.some(i => String(i.id) === String(app.id));
+      const isMyUser = app.userId && app.userId === activeUser.id;
+      if (isMyReferrer || isMyItem || isMyUser) {
         bizList.push({
           id: app.id,
           date: app.appliedAt || new Date().toISOString(),
           ownerName: app.ownerName || app.name || '-',
           ownerPhone: app.ownerPhone || app.phone || '',
-          storeName: app.storeName || app.name || '-',
+          storeName: app.storeName || app.shopName || app.name || '-',
           storeAddress: app.storeAddress || app.address || '',
           statusObj: app
         });
       }
     });
 
-    // 2) myItems 중 applications에 아직 없는 순수 로컬 items도 추가
+    // 2) myItems 중에서도 applications에 매칭되는 건이 있다면 isBizItem === true 인 경우만 허용
     myItems.forEach(item => {
-      if (!bizList.some(b => b.id === item.id)) {
+      const matchingApp = apps.find(a => String(a.id) === String(item.id));
+      if (matchingApp && matchingApp.isBizItem !== true) return;
+
+      if (!bizList.some(b => String(b.id) === String(item.id))) {
         bizList.push({
           id: item.id,
           date: item.registeredAt || new Date().toISOString(),

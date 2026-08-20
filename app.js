@@ -1237,6 +1237,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 3. 내 영업물건 현황 및 진행상황 (모바일 카드)
+    // 3. 내 영업물건 현황 및 진행상황 (모바일 카드)
+    // [엄격 규칙] 최고관리자 대시보드에서 '영업물건으로 변경' 버튼(isBizItem: true)이 체크된 물건만 표시
     function renderBizRegisteredItemsMob() {
         const bizListContainer = document.getElementById('biz-items-list-mobile');
         if (!bizListContainer) return;
@@ -1246,10 +1248,14 @@ document.addEventListener('DOMContentLoaded', () => {
         let myItems = activeUser.items || [];
         let bizList = [];
 
+        // 1) applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 체크한 건만 수집
         apps.forEach(app => {
+            if (app.isBizItem !== true) return; // 관리자 미체크 건은 절대 노출 금지
+
             const isMyReferrer = activeUser.bizCode && app.referrerCode === activeUser.bizCode;
             const isMyItem = myItems.some(i => String(i.id) === String(app.id));
-            if (isMyReferrer || isMyItem) {
+            const isMyUser = app.userId && app.userId === activeUser.id;
+            if (isMyReferrer || isMyItem || isMyUser) {
                 bizList.push({
                     id: app.id,
                     date: app.appliedAt || new Date().toISOString(),
@@ -1262,7 +1268,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // 2) myItems 중에서도 applications에 매칭되는 건이 있다면 isBizItem === true 인 경우만 허용
         myItems.forEach(item => {
+            const matchingApp = apps.find(a => String(a.id) === String(item.id));
+            if (matchingApp && matchingApp.isBizItem !== true) return; // 관리자가 해제했거나 미승인 건은 제외
+
             if (!bizList.some(b => String(b.id) === String(item.id))) {
                 bizList.push({
                     id: item.id,
@@ -1316,8 +1326,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (filtered.length === 0) {
-            const emptyMsg = q ? `검색어 [${escapeHtml(q)}] 에 일치하는 영업물건이 없습니다.` : '등록된 영업물건이 없습니다.';
-            bizListContainer.innerHTML = `<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.88rem; background: #f8fafc; border-radius: 8px;">${emptyMsg}</p>`;
+            const emptyMsg = q ? `검색어 [${escapeHtml(q)}] 에 일치하는 영업물건이 없습니다.` : '등록된 영업물건이 없습니다.<br><span style="font-size: 0.76rem; color: #94a3b8;">(최고관리자가 승인/영업물건으로 등록한 물건만 표시됩니다)</span>';
+            bizListContainer.innerHTML = `<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.88rem; background: #f8fafc; border-radius: 8px; line-height: 1.5;">${emptyMsg}</p>`;
             return;
         }
 
@@ -1359,10 +1369,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const apps = JSON.parse(localStorage.getItem('applications')) || [];
         let itemsUpdated = false;
 
-        // applications 중 해당 영업자(activeUser.bizCode 또는 activeUser.id)가 등록한 건이 items에 없으면 자동 복구/병합
+        // applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 지정한 건만 items에 병합
         apps.forEach(app => {
+            if (app.isBizItem !== true) return; // 관리자 미체크 건은 items에 자동 추가 안 함
+
             const isMyBizApp = (app.referrerCode && activeUser.bizCode && app.referrerCode === activeUser.bizCode) ||
-                               (app.userId && app.userId === activeUser.id && (String(app.id).startsWith('B-') || app.isBizItem || app.signType === '현장 카메라 접수'));
+                               (app.userId && app.userId === activeUser.id);
             if (isMyBizApp && !items.some(it => String(it.id) === String(app.id))) {
                 const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
                 items.unshift({
@@ -1378,6 +1390,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 itemsUpdated = true;
             }
         });
+
+        // 만약 관리자가 applications에서 isBizItem을 해제(false)했다면 items 목록에서도 자동 제거
+        const cleanedItems = items.filter(item => {
+            const matchingApp = apps.find(app => String(app.id) === String(item.id));
+            if (matchingApp && matchingApp.isBizItem === false) {
+                itemsUpdated = true;
+                return false;
+            }
+            return true;
+        });
+        items = cleanedItems;
 
         items = items.map(item => {
             const matchingApp = apps.find(app => String(app.id) === String(item.id));
@@ -1926,9 +1949,12 @@ document.addEventListener('DOMContentLoaded', () => {
         let bizList = [];
 
         apps.forEach(app => {
+            if (app.isBizItem !== true) return; // 관리자 미체크 건은 엑셀 목록에서도 제외
+
             const isMyReferrer = activeUser.bizCode && app.referrerCode === activeUser.bizCode;
             const isMyItem = myItems.some(i => String(i.id) === String(app.id));
-            if (isMyReferrer || isMyItem) {
+            const isMyUser = app.userId && app.userId === activeUser.id;
+            if (isMyReferrer || isMyItem || isMyUser) {
                 bizList.push({
                     id: app.id,
                     date: app.appliedAt || new Date().toISOString(),
@@ -1942,6 +1968,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         myItems.forEach(item => {
+            const matchingApp = apps.find(a => String(a.id) === String(item.id));
+            if (matchingApp && matchingApp.isBizItem !== true) return;
+
             if (!bizList.some(b => String(b.id) === String(item.id))) {
                 bizList.push({
                     id: item.id,
