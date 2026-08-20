@@ -2014,12 +2014,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Supabase 실시간 양방향 데이터 동기화 리스너 (모바일) ---
+    window.isInteractingWithForm = false;
     window.addEventListener('supabase-data-synced', (e) => {
         users = JSON.parse(localStorage.getItem('users')) || [];
         applications = JSON.parse(localStorage.getItem('applications')) || [];
         activeUser = getActiveUser() || null;
         updateDrawerProfile();
         updateHeaderAuthButton();
+
+        // 사용자가 드롭다운(SELECT)이나 텍스트입력(INPUT)을 조작 중일 때는 전체 DOM 재생성을 스킵하여 깜빡임/닫힘 완벽 방지
+        const activeEl = document.activeElement;
+        const isFormActive = window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA'));
+        if (isFormActive) {
+            return;
+        }
+
         renderStatusTab();
 
         // 역할별 모바일 대시보드 화면 실시간 즉시 갱신
@@ -2037,7 +2046,8 @@ document.addEventListener('DOMContentLoaded', () => {
             await window.SupabaseSync.syncAllData();
             // 사용자가 드롭다운(SELECT)이나 텍스트입력(INPUT) 조작 중일 때는 DOM 재생성으로 인한 닫힘 방지
             const activeEl = document.activeElement;
-            if (activeEl && (activeEl.tagName === 'SELECT' || activeEl.tagName === 'INPUT')) {
+            const isFormActive = window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA'));
+            if (isFormActive) {
                 return;
             }
             renderAdminDashboardMob(true);
@@ -2441,7 +2451,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let actionsHtml = `
                         <div class="admin-action-row-mob" style="display:flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-top: 12px;">
                             <div style="position: relative; display: inline-flex; align-items: center;">
-                                <select class="status-select-mob select-app-status-mob" data-id="${app.id}" onchange="window.updateApplicationStatusMob && window.updateApplicationStatusMob('${app.id}', this.value)" style="padding: 6px 28px 6px 10px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 6px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 36px; line-height: 1.2; position: relative; z-index: 10; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
+                                <select class="status-select-mob select-app-status-mob" data-id="${app.id}" onfocus="window.isInteractingWithForm = true;" onblur="setTimeout(() => { window.isInteractingWithForm = false; }, 1000);" onclick="event.stopPropagation(); window.isInteractingWithForm = true;" ontouchstart="event.stopPropagation(); window.isInteractingWithForm = true;" onchange="window.isInteractingWithForm = false; window.updateApplicationStatusMob && window.updateApplicationStatusMob('${app.id}', this.value);" style="padding: 6px 28px 6px 10px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 6px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 36px; line-height: 1.2; position: relative; z-index: 10; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
                                     <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사 대기</option>
                                     <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
                                     <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
