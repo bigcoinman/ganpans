@@ -1255,16 +1255,30 @@ window.SupabaseSync = {
   // 3초 간편문의 전체 영구 초기화 (로컬 + DB 완전 삭제)
   async clearAllInquiries() {
     try {
-      localStorage.setItem('inquiries', JSON.stringify([]));
-      localStorage.setItem('deleted_inquiry_ids', JSON.stringify([]));
-      localStorage.setItem('inquiries_purged_flag', 'true');
+      let deletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
+      const currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+      currentInquiries.forEach(i => {
+        if (i.id && !deletedInqIds.includes(String(i.id))) {
+          deletedInqIds.push(String(i.id));
+        }
+      });
+
       if (window.supabaseClient) {
         const { data } = await window.supabaseClient.from('inquiries').select('id');
         if (data && data.length > 0) {
+          data.forEach(d => {
+            if (d.id && !deletedInqIds.includes(String(d.id))) {
+              deletedInqIds.push(String(d.id));
+            }
+          });
           const ids = data.map(d => String(d.id));
           await window.supabaseClient.from('inquiries').delete().in('id', ids);
         }
       }
+
+      localStorage.setItem('deleted_inquiry_ids', JSON.stringify(deletedInqIds));
+      localStorage.setItem('inquiries', JSON.stringify([]));
+      localStorage.setItem('inquiries_purged_flag', 'true');
       return true;
     } catch (e) {
       console.error('Supabase clearAllInquiries error:', e);

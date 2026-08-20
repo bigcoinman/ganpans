@@ -174,11 +174,23 @@ function toggleAdminSection(containerId, headerEl, event) {
 window.toggleAdminSection = toggleAdminSection;
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 3초 간편문의 기존 오류 데이터 1회 강제 완전 초기화 (사용자 요청)
-  if (!localStorage.getItem('inquiries_cleared_20260820_01')) {
+  // 3초 간편문의 기존 5건 및 오류 데이터 1회 영구 삭제 및 완전 초기화 (사용자 요청)
+  if (!localStorage.getItem('inquiries_cleared_20260820_02')) {
+    const defaultIdsToPurge = [
+      'INQ-20260817-001',
+      'INQ-1786920993324',
+      'INQ-1786871032835',
+      'INQ-1786920450983',
+      'INQ-1786920628397'
+    ];
+    let deletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
+    defaultIdsToPurge.forEach(id => {
+      if (!deletedInqIds.includes(id)) deletedInqIds.push(id);
+    });
+    localStorage.setItem('deleted_inquiry_ids', JSON.stringify(deletedInqIds));
     localStorage.setItem('inquiries', JSON.stringify([]));
-    localStorage.setItem('deleted_inquiry_ids', JSON.stringify([]));
-    localStorage.setItem('inquiries_cleared_20260820_01', 'true');
+    localStorage.setItem('inquiries_purged_flag', 'true');
+    localStorage.setItem('inquiries_cleared_20260820_02', 'true');
     if (window.SupabaseSync) {
       window.SupabaseSync.clearAllInquiries();
     }
