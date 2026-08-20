@@ -84,7 +84,7 @@ function initBuildingGallery() {
       category: '카페 / 식음료',
       support: '노후 전면 간판 철거 및 조명용 플렉스 간판 설치',
       subsidy: '2,000,000원 (자부담 0원 - VAT 별도)',
-      date: '2026년 7월 08일',
+      date: '2025년 6월 08일',
       satisfaction: '★★★★★ 100%',
       desc: '기존 간판이 낡고 빛이 바랬었는데, 보조금 지원사업을 통해 깔끔한 조명용 플렉스 간판으로 탈바꿈했습니다. 야간 조명 켜졌을 때 시인성이 정말 뛰어납니다.'
     },
@@ -753,13 +753,13 @@ function initReviews() {
           const mapped = data.map(r => {
             const d = new Date(r.created_at);
             const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
-            
+
             let avatar = 'fa-store';
             if (r.shop_name.includes('카페') || r.shop_name.includes('커피') || r.shop_name.includes('디저트')) avatar = 'fa-mug-hot';
             else if (r.shop_name.includes('헤어') || r.shop_name.includes('미용')) avatar = 'fa-scissors';
             else if (r.shop_name.includes('국밥') || r.shop_name.includes('음식') || r.shop_name.includes('식당') || r.shop_name.includes('식사')) avatar = 'fa-bowl-food';
             else if (r.shop_name.includes('옷') || r.shop_name.includes('의류') || r.shop_name.includes('패션')) avatar = 'fa-shirt';
-            
+
             return {
               stars: r.rating || 5,
               date: dateStr,
@@ -778,7 +778,7 @@ function initReviews() {
             seen.add(key);
             return !duplicate;
           });
-          
+
           renderReviews();
         }
       } catch (e) {
@@ -1621,7 +1621,7 @@ function initWizard() {
 
         if (bizUserFound) {
           safeSetStorage('users', users);
-          
+
           // 현재 로그인한 사용자가 추천 코드를 발급한 영업자 본인일 경우 세션 정보도 실시간 업데이트
           if (activeUser && activeUser.role === 'business' && activeUser.bizCode === referrerCode) {
             activeUser.items = activeUser.items || [];
@@ -2496,9 +2496,9 @@ function initAuthAndDashboard() {
             const localUser = users.find(u => {
               const uId = (u.id || '').toLowerCase();
               const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
-              const isMatchUser = (uId === idVal.toLowerCase()) || 
-                                  (cleanDigits && uId === cleanDigits) || 
-                                  (cleanDigits && uPhoneDigits === cleanDigits);
+              const isMatchUser = (uId === idVal.toLowerCase()) ||
+                (cleanDigits && uId === cleanDigits) ||
+                (cleanDigits && uPhoneDigits === cleanDigits);
               return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
             });
             if (localUser) {
@@ -2521,9 +2521,9 @@ function initAuthAndDashboard() {
       const localUser = users.find(u => {
         const uId = (u.id || '').toLowerCase();
         const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
-        const isMatchUser = (uId === idVal.toLowerCase()) || 
-                            (cleanDigits && uId === cleanDigits) || 
-                            (cleanDigits && uPhoneDigits === cleanDigits);
+        const isMatchUser = (uId === idVal.toLowerCase()) ||
+          (cleanDigits && uId === cleanDigits) ||
+          (cleanDigits && uPhoneDigits === cleanDigits);
         return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
       });
       if (localUser) user = sanitizeUser(localUser);
@@ -2577,7 +2577,7 @@ function initAuthAndDashboard() {
 // ==========================================
 function initPopups() {
   let popups = JSON.parse(localStorage.getItem('popups'));
-  
+
   if (!popups) {
     popups = [
       {
@@ -2597,19 +2597,19 @@ function initPopups() {
     ];
     localStorage.setItem('popups', JSON.stringify(popups));
   }
-  
+
   // Find active popups matching the posting period
   const todayStr = new Date().toISOString().split('T')[0];
   const activePopups = popups.filter(p => {
     if (!p.isActive) return false;
-    
+
     // Check if within period
     if (p.startDate && todayStr < p.startDate) return false;
     if (p.endDate && todayStr > p.endDate) return false;
-    
+
     return true;
   });
-  
+
   activePopups.forEach(popup => {
     // Check if the user selected "do not show for 24 hours"
     const hideTime = localStorage.getItem(`hide_popup_${popup.id}`);
@@ -2623,18 +2623,18 @@ function initPopups() {
         localStorage.removeItem(`hide_popup_${popup.id}`);
       }
     }
-    
+
     // Create popup window DOM element
     const popupEl = document.createElement('div');
     popupEl.className = 'popup-window';
     popupEl.id = `popup-window-${popup.id}`;
-    
+
     // Apply width, height, position styles
     popupEl.style.width = `${popup.width}px`;
     popupEl.style.height = `${popup.height}px`;
     popupEl.style.top = `${popup.positionTop}px`;
     popupEl.style.left = `${popup.positionLeft}px`;
-    
+
     // Build popup content
     let imageHtml = '';
     if (popup.imageUrl) {
@@ -2646,7 +2646,7 @@ function initPopups() {
         imageHtml = `<img src="${safeImgUrl}" class="popup-img" alt="팝업 이미지">`;
       }
     }
-    
+
     let contentHtml = '';
     const safeContentText = escapeHtml(popup.content).replace(/\n/g, '<br>');
     if (popup.linkUrl) {
@@ -2655,7 +2655,7 @@ function initPopups() {
     } else {
       contentHtml = `<div class="popup-content">${safeContentText}</div>`;
     }
-    
+
     popupEl.innerHTML = `
       <div class="popup-header">
         <h5 class="popup-title">${escapeHtml(popup.title)}</h5>
@@ -2672,17 +2672,17 @@ function initPopups() {
         <button class="popup-close-btn">닫기</button>
       </div>
     `;
-    
+
     document.body.appendChild(popupEl);
-    
+
     // Make popups draggable
     makeDraggable(popupEl);
-    
+
     // Attach close events
     const closeX = popupEl.querySelector('.popup-close-x');
     const closeBtn = popupEl.querySelector('.popup-close-btn');
     const hideTodayCheckbox = popupEl.querySelector('.popup-hide-today');
-    
+
     const closePopup = () => {
       if (hideTodayCheckbox.checked) {
         localStorage.setItem(`hide_popup_${popup.id}`, Date.now().toString());
@@ -2693,7 +2693,7 @@ function initPopups() {
         popupEl.remove();
       }, 300);
     };
-    
+
     closeX.addEventListener('click', closePopup);
     closeBtn.addEventListener('click', closePopup);
   });
@@ -2703,25 +2703,25 @@ function initPopups() {
 function makeDraggable(el) {
   const header = el.querySelector('.popup-header');
   if (!header) return;
-  
+
   header.style.cursor = 'move';
-  
+
   let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-  
+
   header.onmousedown = dragMouseDown;
-  
+
   function dragMouseDown(e) {
     e = e || window.event;
     // Don't drag if clicking the close 'X' button or checkbox or footer button
     if (e.target.closest('.popup-close-x') || e.target.closest('.popup-footer')) return;
-    
+
     e.preventDefault();
     pos3 = e.clientX;
     pos4 = e.clientY;
     document.onmouseup = closeDragElement;
     document.onmousemove = elementDrag;
   }
-  
+
   function elementDrag(e) {
     e = e || window.event;
     e.preventDefault();
@@ -2729,18 +2729,18 @@ function makeDraggable(el) {
     pos2 = pos4 - e.clientY;
     pos3 = e.clientX;
     pos4 = e.clientY;
-    
+
     let newTop = el.offsetTop - pos2;
     let newLeft = el.offsetLeft - pos1;
-    
+
     // Prevent dragging completely off-screen
     if (newTop < 0) newTop = 0;
     if (newLeft < 0) newLeft = 0;
-    
+
     el.style.top = newTop + "px";
     el.style.left = newLeft + "px";
   }
-  
+
   function closeDragElement() {
     document.onmouseup = null;
     document.onmousemove = null;
@@ -2793,7 +2793,7 @@ function initPWA() {
   // Open Modal Logic (Website Custom Modal)
   const openModal = (e) => {
     if (e) e.preventDefault();
-    
+
     if (qrImg) {
       qrImg.onerror = () => {
         qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com%2Fapp';
@@ -2824,7 +2824,7 @@ function initPWA() {
   if (pwaShortcutBtn) {
     pwaShortcutBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      
+
       if (globalDeferredPrompt) {
         // Direct 1-Tap System Dialog
         globalDeferredPrompt.prompt();
@@ -2902,7 +2902,7 @@ document.addEventListener('DOMContentLoaded', initPWA);
 // --- 8. Visitor Tracking Logic (실제 접속자 기준 통계) ---
 async function initVisitorTracking() {
   const RESET_KEY = 'visitor_reset_flag_20260817';
-  
+
   // 기존 하드코딩 가짜 수치(1420, 34 등) 초기화
   if (localStorage.getItem(RESET_KEY) !== 'done') {
     localStorage.removeItem('visitor_total');
@@ -2969,7 +2969,7 @@ function initMobileBottomNav() {
     const handleScroll = () => {
       const scrollPos = window.scrollY + 180;
       let activeSection = 'home';
-      
+
       if (sections.apply && scrollPos >= sections.apply.offsetTop) {
         activeSection = 'apply';
       } else if (sections.simulator && scrollPos >= sections.simulator.offsetTop) {
@@ -3058,41 +3058,41 @@ function initMobileBottomNav() {
 
     const faqDatabase = {
       target: "💡 <strong>지원 대상 및 자격 기준</strong><br><br>" +
-          "• <strong>대상자</strong>: 공고일 현재 경기도 내에 사업장을 두고 영업 중인 <strong>창업 3년 이상</strong>(사업자등록 기준) 소상공인 사업자입니다.<br>" +
-          "• <strong>소상공인 상시 근로자 기준</strong>:<br>" +
-          "  - 도소매업, 음식점, 숙박업, 서비스업: 5인 미만<br>" +
-          "  - 광업, 제조업, 건설업, 운수업: 10인 미만<br>" +
-          "• <strong>지원 제외 대상</strong>: 대기업 프랜차이즈 직영점, 사치향락 업종(유흥주점 등), 무등록/휴폐업자, 지방세 체납자, 최근 3년 이내 경기도 및 시·군 유사 지원사업 수혜자는 신청할 수 없습니다.",
+        "• <strong>대상자</strong>: 공고일 현재 경기도 내에 사업장을 두고 영업 중인 <strong>창업 3년 이상</strong>(사업자등록 기준) 소상공인 사업자입니다.<br>" +
+        "• <strong>소상공인 상시 근로자 기준</strong>:<br>" +
+        "  - 도소매업, 음식점, 숙박업, 서비스업: 5인 미만<br>" +
+        "  - 광업, 제조업, 건설업, 운수업: 10인 미만<br>" +
+        "• <strong>지원 제외 대상</strong>: 대기업 프랜차이즈 직영점, 사치향락 업종(유흥주점 등), 무등록/휴폐업자, 지방세 체납자, 최근 3년 이내 경기도 및 시·군 유사 지원사업 수혜자는 신청할 수 없습니다.",
       amount: "💰 <strong>지원 금액 및 품목 안내</strong><br><br>" +
-          "• <strong>지원 한도</strong>: 업체당 <strong>최대 200만원 한도</strong> (공급가의 100% 지원, 부가세 10% 및 200만원 초과 금액은 본인 부담)<br>" +
-          "  * 예: 견적서 공급가액이 220만원인 경우, 지원금 200만원 + 본인부담 20만원 + 부가세 별도 납부<br>" +
-          "• <strong>지원 품목</strong>: 간판(불법 간판 제외), 썬팅, 투광기 중 <strong>최대 2개 품목 이하</strong> 선택 가능<br>" +
-          "• <strong>시공 주의사항</strong>: 반드시 <strong>선정 후 견적서 승인</strong>을 먼저 받은 다음 시공을 진행해야 합니다. 승인 전 <strong>사전 시공 시 지원 대상에서 제외(선정 취소)</strong>되므로 절대 주의 바랍니다.",
+        "• <strong>지원 한도</strong>: 업체당 <strong>최대 200만원 한도</strong> (공급가의 100% 지원, 부가세 10% 및 200만원 초과 금액은 본인 부담)<br>" +
+        "  * 예: 견적서 공급가액이 220만원인 경우, 지원금 200만원 + 본인부담 20만원 + 부가세 별도 납부<br>" +
+        "• <strong>지원 품목</strong>: 간판(불법 간판 제외), 썬팅, 투광기 중 <strong>최대 2개 품목 이하</strong> 선택 가능<br>" +
+        "• <strong>시공 주의사항</strong>: 반드시 <strong>선정 후 견적서 승인</strong>을 먼저 받은 다음 시공을 진행해야 합니다. 승인 전 <strong>사전 시공 시 지원 대상에서 제외(선정 취소)</strong>되므로 절대 주의 바랍니다.",
       documents: "📄 <strong>제출 서류 안내</strong><br><br>" +
-          "• <strong>필수 기본 서류</strong>:<br>" +
-          "  1. 신청서 및 추진계획서 (점포 사진 첨부 필수)<br>" +
-          "  2. 개인신용정보 제공 동의서<br>" +
-          "  3. 시공계획서<br>" +
-          "• <strong>증빙 서류 (※ 경기바로 공공마이데이터 간편 신청 동의 시 제출 생략 가능)</strong>:<br>" +
-          "  4. 사업자등록증 사본 1부<br>" +
-          "  5. 최근 2개년 부가세 과세표준증명원(또는 면세사업자 수입금액증명원)<br>" +
-          "  6. 소득금액증명원 (직전년도 기준)<br>" +
-          "• <strong>가점 증빙 (해당자만 제출)</strong>: 표창장(도지사 등), 자영업아카데미 수료증, 취약계층 증명서 등",
+        "• <strong>필수 기본 서류</strong>:<br>" +
+        "  1. 신청서 및 추진계획서 (점포 사진 첨부 필수)<br>" +
+        "  2. 개인신용정보 제공 동의서<br>" +
+        "  3. 시공계획서<br>" +
+        "• <strong>증빙 서류 (※ 경기바로 공공마이데이터 간편 신청 동의 시 제출 생략 가능)</strong>:<br>" +
+        "  4. 사업자등록증 사본 1부<br>" +
+        "  5. 최근 2개년 부가세 과세표준증명원(또는 면세사업자 수입금액증명원)<br>" +
+        "  6. 소득금액증명원 (직전년도 기준)<br>" +
+        "• <strong>가점 증빙 (해당자만 제출)</strong>: 표창장(도지사 등), 자영업아카데미 수료증, 취약계층 증명서 등",
       schedule: "📅 <strong>접수 일정 및 방법 안내</strong><br><br>" +
-          "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong> (공고는 3. 18 발표)<br>" +
-          "• <strong>신청 방법</strong>:<br>" +
-          "  - <strong>온라인 신청</strong>: 경기바로 홈페이지(www.ggbaro.kr)에서 공공마이데이터 연동 접수<br>" +
-          "  - <strong>방문 신청</strong>: 경기도시장상권진흥원(경상원) 각 지역센터 영업시간 내 방문 접수 (제출 서류 상담 가능)<br>" +
-          "  - <strong>※ 주의</strong>: 우편 신청 및 온/오프라인 중복 신청은 불가능합니다. 1인 1건만 신청 가능합니다.",
+        "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong> (공고는 3. 18 발표)<br>" +
+        "• <strong>신청 방법</strong>:<br>" +
+        "  - <strong>온라인 신청</strong>: 경기바로 홈페이지(www.ggbaro.kr)에서 공공마이데이터 연동 접수<br>" +
+        "  - <strong>방문 신청</strong>: 경기도시장상권진흥원(경상원) 각 지역센터 영업시간 내 방문 접수 (제출 서류 상담 가능)<br>" +
+        "  - <strong>※ 주의</strong>: 우편 신청 및 온/오프라인 중복 신청은 불가능합니다. 1인 1건만 신청 가능합니다.",
       contact: "📞 <strong>문의처 및 접수 지역센터</strong><br><br>" +
-          "• <strong>경상원 종합상담 콜센터</strong>: <strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
-          "• <strong>지역센터별 관할 구역</strong>:<br>" +
-          "  - 남부센터(수원 소재): 수원, 용인, 군포, 의왕, 과천<br>" +
-          "  - 남부센터(화성 소재): 화성, 오산, 평택, 안성<br>" +
-          "  - 남동센터(광주 소재): 광주, 성남, 여주, 이천<br>" +
-          "  - 남서센터(시흥 소재): 시흥, 안양, 안산, 광명, 부천<br>" +
-          "  - 북부센터(남양주 소재): 남양주, 의정부, 포천, 구리, 가평, 하남, 양평<br>" +
-          "  - 북서센터(파주 소재): 파주, 고양, 양주, 동두천, 연천, 김포"
+        "• <strong>경상원 종합상담 콜센터</strong>: <strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
+        "• <strong>지역센터별 관할 구역</strong>:<br>" +
+        "  - 남부센터(수원 소재): 수원, 용인, 군포, 의왕, 과천<br>" +
+        "  - 남부센터(화성 소재): 화성, 오산, 평택, 안성<br>" +
+        "  - 남동센터(광주 소재): 광주, 성남, 여주, 이천<br>" +
+        "  - 남서센터(시흥 소재): 시흥, 안양, 안산, 광명, 부천<br>" +
+        "  - 북부센터(남양주 소재): 남양주, 의정부, 포천, 구리, 가평, 하남, 양평<br>" +
+        "  - 북서센터(파주 소재): 파주, 고양, 양주, 동두천, 연천, 김포"
     };
 
     function handleUserMessage(messageText, faqType = null) {
@@ -3111,7 +3111,7 @@ function initMobileBottomNav() {
       // 3. Simulate Thinking & Respond
       setTimeout(() => {
         removeLoading(loadingId);
-        
+
         let response = "";
         if (faqType && faqDatabase[faqType]) {
           response = faqDatabase[faqType];
@@ -3136,10 +3136,10 @@ function initMobileBottomNav() {
         }
 
         appendMessage(response, 'bot');
-        
+
         // Re-append quick replies at the bottom so user can click other options
         appendQuickReplies();
-        
+
       }, 800);
     }
 
@@ -3196,7 +3196,7 @@ function initMobileBottomNav() {
     }
   }
 
-  window.openInquiryModal = function(e) {
+  window.openInquiryModal = function (e) {
     if (e) e.preventDefault();
     if (inquiryModal) {
       inquiryModal.classList.add('active');
@@ -3292,7 +3292,7 @@ function initMobileBottomNav() {
   const inquiryMessage = document.getElementById('inquiry-message');
   const inquiryCharCount = document.getElementById('inquiry-char-count');
   if (inquiryMessage && inquiryCharCount) {
-    inquiryMessage.addEventListener('input', function() {
+    inquiryMessage.addEventListener('input', function () {
       const len = this.value.length;
       inquiryCharCount.textContent = len;
       if (len >= 300) {
@@ -3387,9 +3387,9 @@ function initMobileBottomNav() {
     }
   }
 
-  window.openPolicyModal = function(type) {
+  window.openPolicyModal = function (type) {
     if (!policyModal || !policyModalTitle || !policyModalBody) return;
-    
+
     let title = '';
     let content = '';
 
@@ -3463,9 +3463,9 @@ function initMobileBottomNav() {
 
   function openGlobalSearchModal() {
     if (!globalSearchModal) return;
-    
+
     const user = typeof getActiveUser === 'function' ? getActiveUser() : null;
-    
+
     // 비회원 체크
     if (!user) {
       if (searchAuthBlock) searchAuthBlock.style.display = 'block';

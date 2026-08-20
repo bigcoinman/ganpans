@@ -2547,21 +2547,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Register actions
     document.querySelectorAll('.btn-toggle-popup-active').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const pid = parseInt(e.target.closest('button').dataset.pid);
+        const pid = e.target.closest('button').dataset.pid;
         togglePopupActive(pid);
       });
     });
     
     document.querySelectorAll('.btn-edit-popup').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const pid = parseInt(e.target.closest('button').dataset.pid);
+        const pid = e.target.closest('button').dataset.pid;
         loadPopupToForm(pid);
       });
     });
     
     document.querySelectorAll('.btn-delete-popup').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const pid = parseInt(e.target.closest('button').dataset.pid);
+        const pid = e.target.closest('button').dataset.pid;
         deletePopup(pid);
       });
     });
@@ -2569,7 +2569,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load popup to form for editing
   const loadPopupToForm = (pid) => {
-    const popup = popups.find(p => p.id === pid);
+    const popup = popups.find(p => String(p.id) === String(pid));
     if (!popup) return;
     
     popupIdInput.value = popup.id;
@@ -2644,9 +2644,8 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (idVal) {
         // Update
-        const pid = parseInt(idVal);
         popups = popups.map(p => {
-          if (p.id === pid) {
+          if (String(p.id) === String(idVal)) {
             return {
               ...p,
               title: titleVal,
@@ -2695,7 +2694,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const togglePopupActive = (pid) => {
     if (activeUser.role !== 'admin') return;
     popups = popups.map(p => {
-      if (p.id === pid) {
+      if (String(p.id) === String(pid)) {
         return { ...p, isActive: !p.isActive };
       }
       return p;
@@ -2708,11 +2707,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const deletePopup = (pid) => {
     if (activeUser.role !== 'admin') return;
     if (!confirm('정말로 이 팝업창을 삭제하시겠습니까?')) return;
-    popups = popups.filter(p => p.id !== pid);
+    popups = popups.filter(p => String(p.id) !== String(pid));
     localStorage.setItem('popups', JSON.stringify(popups));
     
     // If the deleted popup was being edited, reset form
-    if (popupIdInput.value && parseInt(popupIdInput.value) === pid) {
+    if (popupIdInput.value && String(popupIdInput.value) === String(pid)) {
       resetPopupForm();
     }
     
