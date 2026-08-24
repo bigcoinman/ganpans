@@ -42,7 +42,12 @@ window.toggleInquiryStatusMob = function (id, btnEl) {
     }
 };
 
-window.deleteInquiryAdminMob = function (id, btnEl) {
+window.deleteInquiryAdminMob = function (id, e) {
+    if (e) {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    if (!id) return;
     if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
     let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
     currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
@@ -51,8 +56,8 @@ window.deleteInquiryAdminMob = function (id, btnEl) {
         window.SupabaseSync.deleteInquiry(id);
     }
     alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
-    if (typeof renderAdminDashboardMob === 'function') {
-        renderAdminDashboardMob(true);
+    if (typeof window.renderAdminDashboardMob === 'function') {
+        window.renderAdminDashboardMob(true);
     }
 };
 
@@ -2825,11 +2830,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${escapeHtml(inq.message)}
                         </div>
                         <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
-                            <button type="button" class="btn btn-secondary btn-sm btn-toggle-inquiry-mob" onclick="window.toggleInquiryStatusMob('${inq.id}')" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; background: ${isResolved ? '#f1f5f9' : '#15803d'}; color: ${isResolved ? '#475569' : '#ffffff'}; border: 1px solid ${isResolved ? '#cbd5e1' : '#166534'}; font-weight: 600;">
-                                <i class="fa-solid ${isResolved ? 'fa-rotate-left' : 'fa-check'}"></i> ${isResolved ? '대기로 변경' : '상담 완료'}
+                            <button type="button" class="btn btn-secondary btn-sm btn-toggle-inquiry-mob" onclick="window.toggleInquiryStatusMob('${inq.id}', event)" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; background: ${isResolved ? '#f1f5f9' : '#15803d'}; color: ${isResolved ? '#475569' : '#ffffff'}; border: 1px solid ${isResolved ? '#cbd5e1' : '#166534'}; font-weight: 600; cursor: pointer; touch-action: manipulation;">
+                                <i class="fa-solid ${isResolved ? 'fa-rotate-left' : 'fa-check'}" style="pointer-events: none;"></i> ${isResolved ? '대기로 변경' : '상담 완료'}
                             </button>
-                            <button type="button" class="btn btn-secondary btn-sm btn-delete-inquiry-mob" onclick="window.deleteInquiryAdminMob('${inq.id}')" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2; font-weight: 600;">
-                                <i class="fa-solid fa-trash-can"></i> 삭제
+                            <button type="button" class="btn btn-secondary btn-sm btn-delete-inquiry-mob" onclick="window.deleteInquiryAdminMob('${inq.id}', event)" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2; font-weight: 600; cursor: pointer; touch-action: manipulation;">
+                                <i class="fa-solid fa-trash-can" style="pointer-events: none;"></i> 삭제
                             </button>
                         </div>
                     `;
@@ -2837,49 +2842,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
-
-        // --- 모바일 전역 3초 간편문의 상태 변경 및 삭제 핸들러 ---
-        window.toggleInquiryStatusMob = (id) => {
-            const currentAdmin = (activeUser && activeUser.role === 'admin') ||
-                (() => {
-                    const u = JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser'));
-                    return u && u.role === 'admin';
-                })();
-            if (!currentAdmin) return;
-
-            let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
-            const inqIndex = currentInquiries.findIndex(i => String(i.id) === String(id));
-            if (inqIndex >= 0) {
-                const curStatus = currentInquiries[inqIndex].status;
-                const isNowResolved = (curStatus !== 'resolved' && curStatus !== 'completed' && curStatus !== '확인완료' && curStatus !== '상담완료');
-                currentInquiries[inqIndex].status = isNowResolved ? 'resolved' : 'pending';
-                localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
-
-                if (window.SupabaseSync) {
-                    window.SupabaseSync.upsertInquiry(currentInquiries[inqIndex]);
-                }
-                renderAdminDashboardMob(true);
-            }
-        };
-
-        window.deleteInquiryAdminMob = (id) => {
-            const currentAdmin = (activeUser && activeUser.role === 'admin') ||
-                (() => {
-                    const u = JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser'));
-                    return u && u.role === 'admin';
-                })();
-            if (!currentAdmin) return;
-
-            if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
-            let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
-            currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
-            localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
-            if (window.SupabaseSync) {
-                window.SupabaseSync.deleteInquiry(id);
-            }
-            alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
-            renderAdminDashboardMob(true);
-        };
 
         // 5.5) Render Constructor Progress list (시공업체 진행현황 모바일 탭)
         const constProgressListMob = document.getElementById('admin-const-progress-list-mob');
