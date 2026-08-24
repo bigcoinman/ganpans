@@ -321,9 +321,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawerUserRole.style.background = 'var(--accent-success)';
                 drawerUserRole.style.color = '#fff';
             } else {
-                drawerUserRole.textContent = '일반 회원';
-                drawerUserRole.style.background = 'var(--accent-primary)';
-                drawerUserRole.style.color = '#fff';
+                if (activeUser.conversionStatus === 'pending') {
+                    drawerUserRole.textContent = '영업자 승인 대기중';
+                    drawerUserRole.style.background = '#f59e0b';
+                    drawerUserRole.style.color = '#fff';
+                } else if (activeUser.conversionStatus === 'pending_constructor') {
+                    drawerUserRole.textContent = '시공업체 승인 대기중';
+                    drawerUserRole.style.background = '#f59e0b';
+                    drawerUserRole.style.color = '#fff';
+                } else {
+                    drawerUserRole.textContent = '일반 회원';
+                    drawerUserRole.style.background = 'var(--accent-primary)';
+                    drawerUserRole.style.color = '#fff';
+                }
             }
 
             drawerAuthLinks.style.display = 'none';
@@ -873,8 +883,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (constructorContainer) constructorContainer.style.display = 'block';
             renderConstructorDashboardMob();
         } else {
-            roleBadge.textContent = '일반 회원';
-            roleBadge.style.background = 'var(--accent-primary)';
+            if (activeUser.conversionStatus === 'pending') {
+                roleBadge.textContent = '영업자 승인 대기중';
+                roleBadge.style.background = '#f59e0b';
+            } else if (activeUser.conversionStatus === 'pending_constructor') {
+                roleBadge.textContent = '시공업체 승인 대기중';
+                roleBadge.style.background = '#f59e0b';
+            } else {
+                roleBadge.textContent = '일반 회원';
+                roleBadge.style.background = 'var(--accent-primary)';
+            }
             if (normalContainer) normalContainer.style.display = 'block';
             renderNormalDashboardMob();
         }
@@ -969,6 +987,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 users = users.map(u => u.id === activeUser.id ? { ...u, conversionStatus: 'pending' } : u);
                 localStorage.setItem('users', JSON.stringify(users));
                 localStorage.setItem('activeUser', JSON.stringify(activeUser));
+                sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
 
                 // Supabase Sync
                 if (window.SupabaseSync) {
@@ -982,8 +1001,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.KakaoNotifier.notifyBusinessConversion(activeUser);
                 }
 
-                alert('회원 전환 신청이 접수되었습니다. 최고관리자(admin) 계정 로그인 승인 후 영업코드가 정상 발급됩니다.');
+                alert('영업자 회원 전환 신청이 완료되었습니다.\n최고관리자 승인 후 영업자 코드가 발급되며 영업물건을 등록할 수 있습니다.');
                 renderStatusTab();
+                updateDrawerProfile();
+                updateHeaderAuthButton();
             }
         });
     }
@@ -1037,6 +1058,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             localStorage.setItem('users', JSON.stringify(users));
             localStorage.setItem('activeUser', JSON.stringify(activeUser));
+            sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
 
             // Supabase Sync
             if (window.SupabaseSync) {
@@ -1054,6 +1076,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             alert('시공업체 가입 신청이 정상 완료되었습니다.\n최고관리자 승인 시 정식 코드가 부여됩니다.');
             renderStatusTab();
+            updateDrawerProfile();
+            updateHeaderAuthButton();
         });
     }
 
