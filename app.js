@@ -2961,23 +2961,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let allConstJobs = [];
 
-            // 1. From users' items (오직 '대상자선정' 이상 진행된 건만 시공업체 진행현황에 포함)
+            // 1. From users' items (오직 명시적으로 '대상자선정' 이상 진행된 건만 시공업체 진행현황에 포함)
             curUsers.forEach(u => {
                 if (u.items && Array.isArray(u.items)) {
                     u.items.forEach(item => {
                         const matchingApp = allApps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
-                        const pStatus = item.progressStatus || (matchingApp && (matchingApp.constructionStatus || matchingApp.progressStatus)) || '';
-                        const cStatus = item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '';
+                        const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
+                        const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus)) || '').trim();
 
-                        // 대상자선정 이상 상태인지 엄격 판정 ('지원대기중', '심사대기' 등은 100% 제외)
+                        // 오직 '대상자선정', '간판시공 준비중', '간판시공완료'인 건만 허용
                         const isEligible = (
                             pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-                            pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인' ||
-                            pStatus === '간판 시공 중' || pStatus === '시공 완료' ||
                             cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
                         ) && (
-                            pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류 보완 필요' &&
-                            pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
+                            pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
+                            pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
                         );
 
                         if (isEligible) {
@@ -3018,19 +3016,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 2. From applications (오직 '대상자선정' 이상 진행된 건만 시공업체 진행현황에 포함)
+            // 2. From applications (오직 명시적으로 '대상자선정' 이상 진행된 건만 시공업체 진행현황에 포함)
             allApps.forEach(app => {
-                const pStatus = app.constructionStatus || app.progressStatus || '';
-                const sStatus = app.status || '';
+                const pStatus = String(app.progressStatus || app.constructionStatus || '').trim();
+                const cStatus = String(app.constructionStatus || '').trim();
 
+                // 오직 '대상자선정', '간판시공 준비중', '간판시공완료'인 건만 허용
                 const isEligible = (
                     pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-                    pStatus === 'in_construction' || pStatus === 'completed' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-                    (sStatus === 'approved' && pStatus !== '지원대기중' && pStatus !== '심사대기')
+                    cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
                 ) && (
-                    pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류 보완 필요' &&
-                    pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락' &&
-                    sStatus !== 'pending' && sStatus !== 'rejected' && sStatus !== 'giveup'
+                    pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
+                    pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
                 );
 
                 if (isEligible) {
@@ -3978,23 +3975,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const curUsers = JSON.parse(localStorage.getItem('users')) || [];
 
         let myJobs = [];
-        // 1) 영업물건 중 본인에게 배정되고 '대상자선정' 이상인 건
+        // 1) 영업물건 중 본인에게 배정되고 명시적으로 '대상자선정' 이상인 건
         curUsers.forEach(u => {
             if (u.items && Array.isArray(u.items)) {
                 u.items.forEach(item => {
                     if (String(item.assignedConstructorId) === String(activeUser.id)) {
                         const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
-                        const pStatus = item.progressStatus || (matchingApp && (matchingApp.constructionStatus || matchingApp.progressStatus)) || '';
-                        const cStatus = item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '';
+                        const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
+                        const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus)) || '').trim();
 
                         const isEligible = (
                             pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-                            pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인' ||
-                            pStatus === '간판 시공 중' || pStatus === '시공 완료' ||
                             cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
                         ) && (
-                            pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류 보완 필요' &&
-                            pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
+                            pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
+                            pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
                         );
 
                         if (isEligible) {
@@ -4018,20 +4013,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 2) 기존 applications 중 본인에게 배정되고 '대상자선정' 이상인 건 병합
+        // 2) 기존 applications 중 본인에게 배정되고 명시적으로 '대상자선정' 이상인 건 병합
         apps.forEach(app => {
             if (String(app.assignedConstructorId) === String(activeUser.id) && !myJobs.some(j => String(j.id) === String(app.id))) {
-                const pStatus = app.constructionStatus || app.progressStatus || '';
-                const sStatus = app.status || '';
+                const pStatus = String(app.progressStatus || app.constructionStatus || '').trim();
+                const cStatus = String(app.constructionStatus || '').trim();
 
                 const isEligible = (
                     pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-                    pStatus === 'in_construction' || pStatus === 'completed' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-                    (sStatus === 'approved' && pStatus !== '지원대기중' && pStatus !== '심사대기')
+                    cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
                 ) && (
-                    pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류 보완 필요' &&
-                    pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락' &&
-                    sStatus !== 'pending' && sStatus !== 'rejected' && sStatus !== 'giveup'
+                    pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
+                    pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
                 );
 
                 if (isEligible) {
