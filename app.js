@@ -1,11 +1,17 @@
 // app.js - Mobile App Shell & Interactive State Synchronizer
 
 // --- 모바일 전역 3초 간편문의 상태 변경 및 삭제 핸들러 (최상단 즉시 정의) ---
-window.toggleInquiryStatusMob = function (id, btnEl) {
+window.toggleInquiryStatusMob = function (id, e) {
+    if (e) {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    const btnEl = (e instanceof Element) ? e : (e && e.currentTarget instanceof Element ? e.currentTarget : (e && e.target instanceof Element ? e.target.closest('button') : null));
+
     let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
     let inqIndex = currentInquiries.findIndex(i => String(i.id) === String(id));
     if (inqIndex === -1 && btnEl) {
-        const card = btnEl.closest('.admin-inquiry-card') || btnEl.closest('div');
+        const card = btnEl.closest('.admin-inquiry-card-mob') || btnEl.closest('.admin-inquiry-card') || btnEl.closest('div');
         if (card) {
             const phoneEl = card.querySelector('a[href^="tel:"]');
             const phoneText = phoneEl ? phoneEl.textContent.replace(/[^0-9]/g, '') : '';
@@ -23,10 +29,10 @@ window.toggleInquiryStatusMob = function (id, btnEl) {
         target.status = newStatus;
         localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
 
-        if (btnEl) {
+        if (btnEl && btnEl.style) {
             btnEl.style.background = isNowResolved ? '#f1f5f9' : '#15803d';
             btnEl.style.color = isNowResolved ? '#475569' : '#ffffff';
-            btnEl.innerHTML = `<i class="fa-solid ${isNowResolved ? 'fa-rotate-left' : 'fa-check'}"></i> ${isNowResolved ? '대기로 변경' : '상담 완료'}`;
+            btnEl.innerHTML = `<i class="fa-solid ${isNowResolved ? 'fa-rotate-left' : 'fa-check'}" style="pointer-events: none;"></i> ${isNowResolved ? '대기로 변경' : '상담 완료'}`;
         }
 
         const targetId = target.id || id;
@@ -36,8 +42,8 @@ window.toggleInquiryStatusMob = function (id, btnEl) {
         if (window.SupabaseSync) {
             window.SupabaseSync.upsertInquiry(target);
         }
-        if (typeof renderAdminDashboardMob === 'function') {
-            renderAdminDashboardMob(true);
+        if (typeof window.renderAdminDashboardMob === 'function') {
+            window.renderAdminDashboardMob(true);
         }
     }
 };

@@ -1,7 +1,12 @@
 // dashboard.js - My Page & Business Dashboard Logic
 
 // --- 3초 간편문의 상태 변경 및 삭제 글로벌 핸들러 (최상단 즉시 정의) ---
-window.toggleInquiryStatus = function(id, btnEl) {
+window.toggleInquiryStatus = function(id, e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+  const btnEl = (e instanceof Element) ? e : (e && e.currentTarget instanceof Element ? e.currentTarget : (e && e.target instanceof Element ? e.target.closest('button') : null));
   let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
   let inqIndex = currentInquiries.findIndex(i => String(i.id) === String(id));
   
