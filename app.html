@@ -1500,8 +1500,8 @@
                         <button class="admin-tab-btn-mob" onclick="switchAdminTab('users')"><i class="fa-solid fa-users-gear"></i> <span>회원정보관리</span></button>
                         <button class="admin-tab-btn-mob" onclick="switchAdminTab('apps')"><i class="fa-solid fa-file-signature"></i> <span>신청서목록</span></button>
                         <button class="admin-tab-btn-mob" onclick="switchAdminTab('items')"><i class="fa-solid fa-store"></i> <span>영업물건 진행사항</span></button>
-                        <button class="admin-tab-btn-mob" onclick="switchAdminTab('inquiries')"><i class="fa-solid fa-comments"></i> <span>3초 간편문의</span></button>
                         <button class="admin-tab-btn-mob" onclick="switchAdminTab('const-progress')"><i class="fa-solid fa-screwdriver-wrench"></i> <span>시공업체 진행현황</span></button>
+                        <button class="admin-tab-btn-mob" onclick="switchAdminTab('inquiries')"><i class="fa-solid fa-comments"></i> <span>3초 간편문의</span></button>
                         <button class="admin-tab-btn-mob" onclick="switchAdminTab('popups')"><i class="fa-solid fa-window-restore"></i> <span>팝업관리</span></button>
                         <button class="admin-tab-btn-mob" onclick="switchAdminTab('kakao')"><i class="fa-solid fa-bell"></i> <span>카톡알림</span></button>
                     </div>
@@ -1545,18 +1545,18 @@
                         </div>
                     </div>
 
-                    <div id="admin-panel-inquiries-mob" class="admin-panel-view-mob" style="display: none;">
-                        <div id="admin-inquiries-list-mob" style="display: flex; flex-direction: column; gap: 10px;">
-                            <!-- Inquiries populate dynamically -->
-                        </div>
-                    </div>
-
                     <div id="admin-panel-const-progress-mob" class="admin-panel-view-mob" style="display: none;">
                         <div style="margin-bottom: 12px;">
                             <input type="text" id="search-admin-const-input-mob" placeholder="시공사 / 상호명 / 주소 / 코드 검색" maxlength="30" style="padding: 10px 14px; font-size: 0.95rem; border-radius: 8px; border: 1.5px solid #86efac; width: 100%; box-sizing: border-box; background: #ffffff; font-weight: 500;">
                         </div>
                         <div id="admin-const-progress-list-mob" style="display: flex; flex-direction: column; gap: 10px;">
                             <!-- 시공업체 진행현황 데이터 연동 영역 -->
+                        </div>
+                    </div>
+
+                    <div id="admin-panel-inquiries-mob" class="admin-panel-view-mob" style="display: none;">
+                        <div id="admin-inquiries-list-mob" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Inquiries populate dynamically -->
                         </div>
                     </div>
 
@@ -2423,14 +2423,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js?v=20260824_2321"></script>
-    <script src="security-utils.js?v=20260824_2321"></script>
-    <script src="data-store.js?v=20260824_2321"></script>
-    <script src="kakao-notify.js?v=20260824_2321"></script>
+    <script src="supabase-config.js?v=20260824_2338"></script>
+    <script src="security-utils.js?v=20260824_2338"></script>
+    <script src="data-store.js?v=20260824_2338"></script>
+    <script src="kakao-notify.js?v=20260824_2338"></script>
     <!-- Load PC JavaScript first to run interactive components -->
-    <script src="script.js?v=20260824_2321"></script>
+    <script src="script.js?v=20260824_2338"></script>
     <!-- Load mobile drawer, tab, dashboard scripts -->
-    <script src="app.js?v=20260824_2321"></script>
+    <script src="app.js?v=20260824_2338"></script>
 </body>
 
 </html>
