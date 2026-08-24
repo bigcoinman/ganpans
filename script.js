@@ -1955,10 +1955,24 @@ function initAuthAndDashboard() {
     e.preventDefault();
     const name = document.getElementById('find-id-name')?.value.trim();
     const phone = document.getElementById('find-id-phone')?.value.trim();
+    const cleanDigits = phone ? phone.replace(/[^0-9]/g, '') : '';
     const result = document.getElementById('find-id-result');
     if (!result) return;
 
-    const found = users.find(u => u.name === name && u.phone === phone && !u.isSNS);
+    const currentUsers = JSON.parse(localStorage.getItem('users')) || [];
+    const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+
+    const found = currentUsers.find(u => {
+      const uId = String(u.id || '');
+      const uDigits = uId.replace(/[^0-9]/g, '');
+      const uPhone = String(u.phone || '');
+      const uPhoneDigits = uPhone.replace(/[^0-9]/g, '');
+      if (deletedIds.includes(uId) || (uDigits && deletedIds.includes(uDigits)) || (uPhoneDigits && deletedIds.includes(uPhoneDigits))) {
+        return false;
+      }
+      return u.name === name && (uPhone === phone || (cleanDigits && uPhoneDigits === cleanDigits)) && !u.isSNS;
+    });
+
     result.style.display = 'block';
     if (found) {
       const masked = found.id.length <= 3
@@ -1977,11 +1991,31 @@ function initAuthAndDashboard() {
     e.preventDefault();
     const id = document.getElementById('find-pw-id')?.value.trim();
     const phone = document.getElementById('find-pw-phone')?.value.trim();
+    const cleanDigits = phone ? phone.replace(/[^0-9]/g, '') : '';
+    const cleanIdDigits = id ? id.replace(/[^0-9]/g, '');
     const result = document.getElementById('find-pw-result');
     const resetGroup = document.getElementById('find-pw-reset-group');
     if (!result || !resetGroup) return;
 
-    foundPwUser = users.find(u => u.id === id && u.phone === phone && !u.isSNS);
+    const currentUsers = JSON.parse(localStorage.getItem('users')) || [];
+    const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+
+    if (deletedIds.includes(id) || (cleanIdDigits && deletedIds.includes(cleanIdDigits))) {
+      foundPwUser = null;
+    } else {
+      foundPwUser = currentUsers.find(u => {
+        const uId = String(u.id || '');
+        const uDigits = uId.replace(/[^0-9]/g, '');
+        const uPhone = String(u.phone || '');
+        const uPhoneDigits = uPhone.replace(/[^0-9]/g, '');
+        if (deletedIds.includes(uId) || (uDigits && deletedIds.includes(uDigits)) || (uPhoneDigits && deletedIds.includes(uPhoneDigits))) {
+          return false;
+        }
+        const isIdMatch = (uId.toLowerCase() === id.toLowerCase()) || (cleanIdDigits && uDigits === cleanIdDigits);
+        const isPhoneMatch = (uPhone === phone) || (cleanDigits && uPhoneDigits === cleanDigits);
+        return isIdMatch && isPhoneMatch && !u.isSNS;
+      });
+    }
     result.style.display = 'block';
     resetGroup.style.display = 'none';
     const findPwNew = document.getElementById('find-pw-new');
@@ -2319,11 +2353,17 @@ function initAuthAndDashboard() {
         items: []
       };
 
-      users.push(newUser);
-      localStorage.setItem('users', JSON.stringify(users));
-
       if (window.SupabaseSync) {
         await window.SupabaseSync.upsertUser(newUser);
+      }
+      if (window.DataStore) {
+        const freshUsers = window.DataStore.getUsers();
+        freshUsers.push(newUser);
+        window.DataStore.saveUsers(freshUsers);
+      } else {
+        const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+        localUsers.push(newUser);
+        localStorage.setItem('users', JSON.stringify(localUsers));
       }
 
       const sanitized = typeof sanitizeUser === 'function' ? sanitizeUser(newUser) : newUser;
@@ -2353,11 +2393,41 @@ function initAuthAndDashboard() {
       }
 
       const hashedPassword = typeof sha256 === 'function' ? sha256(pwVal) : pwVal;
-      const cleanDigits = idVal.replace(/[^0-9]/g, '');
-      const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+      const idValLower = idVal.toLowerCase();
+      const cleanDigits = (idVal.startsWith('01') && idVal.replace(/[^0-9]/g, '').length >= 9) ? idVal.replace(/[^0-9]/g, '') : '';
+      let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
 
-      if (deletedIds.includes(idVal) || (cleanDigits && deletedIds.includes(cleanDigits))) {
-        alert('존재하지 않는 회원 정보이거나 이미 탈퇴 처리된 계정입니다.');
+      // 1) 1차 로컬 deleted_user_ids 사전 차단 (대소문자 무관)
+      if (deletedIds.includes(idVal) || deletedIds.includes(idValLower) || (cleanDigits && deletedIds.includes(cleanDigits))) {
+        alert('존재하지 않는 회원 정보이거나 이미 탈퇴/삭제 처리된 계정입니다.');
+        return;
+      }
+
+      // 2) Supabase site_stats에서 deleted_user_ids 실시간 최신 목록 동기화 (타 기기/브라우저 삭제건 즉각 반영)
+      if (window.supabaseClient) {
+        try {
+          const { data: statsData } = await window.supabaseClient
+            .from('site_stats')
+            .select('today_date')
+            .eq('id', 'deleted_user_ids')
+            .maybeSingle();
+          if (statsData && statsData.today_date) {
+            const remoteDeletedIds = JSON.parse(statsData.today_date) || [];
+            if (Array.isArray(remoteDeletedIds)) {
+              remoteDeletedIds.forEach(rid => {
+                const rStr = String(rid).trim();
+                if (rStr && !deletedIds.includes(rStr)) deletedIds.push(rStr);
+                if (rStr && !deletedIds.includes(rStr.toLowerCase())) deletedIds.push(rStr.toLowerCase());
+              });
+              localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
+            }
+          }
+        } catch (eStats) {}
+      }
+
+      // 2차 원격 동기화 후 차단 검사
+      if (deletedIds.includes(idVal) || deletedIds.includes(idValLower) || (cleanDigits && deletedIds.includes(cleanDigits))) {
+        alert('존재하지 않는 회원 정보이거나 이미 탈퇴/삭제 처리된 계정입니다.');
         return;
       }
 
@@ -2368,53 +2438,36 @@ function initAuthAndDashboard() {
           let { data, error } = await window.supabaseClient
             .from('users')
             .select('*')
-            .eq('id', idVal)
+            .ilike('id', idVal)
             .maybeSingle();
 
           if (!data && cleanDigits) {
             const { data: phoneData } = await window.supabaseClient
               .from('users')
               .select('*')
-              .or(`id.eq.${cleanDigits},phone.eq.${idVal},phone.eq.${cleanDigits}`)
+              .or(`phone.eq.${idVal},phone.eq.${cleanDigits}`)
               .maybeSingle();
             if (phoneData) data = phoneData;
           }
 
-          if (!data) {
-            const { data: ilikeData } = await window.supabaseClient
-              .from('users')
-              .select('*')
-              .ilike('id', idVal)
-              .maybeSingle();
-            if (ilikeData) data = ilikeData;
-          }
-
           if (!error && data) {
-            if (deletedIds.includes(String(data.id))) {
-              alert('존재하지 않는 회원 정보이거나 이미 탈퇴 처리된 계정입니다.');
+            const dataId = String(data.id || '');
+            const dataIdLower = dataId.toLowerCase();
+            const dataPhone = String(data.phone || '');
+            const dataPhoneDigits = (dataPhone.length >= 9) ? dataPhone.replace(/[^0-9]/g, '') : '';
+
+            // 삭제된 회원인지 검증 (role이 deleted이거나 삭제 목록에 있는 경우)
+            if (data.role === 'deleted' || 
+                deletedIds.includes(dataId) || 
+                deletedIds.includes(dataIdLower) || 
+                (dataPhoneDigits && deletedIds.includes(dataPhoneDigits))) {
+              alert('존재하지 않는 회원 정보이거나 이미 탈퇴/삭제 처리된 계정입니다.');
               return;
             }
 
             const isPwMatch = (data.password_hash === hashedPassword) || (data.password_hash === pwVal);
             if (isPwMatch) {
               user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : (typeof sanitizeUser === 'function' ? sanitizeUser(data) : data);
-            } else if (!data.password_hash) {
-              const localUser = users.find(u => {
-                const uId = (u.id || '').toLowerCase();
-                const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
-                const isMatchUser = (uId === idVal.toLowerCase()) ||
-                  (cleanDigits && uId === cleanDigits) ||
-                  (cleanDigits && uPhoneDigits === cleanDigits);
-                return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
-              });
-              if (localUser) {
-                user = typeof sanitizeUser === 'function' ? sanitizeUser(localUser) : localUser;
-                if (window.SupabaseSync) {
-                  window.SupabaseSync.updateUser(data.id, { password_hash: hashedPassword });
-                }
-              } else {
-                user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : (typeof sanitizeUser === 'function' ? sanitizeUser(data) : data);
-              }
             }
           }
         } catch (err) {
@@ -2422,8 +2475,11 @@ function initAuthAndDashboard() {
         }
       }
 
-      if (!user) {
-        const localUser = users.find(u => {
+      // Supabase가 미연결된 완전 오프라인 환경에서만 로컬 캐시 사용자 검증
+      // (Supabase가 연결된 상태에서 DB에 존재하지 않는 회원은 삭제된 회원이므로 로그인 절대 불가)
+      if (!user && !window.supabaseClient) {
+        const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+        const localUser = localUsers.find(u => {
           const uId = (u.id || '').toLowerCase();
           const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
           const isMatchUser = (uId === idVal.toLowerCase()) ||
@@ -2431,13 +2487,21 @@ function initAuthAndDashboard() {
             (cleanDigits && uPhoneDigits === cleanDigits);
           return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
         });
-        if (localUser) user = typeof sanitizeUser === 'function' ? sanitizeUser(localUser) : localUser;
+        if (localUser) {
+          const luId = String(localUser.id || '');
+          const luDigits = luId.replace(/[^0-9]/g, '');
+          const luPhoneDigits = String(localUser.phone || '').replace(/[^0-9]/g, '');
+          if (!deletedIds.includes(luId) && (!luDigits || !deletedIds.includes(luDigits)) && (!luPhoneDigits || !deletedIds.includes(luPhoneDigits))) {
+            user = typeof sanitizeUser === 'function' ? sanitizeUser(localUser) : localUser;
+          }
+        }
       }
 
       if (user) {
-        if (!users.some(u => u.id.toLowerCase() === user.id.toLowerCase())) {
-          users.push(user);
-          localStorage.setItem('users', JSON.stringify(users));
+        let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
+        if (!currentUsers.some(u => String(u.id).toLowerCase() === String(user.id).toLowerCase())) {
+          currentUsers.push(user);
+          localStorage.setItem('users', JSON.stringify(currentUsers));
         }
 
         if (rememberMe) {
@@ -2459,7 +2523,7 @@ function initAuthAndDashboard() {
         loginForm.reset();
         updateSessionUI();
       } else {
-        alert('아이디 또는 비밀번호가 올바르지 않습니다.');
+        alert('아이디 또는 비밀번호가 올바르지 않거나 이미 삭제된 회원입니다.');
       }
     });
   }

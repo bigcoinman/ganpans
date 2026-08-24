@@ -493,24 +493,37 @@ function getActiveUser() {
     return null;
   }
 
+  let user = null;
+
   // 1) 로그인 상태 유지 (localStorage)
   const localUser = localStorage.getItem('activeUser');
   if (localUser && localStorage.getItem('activeUser_remember') === 'true') {
-    try { return JSON.parse(localUser); } catch(e) { return null; }
+    try { user = JSON.parse(localUser); } catch(e) { user = null; }
+  } else {
+    // 2) 세션 로그인 (sessionStorage)
+    const sessionUser = sessionStorage.getItem('activeUser');
+    if (sessionUser) {
+      try { user = JSON.parse(sessionUser); } catch(e) { user = null; }
+    } else if (localUser) {
+      // 3) 만약 localStorage에만 있고 remember_me가 지정되지 않은 구버전 캐시라면
+      try { user = JSON.parse(localUser); } catch(e) { user = null; }
+    }
   }
 
-  // 2) 세션 로그인 (sessionStorage)
-  const sessionUser = sessionStorage.getItem('activeUser');
-  if (sessionUser) {
-    try { return JSON.parse(sessionUser); } catch(e) { return null; }
+  if (user) {
+    try {
+      const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+      const uId = String(user.id || '');
+      const uDigits = uId.replace(/[^0-9]/g, '');
+      const uPhoneDigits = String(user.phone || '').replace(/[^0-9]/g, '');
+      if (deletedIds.includes(uId) || (uDigits && deletedIds.includes(uDigits)) || (uPhoneDigits && deletedIds.includes(uPhoneDigits))) {
+        clearActiveUser();
+        return null;
+      }
+    } catch (eDel) {}
   }
 
-  // 3) 만약 localStorage에만 있고 remember_me가 지정되지 않은 구버전 캐시라면
-  if (localUser) {
-    try { return JSON.parse(localUser); } catch(e) { return null; }
-  }
-
-  return null;
+  return user;
 }
 
 function clearActiveUser() {
@@ -1092,31 +1105,89 @@ window.SupabaseSync = {
   },
 
   // 3. 회원 영구 삭제 (외래키 제약조건 23503 사전 방어 및 삭제 캐시 영구 관리)
-  async deleteUser(uid) {
+  async deleteUser(uid, phone) {
     if (!uid) return;
     try {
+      const targetId = String(uid).trim();
+      const targetLower = targetId.toLowerCase();
+      const targetPhone = phone ? String(phone).trim() : '';
+      const cleanPhoneDigits = (targetPhone.length >= 9) ? targetPhone.replace(/[^0-9]/g, '') : '';
+      const cleanTargetDigits = (targetId.startsWith('01') && targetId.replace(/[^0-9]/g, '').length >= 9) ? targetId.replace(/[^0-9]/g, '') : '';
+
       // 1) 로컬 삭제 목록에 등록하여 추후 syncAllData에서 부활 방지
       let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-      if (!deletedIds.includes(String(uid))) {
-        deletedIds.push(String(uid));
-        localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
-      }
+      const idsToAdd = [targetId, targetLower, cleanTargetDigits, targetPhone, cleanPhoneDigits].filter(Boolean);
+      idsToAdd.forEach(id => {
+        if (!deletedIds.includes(String(id))) {
+          deletedIds.push(String(id));
+        }
+      });
+      localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
 
       if (window.supabaseClient) {
-        // 2) 외래키 제약조건(applications, inquiries 등) 사전 null 해제
+        // 2) 외래키 제약조건(applications, inquiries, reviews 등) 사전 null 해제
         try {
-          await window.supabaseClient.from('applications').update({ user_id: null }).eq('user_id', String(uid));
+          await window.supabaseClient.from('applications').update({ user_id: null }).eq('user_id', targetId);
+          if (targetLower !== targetId) {
+            await window.supabaseClient.from('applications').update({ user_id: null }).eq('user_id', targetLower);
+          }
         } catch (eApp) {}
 
         try {
-          await window.supabaseClient.from('inquiries').update({ user_id: null }).eq('user_id', String(uid));
+          await window.supabaseClient.from('inquiries').update({ user_id: null }).eq('user_id', targetId);
+          if (targetLower !== targetId) {
+            await window.supabaseClient.from('inquiries').update({ user_id: null }).eq('user_id', targetLower);
+          }
         } catch (eInq) {}
 
-        // 3) users 테이블에서 영구 삭제
-        const { error } = await window.supabaseClient.from('users').delete().eq('id', String(uid));
-        if (error) {
-          console.warn('Supabase deleteUser 1st attempt error:', error.message);
+        try {
+          await window.supabaseClient.from('reviews').update({ author_id: null }).eq('author_id', targetId);
+          if (targetLower !== targetId) {
+            await window.supabaseClient.from('reviews').update({ author_id: null }).eq('author_id', targetLower);
+          }
+        } catch (eRev) {}
+
+        // 3) 핵심: users 테이블의 비밀번호 및 역할을 즉시 파기 (로그인 0% 불가 영구 차단)
+        try {
+          await window.supabaseClient.from('users').update({
+            password_hash: 'DELETED_' + Date.now(),
+            role: 'deleted',
+            conversion_status: 'deleted'
+          }).eq('id', targetId);
+
+          if (targetLower !== targetId) {
+            await window.supabaseClient.from('users').update({
+              password_hash: 'DELETED_' + Date.now(),
+              role: 'deleted',
+              conversion_status: 'deleted'
+            }).eq('id', targetLower);
+          }
+        } catch (eUpd) {}
+
+        // 4) users 테이블에서 영구 삭제
+        try {
+          await window.supabaseClient.from('users').delete().eq('id', targetId);
+          if (targetLower !== targetId) {
+            await window.supabaseClient.from('users').delete().eq('id', targetLower);
+          }
+          if (cleanPhoneDigits) {
+            await window.supabaseClient.from('users').delete().eq('phone', cleanPhoneDigits);
+            await window.supabaseClient.from('users').delete().eq('phone', targetPhone);
+          }
+        } catch (eDel) {
+          console.warn('Supabase deleteUser error:', eDel);
         }
+
+        // 5) site_stats 테이블에 전역 deleted_user_ids 레코드 동기화 (모든 브라우저/기기 즉각 공유)
+        try {
+          await window.supabaseClient.from('site_stats').upsert({
+            id: 'deleted_user_ids',
+            today_date: JSON.stringify(deletedIds),
+            today_count: deletedIds.length,
+            total_count: deletedIds.length,
+            updated_at: new Date().toISOString()
+          });
+        } catch (eStats) {}
       }
     } catch (e) {
       console.error('Supabase deleteUser error:', e);
@@ -1311,7 +1382,7 @@ window.SupabaseSync = {
     }
   },
 
-  // 7. 전체 양방향 동기화 (Supabase <-> LocalStorage)
+  // 7. Supabase 클라우드 단일 진실의 원천(SSOT) 단방향 동기화
   async syncAllData() {
     if (!window.supabaseClient) {
       initGlobalSupabaseClient();
@@ -1319,344 +1390,62 @@ window.SupabaseSync = {
     if (!window.supabaseClient || this.isSyncing) return false;
     this.isSyncing = true;
 
-    let usersChanged = false;
-    let appsChanged = false;
-    let inqChanged = false;
-
     try {
-      // --- A. 회원(Users) 및 영업물건(Items) 동기화 ---
-      const defaultPurgedUserIds = [
-        'nubine22',
-        'test_probe_user',
-        'probe_const_code',
-        'test_insert_probe_base'
-      ];
-      const defaultPurgedBizItemIds = [
-        'B-260802-0001',
-        'B-260802-0002',
-        'B-260802-0003',
-        '우리나라 곰탕',
-        '우리나라곰탕',
-        '대원감자탕',
-        '대박치킨'
-      ];
-
-      let localUsers = JSON.parse(localStorage.getItem('users')) || [];
-      localUsers = localUsers.filter(lu => !defaultPurgedUserIds.includes(String(lu.id)));
-
-      let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-      defaultPurgedUserIds.forEach(puid => {
-        if (!deletedIds.includes(puid)) deletedIds.push(puid);
-      });
-      localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
-
-      let deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
-      defaultPurgedBizItemIds.forEach(pbid => {
-        if (!deletedBizItemIds.includes(pbid)) deletedBizItemIds.push(pbid);
-      });
-      localStorage.setItem('deleted_biz_item_ids', JSON.stringify(deletedBizItemIds));
-
-      // 로컬 users의 items에서도 삭제된 영업물건 즉시 정제
-      localUsers = localUsers.map(u => {
-        if (u.items && u.items.length > 0) {
-          const cleanItems = u.items.filter(it => 
-            !deletedBizItemIds.includes(String(it.id)) && 
-            !deletedBizItemIds.includes(String(it.appRefId)) && 
-            !deletedBizItemIds.includes(String(it.name || '').trim())
-          );
-          return { ...u, items: cleanItems };
-        }
-        return u;
-      });
-
+      // --- A. 회원(Users) Supabase 클라우드 원천 직접 수집 ---
       const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
-
       if (!usersErr && Array.isArray(supaUsers)) {
-        // 1) Supabase에 있는 회원 데이터를 로컬스토리지에 반영/병합 (삭제된 회원은 부활 차단)
-        for (const su of supaUsers) {
-          const mapped = this.mapDbToUser(su);
-          if (defaultPurgedUserIds.includes(String(mapped.id)) || deletedIds.includes(String(mapped.id))) {
-            continue;
-          }
+        const freshUsers = supaUsers
+          .map(su => this.mapDbToUser(su))
+          .filter(u => u && u.id && u.role !== 'deleted');
 
-          // DB에서 내려온 items에서도 삭제된 영업물건 필터링
-          if (Array.isArray(mapped.items)) {
-            mapped.items = mapped.items.filter(it => 
-              !deletedBizItemIds.includes(String(it.id)) && 
-              !deletedBizItemIds.includes(String(it.appRefId)) && 
-              !deletedBizItemIds.includes(String(it.name || '').trim())
-            );
-          }
+        localStorage.setItem('users', JSON.stringify(freshUsers));
 
-          const idx = localUsers.findIndex(u => u.id === mapped.id);
-
-          if (idx === -1) {
-            localUsers.push(mapped);
-            usersChanged = true;
+        // 현재 로그인 세션 최신 상태 동기화 또는 삭제 계정 세션 강제 파기
+        const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')));
+        if (activeUser && activeUser.id) {
+          const freshCur = freshUsers.find(u => String(u.id).toLowerCase() === String(activeUser.id).toLowerCase());
+          if (freshCur) {
+            const storage = localStorage.getItem('activeUser') ? localStorage : sessionStorage;
+            const sanitized = typeof sanitizeUser === 'function' ? sanitizeUser(freshCur) : freshCur;
+            storage.setItem('activeUser', JSON.stringify(sanitized));
           } else {
-            const cur = localUsers[idx];
-            // DB 값이 최신 변경사항(전환상태, 권한, 승인코드, 이름, 연락처, 주소 등)을 포함할 때 병합
-            let needsUpdate = false;
-            if (mapped.name && cur.name !== mapped.name) {
-              cur.name = mapped.name;
-              needsUpdate = true;
-            }
-            if (mapped.phone !== undefined && mapped.phone !== null && cur.phone !== mapped.phone) {
-              cur.phone = mapped.phone;
-              needsUpdate = true;
-            }
-            if (mapped.email !== undefined && mapped.email !== null && cur.email !== mapped.email) {
-              cur.email = mapped.email;
-              needsUpdate = true;
-            }
-            if (mapped.address !== undefined && mapped.address !== null && cur.address !== mapped.address) {
-              cur.address = mapped.address;
-              needsUpdate = true;
-            }
-            if (mapped.pw && cur.pw !== mapped.pw) {
-              cur.pw = mapped.pw;
-              needsUpdate = true;
-            }
-            if (mapped.conversionStatus !== 'none' && cur.conversionStatus !== mapped.conversionStatus) {
-              cur.conversionStatus = mapped.conversionStatus;
-              needsUpdate = true;
-            }
-            if (mapped.role !== 'normal' && cur.role !== mapped.role) {
-              cur.role = mapped.role;
-              needsUpdate = true;
-            }
-            if (mapped.bizCode && cur.bizCode !== mapped.bizCode) {
-              cur.bizCode = mapped.bizCode;
-              needsUpdate = true;
-            }
-            if (mapped.constCode && cur.constCode !== mapped.constCode) {
-              cur.constCode = mapped.constCode;
-              needsUpdate = true;
-            }
-            if (mapped.pendingBusinessName && cur.pendingBusinessName !== mapped.pendingBusinessName) {
-              cur.pendingBusinessName = mapped.pendingBusinessName;
-              needsUpdate = true;
-            }
-            if (mapped.pendingLicenseNumber && cur.pendingLicenseNumber !== mapped.pendingLicenseNumber) {
-              cur.pendingLicenseNumber = mapped.pendingLicenseNumber;
-              needsUpdate = true;
-            }
-            // items 최신 동기화: 로컬에 items가 있으면 유지하며 DB를 갱신하고, DB에만 items가 있으면 로컬로 가져옴
-            if (cur.items && cur.items.length > 0) {
-              if (!mapped.items || JSON.stringify(cur.items) !== JSON.stringify(mapped.items)) {
-                window.supabaseClient.from('users').update({ items: cur.items }).eq('id', cur.id).then(() => {});
-              }
-            } else if (mapped.items && mapped.items.length > 0) {
-              cur.items = mapped.items;
-              needsUpdate = true;
-            }
-
-            if (needsUpdate) {
-              localUsers[idx] = cur;
-              usersChanged = true;
-
-              // 만약 현재 로그인된 사용자 정보가 갱신된 것이라면 세션 activeUser도 즉시 동기화
-              try {
-                const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')));
-                if (activeUser && activeUser.id === cur.id) {
-                  const storage = localStorage.getItem('activeUser') ? localStorage : sessionStorage;
-                  const sanitized = typeof sanitizeUser === 'function' ? sanitizeUser(cur) : cur;
-                  storage.setItem('activeUser', JSON.stringify(sanitized));
-                }
-              } catch (eSession) {}
-            }
+            // DB에 없거나 삭제된 계정이면 즉시 세션 파기
+            if (typeof clearActiveUser === 'function') clearActiveUser();
+            localStorage.removeItem('activeUser');
+            sessionStorage.removeItem('activeUser');
           }
-        }
-
-        // 2) 로컬에만 있는 회원(모바일 등 로컬 가입자)을 Supabase로 업로드
-        for (const lu of localUsers) {
-          const inSupa = supaUsers.find(su => su.id === lu.id);
-          if (!inSupa) {
-            await this.upsertUser(lu);
-          } else if (inSupa && lu.conversionStatus !== 'none' && inSupa.conversion_status === 'none') {
-            // 로컬에서 전환 신청했으나 Supabase에 아직 안 올라간 경우 동기화
-            await this.updateUser(lu.id, {
-              conversion_status: lu.conversionStatus,
-              pending_business_name: lu.pendingBusinessName || null,
-              pending_license_number: lu.pendingLicenseNumber || null
-            });
-          }
-        }
-
-        if (usersChanged) {
-          localStorage.setItem('users', JSON.stringify(localUsers));
         }
       }
 
-      // --- B. 지원 신청서(Applications) 동기화 ---
-      let localApps = JSON.parse(localStorage.getItem('applications')) || [];
-      const deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
+      // --- B. 지원 신청서(Applications) Supabase 클라우드 원천 직접 수집 ---
       const { data: supaApps, error: appsErr } = await window.supabaseClient.from('applications').select('*');
-
       if (!appsErr && Array.isArray(supaApps)) {
-        supaApps.forEach(sa => {
-          const mapped = this.mapDbToApp(sa);
-          if (deletedAppIds.includes(String(mapped.id))) {
-            window.supabaseClient.from('applications').delete().eq('id', String(mapped.id)).then(() => {});
-            return;
-          }
-
-          const idx = localApps.findIndex(a => String(a.id) === String(mapped.id));
-
-          if (idx === -1) {
-            localApps.push(mapped);
-            appsChanged = true;
-          } else {
-            const cur = localApps[idx];
-            const finalFileData = mapped.fileData || cur.fileData || '';
-            const finalPhotos = (mapped.photos && mapped.photos.length > 0) ? mapped.photos : ((cur.photos && cur.photos.length > 0) ? cur.photos : (finalFileData ? [finalFileData] : []));
-            const finalFileName = (mapped.fileName && mapped.fileName !== '현장사진' && !mapped.fileName.startsWith('data:')) ? mapped.fileName : (cur.fileName || '현장사진.jpg');
-
-            // DB memo에 isBizItem이 명시된 경우 DB의 값을 신뢰하고, 없는 경우 로컬 상태 유지
-            let finalIsBizItem = mapped.isBizItem;
-            if (sa.memo === null || sa.memo === undefined) {
-              finalIsBizItem = cur.isBizItem !== undefined ? cur.isBizItem : false;
-            }
-            const finalReferrerCode = cur.referrerCode || mapped.referrerCode || '';
-            const finalReceiptStatus = cur.receiptStatus || mapped.receiptStatus || '접수예정';
-
-            localApps[idx] = {
-              ...mapped,
-              ...cur,
-              isBizItem: finalIsBizItem,
-              referrerCode: finalReferrerCode,
-              receiptStatus: finalReceiptStatus,
-              fileData: finalFileData,
-              photos: finalPhotos,
-              photosCount: finalPhotos.length,
-              fileName: finalFileName
-            };
-            appsChanged = true;
-
-            // 로컬에 isBizItem: true가 있으나 DB에 memo 자체가 없는 경우 백그라운드 DB 갱신
-            if (finalIsBizItem && (sa.memo === null || sa.memo === undefined)) {
-              window.supabaseClient.from('applications').update({
-                memo: JSON.stringify({ isBizItem: true, receiptStatus: finalReceiptStatus }),
-                referrer_code: finalReferrerCode
-              }).eq('id', String(cur.id)).then(() => {});
-            }
-          }
-        });
-
-        // 로컬에만 있는 신청서를 Supabase로 업로드 (삭제된 것은 제외)
-        for (const la of localApps) {
-          if (deletedAppIds.includes(String(la.id))) continue;
-          const inSupa = supaApps.find(sa => String(sa.id) === String(la.id));
-          if (!inSupa) {
-            await this.upsertApplication(la);
-          }
-        }
-
-        if (appsChanged) {
-          localStorage.setItem('applications', JSON.stringify(localApps));
-        }
-
-        // --- B-2. 최고관리자 대시보드 SSOT 절대 연동: 모든 users.items 중 삭제된 신청서 및 isBizItem 미승인 건 전수 박멸 ---
-        localUsers = localUsers.map(u => {
-          if (u.items && Array.isArray(u.items) && u.items.length > 0) {
-            const originalCount = u.items.length;
-            const cleanItems = u.items.filter(it => {
-              if (!it || !it.id) return false;
-              const itemId = String(it.id);
-              const refId = String(it.appRefId || '');
-              const matchingApp = localApps.find(a => String(a.id) === itemId || (refId && String(a.id) === refId));
-              if (!matchingApp) return false; // 최고관리자 대시보드에서 삭제된 건 100% 영구 제거
-              if (matchingApp.isBizItem !== true && String(matchingApp.isBizItem) !== 'true') return false; // 영업물건 미승인 건 100% 영구 제거
-              return true;
-            });
-
-            if (cleanItems.length !== originalCount) {
-              usersChanged = true;
-              if (window.supabaseClient) {
-                window.supabaseClient.from('users').update({ items: cleanItems }).eq('id', u.id).then(() => {});
-              }
-              return { ...u, items: cleanItems };
-            }
-          }
-          return u;
-        });
-
-        if (usersChanged) {
-          localStorage.setItem('users', JSON.stringify(localUsers));
-        }
+        const freshApps = supaApps.map(sa => this.mapDbToApp(sa)).filter(a => a && a.id);
+        localStorage.setItem('applications', JSON.stringify(freshApps));
       }
 
-      // --- C. 3초 간편문의(Inquiries) 동기화 ---
-      const defaultPurgedIds = [
-        'INQ-20260817-001',
-        'INQ-1786920993324',
-        'INQ-1786871032835',
-        'INQ-1786920450983',
-        'INQ-1786920628397'
-      ];
-      let localInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
-      localInquiries = localInquiries.filter(li => !defaultPurgedIds.includes(String(li.id)));
-
-      let deletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
-      defaultPurgedIds.forEach(pid => {
-        if (!deletedInqIds.includes(pid)) deletedInqIds.push(pid);
-      });
-      localStorage.setItem('deleted_inquiry_ids', JSON.stringify(deletedInqIds));
-
-      const { data: supaInq, error: inqErr } = await window.supabaseClient.from('inquiries').select('*');
-
-      if (!inqErr && Array.isArray(supaInq)) {
-        // 1) Supabase에 있는 문의 데이터를 로컬에 병합 (삭제/블랙리스트 문의는 부활 완전 차단)
-        for (const si of supaInq) {
-          const mapped = this.mapDbToInquiry(si);
-          if (defaultPurgedIds.includes(String(mapped.id)) || deletedInqIds.includes(String(mapped.id))) {
-            continue;
-          }
-
-          const idx = localInquiries.findIndex(i => String(i.id) === String(mapped.id));
-
-          if (idx === -1) {
-            localInquiries.push(mapped);
-            inqChanged = true;
-          } else {
-            const cur = localInquiries[idx];
-            // 로컬에서 관리자가 지정한 status가 최우선이므로 DB 상태가 다르면 DB를 업데이트하고 로컬 유지
-            if (cur.status && cur.status !== mapped.status) {
-              window.supabaseClient.from('inquiries').update({ status: cur.status }).eq('id', String(cur.id)).then(() => {});
-            }
-            if (cur.message !== mapped.message || cur.name !== mapped.name || cur.phone !== mapped.phone) {
-              localInquiries[idx] = { ...cur, ...mapped, status: cur.status || mapped.status };
-              inqChanged = true;
-            }
-          }
-        }
-
-        // 2) 로컬에만 있는 문의를 Supabase로 업로드 (삭제된 것은 제외)
-        for (const li of localInquiries) {
-          if (defaultPurgedIds.includes(String(li.id)) || deletedInqIds.includes(String(li.id))) continue;
-          const inSupa = supaInq.find(si => String(si.id) === String(li.id));
-          if (!inSupa) {
-            await this.upsertInquiry(li);
-          }
-        }
-
-        localStorage.setItem('inquiries', JSON.stringify(localInquiries));
+      // --- C. 3초 간편문의(Inquiries) Supabase 클라우드 원천 직접 수집 ---
+      const { data: supaInqs, error: inqsErr } = await window.supabaseClient.from('inquiries').select('*');
+      if (!inqsErr && Array.isArray(supaInqs)) {
+        localStorage.setItem('inquiries', JSON.stringify(supaInqs));
       }
 
-      // --- D. 변경 사항 발생 시 전역 이벤트 통보 ---
-      if (usersChanged || appsChanged || inqChanged) {
-        window.dispatchEvent(new CustomEvent('supabase-data-synced', {
-          detail: { usersChanged, appsChanged, inqChanged, users: localUsers, applications: localApps, inquiries: localInquiries }
-        }));
+      // 동기화 완료 이벤트 브로드캐스트
+      window.dispatchEvent(new CustomEvent('supabase-data-synced', {
+        detail: { timestamp: new Date().toISOString() }
+      }));
+
+      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+        window.DataStore.notifyAll();
       }
 
+      return true;
     } catch (e) {
-      console.error('Supabase syncAllData error:', e);
+      console.error('[SupabaseSync] syncAllData SSOT error:', e);
+      return false;
     } finally {
       this.isSyncing = false;
     }
-
-    return { usersChanged, appsChanged, inqChanged };
   },
 
   // 8. Supabase Realtime WebSocket 실시간 채널 구독 (0초 지연 실시간 동기화)

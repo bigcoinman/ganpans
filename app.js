@@ -2263,7 +2263,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // 0) Render All Users list (회원정보관리)
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');
         if (allUsersListMob) {
-            let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+            let curUsers = window.DataStore ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
+            const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+            curUsers = curUsers.filter(u => {
+                if (!u || !u.id) return false;
+                const uId = String(u.id);
+                const uDigits = uId.replace(/[^0-9]/g, '');
+                const uPhoneDigits = String(u.phone || '').replace(/[^0-9]/g, '');
+                return !deletedIds.includes(uId) && (!uDigits || !deletedIds.includes(uDigits)) && (!uPhoneDigits || !deletedIds.includes(uPhoneDigits));
+            });
             curUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(curUsers) : curUsers;
             const searchInput = document.getElementById('search-all-users-input-mob');
             const q = searchInput && searchInput.value ? searchInput.value.trim().slice(0, 30).toLowerCase() : '';
@@ -2325,23 +2333,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 allUsersListMob.querySelectorAll('.btn-delete-user-mob').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        const uid = e.target.closest('button').dataset.uid;
-                        if (!confirm(`[주의] 회원 ID [${uid}]을(를) 강제 탈퇴/삭제하시겠습니까?`)) return;
-
-                        let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
-                        currentUsers = currentUsers.filter(u => u.id !== uid);
-                        localStorage.setItem('users', JSON.stringify(currentUsers));
-
-                        if (window.SupabaseSync) {
-                            window.SupabaseSync.deleteUser(uid);
-                        } else if (window.supabaseClient) {
-                            window.supabaseClient.from('users').delete().eq('id', uid).then(({ error }) => {
-                                if (error) console.error('Supabase user delete error:', error.message);
-                            });
+                        const targetBtn = e.target.closest('button');
+                        const uid = targetBtn ? targetBtn.dataset.uid : null;
+                        if (!uid) return;
+                        if (window.deleteUserAdminMob) {
+                            window.deleteUserAdminMob(uid, targetBtn);
+                        } else if (window.DataStore) {
+                            window.DataStore.deleteUser(uid, targetBtn);
                         }
-
-                        alert(`회원 [${uid}]이(가) 정상적으로 삭제되었습니다.`);
-                        renderAdminDashboardMob(true);
+                        if (typeof renderAdminDashboardMob === 'function') {
+                            renderAdminDashboardMob(true);
+                        }
                     });
                 });
             }

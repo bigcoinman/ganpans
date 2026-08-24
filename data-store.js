@@ -36,7 +36,16 @@
       try {
         const users = JSON.parse(localStorage.getItem('users')) || [];
         const deletedUserIds = this.getDeletedUserIds();
-        return users.filter(u => u && u.id && !deletedUserIds.includes(String(u.id)));
+        return users.filter(u => {
+          if (!u || !u.id) return false;
+          const uId = String(u.id);
+          const uDigits = uId.replace(/[^0-9]/g, '');
+          const uPhoneDigits = String(u.phone || '').replace(/[^0-9]/g, '');
+          if (deletedUserIds.includes(uId)) return false;
+          if (uDigits && deletedUserIds.includes(uDigits)) return false;
+          if (uPhoneDigits && deletedUserIds.includes(uPhoneDigits)) return false;
+          return true;
+        });
       } catch (e) {
         console.error('[DataStore] getUsers error:', e);
         return [];
@@ -532,7 +541,9 @@
     // --- 5. 회원 영구 탈퇴/삭제 ---
     deleteUser: function (userId, btnEl) {
       if (!userId) return { success: false };
-      const targetId = String(userId);
+      const targetId = String(userId).trim();
+      if (!targetId) return { success: false };
+      const targetLower = targetId.toLowerCase();
 
       if (!confirm('[주의] 회원 ID [' + targetId + ']을(를) 정말로 강제 탈퇴/삭제 처리하시겠습니까?\n삭제 후 복구할 수 없습니다.')) {
         return { success: false, cancelled: true };
@@ -540,31 +551,56 @@
 
       // 1) 0초 즉각 DOM 제거
       if (btnEl) {
-        const row = btnEl.closest('tr') || btnEl.closest('.user-card-mob');
+        const row = btnEl.closest('tr') || btnEl.closest('.user-card-mob') || btnEl.closest('.admin-user-card-mob');
         if (row) row.remove();
       }
 
-      // 2) deleted_user_ids 등록
-      let deletedUserIds = this.getDeletedUserIds();
-      if (!deletedUserIds.includes(targetId)) {
-        deletedUserIds.push(targetId);
-        localStorage.setItem('deleted_user_ids', JSON.stringify(deletedUserIds));
-      }
+      // 대상 회원의 전화번호 등 추가 식별자 확보
+      let rawUsers = JSON.parse(localStorage.getItem('users')) || [];
+      const targetUser = rawUsers.find(u => 
+        String(u.id).toLowerCase() === targetLower
+      );
+      const targetPhone = targetUser ? String(targetUser.phone || '').trim() : '';
+      const cleanPhoneDigits = (targetPhone.length >= 9) ? targetPhone.replace(/[^0-9]/g, '') : '';
+      const cleanTargetDigits = (targetId.startsWith('01') && targetId.replace(/[^0-9]/g, '').length >= 9) ? targetId.replace(/[^0-9]/g, '') : '';
 
-      // 3) users 배열에서 제거
-      let users = this.getUsers();
-      users = users.filter(u => String(u.id) !== targetId);
-      this.saveUsers(users);
+      // 2) deleted_user_ids 등록 (대소문자 모두 등록)
+      let deletedUserIds = this.getDeletedUserIds();
+      [targetId, targetLower, cleanTargetDigits, targetPhone, cleanPhoneDigits].filter(Boolean).forEach(id => {
+        if (!deletedUserIds.includes(String(id))) {
+          deletedUserIds.push(String(id));
+        }
+      });
+      localStorage.setItem('deleted_user_ids', JSON.stringify(deletedUserIds));
+
+      // 3) users 배열에서 완전 제거
+      rawUsers = rawUsers.filter(u => {
+        if (!u || !u.id) return false;
+        const uId = String(u.id);
+        const uIdLower = uId.toLowerCase();
+        const uPhone = String(u.phone || '');
+        const uPhoneDigits = (uPhone.length >= 9) ? uPhone.replace(/[^0-9]/g, '') : '';
+        if (uIdLower === targetLower) return false;
+        if (cleanTargetDigits && uId === cleanTargetDigits) return false;
+        if (cleanPhoneDigits && uPhoneDigits === cleanPhoneDigits) return false;
+        if (deletedUserIds.includes(uId) || deletedUserIds.includes(uIdLower)) return false;
+        return true;
+      });
+      this.saveUsers(rawUsers);
 
       // 3.5) 현재 로그인 세션이 삭제된 회원이면 즉시 세션 파기
       const active = this.getActiveUser();
-      if (active && String(active.id) === targetId) {
-        this.setActiveUser(null);
+      if (active) {
+        const actId = String(active.id || '').toLowerCase();
+        if (actId === targetLower || deletedUserIds.includes(actId)) {
+          this.setActiveUser(null);
+          if (typeof clearActiveUser === 'function') clearActiveUser();
+        }
       }
 
-      // 4) Supabase DB 영구 삭제
+      // 4) Supabase DB 영구 삭제 (비밀번호 파기 및 DB 삭제)
       if (window.SupabaseSync) {
-        window.SupabaseSync.deleteUser(targetId);
+        window.SupabaseSync.deleteUser(targetId, targetPhone);
       }
 
       alert('회원 [' + targetId + ']이(가) 정상적으로 탈퇴/삭제되었습니다.');
