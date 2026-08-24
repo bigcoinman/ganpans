@@ -1588,8 +1588,9 @@ if (typeof window !== 'undefined') {
       if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
       
       if (typeof window.switchTab === 'function') {
-        window.switchTab('status');
-      } else if (typeof window.renderAdminDashboardMob === 'function') {
+        window.switchTab('home');
+      }
+      if (typeof window.renderAdminDashboardMob === 'function') {
         window.renderAdminDashboardMob(true);
       }
 
@@ -1736,8 +1737,9 @@ if (typeof window !== 'undefined') {
       if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
       if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
       if (typeof window.switchTab === 'function') {
-        window.switchTab('status');
-      } else if (typeof window.renderAdminDashboardMob === 'function' && user.role === 'admin') {
+        window.switchTab('home');
+      }
+      if (typeof window.renderAdminDashboardMob === 'function' && user.role === 'admin') {
         window.renderAdminDashboardMob(true);
       }
       window.dispatchEvent(new CustomEvent('supabase-data-synced'));
