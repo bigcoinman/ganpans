@@ -398,10 +398,7 @@ function showPhotoDownloadModal(appOrId) {
       <div style="padding:20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:16px;">
         <div style="display:flex;flex-direction:column;gap:10px;">
           <button type="button" onclick="window.downloadIndividualPhotos('${app.id}');document.getElementById('photo-download-modal').style.display='none';" style="padding:13px 16px;background:linear-gradient(135deg, #2563eb, #1d4ed8);color:#ffffff;border:none;border-radius:10px;font-size:0.92rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 6px -1px rgba(37,99,235,0.25);transition:all 0.15s;">
-            <i class="fa-solid fa-cloud-arrow-down" style="font-size:1.05rem;"></i> 전체 사진 바로 저장 (압축해제 불필요 · 보안경고 없음)
-          </button>
-          <button type="button" onclick="window.downloadZipFile('${app.id}');" style="padding:10px 16px;background:#f8fafc;color:#334155;border:1.5px solid #cbd5e1;border-radius:10px;font-size:0.86rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.15s;">
-            <i class="fa-solid fa-file-zipper" style="color:#64748b;"></i> ZIP 압축 파일로 받기 (${photos.length}장 묶음)
+            <i class="fa-solid fa-cloud-arrow-down" style="font-size:1.05rem;"></i> 전체 사진 바로 저장 (${photos.length}장 일괄 다운로드)
           </button>
         </div>
 

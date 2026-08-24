@@ -3601,9 +3601,30 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
         <td style="padding: 12px 16px; width: 110px; white-space: nowrap;">
           ${(() => {
-            const photoSrc = app.fileData || (app.photos && app.photos.length > 0 ? app.photos[0] : '');
-            const downloadBtn = photoSrc
-              ? `<a href="${sanitizeUrl(photoSrc)}" download="${escapeHtml(app.fileName) || '현장사진.jpg'}" style="padding: 4px 8px; font-size: 0.74rem; background: #2563eb; color: #ffffff; border: 1px solid #1d4ed8; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; width: 100%; box-sizing: border-box; text-align: center; box-shadow: 0 1px 2px rgba(37,99,235,0.2); transition: background 0.15s;" title="현장사진 다운로드"><i class="fa-solid fa-download"></i> 다운로드</a>`
+            let photoList = [];
+            if (Array.isArray(app.photos) && app.photos.length > 0) {
+              photoList = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+            }
+            if (photoList.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
+              photoList = [app.fileData];
+            }
+            if (photoList.length === 0 && app.image_url && typeof app.image_url === 'string') {
+              if (app.image_url.startsWith('[') && app.image_url.includes('data:')) {
+                try {
+                  const parsed = JSON.parse(app.image_url);
+                  if (Array.isArray(parsed)) {
+                    photoList = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+                  }
+                } catch (e) {}
+              } else if (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) {
+                photoList = [app.image_url];
+              }
+            }
+            const count = photoList.length;
+            const hasPhoto = count > 0;
+
+            const downloadBtn = hasPhoto
+              ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="padding: 4px 8px; font-size: 0.74rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; width: 100%; box-sizing: border-box; text-align: center; box-shadow: 0 1px 2px rgba(37,99,235,0.1); transition: background 0.15s;" title="${count > 1 ? `현장사진 ${count}장 다운로드` : '현장사진 다운로드'}"><i class="fa-solid ${count > 1 ? 'fa-file-zipper' : 'fa-download'}" style="color: #2563eb;"></i> ${count > 1 ? `다운 (${count}장)` : '다운로드'}</button>`
               : `<button type="button" disabled style="padding: 4px 8px; font-size: 0.74rem; background: #e2e8f0; color: #94a3b8; border: 1px solid #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; box-sizing: border-box; cursor: not-allowed;"><i class="fa-solid fa-download"></i> 다운로드</button>`;
 
             return `
