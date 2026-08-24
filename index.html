@@ -1480,8 +1480,8 @@
             <button class="auth-close-btn" id="auth-close-btn" onclick="document.getElementById('auth-modal').classList.remove('active');">&times;</button>
             <div class="auth-scroll-container">
                 <div class="auth-tabs">
-                    <button class="auth-tab-btn active" id="tab-login-btn">로그인</button>
-                    <button class="auth-tab-btn" id="tab-signup-btn">회원가입</button>
+                    <button type="button" class="auth-tab-btn active" id="tab-login-btn" onclick="window.switchAuthTab('login', event)">로그인</button>
+                    <button type="button" class="auth-tab-btn" id="tab-signup-btn" onclick="window.switchAuthTab('signup', event)">회원가입</button>
                 </div>
 
             <!-- Login Form Pane -->

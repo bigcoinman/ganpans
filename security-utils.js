@@ -1541,8 +1541,46 @@ if (typeof window !== 'undefined') {
   window.SupabaseSync.initAutoSync(30000);
 }
 
-// 전역 단일 인증 실행 핸들러 (모든 플랫폼·화면 100% 호환 보장)
+// 전역 단일 인증 실행 핸들러 및 탭 전환 엔진 (모든 플랫폼·화면 100% 호환 보장)
 if (typeof window !== 'undefined') {
+  window.switchAuthTab = function(tab, e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    const tabLoginBtn = document.getElementById('tab-login-btn');
+    const tabSignupBtn = document.getElementById('tab-signup-btn');
+    const loginPane = document.getElementById('login-pane');
+    const signupPane = document.getElementById('signup-pane');
+    const findIdPane = document.getElementById('find-id-pane');
+    const findPwPane = document.getElementById('find-pw-pane');
+    const authTabs = document.querySelector('.auth-tabs');
+
+    if (authTabs) authTabs.style.display = '';
+    if (findIdPane) findIdPane.classList.remove('active');
+    if (findPwPane) findPwPane.classList.remove('active');
+
+    if (tab === 'signup') {
+      if (tabLoginBtn) tabLoginBtn.classList.remove('active');
+      if (tabSignupBtn) tabSignupBtn.classList.add('active');
+      if (loginPane) loginPane.classList.remove('active');
+      if (signupPane) signupPane.classList.add('active');
+    } else {
+      if (tabLoginBtn) tabLoginBtn.classList.add('active');
+      if (tabSignupBtn) tabSignupBtn.classList.remove('active');
+      if (loginPane) loginPane.classList.add('active');
+      if (signupPane) signupPane.classList.remove('active');
+    }
+  };
+
+  window.openAuthModal = function(initialTab = 'login') {
+    const authModal = document.getElementById('auth-modal');
+    if (authModal) {
+      authModal.classList.add('active');
+      window.switchAuthTab(initialTab);
+    }
+  };
+
   window.executeAppLogin = async function(e) {
     if (e) {
       if (typeof e.preventDefault === 'function') e.preventDefault();

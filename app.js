@@ -580,12 +580,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function openAuthModal() {
+    function openAuthModal(initialTab = 'login') {
         const authModal = document.getElementById('auth-modal');
         if (authModal) {
             authModal.classList.add('active');
+            if (typeof window.switchAuthTab === 'function') {
+                window.switchAuthTab(initialTab);
+            }
         }
     }
+    window.openAuthModal = openAuthModal;
 
     // --- Mobile Auth Modal Close Interceptor (Supports Touch & Click) ---
     const authCloseBtn = document.getElementById('auth-close-btn');
