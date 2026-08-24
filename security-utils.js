@@ -1578,7 +1578,6 @@ if (typeof window !== 'undefined') {
         window.SupabaseSync.upsertUser(adminUser).catch(() => {});
       }
 
-      alert('최고관리자님, 반갑습니다!');
       const authModal = document.getElementById('auth-modal');
       if (authModal) authModal.classList.remove('active');
       const form = document.getElementById('login-form');
@@ -1587,9 +1586,13 @@ if (typeof window !== 'undefined') {
       if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
       if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
       if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
-      if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
-      if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
-      if (typeof window.switchTab === 'function') window.switchTab('tab-dashboard');
+      
+      if (typeof window.switchTab === 'function') {
+        window.switchTab('tab-dashboard');
+      } else if (typeof window.renderAdminDashboardMob === 'function') {
+        window.renderAdminDashboardMob(true);
+      }
+
       window.dispatchEvent(new CustomEvent('supabase-data-synced'));
       return;
     }
@@ -1723,7 +1726,6 @@ if (typeof window !== 'undefined') {
         localStorage.removeItem('activeUser');
       }
 
-      alert(`${user.name}님, 반갑습니다!`);
       const authModal = document.getElementById('auth-modal');
       if (authModal) authModal.classList.remove('active');
       const form = document.getElementById('login-form');
@@ -1733,7 +1735,11 @@ if (typeof window !== 'undefined') {
       if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
       if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
       if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
-      if (typeof window.renderAdminDashboardMob === 'function' && user.role === 'admin') window.renderAdminDashboardMob(true);
+      if (typeof window.switchTab === 'function') {
+        window.switchTab(user.role === 'admin' ? 'tab-dashboard' : 'tab-status');
+      } else if (typeof window.renderAdminDashboardMob === 'function' && user.role === 'admin') {
+        window.renderAdminDashboardMob(true);
+      }
       window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     } else {
       alert('아이디 또는 비밀번호가 올바르지 않거나 이미 삭제된 회원입니다.');
