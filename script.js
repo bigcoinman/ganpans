@@ -1,44 +1,52 @@
 // script.js - Signboard Support Portal Interactive Features
 
 document.addEventListener('DOMContentLoaded', () => {
+  const safeInit = (name, fn) => {
+    try {
+      if (typeof fn === 'function') fn();
+    } catch (err) {
+      console.warn(`[Init Module Error: ${name}]`, err);
+    }
+  };
+
   // --- 1. Fictional Building Gallery ---
-  initBuildingGallery();
+  safeInit('BuildingGallery', initBuildingGallery);
 
   // --- 2. Signboard Simulator ---
-  initSimulator();
+  safeInit('Simulator', initSimulator);
 
   // --- 3. FAQ Accordion ---
-  initFAQ();
+  safeInit('FAQ', initFAQ);
 
   // --- 3.5. Owner Reviews ---
-  initReviews();
+  safeInit('Reviews', initReviews);
 
   // --- 4. Application Wizard ---
-  initWizard();
+  safeInit('Wizard', initWizard);
 
   // --- 5. Eligibility Checklist ---
-  initChecklist();
+  safeInit('Checklist', initChecklist);
 
   // --- 6. User Auth & Dashboard ---
-  initAuthAndDashboard();
+  safeInit('AuthAndDashboard', initAuthAndDashboard);
 
   // --- 7. Real-time Popups ---
-  initPopups();
+  safeInit('Popups', initPopups);
 
   // --- 8. Visitor Tracking ---
-  initVisitorTracking();
+  safeInit('VisitorTracking', initVisitorTracking);
 
   // --- 9. Mobile Bottom Navigation ---
-  initMobileBottomNav();
+  safeInit('MobileBottomNav', initMobileBottomNav);
 
   // --- 10. AI Assistant ---
-  initAIAssistant();
+  safeInit('AIAssistant', initAIAssistant);
 
   // --- 11. Inquiry, Policy & Global Search ---
-  initModalsAndSearch();
+  safeInit('ModalsAndSearch', initModalsAndSearch);
 
   // --- 12. PWA Initialization ---
-  initPWA();
+  safeInit('PWA', initPWA);
 });
 
 // ==========================================
@@ -1992,7 +2000,7 @@ function initAuthAndDashboard() {
     const id = document.getElementById('find-pw-id')?.value.trim();
     const phone = document.getElementById('find-pw-phone')?.value.trim();
     const cleanDigits = phone ? phone.replace(/[^0-9]/g, '') : '';
-    const cleanIdDigits = id ? id.replace(/[^0-9]/g, '');
+    const cleanIdDigits = id ? id.replace(/[^0-9]/g, '') : '';
     const result = document.getElementById('find-pw-result');
     const resetGroup = document.getElementById('find-pw-reset-group');
     if (!result || !resetGroup) return;

@@ -4,16 +4,18 @@
 <head>
     <script>
         // Force unregister old service workers & purge old browser caches
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for (let r of registrations) r.unregister();
-            });
-        }
-        if ('caches' in window) {
-            caches.keys().then(function(names) {
-                for (let n of names) caches.delete(n);
-            });
-        }
+        try {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for (let r of registrations) r.unregister();
+                }).catch(function(e){});
+            }
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    for (let n of names) caches.delete(n);
+                }).catch(function(e){});
+            }
+        } catch(e) {}
     </script>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -42,8 +44,8 @@
     <!-- FontAwesome Icons & Outfit Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Load PC styles first, then mobile overrides -->
-    <link rel="stylesheet" href="style.css?v=20260818_0110">
-    <link rel="stylesheet" href="app.css?v=20260818_0110">
+    <link rel="stylesheet" href="style.css?v=20260825_0230">
+    <link rel="stylesheet" href="app.css?v=20260825_0230">
 </head>
 
 <body class="mobile-app-body">
@@ -53,10 +55,10 @@
             <img src="간판지원단 로고-3.png" alt="간판지원단" style="height: 29px; width: auto; display: block;">
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-            <button class="app-install-btn-header" id="mobile-header-install-btn">
+            <button class="app-install-btn-header" id="mobile-header-install-btn" onclick="if(window.openInstallModalMob) window.openInstallModalMob(event); return false;">
                 <i class="fa-solid fa-share-nodes"></i> 앱 공유
             </button>
-            <button class="app-header-auth-btn" id="app-header-auth-btn">
+            <button class="app-header-auth-btn" id="app-header-auth-btn" onclick="if(window.handleHeaderAuthClickMob) window.handleHeaderAuthClickMob(event); return false;">
                 <i class="fa-regular fa-user"></i>
                 <span id="app-header-auth-text">로그인</span>
             </button>
@@ -1852,17 +1854,17 @@
             <i class="fa-solid fa-list-check nav-icon"></i>
             <span class="nav-label">현황</span>
         </button>
-        <button class="nav-item" onclick="openGlobalSearchModal();" id="tab-btn-search">
+        <button class="nav-item" onclick="if(window.openGlobalSearchModal) window.openGlobalSearchModal(); return false;" id="tab-btn-search">
             <i class="fa-solid fa-magnifying-glass nav-icon"></i>
             <span class="nav-label">검색</span>
         </button>
-        <button class="nav-item nav-fab" onclick="switchTab('apply')" id="tab-btn-apply">
+        <button class="nav-item nav-fab" onclick="if(window.switchTab) window.switchTab('apply'); return false;" id="tab-btn-apply">
             <div class="fab-circle">
                 <i class="fa-solid fa-plus"></i>
             </div>
             <span class="nav-label">간편 신청</span>
         </button>
-        <button class="nav-item" onclick="window.triggerAppRefresh && window.triggerAppRefresh(); return false;" id="tab-btn-refresh" title="최신 데이터 새로고침">
+        <button class="nav-item" onclick="if(window.triggerAppRefresh) window.triggerAppRefresh(false); return false;" id="tab-btn-refresh" title="최신 데이터 새로고침">
             <i class="fa-solid fa-rotate-right nav-icon"></i>
             <span class="nav-label">새로고침</span>
         </button>
@@ -2423,14 +2425,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js?v=20260825_0153"></script>
-    <script src="security-utils.js?v=20260825_0153"></script>
-    <script src="data-store.js?v=20260825_0153"></script>
-    <script src="kakao-notify.js?v=20260825_0153"></script>
+    <script src="supabase-config.js?v=20260825_0230"></script>
+    <script src="security-utils.js?v=20260825_0230"></script>
+    <script src="data-store.js?v=20260825_0230"></script>
+    <script src="kakao-notify.js?v=20260825_0230"></script>
     <!-- Load PC JavaScript first to run interactive components -->
-    <script src="script.js?v=20260825_0153"></script>
+    <script src="script.js?v=20260825_0230"></script>
     <!-- Load mobile drawer, tab, dashboard scripts -->
-    <script src="app.js?v=20260825_0153"></script>
+    <script src="app.js?v=20260825_0230"></script>
 </body>
 
 </html>

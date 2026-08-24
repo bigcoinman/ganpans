@@ -4546,7 +4546,7 @@ footer {
     background-color: #ffffff !important;
     border-radius: 24px !important;
     box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18) !important;
-    display: flex !important;
+    display: none !important;
     flex-direction: column !important;
     overflow: hidden !important;
     z-index: 10001 !important;
@@ -4558,6 +4558,7 @@ footer {
 }
 
 .ai-chat-container.active {
+    display: flex !important;
     transform: translateY(0) scale(1) !important;
     opacity: 1 !important;
     pointer-events: auto !important;
@@ -4997,7 +4998,7 @@ footer {
     backdrop-filter: blur(4px) !important;
     -webkit-backdrop-filter: blur(4px) !important;
     z-index: 15000 !important;
-    display: flex !important;
+    display: none !important;
     align-items: center !important;
     justify-content: flex-start !important;
     opacity: 0 !important;
@@ -5015,6 +5016,7 @@ footer {
 }
 
 .inquiry-modal-overlay.active {
+    display: flex !important;
     opacity: 1 !important;
     pointer-events: auto !important;
 }

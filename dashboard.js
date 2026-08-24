@@ -2986,7 +2986,7 @@ document.addEventListener('DOMContentLoaded', () => {
         u.items.forEach(item => {
           const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
           const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
-          const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus)) || '').trim();
+          const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '').trim();
 
           // 오직 '대상자선정', '간판시공 준비중', '간판시공완료'인 건만 허용
           const isEligible = (
@@ -3083,6 +3083,8 @@ document.addEventListener('DOMContentLoaded', () => {
             invoicePhotos: app.invoicePhotos || [],
             createdAt: app.appliedAt || app.createdAt || new Date().toISOString()
           });
+        }
+      }
     });
 
     // Sort descending by date
@@ -4322,7 +4324,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (String(item.assignedConstructorId) === String(activeUser.id)) {
             const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
             const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
-            const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus)) || '').trim();
+            const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '').trim();
 
             const isEligible = (
               pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||

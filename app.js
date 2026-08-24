@@ -82,8 +82,150 @@ window.toggleBizItemMob = function (appId, btnEl) {
     }
 };
 
-window.deleteApplicationAdminMob = function (appId, btnEl) {
-    if (window.DataStore) return window.DataStore.deleteApplication(appId, btnEl);
+// --- 모바일 전역 네비게이션 및 모달 핸들러 (최상단 즉시 선언 - Fail-Safe Early Definition) ---
+window.switchTab = function (tabId) {
+    try {
+        if (tabId === 'dashboard' || tabId === 'tab-dashboard') {
+            tabId = 'status';
+        }
+        const tabs = document.querySelectorAll('.app-view');
+        const navItems = document.querySelectorAll('.nav-item');
+
+        if (tabId === 'apply') {
+            navItems.forEach(btn => {
+                if (btn.id === 'tab-btn-home' || btn.id === 'tab-btn-apply') {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            tabs.forEach(tab => {
+                if (tab.id === 'view-home') {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            setTimeout(() => {
+                const appSection = document.getElementById('apply-section');
+                const homeView = document.getElementById('view-home');
+                if (appSection && homeView) {
+                    homeView.scrollTo({
+                        top: appSection.offsetTop - 10,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 50);
+            return;
+        }
+
+        tabs.forEach(tab => {
+            if (tab.id === `view-${tabId}`) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+
+        navItems.forEach(btn => {
+            if (btn.id === `tab-btn-${tabId}`) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        if (tabId === 'status' && typeof window.renderStatusTab === 'function') {
+            window.renderStatusTab();
+        }
+
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        const activeTab = document.getElementById(`view-${tabId}`);
+        if (activeTab) {
+            activeTab.scrollTop = 0;
+        }
+        if (typeof window.updateHeaderAuthButton === 'function') {
+            window.updateHeaderAuthButton();
+        }
+    } catch (err) {
+        console.error('[switchTab Error]', err);
+    }
+};
+
+window.openInstallModalMob = function (e) {
+    if (e) {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    const mobileInstallModal = document.getElementById('install-modal');
+    if (mobileInstallModal) {
+        const qrImg = document.getElementById('install-qr-img');
+        if (qrImg) {
+            qrImg.onerror = () => {
+                qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com%2Fapp';
+            };
+            qrImg.src = './ganpan-app-qr.png?v=20260817';
+        }
+        const qrSection = document.getElementById('install-qr-section');
+        if (qrSection) qrSection.style.display = 'flex';
+        mobileInstallModal.classList.add('active');
+    }
+};
+
+window.openAuthModal = function (initialTab = 'login') {
+    const authModal = document.getElementById('auth-modal');
+    if (authModal) {
+        authModal.classList.add('active');
+        if (typeof window.switchAuthTab === 'function') {
+            window.switchAuthTab(initialTab);
+        }
+    }
+};
+
+window.handleHeaderAuthClickMob = function (e) {
+    if (e) {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    const user = (typeof getActiveUser === 'function') ? (getActiveUser() || null) : null;
+    if (user) {
+        if (typeof window.openDrawer === 'function') {
+            window.openDrawer();
+        } else {
+            const drawer = document.getElementById('app-drawer');
+            const drawerOverlay = document.getElementById('app-drawer-overlay');
+            if (drawer) drawer.classList.add('active');
+            if (drawerOverlay) drawerOverlay.classList.add('active');
+            if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
+        }
+    } else {
+        window.openAuthModal();
+    }
+};
+
+window.openGlobalSearchModal = function () {
+    const globalSearchModal = document.getElementById('global-search-modal');
+    if (!globalSearchModal) return;
+    const user = typeof getActiveUser === 'function' ? getActiveUser() : null;
+    const searchAuthBlock = document.getElementById('search-auth-block');
+    const searchContentArea = document.getElementById('search-content-area');
+    const globalSearchInput = document.getElementById('global-search-input');
+    const searchResultsArea = document.getElementById('search-results-area');
+
+    if (!user) {
+        if (searchAuthBlock) searchAuthBlock.style.display = 'block';
+        if (searchContentArea) searchContentArea.style.display = 'none';
+    } else {
+        if (searchAuthBlock) searchAuthBlock.style.display = 'none';
+        if (searchContentArea) searchContentArea.style.display = 'block';
+        if (typeof window.setSearchModeMob === 'function') window.setSearchModeMob('name');
+        if (globalSearchInput) globalSearchInput.value = '';
+        if (searchResultsArea) searchResultsArea.innerHTML = '';
+        setTimeout(() => { if (globalSearchInput) globalSearchInput.focus(); }, 150);
+    }
+    globalSearchModal.classList.add('active');
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2967,7 +3109,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     u.items.forEach(item => {
                         const matchingApp = allApps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
                         const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
-                        const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus)) || '').trim();
+                        const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '').trim();
 
                         // 오직 '대상자선정', '간판시공 준비중', '간판시공완료'인 건만 허용
                         const isEligible = (
@@ -3982,7 +4124,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (String(item.assignedConstructorId) === String(activeUser.id)) {
                         const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
                         const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
-                        const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus)) || '').trim();
+                        const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '').trim();
 
                         const isEligible = (
                             pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
@@ -5318,6 +5460,7 @@ document.addEventListener('DOMContentLoaded', () => {
             toast.classList.remove('show');
         }, 2200);
     }
+    window.showRefreshToast = showRefreshToast;
 
     async function triggerAppRefresh(isSilent = false) {
         if (isRefreshing) return;
