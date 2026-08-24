@@ -1892,4 +1892,188 @@ if (typeof window !== 'undefined') {
       alert('아이디 또는 비밀번호가 올바르지 않거나 이미 삭제된 회원입니다.');
     }
   };
+
+  window.executeAppSignup = async function(e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+
+    const signupIdInput = document.getElementById('signup-id');
+    const signupPwInput = document.getElementById('signup-pw');
+    const signupPwConfirmInput = document.getElementById('signup-pw-confirm');
+    const signupNameInput = document.getElementById('signup-name');
+    const signupAddressInput = document.getElementById('signup-address');
+    const signupEmailInput = document.getElementById('signup-email');
+    const signupPhoneInput = document.getElementById('signup-phone');
+
+    const idVal = signupIdInput ? signupIdInput.value.trim() : '';
+    const pwVal = signupPwInput ? signupPwInput.value : '';
+    const pwConfirmVal = signupPwConfirmInput ? signupPwConfirmInput.value : '';
+    const nameVal = signupNameInput ? signupNameInput.value.trim() : '';
+    const addressVal = signupAddressInput ? signupAddressInput.value.trim() : '';
+    const emailVal = signupEmailInput ? signupEmailInput.value.trim() : '';
+    const phoneVal = signupPhoneInput ? signupPhoneInput.value.trim() : '';
+
+    if (!idVal) {
+      alert('아이디를 입력해 주세요.');
+      signupIdInput?.focus();
+      return;
+    }
+
+    if (idVal.length < 4 || idVal.length > 20) {
+      alert('아이디는 4자 이상 20자 이하로 입력해 주세요.');
+      signupIdInput?.focus();
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9]+$/.test(idVal)) {
+      alert('아이디는 영문 대/소문자와 숫자만 사용 가능합니다.');
+      signupIdInput?.focus();
+      return;
+    }
+
+    // 아이디 중복 체크 자동 검증 (미체크 시 즉시 검사)
+    const idValLower = idVal.toLowerCase();
+    let exists = false;
+    const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+    if (localUsers.some(u => String(u.id).toLowerCase() === idValLower && u.role !== 'deleted')) {
+      exists = true;
+    }
+    if (!exists && window.supabaseClient) {
+      try {
+        const { data } = await window.supabaseClient.from('users').select('id, role').ilike('id', idVal).maybeSingle();
+        if (data && data.role !== 'deleted') exists = true;
+      } catch (err) {
+        console.warn('Supabase check id error:', err);
+      }
+    }
+    if (exists) {
+      alert(`'${idVal}'는 이미 사용 중인 아이디입니다.\n다른 아이디를 입력해 주세요.`);
+      signupIdInput?.focus();
+      return;
+    }
+
+    if (!pwVal) {
+      alert('비밀번호를 입력해 주세요.');
+      signupPwInput?.focus();
+      return;
+    }
+
+    const pwRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\]{8,20}$/;
+    if (!pwRegex.test(pwVal)) {
+      alert('비밀번호는 영문 소문자·숫자·특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.');
+      signupPwInput?.focus();
+      return;
+    }
+
+    if (pwVal !== pwConfirmVal) {
+      alert('비밀번호 확인이 일치하지 않습니다. 다시 확인해 주세요.');
+      signupPwConfirmInput?.focus();
+      return;
+    }
+
+    if (!nameVal || nameVal.length < 2 || nameVal.length > 20) {
+      alert('이름은 2자 이상 20자 이하로 입력해 주세요.');
+      signupNameInput?.focus();
+      return;
+    }
+
+    if (!phoneVal || phoneVal.length < 9 || phoneVal.length > 15) {
+      alert('휴대폰 번호를 정확히 입력해 주세요. (예: 010-1234-5678)');
+      signupPhoneInput?.focus();
+      return;
+    }
+
+    const phoneRegex = /^[0-9+\s-]+$/;
+    if (!phoneRegex.test(phoneVal)) {
+      alert('휴대폰 번호에는 숫자와 하이픈(-)만 입력할 수 있습니다.');
+      signupPhoneInput?.focus();
+      return;
+    }
+
+    if (emailVal && emailVal.length > 50) {
+      alert('이메일 주소는 최대 50자까지 입력할 수 있습니다.');
+      signupEmailInput?.focus();
+      return;
+    }
+
+    const submitBtn = document.getElementById('btn-complete-signup');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 가입 처리 중...';
+    }
+
+    try {
+      const newUser = {
+        id: idVal,
+        pw: typeof sha256 === 'function' ? sha256(pwVal) : pwVal,
+        name: nameVal,
+        address: addressVal || '',
+        email: emailVal || '',
+        phone: phoneVal,
+        role: 'normal',
+        isSNS: false,
+        bizCode: null,
+        conversionStatus: 'none',
+        items: []
+      };
+
+      // 1) Supabase 클라우드 저장
+      if (window.SupabaseSync) {
+        await window.SupabaseSync.upsertUser(newUser);
+      }
+
+      // 2) DataStore / LocalStorage 저장
+      if (window.DataStore) {
+        const freshUsers = window.DataStore.getUsers();
+        if (!freshUsers.some(u => String(u.id).toLowerCase() === idVal.toLowerCase())) {
+          freshUsers.push(newUser);
+          window.DataStore.saveUsers(freshUsers);
+        }
+      } else {
+        const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+        if (!localUsers.some(u => String(u.id).toLowerCase() === idVal.toLowerCase())) {
+          localUsers.push(newUser);
+          localStorage.setItem('users', JSON.stringify(localUsers));
+        }
+      }
+
+      // 3) 자동 로그인 세션 생성
+      const sanitized = typeof sanitizeUser === 'function' ? sanitizeUser(newUser) : newUser;
+      sessionStorage.setItem('activeUser', JSON.stringify(sanitized));
+      localStorage.removeItem('activeUser_remember');
+      localStorage.removeItem('activeUser');
+
+      alert('회원가입이 완료되었습니다! 자동 로그인됩니다.');
+
+      // 모달 닫기 및 폼 초기화
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.remove('active');
+      const signupForm = document.getElementById('signup-form');
+      if (signupForm) signupForm.reset();
+
+      window.isIdChecked = false;
+      window.isIdAvailable = false;
+      const idCheckMsg = document.getElementById('id-check-msg');
+      if (idCheckMsg) { idCheckMsg.textContent = ''; idCheckMsg.style.display = 'none'; }
+
+      // 4) 모바일 앱 및 PC UI 전역 동기화
+      if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
+      if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
+      if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
+      if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+      if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
+      if (typeof window.switchTab === 'function') window.switchTab('home');
+
+    } catch (err) {
+      console.error('Signup error:', err);
+      alert('회원가입 처리 중 오류가 발생했습니다: ' + (err.message || '다시 시도해 주세요.'));
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> 가입완료';
+      }
+    }
+  };
 }
