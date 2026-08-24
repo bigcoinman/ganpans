@@ -2830,10 +2830,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${escapeHtml(inq.message)}
                         </div>
                         <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
-                            <button type="button" class="btn btn-secondary btn-sm btn-toggle-inquiry-mob" onclick="window.toggleInquiryStatusMob('${inq.id}', event)" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; background: ${isResolved ? '#f1f5f9' : '#15803d'}; color: ${isResolved ? '#475569' : '#ffffff'}; border: 1px solid ${isResolved ? '#cbd5e1' : '#166534'}; font-weight: 600; cursor: pointer; touch-action: manipulation;">
+                            <button type="button" class="btn btn-secondary btn-sm btn-toggle-inquiry-mob" onpointerdown="event.stopPropagation()" onclick="window.toggleInquiryStatusMob('${inq.id}', event); return false;" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; background: ${isResolved ? '#f1f5f9' : '#15803d'}; color: ${isResolved ? '#475569' : '#ffffff'}; border: 1px solid ${isResolved ? '#cbd5e1' : '#166534'}; font-weight: 600; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
                                 <i class="fa-solid ${isResolved ? 'fa-rotate-left' : 'fa-check'}" style="pointer-events: none;"></i> ${isResolved ? '대기로 변경' : '상담 완료'}
                             </button>
-                            <button type="button" class="btn btn-secondary btn-sm btn-delete-inquiry-mob" onclick="window.deleteInquiryAdminMob('${inq.id}', event)" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2; font-weight: 600; cursor: pointer; touch-action: manipulation;">
+                            <button type="button" class="btn btn-secondary btn-sm btn-delete-inquiry-mob" onpointerdown="event.stopPropagation()" onclick="window.deleteInquiryAdminMob('${inq.id}', event); return false;" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2; font-weight: 600; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
                                 <i class="fa-solid fa-trash-can" style="pointer-events: none;"></i> 삭제
                             </button>
                         </div>

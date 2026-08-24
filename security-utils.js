@@ -1389,10 +1389,14 @@ window.SupabaseSync = {
     }
     if (!window.supabaseClient || this.isSyncing) return false;
     this.isSyncing = true;
-
     try {
+      const oldUsersStr = localStorage.getItem('users') || '[]';
+      const oldAppsStr = localStorage.getItem('applications') || '[]';
+      const oldInqsStr = localStorage.getItem('inquiries') || '[]';
+
       // --- A. 회원(Users) Supabase 클라우드 원천 직접 수집 ---
       const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
+      let usersChanged = false;
       if (!usersErr && Array.isArray(supaUsers)) {
         const freshUsers = supaUsers
           .map(su => this.mapDbToUser(su))
@@ -1417,7 +1421,11 @@ window.SupabaseSync = {
           this.upsertUser(defaultAdmin).then(() => {});
         }
 
-        localStorage.setItem('users', JSON.stringify(freshUsers));
+        const newUsersStr = JSON.stringify(freshUsers);
+        if (oldUsersStr !== newUsersStr) {
+          localStorage.setItem('users', newUsersStr);
+          usersChanged = true;
+        }
 
         // 현재 로그인 세션 최신 상태 동기화 또는 삭제 계정 세션 강제 파기
         const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')));
@@ -1438,24 +1446,36 @@ window.SupabaseSync = {
 
       // --- B. 지원 신청서(Applications) Supabase 클라우드 원천 직접 수집 ---
       const { data: supaApps, error: appsErr } = await window.supabaseClient.from('applications').select('*');
+      let appsChanged = false;
       if (!appsErr && Array.isArray(supaApps)) {
         const freshApps = supaApps.map(sa => this.mapDbToApp(sa)).filter(a => a && a.id);
-        localStorage.setItem('applications', JSON.stringify(freshApps));
+        const newAppsStr = JSON.stringify(freshApps);
+        if (oldAppsStr !== newAppsStr) {
+          localStorage.setItem('applications', newAppsStr);
+          appsChanged = true;
+        }
       }
 
       // --- C. 3초 간편문의(Inquiries) Supabase 클라우드 원천 직접 수집 ---
       const { data: supaInqs, error: inqsErr } = await window.supabaseClient.from('inquiries').select('*');
+      let inqsChanged = false;
       if (!inqsErr && Array.isArray(supaInqs)) {
-        localStorage.setItem('inquiries', JSON.stringify(supaInqs));
+        const newInqsStr = JSON.stringify(supaInqs);
+        if (oldInqsStr !== newInqsStr) {
+          localStorage.setItem('inquiries', newInqsStr);
+          inqsChanged = true;
+        }
       }
 
-      // 동기화 완료 이벤트 브로드캐스트
-      window.dispatchEvent(new CustomEvent('supabase-data-synced', {
-        detail: { timestamp: new Date().toISOString() }
-      }));
+      // 실제 데이터가 변경되었을 때만 화면 갱신 이벤트를 발화하여 DOM 재생성 방지
+      if (usersChanged || appsChanged || inqsChanged) {
+        window.dispatchEvent(new CustomEvent('supabase-data-synced', {
+          detail: { timestamp: new Date().toISOString() }
+        }));
 
-      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-        window.DataStore.notifyAll();
+        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+          window.DataStore.notifyAll();
+        }
       }
 
       return true;
@@ -1518,7 +1538,7 @@ window.SupabaseSync = {
 
 // 페이지 로드 시 SupabaseSync 자동 가동
 if (typeof window !== 'undefined') {
-  window.SupabaseSync.initAutoSync(5000);
+  window.SupabaseSync.initAutoSync(30000);
 }
 
 // 전역 단일 인증 실행 핸들러 (모든 플랫폼·화면 100% 호환 보장)
