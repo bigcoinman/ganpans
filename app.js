@@ -2817,6 +2817,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const typeLabel = typeMap[inq.type] || inq.type || '일반 문의';
 
+                    const msgContent = inq.message || inq.content || inq.body || inq.region || '';
+                    const displayMsg = msgContent.trim() ? escapeHtml(msgContent) : '<span style="color: #94a3b8; font-style: italic;">(등록된 세부 문의 내용이 없습니다)</span>';
+
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                             <strong style="font-size: 1.05rem; color: var(--text-primary);">${escapeHtml(inq.name)}</strong>
@@ -2827,7 +2830,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span style="margin-left: 8px; background: rgba(99,102,241,0.1); color: var(--accent-primary); padding: 2px 8px; border-radius: 4px; font-size: 0.82rem; font-weight: 600;">${escapeHtml(typeLabel)}</span>
                         </div>
                         <div style="font-size: 0.92rem; color: var(--text-primary); line-height: 1.5; margin-top: 8px; padding: 10px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9; word-break: break-word;">
-                            ${escapeHtml(inq.message)}
+                            ${displayMsg}
                         </div>
                         <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
                             <button type="button" class="btn btn-secondary btn-sm btn-toggle-inquiry-mob" onpointerdown="event.stopPropagation()" onclick="window.toggleInquiryStatusMob('${inq.id}', event); return false;" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; background: ${isResolved ? '#f1f5f9' : '#15803d'}; color: ${isResolved ? '#475569' : '#ffffff'}; border: 1px solid ${isResolved ? '#cbd5e1' : '#166534'}; font-weight: 600; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">

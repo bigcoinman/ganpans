@@ -1296,7 +1296,7 @@ window.SupabaseSync = {
       name: dbInq.name || '',
       phone: dbInq.phone || '',
       type: dbInq.type || dbInq.category || 'other',
-      message: dbInq.message || dbInq.region || '',
+      message: dbInq.message || dbInq.content || dbInq.body || dbInq.inquiry_text || dbInq.memo || dbInq.region || '',
       status: dbInq.status || 'pending',
       submittedAt: dbInq.created_at || dbInq.submitted_at || new Date().toISOString()
     };
