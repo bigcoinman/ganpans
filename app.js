@@ -2961,11 +2961,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let allConstJobs = [];
 
-            // 1. From users' items
+            // 1. From users' items (오직 '대상자선정' 이상 진행된 건만 시공업체 진행현황에 포함)
             curUsers.forEach(u => {
                 if (u.items && Array.isArray(u.items)) {
                     u.items.forEach(item => {
-                        if (item.assignedConstructorId || (item.constructionStatus && item.constructionStatus !== 'none') || item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판시공완료' || item.progressStatus === '간판 시공 중' || item.progressStatus === '시공 완료') {
+                        const matchingApp = allApps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
+                        const pStatus = item.progressStatus || (matchingApp && (matchingApp.constructionStatus || matchingApp.progressStatus)) || '';
+                        const cStatus = item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '';
+
+                        // 대상자선정 이상 상태인지 엄격 판정 ('지원대기중', '심사대기' 등은 100% 제외)
+                        const isEligible = (
+                            pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
+                            pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인' ||
+                            pStatus === '간판 시공 중' || pStatus === '시공 완료' ||
+                            cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
+                        ) && (
+                            pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류 보완 필요' &&
+                            pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
+                        );
+
+                        if (isEligible) {
                             let cName = item.assignedConstructorName || '';
                             let cCode = '';
                             let cPhone = '';
@@ -3003,9 +3018,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 2. From applications
+            // 2. From applications (오직 '대상자선정' 이상 진행된 건만 시공업체 진행현황에 포함)
             allApps.forEach(app => {
-                if (app.assignedConstructorId || (app.constructionStatus && app.constructionStatus !== 'none')) {
+                const pStatus = app.constructionStatus || app.progressStatus || '';
+                const sStatus = app.status || '';
+
+                const isEligible = (
+                    pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
+                    pStatus === 'in_construction' || pStatus === 'completed' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
+                    (sStatus === 'approved' && pStatus !== '지원대기중' && pStatus !== '심사대기')
+                ) && (
+                    pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류 보완 필요' &&
+                    pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락' &&
+                    sStatus !== 'pending' && sStatus !== 'rejected' && sStatus !== 'giveup'
+                );
+
+                if (isEligible) {
                     if (!allConstJobs.some(j => String(j.id) === String(app.id))) {
                         let cName = app.assignedConstructorName || '';
                         let cCode = '';
@@ -3950,34 +3978,65 @@ document.addEventListener('DOMContentLoaded', () => {
         const curUsers = JSON.parse(localStorage.getItem('users')) || [];
 
         let myJobs = [];
-        // 1) 영업물건 중 본인에게 배정된 건
+        // 1) 영업물건 중 본인에게 배정되고 '대상자선정' 이상인 건
         curUsers.forEach(u => {
             if (u.items && Array.isArray(u.items)) {
                 u.items.forEach(item => {
                     if (String(item.assignedConstructorId) === String(activeUser.id)) {
-                        myJobs.push({
-                            id: item.id,
-                            isBizItemJob: true,
-                            bizItemOwnerId: u.id,
-                            storeName: item.name,
-                            ownerName: `${u.name} (영업자)`,
-                            ownerPhone: item.phone || u.phone || '-',
-                            storeAddress: item.address,
-                            signType: item.signType || 'LED 채널/플렉스',
-                            constructionStatus: item.constructionStatus || 'before_construction',
-                            constructionPhotos: item.constructionPhotos || [],
-                            invoicePhotos: item.invoicePhotos || [],
-                            createdAt: item.assignedAt || item.createdAt || new Date().toISOString()
-                        });
+                        const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
+                        const pStatus = item.progressStatus || (matchingApp && (matchingApp.constructionStatus || matchingApp.progressStatus)) || '';
+                        const cStatus = item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '';
+
+                        const isEligible = (
+                            pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
+                            pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인' ||
+                            pStatus === '간판 시공 중' || pStatus === '시공 완료' ||
+                            cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
+                        ) && (
+                            pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류 보완 필요' &&
+                            pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
+                        );
+
+                        if (isEligible) {
+                            myJobs.push({
+                                id: item.id,
+                                isBizItemJob: true,
+                                bizItemOwnerId: u.id,
+                                storeName: item.name,
+                                ownerName: `${u.name} (영업자)`,
+                                ownerPhone: item.phone || u.phone || '-',
+                                storeAddress: item.address,
+                                signType: item.signType || 'LED 채널/플렉스',
+                                constructionStatus: item.constructionStatus || 'before_construction',
+                                constructionPhotos: item.constructionPhotos || [],
+                                invoicePhotos: item.invoicePhotos || [],
+                                createdAt: item.assignedAt || item.createdAt || new Date().toISOString()
+                            });
+                        }
                     }
                 });
             }
         });
 
-        // 2) 기존 applications 중 본인에게 배정된 건 병합
+        // 2) 기존 applications 중 본인에게 배정되고 '대상자선정' 이상인 건 병합
         apps.forEach(app => {
             if (String(app.assignedConstructorId) === String(activeUser.id) && !myJobs.some(j => String(j.id) === String(app.id))) {
-                myJobs.push(app);
+                const pStatus = app.constructionStatus || app.progressStatus || '';
+                const sStatus = app.status || '';
+
+                const isEligible = (
+                    pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
+                    pStatus === 'in_construction' || pStatus === 'completed' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
+                    (sStatus === 'approved' && pStatus !== '지원대기중' && pStatus !== '심사대기')
+                ) && (
+                    pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류 보완 필요' &&
+                    pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락' &&
+                    sStatus !== 'pending' && sStatus !== 'rejected' && sStatus !== 'giveup'
+                );
+
+                if (isEligible) {
+                    myJobs.push(app);
+                }
             }
         });
 
