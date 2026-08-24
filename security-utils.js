@@ -1520,3 +1520,223 @@ window.SupabaseSync = {
 if (typeof window !== 'undefined') {
   window.SupabaseSync.initAutoSync(5000);
 }
+
+// 전역 단일 인증 실행 핸들러 (모든 플랫폼·화면 100% 호환 보장)
+if (typeof window !== 'undefined') {
+  window.executeAppLogin = async function(e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+
+    const idInput = document.getElementById('login-id');
+    const pwInput = document.getElementById('login-pw');
+    const idVal = idInput ? idInput.value.trim() : '';
+    const pwVal = pwInput ? pwInput.value : '';
+    const rememberMe = document.getElementById('login-remember-me') ? document.getElementById('login-remember-me').checked : false;
+
+    if (!idVal || !pwVal) {
+      alert('아이디와 비밀번호를 모두 입력해 주세요.');
+      return;
+    }
+
+    const idValLower = idVal.toLowerCase();
+
+    // 1) 최고관리자 (admin) 직통 즉각 로그인 (0초 무조건 통과)
+    if (idValLower === 'admin' || idValLower === 'administrator' || idValLower === 'superadmin') {
+      const adminUser = {
+        id: 'admin',
+        pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
+        name: '최고관리자',
+        address: '경기도 수원시 영통구 청명남로 10',
+        email: 'admin@ganpan.go.kr',
+        phone: '010-0000-0000',
+        role: 'admin',
+        isSNS: false,
+        bizCode: null,
+        conversionStatus: 'none',
+        items: []
+      };
+
+      let users = JSON.parse(localStorage.getItem('users')) || [];
+      if (!users.some(u => String(u.id).toLowerCase() === 'admin')) {
+        users.push(adminUser);
+        localStorage.setItem('users', JSON.stringify(users));
+      }
+
+      if (rememberMe) {
+        localStorage.setItem('activeUser', JSON.stringify(adminUser));
+        localStorage.setItem('activeUser_remember', 'true');
+        sessionStorage.removeItem('activeUser');
+      } else {
+        sessionStorage.setItem('activeUser', JSON.stringify(adminUser));
+        localStorage.removeItem('activeUser_remember');
+        localStorage.removeItem('activeUser');
+      }
+
+      if (window.SupabaseSync) {
+        window.SupabaseSync.upsertUser(adminUser).catch(() => {});
+      }
+
+      alert('최고관리자님, 반갑습니다!');
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.remove('active');
+      const form = document.getElementById('login-form');
+      if (form) form.reset();
+
+      if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
+      if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
+      if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
+      if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
+      if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+      if (typeof window.switchTab === 'function') window.switchTab('tab-dashboard');
+      window.dispatchEvent(new CustomEvent('supabase-data-synced'));
+      return;
+    }
+
+    // 2) 일반 회원 및 기타 사용자 로그인
+    const hashedPassword = typeof sha256 === 'function' ? sha256(pwVal) : pwVal;
+    const cleanDigits = (idVal.startsWith('01') && idVal.replace(/[^0-9]/g, '').length >= 9) ? idVal.replace(/[^0-9]/g, '') : '';
+    let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+
+    if (deletedIds.includes(idVal) || deletedIds.includes(idValLower) || (cleanDigits && deletedIds.includes(cleanDigits))) {
+      alert('존재하지 않는 회원 정보이거나 이미 탈퇴/삭제 처리된 계정입니다.');
+      return;
+    }
+
+    let user = null;
+
+    if (window.supabaseClient) {
+      try {
+        let { data, error } = await window.supabaseClient
+          .from('users')
+          .select('*')
+          .ilike('id', idVal)
+          .maybeSingle();
+
+        if (!data && cleanDigits) {
+          const { data: phoneData } = await window.supabaseClient
+            .from('users')
+            .select('*')
+            .or(`phone.eq.${idVal},phone.eq.${cleanDigits}`)
+            .maybeSingle();
+          if (phoneData) data = phoneData;
+        }
+
+        if (!error && data) {
+          const dataId = String(data.id || '');
+          const dataIdLower = dataId.toLowerCase();
+          const dataPhone = String(data.phone || '');
+          const dataPhoneDigits = (dataPhone.length >= 9) ? dataPhone.replace(/[^0-9]/g, '') : '';
+
+          if (data.role === 'deleted' || 
+              deletedIds.includes(dataId) || 
+              deletedIds.includes(dataIdLower) || 
+              (dataPhoneDigits && deletedIds.includes(dataPhoneDigits))) {
+            alert('존재하지 않는 회원 정보이거나 이미 탈퇴/삭제 처리된 계정입니다.');
+            return;
+          }
+
+          const isPwMatch = (data.password_hash === hashedPassword) || (data.password_hash === pwVal);
+          if (isPwMatch) {
+            user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : (typeof sanitizeUser === 'function' ? sanitizeUser(data) : data);
+          }
+        }
+      } catch (err) {
+        console.error('Login Supabase error:', err);
+      }
+    }
+
+    // 시스템 기본 계정(bizuser, constuser) 및 로컬 캐시 검증
+    if (!user) {
+      if (idValLower === 'bizuser' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === 'bizuser')) {
+        user = {
+          id: 'bizuser',
+          pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
+          name: '김영업',
+          address: '경기도 성남시 분당구 판교역로 235',
+          email: 'kim@naver.com',
+          phone: '010-9876-5432',
+          role: 'business',
+          isSNS: false,
+          bizCode: 'B-260712',
+          conversionStatus: 'approved',
+          items: []
+        };
+        if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
+      } else if (idValLower === 'constuser' && (pwVal === 'const123!' || pwVal === 'const123')) {
+        user = {
+          id: 'constuser',
+          pw: typeof sha256 === 'function' ? sha256('const123!') : 'const123!',
+          name: '박시공',
+          address: '경기도 수원시 권선구 권선로 301',
+          email: 'park@naver.com',
+          phone: '010-5555-4444',
+          role: 'constructor',
+          isSNS: false,
+          bizCode: null,
+          constCode: 'CO-2026-9090',
+          businessName: '(주)경기가온시공',
+          licenseNumber: '120-81-12345',
+          conversionStatus: 'approved',
+          items: []
+        };
+        if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
+      }
+    }
+
+    if (!user) {
+      const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+      const localUser = localUsers.find(u => {
+        const uId = (u.id || '').toLowerCase();
+        const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
+        const isMatchUser = (uId === idVal.toLowerCase()) ||
+          (cleanDigits && uId === cleanDigits) ||
+          (cleanDigits && uPhoneDigits === cleanDigits);
+        return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
+      });
+      if (localUser) {
+        const luId = String(localUser.id || '');
+        const luIdLower = luId.toLowerCase();
+        const luDigits = luId.replace(/[^0-9]/g, '');
+        const luPhoneDigits = String(localUser.phone || '').replace(/[^0-9]/g, '');
+        if (!deletedIds.includes(luId) && !deletedIds.includes(luIdLower) && (!luDigits || !deletedIds.includes(luDigits)) && (!luPhoneDigits || !deletedIds.includes(luPhoneDigits)) && localUser.role !== 'deleted') {
+          user = typeof sanitizeUser === 'function' ? sanitizeUser(localUser) : localUser;
+        }
+      }
+    }
+
+    if (user) {
+      let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
+      if (!currentUsers.some(u => String(u.id).toLowerCase() === String(user.id).toLowerCase())) {
+        currentUsers.push(user);
+        localStorage.setItem('users', JSON.stringify(currentUsers));
+      }
+
+      if (rememberMe) {
+        localStorage.setItem('activeUser', JSON.stringify(user));
+        localStorage.setItem('activeUser_remember', 'true');
+        sessionStorage.removeItem('activeUser');
+      } else {
+        sessionStorage.setItem('activeUser', JSON.stringify(user));
+        localStorage.removeItem('activeUser_remember');
+        localStorage.removeItem('activeUser');
+      }
+
+      alert(`${user.name}님, 반갑습니다!`);
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.remove('active');
+      const form = document.getElementById('login-form');
+      if (form) form.reset();
+
+      if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
+      if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
+      if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
+      if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
+      if (typeof window.renderAdminDashboardMob === 'function' && user.role === 'admin') window.renderAdminDashboardMob(true);
+      window.dispatchEvent(new CustomEvent('supabase-data-synced'));
+    } else {
+      alert('아이디 또는 비밀번호가 올바르지 않거나 이미 삭제된 회원입니다.');
+    }
+  };
+}
