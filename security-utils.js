@@ -510,7 +510,7 @@ function getActiveUser() {
     }
   }
 
-  if (user) {
+  if (user && user.id) {
     try {
       const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
       const uId = String(user.id || '');
@@ -519,6 +519,19 @@ function getActiveUser() {
       if (deletedIds.includes(uId) || (uDigits && deletedIds.includes(uDigits)) || (uPhoneDigits && deletedIds.includes(uPhoneDigits))) {
         clearActiveUser();
         return null;
+      }
+
+      // 최신 users 목록과 실시간 100% 동기화 (최고관리자의 승인/권한 변경/영업코드/시공코드 즉시 반영)
+      const allUsers = JSON.parse(localStorage.getItem('users')) || [];
+      const freshUser = allUsers.find(u => String(u.id).toLowerCase() === uId.toLowerCase());
+      if (freshUser) {
+        user = typeof sanitizeUser === 'function' ? sanitizeUser({ ...user, ...freshUser }) : { ...user, ...freshUser };
+        if (sessionStorage.getItem('activeUser')) {
+          sessionStorage.setItem('activeUser', JSON.stringify(user));
+        }
+        if (localStorage.getItem('activeUser')) {
+          localStorage.setItem('activeUser', JSON.stringify(user));
+        }
       }
     } catch (eDel) {}
   }
@@ -1432,9 +1445,11 @@ window.SupabaseSync = {
         if (activeUser && activeUser.id) {
           const freshCur = freshUsers.find(u => String(u.id).toLowerCase() === String(activeUser.id).toLowerCase());
           if (freshCur) {
-            const storage = localStorage.getItem('activeUser') ? localStorage : sessionStorage;
             const sanitized = typeof sanitizeUser === 'function' ? sanitizeUser(freshCur) : freshCur;
-            storage.setItem('activeUser', JSON.stringify(sanitized));
+            sessionStorage.setItem('activeUser', JSON.stringify(sanitized));
+            if (localStorage.getItem('activeUser')) {
+              localStorage.setItem('activeUser', JSON.stringify(sanitized));
+            }
           } else {
             // DB에 없거나 삭제된 계정이면 즉시 세션 파기
             if (typeof clearActiveUser === 'function') clearActiveUser();

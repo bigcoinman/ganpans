@@ -840,6 +840,14 @@ document.addEventListener('DOMContentLoaded', () => {
         activeUser = getActiveUser() || null;
         applications = JSON.parse(localStorage.getItem('applications')) || [];
 
+        // 최신 users 목록과 100% 동기화 (최고관리자 승인 즉시 권한 승격 반영)
+        if (activeUser && users.length > 0) {
+            const fresh = users.find(u => String(u.id).toLowerCase() === String(activeUser.id).toLowerCase());
+            if (fresh) {
+                activeUser = { ...activeUser, ...fresh };
+            }
+        }
+
         const statusLoggedOut = document.getElementById('status-logged-out');
         const statusLoggedIn = document.getElementById('status-logged-in');
 
@@ -3217,6 +3225,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         localStorage.setItem('users', JSON.stringify(users));
 
+        if (activeUser && String(activeUser.id).toLowerCase() === String(uid).toLowerCase()) {
+            activeUser.role = 'constructor';
+            activeUser.constCode = code;
+            activeUser.conversionStatus = 'approved';
+            sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+            if (localStorage.getItem('activeUser')) {
+                localStorage.setItem('activeUser', JSON.stringify(activeUser));
+            }
+        }
+
         // Supabase Sync
         if (window.SupabaseSync) {
             window.SupabaseSync.updateUser(uid, {
@@ -3230,6 +3248,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         alert(`시공업체 회원 승인이 정상 완료되었습니다! (발급된 시공코드: [${code}])`);
         renderStatusTab();
+        updateDrawerProfile();
+        updateHeaderAuthButton();
+        window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     }
 
     function approveUserConversionMob(uid) {
@@ -3242,6 +3263,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         localStorage.setItem('users', JSON.stringify(users));
 
+        if (activeUser && String(activeUser.id).toLowerCase() === String(uid).toLowerCase()) {
+            activeUser.role = 'business';
+            activeUser.bizCode = code;
+            activeUser.conversionStatus = 'approved';
+            sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+            if (localStorage.getItem('activeUser')) {
+                localStorage.setItem('activeUser', JSON.stringify(activeUser));
+            }
+        }
+
         // Supabase Sync
         if (window.SupabaseSync) {
             window.SupabaseSync.updateUser(uid, {
@@ -3253,6 +3284,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         alert(`영업자 회원 승인이 정상 완료되었습니다! (발급된 영업코드: ${code})`);
         renderStatusTab();
+        updateDrawerProfile();
+        updateHeaderAuthButton();
+        window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     }
 
     function rejectUserConversionMob(uid) {
