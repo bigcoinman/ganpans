@@ -280,6 +280,20 @@
           );
         }
 
+        let matchedItem = null;
+        for (const u of users) {
+          if (u.items && Array.isArray(u.items)) {
+            const found = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
+            if (found) {
+              matchedItem = found;
+              break;
+            }
+          }
+        }
+
+        const rStatus = (matchedItem && matchedItem.receiptStatus) || app.receiptStatus || '접수예정';
+        const pStatus = (matchedItem && matchedItem.progressStatus) || app.constructionStatus || app.progressStatus || (app.status === 'approved' ? '대상자선정' : '지원대기중');
+
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
         const itemObj = {
           id: String(app.id),
@@ -288,12 +302,12 @@
           phone: app.ownerPhone || app.phone || '',
           address: app.storeAddress || app.address || '',
           photosCount: photosList.length,
-          receiptStatus: app.receiptStatus || '접수예정',
-          progressStatus: (app.status === 'approved' ? '승인 완료' : (app.status === 'rejected' ? '반려됨' : (app.status === 'giveup' ? '지원사업 포기' : '지원대기중'))),
+          receiptStatus: rStatus,
+          progressStatus: pStatus,
           photos: photosList,
           registeredAt: app.appliedAt || app.createdAt || new Date().toISOString(),
-          assignedConstructorId: app.assignedConstructorId || '',
-          assignedConstructorName: app.assignedConstructorName || ''
+          assignedConstructorId: app.assignedConstructorId || (matchedItem && matchedItem.assignedConstructorId) || '',
+          assignedConstructorName: app.assignedConstructorName || (matchedItem && matchedItem.assignedConstructorName) || ''
         };
 
         allItems.push({

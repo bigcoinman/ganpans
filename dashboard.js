@@ -2199,6 +2199,7 @@ document.addEventListener('DOMContentLoaded', () => {
           app.receiptStatus = value;
         } else {
           app.constructionStatus = value;
+          app.progressStatus = value;
           if (value === '지원대기중') app.status = 'pending';
           else if (value === '승인 완료' || value === '대상자선정' || value === '간판시공 준비중' || value === '간판시공완료') app.status = 'approved';
           else if (value === '반려됨') app.status = 'rejected';
