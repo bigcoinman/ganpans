@@ -1588,7 +1588,7 @@ if (typeof window !== 'undefined') {
       if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
       
       if (typeof window.switchTab === 'function') {
-        window.switchTab('tab-dashboard');
+        window.switchTab('status');
       } else if (typeof window.renderAdminDashboardMob === 'function') {
         window.renderAdminDashboardMob(true);
       }
@@ -1736,7 +1736,7 @@ if (typeof window !== 'undefined') {
       if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
       if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
       if (typeof window.switchTab === 'function') {
-        window.switchTab(user.role === 'admin' ? 'tab-dashboard' : 'tab-status');
+        window.switchTab('status');
       } else if (typeof window.renderAdminDashboardMob === 'function' && user.role === 'admin') {
         window.renderAdminDashboardMob(true);
       }

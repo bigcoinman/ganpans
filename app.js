@@ -484,6 +484,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Tab Switching Logic ---
     function switchTab(tabId) {
+        if (tabId === 'dashboard' || tabId === 'tab-dashboard') {
+            tabId = 'status';
+        }
         if (tabId === 'apply') {
             // Highlight the home navigation button
             navItems.forEach(btn => {
