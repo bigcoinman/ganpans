@@ -2295,8 +2295,10 @@ function initAuthAndDashboard() {
       const emailVal = typeof escapeHtml === 'function' ? escapeHtml(signupEmailInput?.value.trim()) : (signupEmailInput?.value.trim() || '');
       const phoneVal = typeof escapeHtml === 'function' ? escapeHtml(signupPhoneInput?.value.trim()) : (signupPhoneInput?.value.trim() || '');
 
-      if (!isIdChecked || !isIdAvailable) {
-        alert('아이디 중복 확인(사용 가능 검색)을 완료해 주세요.');
+      const checked = (isIdChecked || window.isIdChecked);
+      const available = (isIdAvailable || window.isIdAvailable);
+      if (!checked || !available) {
+        alert('아이디 중복 확인(아이디 검색)을 먼저 완료해 주세요.');
         return;
       }
 

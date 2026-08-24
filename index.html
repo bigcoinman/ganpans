@@ -1596,7 +1596,7 @@
                         <label for="signup-id">아이디</label>
                         <div class="input-with-btn">
                             <input type="text" id="signup-id" class="form-input-auth" placeholder="4~20자 영문·숫자" maxlength="20" required>
-                            <button type="button" class="btn btn-secondary btn-inline" id="btn-check-id" style="padding: 0 10px; font-size: 0.72rem; min-width: 70px; font-weight: 600; white-space: nowrap;">아이디 검색</button>
+                            <button type="button" class="btn btn-secondary btn-inline" id="btn-check-id" onclick="window.checkSignupId(event)" style="padding: 0 10px; font-size: 0.72rem; min-width: 70px; font-weight: 600; white-space: nowrap; cursor: pointer; touch-action: manipulation;">아이디 검색</button>
                         </div>
                         <span class="form-helper" id="id-check-msg"></span>
                     </div>

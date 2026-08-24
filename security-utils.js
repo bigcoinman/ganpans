@@ -1573,11 +1573,98 @@ if (typeof window !== 'undefined') {
     }
   };
 
-  window.openAuthModal = function(initialTab = 'login') {
-    const authModal = document.getElementById('auth-modal');
-    if (authModal) {
-      authModal.classList.add('active');
-      window.switchAuthTab(initialTab);
+  window.checkSignupId = async function(e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    const signupIdInput = document.getElementById('signup-id');
+    const idCheckMsg = document.getElementById('id-check-msg');
+    if (!signupIdInput) return;
+
+    const idVal = signupIdInput.value.trim();
+    if (!idVal) {
+      if (idCheckMsg) {
+        idCheckMsg.className = 'form-helper error';
+        idCheckMsg.style.color = '#dc2626';
+        idCheckMsg.style.display = 'block';
+        idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디를 입력해 주세요.';
+      }
+      alert('아이디를 입력해 주세요.');
+      signupIdInput.focus();
+      return;
+    }
+
+    if (idVal.length < 4 || idVal.length > 20) {
+      if (idCheckMsg) {
+        idCheckMsg.className = 'form-helper error';
+        idCheckMsg.style.color = '#dc2626';
+        idCheckMsg.style.display = 'block';
+        idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 4자 이상 20자 이하로 입력해 주세요.';
+      }
+      alert('아이디는 4자 이상 20자 이하로 입력해 주세요.');
+      signupIdInput.focus();
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9]+$/.test(idVal)) {
+      if (idCheckMsg) {
+        idCheckMsg.className = 'form-helper error';
+        idCheckMsg.style.color = '#dc2626';
+        idCheckMsg.style.display = 'block';
+        idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 영문 대/소문자와 숫자만 사용 가능합니다.';
+      }
+      alert('아이디는 영문 대/소문자와 숫자만 사용 가능합니다.');
+      signupIdInput.focus();
+      return;
+    }
+
+    const idValLower = idVal.toLowerCase();
+    let exists = false;
+
+    // 1) 로컬 사용자 목록 실시간 대조
+    const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+    if (localUsers.some(u => String(u.id).toLowerCase() === idValLower && u.role !== 'deleted')) {
+      exists = true;
+    }
+
+    // 2) Supabase 클라우드 실시간 대조
+    if (!exists && window.supabaseClient) {
+      try {
+        const { data, error } = await window.supabaseClient
+          .from('users')
+          .select('id, role')
+          .ilike('id', idVal)
+          .maybeSingle();
+
+        if (!error && data && data.role !== 'deleted') {
+          exists = true;
+        }
+      } catch (err) {
+        console.warn('Supabase check id error:', err);
+      }
+    }
+
+    window.isIdChecked = true;
+    if (exists) {
+      window.isIdAvailable = false;
+      if (idCheckMsg) {
+        idCheckMsg.className = 'form-helper error';
+        idCheckMsg.style.color = '#dc2626';
+        idCheckMsg.style.display = 'block';
+        idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 이미 사용 중인 아이디입니다.';
+      }
+      alert(`'${idVal}'는 이미 사용 중인 아이디입니다.\n다른 아이디를 입력해 주세요.`);
+      signupIdInput.focus();
+    } else {
+      window.isIdAvailable = true;
+      if (idCheckMsg) {
+        idCheckMsg.className = 'form-helper success';
+        idCheckMsg.style.color = '#16a34a';
+        idCheckMsg.style.display = 'block';
+        idCheckMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> 사용 가능한 아이디입니다.';
+      }
+      alert(`'${idVal}'는 사용 가능한 아이디입니다!`);
     }
   };
 
