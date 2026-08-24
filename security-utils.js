@@ -1398,6 +1398,25 @@ window.SupabaseSync = {
           .map(su => this.mapDbToUser(su))
           .filter(u => u && u.id && u.role !== 'deleted');
 
+        const hasAdmin = freshUsers.some(u => String(u.id).toLowerCase() === 'admin');
+        if (!hasAdmin) {
+          const defaultAdmin = {
+            id: 'admin',
+            pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
+            name: '최고관리자',
+            address: '경기도 수원시 영통구 청명남로 10',
+            email: 'admin@ganpan.go.kr',
+            phone: '010-0000-0000',
+            role: 'admin',
+            isSNS: false,
+            bizCode: null,
+            conversionStatus: 'none',
+            items: []
+          };
+          freshUsers.push(defaultAdmin);
+          this.upsertUser(defaultAdmin).then(() => {});
+        }
+
         localStorage.setItem('users', JSON.stringify(freshUsers));
 
         // 현재 로그인 세션 최신 상태 동기화 또는 삭제 계정 세션 강제 파기
