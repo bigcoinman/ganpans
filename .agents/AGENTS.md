@@ -95,8 +95,8 @@ git worktree add "../{프로젝트명}-dev" -b develop
 - **개발 시 주의사항**: `DataStore.notifyAll()` 또는 `supabase-data-synced` 이벤트 발생 시 위 모든 렌더링 함수가 조건에 맞게 빠짐없이 호출되도록 보장해야 한다. 영업자의 신청서 필터링은 `userId`뿐만 아니라 `ownerPhone`, `ownerName`, `referrerCode(bizCode)` 등을 활용한 **다각도 정밀 매칭**을 사용해야 한다.
 
 ### [업무 그룹 B] 영업물건 (공단/진흥원 접수) 현황 및 진행상황 건
-1. **최고관리자 PC웹**: "영업물건 진행사항" (`renderManagerPanel`, `renderBizRegisteredTable`)
-2. **최고관리자 모바일 앱**: "영업물건 진행사항" (`renderAdminDashboardMob`, `renderBizItemsListMob`)
+1. **최고관리자 PC웹**: "영업물건 진행상황" (`renderManagerPanel`, `renderBizRegisteredTable`)
+2. **최고관리자 모바일 앱**: "영업물건 진행상황" (`renderAdminDashboardMob`, `renderBizItemsListMob`)
 3. **영업자 PC웹 (영업자 전용 대시보드)**: "내 영업물건 현황 및 진행상황" (`renderBizRegisteredTable`)
 4. **영업자 모바일 앱 (현황 대시보드)**: "내 영업물건 현황 및 진행상황" (`renderBizRegisteredItemsMob`, `renderBusinessDashboardMob`)
 - **동기화 규칙**: 접수상태(업체신청, 접수예정, 접수완료), 진행상태(지원대기중, 심사대기, 대상자선정, 간판시공 준비중, 간판시공완료), 시공사 배정 변경 시 `users.items`와 `applications` 양방향으로 즉시 100% 동시 반영한다.
@@ -108,7 +108,7 @@ git worktree add "../{프로젝트명}-dev" -b develop
 ## 최고관리자 대시보드 표준 메뉴명 (PC웹 ↔ 모바일 앱 100% 일치)
 1. **`회원 정보 관리`** (전체 가입 회원 명부 및 권한 관리)
 2. **`영업자 승인 및 시공사 승인`** (등급 전환 신청 승인/반려)
-3. **`영업물건 진행사항`** (공단 접수 영업물건 관리 및 상태 조작)
+3. **`영업물건 진행상황`** (공단 접수 영업물건 관리 및 상태 조작)
 4. **`신청서 목록`** (온라인 간편 지원 신청 접수건 관리)
 5. **`시공업체 진행현황 (전체 시공 배정건)`** (시공 배정 및 완료 정산 관리)
 6. **`3초 간편 문의 목록`** (간편 상담 문의 접수 및 처리)

@@ -241,7 +241,7 @@
       return bizList;
     },
 
-    // --- 최고관리자 전용 전체 영업물건 진행사항 목록 (isBizItem: false 건은 100% 완전 제외) ---
+    // --- 최고관리자 전용 전체 영업물건 진행상황 목록 (isBizItem: false 건은 100% 완전 제외) ---
     getAdminBizItems: function () {
       const apps = this.getApplications();
       const users = this.getUsers();
@@ -512,7 +512,7 @@
       if (isNowBizItem) {
         alert('[' + storeLabel + '] 건이 영업물건으로 변경되었습니다.\n공단/진흥원 접수 및 담당 영업자 대시보드로 실시간 연동됩니다.');
       } else {
-        alert('[' + storeLabel + '] 건의 영업물건 등록이 해제되었습니다.\n영업물건 진행사항 및 영업자 대시보드에서 즉시 제외됩니다.');
+        alert('[' + storeLabel + '] 건의 영업물건 등록이 해제되었습니다.\n영업물건 진행상황 및 영업자 대시보드에서 즉시 제외됩니다.');
       }
 
       return { success: true, isBizItem: isNowBizItem };

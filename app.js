@@ -2256,7 +2256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 모바일 영업물건 진행사항 검색창 이벤트 (아이디 / 이름 / 코드 / 상호명)
+    // 모바일 영업물건 진행상황 검색창 이벤트 (아이디 / 이름 / 코드 / 상호명)
     const searchItemsInputMob = document.getElementById('search-items-input-mob');
     if (searchItemsInputMob) {
         searchItemsInputMob.addEventListener('input', () => {
@@ -2742,7 +2742,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 4) Render Items list (영업물건 진행사항)
+        // 4) Render Items list (영업물건 진행상황)
         const itemsList = document.getElementById('admin-items-list-mob');
         if (itemsList) {
             itemsList.innerHTML = '';
