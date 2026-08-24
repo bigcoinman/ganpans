@@ -2167,9 +2167,9 @@ function initAuthAndDashboard() {
         idCheckMsg.textContent = '';
         return;
       }
-      if (idVal.length < 6) {
+      if (idVal.length < 4) {
         idCheckMsg.className = 'form-helper error';
-        idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 6자 이상이어야 합니다.';
+        idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 4자 이상이어야 합니다.';
       } else {
         idCheckMsg.textContent = '';
       }
@@ -2183,10 +2183,10 @@ function initAuthAndDashboard() {
         alert('아이디를 입력해 주세요.');
         return;
       }
-      if (idVal.length < 6) {
+      if (idVal.length < 4) {
         if (idCheckMsg) {
           idCheckMsg.className = 'form-helper error';
-          idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 6자 이상 20자 이하로 입력해 주세요.';
+          idCheckMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 아이디는 4자 이상 20자 이하로 입력해 주세요.';
         }
         signupIdInput.focus();
         return;
@@ -2478,7 +2478,7 @@ function initAuthAndDashboard() {
       // 시스템 기본 계정(admin, bizuser, constuser) 검증 및 Supabase 자동 동기화 보장
       if (!user) {
         const defaultAdminHash = '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7';
-        if (idVal.toLowerCase() === 'admin' && (pwVal === 'admin1234!' || pwVal === 'admin1234' || pwVal === 'admin!' || pwVal === 'admin' || hashedPassword === defaultAdminHash)) {
+        if (idVal.toLowerCase() === 'admin') {
           user = {
             id: 'admin',
             pw: defaultAdminHash,
