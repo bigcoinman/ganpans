@@ -208,6 +208,21 @@
         // 최고관리자는 전체 조회, 영업자는 오직 본인 귀속 건만 조회
         if (this.isAdmin(user) || isMyReferrer || isMyUser || isMyPhone || isMyName) {
           if (!bizList.some(b => String(b.id) === String(app.id))) {
+            let matchedItem = null;
+            const allUsers = this.getUsers();
+            for (const u of allUsers) {
+              if (u.items && Array.isArray(u.items)) {
+                const found = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
+                if (found) {
+                  matchedItem = found;
+                  break;
+                }
+              }
+            }
+
+            const rStatus = (matchedItem && matchedItem.receiptStatus) || app.receiptStatus || '접수예정';
+            const pStatus = (matchedItem && matchedItem.progressStatus) || app.constructionStatus || app.progressStatus || (app.status === 'approved' ? '대상자선정' : '지원대기중');
+
             bizList.push({
               id: app.id,
               date: app.appliedAt || app.createdAt || new Date().toISOString(),
@@ -215,7 +230,9 @@
               ownerPhone: app.ownerPhone || app.phone || '',
               storeName: app.storeName || app.shopName || app.name || '-',
               storeAddress: app.storeAddress || app.address || '',
-              statusObj: app
+              statusObj: app,
+              receiptStatus: rStatus,
+              progressStatus: pStatus
             });
           }
         }

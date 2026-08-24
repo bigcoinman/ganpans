@@ -1132,6 +1132,34 @@ document.addEventListener('DOMContentLoaded', () => {
         return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 심사 대기</span>';
     }
 
+    function getReceiptStatusBadgeHtmlMob(status) {
+        const s = String(status || '').trim();
+        if (s === '접수완료' || s.includes('접수완료') || s === '접수 완료') {
+            return '<span style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 4px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-check-double"></i> 접수완료</span>';
+        }
+        if (s === '업체신청') {
+            return '<span style="background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-building"></i> 업체신청</span>';
+        }
+        return '<span style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 4px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-clock"></i> 접수예정</span>';
+    }
+
+    function getProgressStatusBadgeHtmlMob(status) {
+        const s = String(status || '').trim();
+        if (s === '간판시공완료' || s === '시공 완료' || s === '정산 완료') {
+            return '<span style="background: #fdf4ff; color: #a855f7; border: 1px solid #f0abfc; padding: 3px 8px; border-radius: 4px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-screwdriver-wrench"></i> 간판시공완료</span>';
+        }
+        if (s === '간판시공 준비중' || s === '시공 준비중') {
+            return '<span style="background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; padding: 3px 8px; border-radius: 4px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-paint-roller"></i> 간판시공 준비중</span>';
+        }
+        if (s === '대상자선정' || s === '선정') {
+            return '<span style="background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
+        }
+        if (s === '심사대기' || s === '심사 대기' || s === '서류 보완 필요') {
+            return '<span style="background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; padding: 3px 8px; border-radius: 4px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-hourglass-half"></i> 심사대기</span>';
+        }
+        return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 지원대기중</span>';
+    }
+
     // Mobile Business Dashboard Toggle States
     let userAppsMobExpanded = false; // false: 최근 3건 요약, true: 전체 확장
     let bizItemsMobExpanded = false; // false: 최근 3건 요약, true: 전체 확장
@@ -1432,7 +1460,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         bizListContainer.innerHTML = '';
         displayBiz.forEach(item => {
-            const statusBadge = getAppStatusBadgeHtmlMob(item.statusObj);
+            const receiptBadge = getReceiptStatusBadgeHtmlMob(item.receiptStatus);
+            const progressBadge = getProgressStatusBadgeHtmlMob(item.progressStatus);
 
             const card = document.createElement('div');
             card.className = 'biz-card-mob';
@@ -1440,7 +1469,10 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <h5 style="font-size: 1.31rem; font-weight: 700; color: var(--text-primary); margin: 0;">${escapeHtml(item.storeName || '-')}</h5>
-                    <div>${statusBadge}</div>
+                    <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                        ${receiptBadge}
+                        ${progressBadge}
+                    </div>
                 </div>
                 <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 5px 0;">
                     <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 600;">${formatDateOnly(item.date)}</span>
@@ -1451,9 +1483,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 5px 0;">
                     <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 700;">${escapeHtml(item.ownerName || '-')}</span> <span style="color: var(--text-secondary); font-size: 0.98rem;">(${escapeHtml(item.ownerPhone || '-')})</span>
                 </p>
-                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0; line-height: 1.4;">
+                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 10px 0; line-height: 1.4;">
                     <strong style="color: #475569;">주소:</strong> ${escapeHtml(item.storeAddress || '-')}
                 </p>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="font-size: 0.9rem; font-weight: 700; color: #475569;"><i class="fa-solid fa-signal" style="color: #2563eb;"></i> 실시간 진행상황</span>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <span style="font-size: 0.84rem; color: #64748b;">접수:</span> ${receiptBadge}
+                        <span style="font-size: 0.84rem; color: #64748b; margin-left: 4px;">진행:</span> ${progressBadge}
+                    </div>
+                </div>
             `;
             bizListContainer.appendChild(card);
         });
@@ -3585,6 +3624,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })();
 
         renderStatusTab();
+        window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     }
     window.updateItemStatusMob = updateItemStatusMob;
 

@@ -2232,6 +2232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
 
     updateSessionUI();
+    window.dispatchEvent(new CustomEvent('supabase-data-synced'));
   };
   window.updateItemStatus = updateItemStatus;
 
@@ -3725,6 +3726,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!isApprovedBizItem) return; // 관리자 미체크 건은 제외
 
       if (!bizList.some(b => String(b.id) === String(app.id))) {
+        let matchedItem = null;
+        for (const u of curUsersList) {
+          if (u.items && Array.isArray(u.items)) {
+            const found = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
+            if (found) {
+              matchedItem = found;
+              break;
+            }
+          }
+        }
+        const rStatus = (matchedItem && matchedItem.receiptStatus) || app.receiptStatus || '접수예정';
+        const pStatus = (matchedItem && matchedItem.progressStatus) || app.constructionStatus || app.progressStatus || (app.status === 'approved' ? '대상자선정' : '지원대기중');
+
         bizList.push({
           id: app.id,
           date: app.appliedAt || app.createdAt || new Date().toISOString(),
@@ -3732,7 +3746,9 @@ document.addEventListener('DOMContentLoaded', () => {
           ownerPhone: app.ownerPhone || app.phone || '',
           storeName: app.storeName || app.shopName || app.name || '-',
           storeAddress: app.storeAddress || app.address || '',
-          statusObj: app
+          statusObj: app,
+          receiptStatus: rStatus,
+          progressStatus: pStatus
         });
       }
     });
@@ -3744,6 +3760,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (matchingApp && (matchingApp.isBizItem === false || String(matchingApp.isBizItem) === 'false')) return; // 관리자가 명시적으로 해제한 건만 제외
 
       if (!bizList.some(b => String(b.id) === String(item.id) || (item.appRefId && String(b.id) === String(item.appRefId)))) {
+        const rStatus = item.receiptStatus || (matchingApp && matchingApp.receiptStatus) || '접수예정';
+        const pStatus = item.progressStatus || (matchingApp && (matchingApp.constructionStatus || matchingApp.progressStatus)) || '지원대기중';
+
         bizList.push({
           id: item.id,
           date: item.registeredAt || item.createdAt || new Date().toISOString(),
@@ -3754,7 +3773,9 @@ document.addEventListener('DOMContentLoaded', () => {
           statusObj: matchingApp || {
             status: item.receiptStatus === '승인완료' ? 'approved' : 'pending',
             constructionStatus: item.progressStatus || '지원대기중'
-          }
+          },
+          receiptStatus: rStatus,
+          progressStatus: pStatus
         });
       }
     });
@@ -3842,7 +3863,24 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.style.transition = 'background 0.2s ease';
 
       const dateOnly = formatDateOnly(item.date);
-      const statusBadge = getAppStatusBadgeHtml(item.statusObj);
+      const r = String(item.receiptStatus || '').trim();
+      const p = String(item.progressStatus || '').trim();
+
+      const receiptBadge = (r === '접수완료' || r.includes('접수완료') || r === '접수 완료')
+        ? '<span style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-check-double"></i> 접수완료</span>'
+        : (r === '업체신청'
+          ? '<span style="background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-building"></i> 업체신청</span>'
+          : '<span style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-clock"></i> 접수예정</span>');
+
+      const progressBadge = (p === '간판시공완료' || p === '시공 완료' || p === '정산 완료')
+        ? '<span style="background: #fdf4ff; color: #a855f7; border: 1px solid #f0abfc; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-screwdriver-wrench"></i> 간판시공완료</span>'
+        : ((p === '간판시공 준비중' || p === '시공 준비중')
+          ? '<span style="background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-paint-roller"></i> 간판시공 준비중</span>'
+          : ((p === '대상자선정' || p === '선정')
+            ? '<span style="background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>'
+            : ((p === '심사대기' || p === '심사 대기' || p === '서류 보완 필요')
+              ? '<span style="background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-hourglass-half"></i> 심사대기</span>'
+              : '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-regular fa-clock"></i> 지원대기중</span>')));
 
       tr.innerHTML = `
         <td style="padding: 12px 16px; color: var(--text-secondary); font-family: monospace; white-space: nowrap;">${dateOnly}</td>
@@ -3857,7 +3895,12 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">${escapeHtml(item.storeName || '-')}</div>
           ${item.storeAddress ? `<div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.storeAddress)}</div>` : ''}
         </td>
-        <td style="padding: 12px 16px; white-space: nowrap;">${statusBadge}</td>
+        <td style="padding: 12px 16px; white-space: nowrap;">
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+            <div style="display: flex; gap: 4px; align-items: center;"><span style="font-size: 0.72rem; color: #64748b;">접수:</span> ${receiptBadge}</div>
+            <div style="display: flex; gap: 4px; align-items: center;"><span style="font-size: 0.72rem; color: #64748b;">진행:</span> ${progressBadge}</div>
+          </div>
+        </td>
         <td style="padding: 12px 16px; text-align: center; white-space: nowrap;">
           <button class="btn btn-secondary btn-sm btn-cancel-biz-item" data-id="${item.id}" style="padding: 5px 10px; font-size: 0.72rem; border-color: rgba(239, 68, 68, 0.3); color: rgba(239, 68, 68, 0.7); background: transparent; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.borderColor='rgba(239,68,68,0.5)';" onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(239,68,68,0.3)';"><i class="fa-solid fa-trash-can"></i> 취소</button>
         </td>
