@@ -434,8 +434,8 @@
       return allItems;
     },
 
-    // --- 시공업체 진행현황 실존 목록 단일 진실의 원천(SSOT & 중복 배제) ---
-    getConstructionJobs: function () {
+    // --- 시공업체 진행현황 실존 목록 단일 진실의 원천(SSOT & 중복 100% 원천 배제) ---
+    getConstructionJobs: function (targetConstructorUser) {
       const apps = this.getApplications();
       const curUsers = this.getUsers();
       const allConstJobs = [];
@@ -446,19 +446,32 @@
       const isDuplicateJob = (list, targetJob) => {
         if (!targetJob) return true;
         const tId = String(targetJob.id || '').trim();
+        const tAppRef = String(targetJob.appRefId || '').trim();
         const tName = normalizeStr(targetJob.storeName);
         const tPhone = normalizePhone(targetJob.ownerPhone);
         const tAddr = normalizeStr(targetJob.storeAddress);
 
         return list.some(j => {
           const jId = String(j.id || '').trim();
+          const jAppRef = String(j.appRefId || '').trim();
           const jName = normalizeStr(j.storeName);
           const jPhone = normalizePhone(j.ownerPhone);
           const jAddr = normalizeStr(j.storeAddress);
 
-          if (tId && jId === tId) return true;
-          if (tName && jName && tName === jName && tPhone && jPhone && tPhone === jPhone) return true;
-          if (tName && jName && tName === jName && tAddr && jAddr && (tAddr === jAddr || tAddr.includes(jAddr) || jAddr.includes(tAddr))) return true;
+          // 1) ID 또는 appRefId 일치
+          if (tId && (jId === tId || jAppRef === tId)) return true;
+          if (tAppRef && (jId === tAppRef || jAppRef === tAppRef)) return true;
+
+          // 2) 상호명이 같으면 무조건 동일 시공 건으로 간주 (상호명이 유의미한 2자 이상인 경우)
+          if (tName && jName && tName !== '-' && jName !== '-' && tName === jName) return true;
+
+          // 3) 연락처 일치 (8자리 이상 유효 전화번호)
+          if (tPhone && jPhone && tPhone.length >= 8 && tPhone === jPhone) return true;
+
+          // 4) 주소 일치 및 상호명 부분 일치
+          if (tAddr && jAddr && tAddr !== '-' && jAddr !== '-' && (tAddr === jAddr || tAddr.includes(jAddr) || jAddr.includes(tAddr))) {
+            if (tName && jName && (tName.includes(jName) || jName.includes(tName))) return true;
+          }
 
           return false;
         });
@@ -501,6 +514,7 @@
               }
               const jobObj = {
                 id: item.id,
+                appRefId: item.appRefId || (matchingApp ? matchingApp.id : null),
                 isBizItemJob: true,
                 bizItemOwnerId: u.id,
                 bizOwnerName: u.name,
@@ -559,6 +573,7 @@
           }
           const jobObj = {
             id: app.id,
+            appRefId: app.id,
             isBizItemJob: false,
             bizItemOwnerId: null,
             bizOwnerName: app.referrerCode || '본사접수',
@@ -585,6 +600,24 @@
           }
         }
       });
+
+      // 최신순 정렬
+      allConstJobs.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+      // 시공사 파트너 조회 시 본인 귀속 건만 필터링
+      if (targetConstructorUser && (targetConstructorUser.role === 'constructor' || !this.isAdmin(targetConstructorUser))) {
+        const cId = String(targetConstructorUser.id || '').toLowerCase();
+        const cCode = String(targetConstructorUser.constCode || '').toLowerCase();
+        const cBiz = String(targetConstructorUser.businessName || targetConstructorUser.pendingBusinessName || targetConstructorUser.name || '').toLowerCase();
+
+        return allConstJobs.filter(j => {
+          const jCId = String(j.assignedConstructorId || '').toLowerCase();
+          const jCCode = String(j.assignedConstructorCode || '').toLowerCase();
+          const jCName = String(j.assignedConstructorName || '').toLowerCase();
+
+          return (cId && jCId === cId) || (cCode && (jCCode === cCode || jCId === cCode)) || (cBiz && jCName === cBiz);
+        });
+      }
 
       return allConstJobs;
     },

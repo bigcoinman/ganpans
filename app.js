@@ -4165,67 +4165,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const jobsList = document.getElementById('constructor-jobs-list-mobile');
         if (!jobsList) return;
 
-        const apps = JSON.parse(localStorage.getItem('applications')) || [];
-        const curUsers = JSON.parse(localStorage.getItem('users')) || [];
-
-        let myJobs = [];
-        // 1) 영업물건 중 본인에게 배정되고 명시적으로 '대상자선정' 이상인 건
-        curUsers.forEach(u => {
-            if (u.items && Array.isArray(u.items)) {
-                u.items.forEach(item => {
-                    if (String(item.assignedConstructorId) === String(activeUser.id)) {
-                        const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
-                        const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
-                        const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '').trim();
-
-                        const isEligible = (
-                            pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-                            cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
-                        ) && (
-                            pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
-                            pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
-                        );
-
-                        if (isEligible) {
-                            myJobs.push({
-                                id: item.id,
-                                isBizItemJob: true,
-                                bizItemOwnerId: u.id,
-                                storeName: item.name,
-                                ownerName: `${u.name} (영업자)`,
-                                ownerPhone: item.phone || u.phone || '-',
-                                storeAddress: item.address,
-                                signType: item.signType || 'LED 채널/플렉스',
-                                constructionStatus: item.constructionStatus || 'before_construction',
-                                constructionPhotos: item.constructionPhotos || [],
-                                invoicePhotos: item.invoicePhotos || [],
-                                createdAt: item.assignedAt || item.createdAt || new Date().toISOString()
-                            });
-                        }
-                    }
-                });
-            }
-        });
-
-        // 2) 기존 applications 중 본인에게 배정되고 명시적으로 '대상자선정' 이상인 건 병합
-        apps.forEach(app => {
-            if (String(app.assignedConstructorId) === String(activeUser.id) && !myJobs.some(j => String(j.id) === String(app.id))) {
-                const pStatus = String(app.progressStatus || app.constructionStatus || '').trim();
-                const cStatus = String(app.constructionStatus || '').trim();
-
-                const isEligible = (
-                    pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-                    cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
-                ) && (
-                    pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
-                    pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
-                );
-
-                if (isEligible) {
-                    myJobs.push(app);
-                }
-            }
-        });
+        const myJobs = (window.DataStore && typeof window.DataStore.getConstructionJobs === 'function')
+            ? window.DataStore.getConstructionJobs(activeUser)
+            : [];
 
         // Search filtering for constructor jobs (모바일)
         const searchInputMob = document.getElementById('search-constructor-jobs-input-mob');
