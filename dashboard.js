@@ -3907,86 +3907,9 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('activeUser', JSON.stringify(activeUser));
     }
 
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
-    let myItems = activeUser.items || [];
-    let bizList = [];
-
-    const deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
-    const isPurgedItem = (it) => {
-      if (!it) return false;
-      const itId = String(it.id || '').trim();
-      const itRef = String(it.appRefId || '').trim();
-      const itName = String(it.name || it.storeName || it.shopName || '').replace(/\s+/g, '').toLowerCase();
-      return deletedBizItemIds.some(del => {
-        const cleanDel = String(del).replace(/\s+/g, '').toLowerCase();
-        return itId === del || itRef === del || (itName && cleanDel && (itName === cleanDel || itName.includes(cleanDel) || cleanDel.includes(itName)));
-      });
-    };
-
-    const myBizCode = String(activeUser.bizCode || '').trim().toLowerCase();
-    const myUserId = String(activeUser.id || '').trim().toLowerCase();
-    const myUserName = String(activeUser.name || '').trim().toLowerCase();
-
-    // 1) applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 체크한 건 수집 (모든 영업자 대시보드 100% 동시 노출)
-    apps.forEach(app => {
-      if (isPurgedItem(app)) return; // 삭제/정화된 물건 제외
-      const isApprovedBizItem = (app.isBizItem === true || String(app.isBizItem) === 'true');
-      if (!isApprovedBizItem) return; // 관리자 미체크 건은 제외
-
-      if (!bizList.some(b => String(b.id) === String(app.id))) {
-        let matchedItem = null;
-        for (const u of curUsersList) {
-          if (u.items && Array.isArray(u.items)) {
-            const found = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
-            if (found) {
-              matchedItem = found;
-              break;
-            }
-          }
-        }
-        const rStatus = (matchedItem && matchedItem.receiptStatus) || app.receiptStatus || '접수예정';
-        const pStatus = (matchedItem && matchedItem.progressStatus) || app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
-
-        bizList.push({
-          id: app.id,
-          date: app.appliedAt || app.createdAt || new Date().toISOString(),
-          ownerName: app.ownerName || app.name || '-',
-          ownerPhone: app.ownerPhone || app.phone || '',
-          storeName: app.storeName || app.shopName || app.name || '-',
-          storeAddress: app.storeAddress || app.address || '',
-          statusObj: app,
-          receiptStatus: rStatus,
-          progressStatus: pStatus
-        });
-      }
-    });
-
-    // 2) myItems 중에서도 applications에 매칭되는 건이 있다면 isBizItem === false 인 경우만 제외하고 모두 허용
-    myItems.forEach(item => {
-      if (isPurgedItem(item)) return; // 삭제/정화된 물건 제외
-      const matchingApp = apps.find(a => String(a.id) === String(item.id) || String(a.id) === String(item.appRefId));
-      if (matchingApp && (matchingApp.isBizItem === false || String(matchingApp.isBizItem) === 'false')) return; // 관리자가 명시적으로 해제한 건만 제외
-
-      if (!bizList.some(b => String(b.id) === String(item.id) || (item.appRefId && String(b.id) === String(item.appRefId)))) {
-        const rStatus = item.receiptStatus || (matchingApp && matchingApp.receiptStatus) || '접수예정';
-        const pStatus = item.progressStatus || (matchingApp && (matchingApp.constructionStatus || matchingApp.progressStatus)) || '지원대기중';
-
-        bizList.push({
-          id: item.id,
-          date: item.registeredAt || item.createdAt || new Date().toISOString(),
-          ownerName: item.name || item.ownerName || '-',
-          ownerPhone: item.phone || item.ownerPhone || '',
-          storeName: item.name || item.storeName || '-',
-          storeAddress: item.address || item.storeAddress || '',
-          statusObj: matchingApp || {
-            status: item.receiptStatus === '승인완료' ? 'approved' : 'pending',
-            constructionStatus: item.progressStatus || '지원대기중'
-          },
-          receiptStatus: rStatus,
-          progressStatus: pStatus
-        });
-      }
-    });
+    const bizList = (window.DataStore && typeof window.DataStore.getBizItemsForUser === 'function')
+      ? window.DataStore.getBizItemsForUser(activeUser)
+      : [];
 
     // 검색 필터링 및 엑셀 버튼 동적 보장
     const searchInput = document.getElementById('search-biz-table-input');

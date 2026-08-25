@@ -168,7 +168,7 @@
       }
     },
 
-    // --- 2. 영업물건 전용 데이터 조회 (최고관리자 대시보드 절대 SSOT 기반) ---
+    // --- 2. 영업물건 전용 데이터 조회 (최고관리자 대시보드 절대 SSOT 기반 & 완벽한 중복 방지) ---
     getBizItemsForUser: function (targetUser) {
       const user = targetUser || this.getActiveUser();
       if (!user) return [];
@@ -181,7 +181,43 @@
         if (!it) return false;
         const itId = String(it.id || '').trim();
         const itRef = String(it.appRefId || '').trim();
-        return deletedBizIds.includes(itId) || deletedBizIds.includes(itRef);
+        const itName = String(it.name || it.storeName || it.shopName || '').replace(/\s+/g, '').toLowerCase();
+        return deletedBizIds.some(del => {
+          const cleanDel = String(del).replace(/\s+/g, '').toLowerCase();
+          return itId === del || itRef === del || (itName && cleanDel && (itName === cleanDel || itName.includes(cleanDel) || cleanDel.includes(itName)));
+        });
+      };
+
+      const normalizeStr = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
+      const normalizePhone = (p) => String(p || '').replace(/[^0-9]/g, '');
+
+      const isDuplicateInBizList = (list, item) => {
+        if (!item) return true;
+        const tId = String(item.id || '').trim();
+        const tRef = String(item.appRefId || '').trim();
+        const tName = normalizeStr(item.storeName || item.shopName || item.name);
+        const tPhone = normalizePhone(item.ownerPhone || item.phone);
+        const tAddr = normalizeStr(item.storeAddress || item.address);
+
+        return list.some(b => {
+          const bId = String(b.id || '').trim();
+          const bRef = String(b.statusObj ? (b.statusObj.appRefId || b.statusObj.id) : '').trim();
+          const bName = normalizeStr(b.storeName || b.ownerName);
+          const bPhone = normalizePhone(b.ownerPhone);
+          const bAddr = normalizeStr(b.storeAddress);
+
+          // 1) ID 또는 appRefId 매칭
+          if (tId && (bId === tId || bRef === tId)) return true;
+          if (tRef && (bId === tRef || bRef === tRef)) return true;
+
+          // 2) 상호명 + 전화번호 매칭
+          if (tName && bName && tName === bName && tPhone && bPhone && tPhone === bPhone) return true;
+
+          // 3) 상호명 + 주소 매칭
+          if (tName && bName && tName === bName && tAddr && bAddr && (tAddr === bAddr || tAddr.includes(bAddr) || bAddr.includes(tAddr))) return true;
+
+          return false;
+        });
       };
 
       const myBizCode = String(user.bizCode || '').trim().toLowerCase();
@@ -207,33 +243,39 @@
 
         // 최고관리자는 전체 조회, 영업자는 오직 본인 귀속 건만 조회
         if (this.isAdmin(user) || isMyReferrer || isMyUser || isMyPhone || isMyName) {
-          if (!bizList.some(b => String(b.id) === String(app.id))) {
-            let matchedItem = null;
-            const allUsers = this.getUsers();
-            for (const u of allUsers) {
-              if (u.items && Array.isArray(u.items)) {
-                const found = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
-                if (found) {
-                  matchedItem = found;
-                  break;
-                }
+          let matchedItem = null;
+          const allUsers = this.getUsers();
+          for (const u of allUsers) {
+            if (u.items && Array.isArray(u.items)) {
+              const found = u.items.find(it => 
+                String(it.id) === String(app.id) || 
+                String(it.appRefId) === String(app.id) ||
+                (normalizeStr(it.name) === normalizeStr(app.storeName) && normalizePhone(it.phone) === normalizePhone(app.ownerPhone))
+              );
+              if (found) {
+                matchedItem = found;
+                break;
               }
             }
+          }
 
-            const rStatus = (matchedItem && matchedItem.receiptStatus) || app.receiptStatus || '접수예정';
-            const pStatus = (matchedItem && matchedItem.progressStatus) || app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
+          const rStatus = (matchedItem && matchedItem.receiptStatus) || app.receiptStatus || '접수예정';
+          const pStatus = (matchedItem && matchedItem.progressStatus) || app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
 
-            bizList.push({
-              id: app.id,
-              date: app.appliedAt || app.createdAt || new Date().toISOString(),
-              ownerName: app.ownerName || app.name || '-',
-              ownerPhone: app.ownerPhone || app.phone || '',
-              storeName: app.storeName || app.shopName || app.name || '-',
-              storeAddress: app.storeAddress || app.address || '',
-              statusObj: app,
-              receiptStatus: rStatus,
-              progressStatus: pStatus
-            });
+          const bizObj = {
+            id: app.id,
+            date: app.appliedAt || app.createdAt || new Date().toISOString(),
+            ownerName: app.ownerName || app.name || '-',
+            ownerPhone: app.ownerPhone || app.phone || '',
+            storeName: app.storeName || app.shopName || app.name || '-',
+            storeAddress: app.storeAddress || app.address || '',
+            statusObj: app,
+            receiptStatus: rStatus,
+            progressStatus: pStatus
+          };
+
+          if (!isDuplicateInBizList(bizList, bizObj)) {
+            bizList.push(bizObj);
           }
         }
       });
@@ -241,7 +283,7 @@
       return bizList;
     },
 
-    // --- 최고관리자 전용 전체 영업물건 진행상황 목록 (isBizItem: false 건은 100% 완전 제외) ---
+    // --- 최고관리자 전용 전체 영업물건 진행상황 목록 (중복 100% 완전 배제 & SSOT) ---
     getAdminBizItems: function () {
       const apps = this.getApplications();
       const users = this.getUsers();
@@ -252,14 +294,49 @@
         if (!it) return false;
         const itId = String(it.id || '').trim();
         const itRef = String(it.appRefId || '').trim();
+        const itName = String(it.name || it.storeName || it.shopName || '').replace(/\s+/g, '').toLowerCase();
         return deletedBizIds.includes(itId) || deletedBizIds.includes(itRef);
       };
 
-      // 1) applications 중 isBizItem: true 인 건 수집
+      const normalizeStr = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
+      const normalizePhone = (p) => String(p || '').replace(/[^0-9]/g, '');
+
+      const isDuplicate = (existingList, targetItem) => {
+        if (!targetItem) return true;
+        const tId = String(targetItem.id || '').trim();
+        const tRef = String(targetItem.appRefId || '').trim();
+        const tName = normalizeStr(targetItem.name || targetItem.storeName || targetItem.shopName);
+        const tPhone = normalizePhone(targetItem.phone || targetItem.ownerPhone);
+        const tAddr = normalizeStr(targetItem.address || targetItem.storeAddress);
+
+        return existingList.some(entry => {
+          const eItem = entry.item;
+          if (!eItem) return false;
+          const eId = String(eItem.id || '').trim();
+          const eRef = String(eItem.appRefId || '').trim();
+          const eName = normalizeStr(eItem.name || eItem.storeName || eItem.shopName);
+          const ePhone = normalizePhone(eItem.phone || eItem.ownerPhone);
+          const eAddr = normalizeStr(eItem.address || eItem.storeAddress);
+
+          // 1) ID 또는 appRefId 일치
+          if (tId && (eId === tId || eRef === tId)) return true;
+          if (tRef && (eId === tRef || eRef === tRef)) return true;
+
+          // 2) 상호명 + 전화번호 일치
+          if (tName && eName && tName === eName && tPhone && ePhone && tPhone === ePhone) return true;
+
+          // 3) 상호명 + 주소 일치
+          if (tName && eName && tName === eName && tAddr && eAddr && (tAddr === eAddr || tAddr.includes(eAddr) || eAddr.includes(tAddr))) return true;
+
+          return false;
+        });
+      };
+
+      // 1) applications 중 isBizItem: true 인 건 수집 (최우선 단일 진실의 원천)
       apps.forEach(app => {
         if (isPurged(app)) return;
         const isApprovedBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
-        if (!isApprovedBizItem) return; // 비활성화 건은 절대 제외!
+        if (!isApprovedBizItem) return; // 비활성화/미승인 건은 절대 제외!
 
         // 담당 영업자 찾기
         let assignedUser = null;
@@ -283,7 +360,11 @@
         let matchedItem = null;
         for (const u of users) {
           if (u.items && Array.isArray(u.items)) {
-            const found = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
+            const found = u.items.find(it => 
+              String(it.id) === String(app.id) || 
+              String(it.appRefId) === String(app.id) ||
+              (normalizeStr(it.name) === normalizeStr(app.storeName) && normalizePhone(it.phone) === normalizePhone(app.ownerPhone))
+            );
             if (found) {
               matchedItem = found;
               break;
@@ -310,22 +391,29 @@
           assignedConstructorName: app.assignedConstructorName || (matchedItem && matchedItem.assignedConstructorName) || ''
         };
 
-        allItems.push({
-          user: assignedUser || { id: 'admin', name: '최고관리자', role: 'admin', bizCode: 'ADMIN' },
-          item: itemObj
-        });
+        if (!isDuplicate(allItems, itemObj)) {
+          allItems.push({
+            user: assignedUser || { id: 'admin', name: '최고관리자', role: 'admin', bizCode: 'ADMIN' },
+            item: itemObj
+          });
+        }
       });
 
-      // 2) users.items 중에서도 applications와 대조하여 isBizItem === false 인 건은 100% 제외
+      // 2) users.items 중에서도 applications와 대조하여 isBizItem === false 인 건은 100% 제외하고, 중복이 아닌 건만 수집
       users.forEach(u => {
         if (u.role === 'business' && u.items && u.items.length > 0) {
           u.items.forEach(item => {
             if (isPurged(item)) return;
-            const matchingApp = apps.find(a => String(a.id) === String(item.id) || String(a.id) === String(item.appRefId));
+            const matchingApp = apps.find(a => 
+              String(a.id) === String(item.id) || 
+              String(a.id) === String(item.appRefId) ||
+              (normalizeStr(a.storeName) === normalizeStr(item.name) && normalizePhone(a.ownerPhone || a.phone) === normalizePhone(item.phone))
+            );
             if (matchingApp && (matchingApp.isBizItem === false || String(matchingApp.isBizItem) === 'false')) {
               return; // 관리자가 해제한 건은 절대 표시하지 않음!
             }
-            if (!allItems.some(entry => String(entry.item.id) === String(item.id) || (item.appRefId && String(entry.item.id) === String(item.appRefId)))) {
+
+            if (!isDuplicate(allItems, item)) {
               allItems.push({
                 user: u,
                 item: item
@@ -346,17 +434,45 @@
       return allItems;
     },
 
-    // --- 시공업체 진행현황 실존 목록 단일 진실의 원천(SSOT) 수집 함수 ---
+    // --- 시공업체 진행현황 실존 목록 단일 진실의 원천(SSOT & 중복 배제) ---
     getConstructionJobs: function () {
       const apps = this.getApplications();
       const curUsers = this.getUsers();
       const allConstJobs = [];
 
+      const normalizeStr = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
+      const normalizePhone = (p) => String(p || '').replace(/[^0-9]/g, '');
+
+      const isDuplicateJob = (list, targetJob) => {
+        if (!targetJob) return true;
+        const tId = String(targetJob.id || '').trim();
+        const tName = normalizeStr(targetJob.storeName);
+        const tPhone = normalizePhone(targetJob.ownerPhone);
+        const tAddr = normalizeStr(targetJob.storeAddress);
+
+        return list.some(j => {
+          const jId = String(j.id || '').trim();
+          const jName = normalizeStr(j.storeName);
+          const jPhone = normalizePhone(j.ownerPhone);
+          const jAddr = normalizeStr(j.storeAddress);
+
+          if (tId && jId === tId) return true;
+          if (tName && jName && tName === jName && tPhone && jPhone && tPhone === jPhone) return true;
+          if (tName && jName && tName === jName && tAddr && jAddr && (tAddr === jAddr || tAddr.includes(jAddr) || jAddr.includes(tAddr))) return true;
+
+          return false;
+        });
+      };
+
       // 1) From users' items (영업물건)
       curUsers.forEach(u => {
         if (u.items && Array.isArray(u.items)) {
           u.items.forEach(item => {
-            const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
+            const matchingApp = apps.find(a => 
+              String(a.id) === String(item.id) || 
+              (item.appRefId && String(a.id) === String(item.appRefId)) ||
+              (normalizeStr(a.storeName) === normalizeStr(item.name) && normalizePhone(a.ownerPhone || a.phone) === normalizePhone(item.phone))
+            );
             const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
             const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '').trim();
 
@@ -383,7 +499,7 @@
                   cName = item.assignedConstructorName || item.assignedConstructorId;
                 }
               }
-              allConstJobs.push({
+              const jobObj = {
                 id: item.id,
                 isBizItemJob: true,
                 bizItemOwnerId: u.id,
@@ -404,7 +520,11 @@
                 draftApprovedAt: item.draftApprovedAt || (matchingApp && matchingApp.draftApprovedAt) || null,
                 constructionPhotos: item.constructionPhotos || (matchingApp && matchingApp.constructionPhotos) || (item.afterPhotos || (matchingApp && matchingApp.afterPhotos) || []),
                 createdAt: item.assignedAt || item.createdAt || new Date().toISOString()
-              });
+              };
+
+              if (!isDuplicateJob(allConstJobs, jobObj)) {
+                allConstJobs.push(jobObj);
+              }
             }
           });
         }
@@ -424,42 +544,44 @@
         );
 
         if (isEligible) {
-          if (!allConstJobs.some(j => String(j.id) === String(app.id))) {
-            let cName = app.assignedConstructorName || '';
-            let cCode = '';
-            let cPhone = '';
-            if (app.assignedConstructorId) {
-              const cu = curUsers.find(x => x.id === app.assignedConstructorId || x.constCode === app.assignedConstructorId);
-              if (cu) {
-                cName = cu.businessName || cu.pendingBusinessName || cu.name || cu.id;
-                cCode = cu.constCode || '';
-                cPhone = cu.phone || '';
-              } else {
-                cName = app.assignedConstructorName || app.assignedConstructorId;
-              }
+          let cName = app.assignedConstructorName || '';
+          let cCode = '';
+          let cPhone = '';
+          if (app.assignedConstructorId) {
+            const cu = curUsers.find(x => x.id === app.assignedConstructorId || x.constCode === app.assignedConstructorId);
+            if (cu) {
+              cName = cu.businessName || cu.pendingBusinessName || cu.name || cu.id;
+              cCode = cu.constCode || '';
+              cPhone = cu.phone || '';
+            } else {
+              cName = app.assignedConstructorName || app.assignedConstructorId;
             }
-            allConstJobs.push({
-              id: app.id,
-              isBizItemJob: false,
-              bizItemOwnerId: null,
-              bizOwnerName: app.referrerCode || '본사접수',
-              storeName: app.storeName || '-',
-              ownerName: app.ownerName || '-',
-              ownerPhone: app.ownerPhone || app.phone || '-',
-              storeAddress: app.storeAddress || '-',
-              signType: app.signType || '플렉스 간판',
-              assignedConstructorId: app.assignedConstructorId || '',
-              assignedConstructorName: cName || '미배정',
-              assignedConstructorCode: cCode,
-              assignedConstructorPhone: cPhone,
-              progressStatus: pStatus,
-              constructionStatus: app.constructionStatus || (pStatus === '간판시공완료' ? 'completed' : (pStatus === '간판시공 준비중' ? 'in_construction' : (pStatus === '간판 디자인 시안 및 교정 중' ? 'design_draft' : 'before_construction'))),
-              signDraftPhotos: app.signDraftPhotos || app.designPhotos || [],
-              draftStatus: app.draftStatus || 'pending',
-              draftApprovedAt: app.draftApprovedAt || null,
-              constructionPhotos: app.constructionPhotos || app.afterPhotos || [],
-              createdAt: app.appliedAt || app.createdAt || new Date().toISOString()
-            });
+          }
+          const jobObj = {
+            id: app.id,
+            isBizItemJob: false,
+            bizItemOwnerId: null,
+            bizOwnerName: app.referrerCode || '본사접수',
+            storeName: app.storeName || '-',
+            ownerName: app.ownerName || '-',
+            ownerPhone: app.ownerPhone || app.phone || '-',
+            storeAddress: app.storeAddress || '-',
+            signType: app.signType || '플렉스 간판',
+            assignedConstructorId: app.assignedConstructorId || '',
+            assignedConstructorName: cName || '미배정',
+            assignedConstructorCode: cCode,
+            assignedConstructorPhone: cPhone,
+            progressStatus: pStatus,
+            constructionStatus: app.constructionStatus || (pStatus === '간판시공완료' ? 'completed' : (pStatus === '간판시공 준비중' ? 'in_construction' : (pStatus === '간판 디자인 시안 및 교정 중' ? 'design_draft' : 'before_construction'))),
+            signDraftPhotos: app.signDraftPhotos || app.designPhotos || [],
+            draftStatus: app.draftStatus || 'pending',
+            draftApprovedAt: app.draftApprovedAt || null,
+            constructionPhotos: app.constructionPhotos || app.afterPhotos || [],
+            createdAt: app.appliedAt || app.createdAt || new Date().toISOString()
+          };
+
+          if (!isDuplicateJob(allConstJobs, jobObj)) {
+            allConstJobs.push(jobObj);
           }
         }
       });
