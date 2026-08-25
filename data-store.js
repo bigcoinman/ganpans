@@ -434,7 +434,7 @@
       return allItems;
     },
 
-    // --- 시공업체 진행현황 실존 목록 단일 진실의 원천(SSOT & 중복 100% 원천 배제) ---
+    // --- 시공업체 진행현황 실존 목록 단일 진실의 원천(SSOT & 중복 100% 원천 배제 & 영업자 정보 정밀 매칭) ---
     getConstructionJobs: function (targetConstructorUser) {
       const apps = this.getApplications();
       const curUsers = this.getUsers();
@@ -442,6 +442,78 @@
 
       const normalizeStr = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
       const normalizePhone = (p) => String(p || '').replace(/[^0-9]/g, '');
+
+      // 담당 영업자 정보(이름, 코드, 라벨)를 영업물건 진행상황과 100% 일치하게 정밀 추출
+      const resolveSalesperson = (app, item, user) => {
+        let assignedUser = null;
+        const refCode = String((app && (app.referrerCode || app.bizCode)) || (item && (item.referrerCode || item.bizCode)) || '').trim().toLowerCase();
+        const appUser = String((app && app.userId) || (item && item.userId) || '').trim().toLowerCase();
+
+        // 1) user 파라미터가 이미 영업자(business)인 경우 우선 적용
+        if (user && user.role === 'business') {
+          assignedUser = user;
+        }
+
+        // 2) referrerCode(bizCode, id, name)로 탐색
+        if (!assignedUser && refCode) {
+          assignedUser = curUsers.find(u =>
+            (u.role === 'business') &&
+            ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
+              (u.id && String(u.id).trim().toLowerCase() === refCode) ||
+              (u.name && String(u.name).trim().toLowerCase() === refCode))
+          );
+        }
+
+        // 3) userId로 탐색
+        if (!assignedUser && appUser) {
+          assignedUser = curUsers.find(u =>
+            (u.role === 'business') &&
+            (u.id && String(u.id).trim().toLowerCase() === appUser)
+          );
+        }
+
+        // 4) curUsers.items를 순회하여 해당 item/app을 소유한 영업자 탐색
+        if (!assignedUser) {
+          const targetId = String((item && item.id) || (app && app.id) || '').trim();
+          const targetRef = String((item && item.appRefId) || (app && app.id) || '').trim();
+          if (targetId || targetRef) {
+            assignedUser = curUsers.find(u =>
+              u.role === 'business' && u.items && Array.isArray(u.items) &&
+              u.items.some(it => String(it.id) === targetId || String(it.appRefId) === targetId || (targetRef && (String(it.id) === targetRef || String(it.appRefId) === targetRef)))
+            );
+          }
+        }
+
+        // 5) 점주/상호명 및 연락처로 영업자의 items 대조 탐색
+        if (!assignedUser) {
+          const stName = normalizeStr((item && (item.name || item.storeName)) || (app && (app.storeName || app.shopName)));
+          const stPhone = normalizePhone((item && item.phone) || (app && (app.ownerPhone || app.phone)));
+          if (stName && stName !== '-') {
+            assignedUser = curUsers.find(u =>
+              u.role === 'business' && u.items && Array.isArray(u.items) &&
+              u.items.some(it => normalizeStr(it.name) === stName || (stPhone && normalizePhone(it.phone) === stPhone))
+            );
+          }
+        }
+
+        if (assignedUser && assignedUser.role === 'business') {
+          const bName = assignedUser.name || '영업자';
+          const bCode = assignedUser.bizCode || assignedUser.id || 'B-CODE';
+          return {
+            bizOwnerId: assignedUser.id,
+            bizOwnerName: bName,
+            bizCode: bCode,
+            bizLabel: `${bName} 영업자 / ${bCode}`
+          };
+        }
+
+        return {
+          bizOwnerId: null,
+          bizOwnerName: '본사접수',
+          bizCode: '본사접수',
+          bizLabel: '본사직접접수'
+        };
+      };
 
       const isDuplicateJob = (list, targetJob) => {
         if (!targetJob) return true;
@@ -484,7 +556,7 @@
             const matchingApp = apps.find(a => 
               String(a.id) === String(item.id) || 
               (item.appRefId && String(a.id) === String(item.appRefId)) ||
-              (normalizeStr(a.storeName) === normalizeStr(item.name) && normalizePhone(a.ownerPhone || a.phone) === normalizePhone(item.phone))
+              (normalizeStr(a.storeName || a.shopName) === normalizeStr(item.name) && normalizePhone(a.ownerPhone || a.phone) === normalizePhone(item.phone))
             );
             const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
             const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '').trim();
@@ -499,6 +571,7 @@
             );
 
             if (isEligible) {
+              const salesInfo = resolveSalesperson(matchingApp, item, u);
               let cName = item.assignedConstructorName || '';
               let cCode = '';
               let cPhone = '';
@@ -516,11 +589,13 @@
                 id: item.id,
                 appRefId: item.appRefId || (matchingApp ? matchingApp.id : null),
                 isBizItemJob: true,
-                bizItemOwnerId: u.id,
-                bizOwnerName: u.name,
-                storeName: item.name || (matchingApp && matchingApp.storeName) || '-',
-                ownerName: `${u.name} (영업자)`,
-                ownerPhone: item.phone || (matchingApp && (matchingApp.ownerPhone || matchingApp.phone)) || u.phone || '-',
+                bizItemOwnerId: salesInfo.bizOwnerId,
+                bizOwnerName: salesInfo.bizOwnerName,
+                bizCode: salesInfo.bizCode,
+                bizLabel: salesInfo.bizLabel,
+                storeName: item.name || (matchingApp && (matchingApp.storeName || matchingApp.shopName)) || '-',
+                ownerName: (matchingApp && matchingApp.ownerName) || item.ownerName || '점주',
+                ownerPhone: (matchingApp && (matchingApp.ownerPhone || matchingApp.phone)) || item.phone || '-',
                 storeAddress: item.address || (matchingApp && matchingApp.storeAddress) || '-',
                 signType: item.signType || (matchingApp && matchingApp.signType) || '플렉스 간판',
                 assignedConstructorId: item.assignedConstructorId || '',
@@ -558,6 +633,7 @@
         );
 
         if (isEligible) {
+          const salesInfo = resolveSalesperson(app, null, null);
           let cName = app.assignedConstructorName || '';
           let cCode = '';
           let cPhone = '';
@@ -575,9 +651,11 @@
             id: app.id,
             appRefId: app.id,
             isBizItemJob: false,
-            bizItemOwnerId: null,
-            bizOwnerName: app.referrerCode || '본사접수',
-            storeName: app.storeName || '-',
+            bizItemOwnerId: salesInfo.bizOwnerId,
+            bizOwnerName: salesInfo.bizOwnerName,
+            bizCode: salesInfo.bizCode,
+            bizLabel: salesInfo.bizLabel,
+            storeName: app.storeName || app.shopName || '-',
             ownerName: app.ownerName || '-',
             ownerPhone: app.ownerPhone || app.phone || '-',
             storeAddress: app.storeAddress || '-',

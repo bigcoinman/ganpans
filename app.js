@@ -3242,9 +3242,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                             <div>
                                 <strong style="font-size: 1.02rem; color: var(--text-primary);">${escapeHtml(job.storeName)}</strong>
-                                <span style="font-size: 0.82rem; color: var(--text-secondary); margin-left: 4px;">(${escapeHtml(job.ownerName)})</span>
+                                <span style="font-size: 0.84rem; font-weight: normal; color: var(--text-secondary); margin-left: 4px;">(${escapeHtml(job.bizLabel || (job.bizOwnerName ? `${job.bizOwnerName} 영업자 / ${job.bizCode}` : '본사접수'))})</span>
                             </div>
                             <span style="font-size: 0.78rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: ${statusBg}; color: ${statusColor};">${statusLabel}</span>
+                        </div>
+                        <div style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 4px;">
+                            <i class="fa-solid fa-user"></i> 대표자: <strong style="color: #334155;">${escapeHtml(job.ownerName || '-')}</strong> ${job.ownerPhone ? `(${escapeHtml(job.ownerPhone)})` : ''}
                         </div>
                         <div style="font-size: 0.88rem; color: #0f766e; font-weight: 700; margin-bottom: 4px;">
                             <i class="fa-solid fa-trowel-bricks" style="color: #14b8a6;"></i> 시공사: ${escapeHtml(job.assignedConstructorName)} ${job.assignedConstructorPhone ? `(${escapeHtml(job.assignedConstructorPhone)})` : ''}

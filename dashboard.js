@@ -3320,11 +3320,13 @@ document.addEventListener('DOMContentLoaded', () => {
           ${job.assignedConstructorCode ? `<div style="font-size: 0.72rem; color: #0f766e; font-family: monospace;">코드: ${escapeHtml(job.assignedConstructorCode)}</div>` : ''}
         </td>
         <td style="padding: 14px 16px; font-weight: 600; color: var(--text-primary);">
-          ${escapeHtml(job.storeName)}
-          <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;">
-            <i class="fa-solid fa-user"></i> ${escapeHtml(job.ownerName)} (${escapeHtml(job.ownerPhone)})
+          <div style="font-size: 0.92rem; font-weight: 700; color: #1e293b;">
+            ${escapeHtml(job.storeName)}
+            <span style="font-size: 0.78rem; font-weight: normal; color: var(--text-secondary); margin-left: 4px;">(${escapeHtml(job.bizLabel || (job.bizOwnerName ? `${job.bizOwnerName} 영업자 / ${job.bizCode}` : '본사접수'))})</span>
           </div>
-          ${job.bizOwnerName ? `<div style="font-size: 0.72rem; color: var(--accent-primary); margin-top: 1px;"><i class="fa-solid fa-user-tie"></i> ${escapeHtml(job.bizOwnerName)}</div>` : ''}
+          <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;">
+            <i class="fa-solid fa-user"></i> 대표자: ${escapeHtml(job.ownerName)} (${escapeHtml(job.ownerPhone)})
+          </div>
         </td>
         <td style="padding: 14px 16px;">
           <div style="font-size: 0.82rem; color: #334155;"><i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> ${escapeHtml(job.storeAddress)}</div>
