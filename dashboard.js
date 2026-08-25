@@ -464,12 +464,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (activeUser && activeUser.role === 'admin') {
-      renderAllUsersList();
-      renderManagerPanel();
-      renderAdminStats();
-      renderApplicationsList();
-      renderManagerConstProgress();
-      renderInquiriesList();
+      // Supabase에서 최신 inquiries를 직접 fetch 후 localStorage 갱신 → 화면 렌더링
+      const _sbUrl = (window.SUPABASE_URL) || 'https://nfexylsehsucctoefwdz.supabase.co';
+      const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh';
+      fetch(_sbUrl + '/rest/v1/inquiries?select=*&order=created_at.desc', {
+        headers: { 'apikey': _sbKey, 'Authorization': 'Bearer ' + _sbKey }
+      }).then(res => res.json()).then(rows => {
+        if (Array.isArray(rows)) {
+          const deletedIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
+          const mapped = rows
+            .filter(r => r && r.id && !deletedIds.includes(String(r.id)))
+            .map(r => ({
+              id: String(r.id),
+              name: r.name || '',
+              phone: r.phone || '',
+              type: r.category || 'other',
+              category: r.category || 'other',
+              message: r.region || '',
+              content: r.region || '',
+              region: r.region || '',
+              status: r.status || 'pending',
+              submittedAt: r.created_at || new Date().toISOString(),
+              created_at: r.created_at || new Date().toISOString()
+            }));
+          localStorage.setItem('inquiries', JSON.stringify(mapped));
+        }
+      }).catch(() => {}).finally(() => {
+        renderAllUsersList();
+        renderManagerPanel();
+        renderAdminStats();
+        renderApplicationsList();
+        renderManagerConstProgress();
+        renderInquiriesList();
+      });
     } else if (activeUser && activeUser.role === 'business') {
       renderBusinessDashboard();
       renderUserApplicationsList();
@@ -2870,9 +2897,48 @@ document.addEventListener('DOMContentLoaded', () => {
       })();
     if (!currentAdmin) return;
 
-    const inquiries = (window.DataStore && typeof window.DataStore.getInquiries === 'function')
-      ? window.DataStore.getInquiries()
-      : (JSON.parse(localStorage.getItem('inquiries')) || []);
+    // Supabase REST로 최신 데이터 직접 fetch 후 렌더링 (localStorage 캐시 여부 무관)
+    const _sbUrl = (window.SUPABASE_URL) || 'https://nfexylsehsucctoefwdz.supabase.co';
+    const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh';
+    fetch(_sbUrl + '/rest/v1/inquiries?select=*&order=created_at.desc', {
+      headers: { 'apikey': _sbKey, 'Authorization': 'Bearer ' + _sbKey }
+    }).then(res => res.json()).then(rows => {
+      let inquiries = [];
+      if (Array.isArray(rows)) {
+        const deletedIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
+        inquiries = rows
+          .filter(r => r && r.id && !deletedIds.includes(String(r.id)))
+          .map(r => ({
+            id: String(r.id),
+            name: r.name || '',
+            phone: r.phone || '',
+            type: r.category || 'other',
+            category: r.category || 'other',
+            message: r.region || '',
+            content: r.region || '',
+            region: r.region || '',
+            status: r.status || 'pending',
+            submittedAt: r.created_at || new Date().toISOString(),
+            created_at: r.created_at || new Date().toISOString()
+          }));
+        localStorage.setItem('inquiries', JSON.stringify(inquiries));
+      } else {
+        // Supabase 조회 실패 시 localStorage fallback
+        inquiries = (window.DataStore && typeof window.DataStore.getInquiries === 'function')
+          ? window.DataStore.getInquiries()
+          : (JSON.parse(localStorage.getItem('inquiries')) || []);
+      }
+      _renderInquiriesTable(inquiries, inquiriesTableBody);
+    }).catch(() => {
+      // fetch 에러 시 localStorage fallback
+      const inquiries = (window.DataStore && typeof window.DataStore.getInquiries === 'function')
+        ? window.DataStore.getInquiries()
+        : (JSON.parse(localStorage.getItem('inquiries')) || []);
+      _renderInquiriesTable(inquiries, inquiriesTableBody);
+    });
+  };
+
+  const _renderInquiriesTable = (inquiries, inquiriesTableBody) => {
     const paginationInquiriesContainer = document.getElementById('pagination-manager-inquiries');
 
     if (inquiries.length === 0) {

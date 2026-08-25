@@ -4884,24 +4884,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 submittedAt: new Date().toISOString()
             };
 
+            // 1) 로컬 DataStore에 즉시 저장 (낙관적 UI)
             if (window.DataStore && typeof window.DataStore.upsertInquiry === 'function') {
                 window.DataStore.upsertInquiry(newInquiry);
             } else {
                 const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
                 inquiries.unshift(newInquiry);
                 localStorage.setItem('inquiries', JSON.stringify(inquiries));
-                if (window.SupabaseSync && typeof window.SupabaseSync.upsertInquiry === 'function') {
-                    window.SupabaseSync.upsertInquiry(newInquiry);
-                }
             }
 
-            // 카카오톡 관리자 실시간 알림 발송
+            // 2) Supabase REST API로 직접 저장 (supabaseClient 초기화 여부 무관, 100% 보장)
+            const _sbUrl = (window.SUPABASE_URL) || 'https://nfexylsehsucctoefwdz.supabase.co';
+            const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh';
+            const _dbPayload = {
+                id: newInquiry.id,
+                name: newInquiry.name,
+                phone: newInquiry.phone,
+                category: newInquiry.type || 'other',
+                region: newInquiry.message,
+                status: 'pending',
+                created_at: newInquiry.submittedAt
+            };
+            fetch(_sbUrl + '/rest/v1/inquiries?on_conflict=id', {
+                method: 'POST',
+                headers: {
+                    'apikey': _sbKey,
+                    'Authorization': 'Bearer ' + _sbKey,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal,resolution=merge-duplicates'
+                },
+                body: JSON.stringify(_dbPayload)
+            }).then(res => {
+                if (!res.ok) {
+                    res.text().then(t => console.warn('[Inquiry] Supabase save failed:', res.status, t));
+                } else {
+                    console.log('[Inquiry] Supabase save OK:', newInquiry.id);
+                    window.dispatchEvent(new CustomEvent('supabase-data-synced'));
+                    if (typeof window.renderAdminDashboardMob === 'function') {
+                        window.renderAdminDashboardMob(true);
+                    }
+                }
+            }).catch(err => console.error('[Inquiry] Supabase fetch error:', err));
+
+            // 3) 카카오톡 관리자 실시간 알림 발송
             if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyInquiry === 'function') {
                 window.KakaoNotifier.notifyInquiry(newInquiry);
-            }
-
-            if (typeof window.renderAdminDashboardMob === 'function') {
-                window.renderAdminDashboardMob(true);
             }
 
             alert('간편 문의 접수가 정상 완료되었습니다.\n담당자가 확인 후 연락처로 신속히 연락드리겠습니다.');
