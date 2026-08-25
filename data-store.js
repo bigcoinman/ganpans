@@ -358,7 +358,7 @@
           u.items.forEach(item => {
             const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
             const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
-            const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus)) || '').trim();
+            const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '').trim();
 
             // 오직 '대상자선정', '간판시공 준비중', '간판시공완료' 또는 시공 진행/완료인 건만 허용
             const isEligible = (
@@ -913,7 +913,10 @@
         if (typeof window.renderBusinessDashboard === 'function') window.renderBusinessDashboard();
         if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
         if (typeof window.renderInquiriesList === 'function') window.renderInquiriesList();
+        if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+        if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
         if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+        if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
         if (typeof window.renderBusinessDashboardMob === 'function') window.renderBusinessDashboardMob();
         if (typeof window.renderBizRegisteredItemsMob === 'function') window.renderBizRegisteredItemsMob();
         if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
@@ -974,5 +977,273 @@
     const res = window.DataStore.clearAllInquiries();
     alert('모든 간편 문의 내역이 성공적으로 초기화되었습니다.');
     return res;
+  };
+
+  // --- 공통 간판 종류 변경 핸들러 (PC웹 & 모바일 공용) ---
+  window.updateJobSignType = function (id, signType) {
+    const trimmed = String(signType || '').trim();
+    if (!trimmed) return;
+
+    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let updatedUid = null;
+
+    apps = apps.map(a => {
+      if (String(a.id) === String(id)) {
+        return { ...a, signType: trimmed };
+      }
+      return a;
+    });
+    localStorage.setItem('applications', JSON.stringify(apps));
+
+    curUsers = curUsers.map(u => {
+      if (u.items && Array.isArray(u.items)) {
+        const updatedItems = u.items.map(it => {
+          if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
+            updatedUid = u.id;
+            return { ...it, signType: trimmed };
+          }
+          return it;
+        });
+        return { ...u, items: updatedItems };
+      }
+      return u;
+    });
+    localStorage.setItem('users', JSON.stringify(curUsers));
+
+    if (window.SupabaseSync) {
+      const app = apps.find(a => String(a.id) === String(id));
+      if (app) window.SupabaseSync.upsertApplication(app);
+      if (updatedUid) {
+        const u = curUsers.find(usr => usr.id === updatedUid);
+        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+      }
+    }
+    if (window.DataStore) window.DataStore.notifyAll();
+  };
+
+  // --- 공통 간판 디자인 시안 확정 토글 핸들러 (PC웹 & 모바일 공용) ---
+  window.toggleDraftApproval = function (id, newDraftStatus) {
+    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let updatedUid = null;
+    const approvedTime = (newDraftStatus === 'admin_approved' || newDraftStatus === 'owner_approved') ? new Date().toISOString() : null;
+
+    apps = apps.map(a => {
+      if (String(a.id) === String(id)) {
+        return { ...a, draftStatus: newDraftStatus, draftApprovedAt: approvedTime };
+      }
+      return a;
+    });
+    localStorage.setItem('applications', JSON.stringify(apps));
+
+    curUsers = curUsers.map(u => {
+      if (u.items && Array.isArray(u.items)) {
+        const updatedItems = u.items.map(it => {
+          if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
+            updatedUid = u.id;
+            return { ...it, draftStatus: newDraftStatus, draftApprovedAt: approvedTime };
+          }
+          return it;
+        });
+        return { ...u, items: updatedItems };
+      }
+      return u;
+    });
+    localStorage.setItem('users', JSON.stringify(curUsers));
+
+    if (window.SupabaseSync) {
+      const app = apps.find(a => String(a.id) === String(id));
+      if (app) window.SupabaseSync.upsertApplication(app);
+      if (updatedUid) {
+        const u = curUsers.find(usr => usr.id === updatedUid);
+        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+      }
+    }
+
+    if (newDraftStatus === 'admin_approved') {
+      alert('관리자 직권으로 [간판 디자인 시안]을 최종 확정하였습니다.\n신청 점주 마이페이지 및 시공사 화면에 실시간으로 반영됩니다.');
+    } else if (newDraftStatus === 'pending') {
+      alert('간판 디자인 시안 확정을 취소하고 [검토중] 상태로 변경하였습니다.');
+    }
+
+    if (window.DataStore) window.DataStore.notifyAll();
+  };
+
+  // --- 점주 전용 간판 디자인 시안 승인 핸들러 ---
+  window.approveDraftByOwner = function (id) {
+    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let updatedUid = null;
+    const approvedTime = new Date().toISOString();
+
+    apps = apps.map(a => {
+      if (String(a.id) === String(id)) {
+        return { ...a, draftStatus: 'owner_approved', draftApprovedAt: approvedTime };
+      }
+      return a;
+    });
+    localStorage.setItem('applications', JSON.stringify(apps));
+
+    curUsers = curUsers.map(u => {
+      if (u.items && Array.isArray(u.items)) {
+        const updatedItems = u.items.map(it => {
+          if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
+            updatedUid = u.id;
+            return { ...it, draftStatus: 'owner_approved', draftApprovedAt: approvedTime };
+          }
+          return it;
+        });
+        return { ...u, items: updatedItems };
+      }
+      return u;
+    });
+    localStorage.setItem('users', JSON.stringify(curUsers));
+
+    if (window.SupabaseSync) {
+      const app = apps.find(a => String(a.id) === String(id));
+      if (app) window.SupabaseSync.upsertApplication(app);
+      if (updatedUid) {
+        const u = curUsers.find(usr => usr.id === updatedUid);
+        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+      }
+    }
+
+    alert('간판 디자인 시안을 최종 승인하셨습니다!\n시공사와 최고관리자 화면에 즉시 공유되어 간판 제작 및 시공이 진행됩니다.');
+    if (window.DataStore) window.DataStore.notifyAll();
+  };
+
+  // --- 간판 디자인 시안 크게보기 모달 (PC웹 & 모바일 공용) ---
+  window.viewDraftModal = function (id) {
+    const jobs = (window.DataStore && typeof window.DataStore.getConstructionJobs === 'function')
+      ? window.DataStore.getConstructionJobs()
+      : [];
+    let job = jobs.find(j => String(j.id) === String(id));
+    if (!job) {
+      const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+        ? window.DataStore.getApplications()
+        : (JSON.parse(localStorage.getItem('applications')) || []);
+      const app = apps.find(a => String(a.id) === String(id));
+      if (app) {
+        job = {
+          id: app.id,
+          storeName: app.storeName || app.shopName || '-',
+          signType: app.signType || '간판',
+          signDraftPhotos: app.signDraftPhotos || app.designPhotos || [],
+          draftStatus: app.draftStatus || 'pending'
+        };
+      }
+    }
+    if (!job || !job.signDraftPhotos || job.signDraftPhotos.length === 0) {
+      alert('등록된 간판 디자인 시안이 없습니다.');
+      return;
+    }
+
+    const modalId = 'modal-view-draft-preview';
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = modalId;
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;';
+      document.body.appendChild(modal);
+    }
+
+    const photosHtml = job.signDraftPhotos.map((src, idx) => `
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">시안 #${idx + 1}</div>
+        <img src="${(typeof sanitizeUrl === 'function' ? sanitizeUrl(src) : src)}" alt="간판 디자인 시안 #${idx + 1}" style="max-width: 100%; max-height: 70vh; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); object-fit: contain;">
+      </div>
+    `).join('');
+
+    let statusBadgeText = '시안 검토중';
+    if (job.draftStatus === 'owner_approved') statusBadgeText = '점주 시안확정 완료';
+    else if (job.draftStatus === 'admin_approved') statusBadgeText = '관리자 직권확정 완료';
+
+    const safeStoreName = (typeof escapeHtml === 'function' ? escapeHtml(job.storeName) : job.storeName);
+    const safeSignType = (typeof escapeHtml === 'function' ? escapeHtml(job.signType) : job.signType);
+
+    modal.innerHTML = `
+      <div style="background: white; border-radius: 14px; padding: 24px; max-width: 750px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;"><i class="fa-solid fa-palette" style="color: #6366f1;"></i> 간판 디자인 시안 확인</h3>
+            <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">상호명: <strong>${safeStoreName}</strong> | 간판종류: <strong>${safeSignType}</strong> (${statusBadgeText})</div>
+          </div>
+          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
+        </div>
+        <div>${photosHtml}</div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px;">
+          ${(job.draftStatus !== 'owner_approved' && job.draftStatus !== 'admin_approved') ? `
+            <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved'); document.getElementById('${modalId}').style.display='none';" style="padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-check"></i> 관리자 직권 시안확정</button>
+          ` : `
+            <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'pending'); document.getElementById('${modalId}').style.display='none';" style="padding: 8px 16px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-rotate-left"></i> 시안 확정 취소</button>
+          `}
+          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="padding: 8px 16px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">닫기</button>
+        </div>
+      </div>
+    `;
+    modal.style.display = 'flex';
+  };
+
+  // --- 시공 후 사진 증빙 확인 모달 (PC웹 & 모바일 공용) ---
+  window.viewConstructionPhotosModal = function (id) {
+    const jobs = (window.DataStore && typeof window.DataStore.getConstructionJobs === 'function')
+      ? window.DataStore.getConstructionJobs()
+      : [];
+    let job = jobs.find(j => String(j.id) === String(id));
+    if (!job) {
+      const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+        ? window.DataStore.getApplications()
+        : (JSON.parse(localStorage.getItem('applications')) || []);
+      const app = apps.find(a => String(a.id) === String(id));
+      if (app) {
+        job = {
+          id: app.id,
+          storeName: app.storeName || app.shopName || '-',
+          assignedConstructorName: app.assignedConstructorName || '시공업체',
+          constructionPhotos: app.constructionPhotos || []
+        };
+      }
+    }
+    if (!job || !job.constructionPhotos || job.constructionPhotos.length === 0) {
+      alert('등록된 시공 후 사진 증빙이 없습니다.');
+      return;
+    }
+
+    const modalId = 'modal-view-const-photos-preview';
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = modalId;
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;';
+      document.body.appendChild(modal);
+    }
+
+    const photosHtml = job.constructionPhotos.map((src, idx) => `
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">시공 후 사진 #${idx + 1}</div>
+        <img src="${(typeof sanitizeUrl === 'function' ? sanitizeUrl(src) : src)}" alt="시공 후 사진 #${idx + 1}" style="max-width: 100%; max-height: 70vh; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); object-fit: contain;">
+      </div>
+    `).join('');
+
+    const safeStoreName = (typeof escapeHtml === 'function' ? escapeHtml(job.storeName) : job.storeName);
+    const safeConstName = (typeof escapeHtml === 'function' ? escapeHtml(job.assignedConstructorName) : job.assignedConstructorName);
+
+    modal.innerHTML = `
+      <div style="background: white; border-radius: 14px; padding: 24px; max-width: 750px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;"><i class="fa-solid fa-camera" style="color: #10b981;"></i> 시공 후 사진 증빙 (${job.constructionPhotos.length}장)</h3>
+            <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">상호명: <strong>${safeStoreName}</strong> | 시공사: <strong>${safeConstName}</strong></div>
+          </div>
+          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
+        </div>
+        <div>${photosHtml}</div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px;">
+          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="padding: 8px 16px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">닫기</button>
+        </div>
+      </div>
+    `;
+    modal.style.display = 'flex';
   };
 })();
