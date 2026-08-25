@@ -1283,34 +1283,36 @@ window.SupabaseSync = {
     }
   },
 
-  // 3초 간편문의 매핑 함수
+  // 3초 간편문의 매핑 함수 (실제 Supabase DB 스키마: id, name, phone, category, region, status, created_at)
   mapInquiryToDb(inq) {
     if (!inq) return null;
     const msg = inq.message || inq.content || inq.body || inq.memo || inq.region || '';
+    const inqType = inq.type || inq.category || 'other';
     const dateStr = inq.submittedAt || inq.created_at || inq.createdAt || new Date().toISOString();
     return {
       id: String(inq.id),
       name: String(inq.name || ''),
       phone: String(inq.phone || ''),
-      type: String(inq.type || inq.category || 'other'),
-      category: String(inq.category || inq.type || 'other'),
-      message: String(msg),
-      region: String(inq.region || msg),
+      category: String(inqType),
+      region: String(msg),
       status: String(inq.status || 'pending'),
       created_at: dateStr
     };
   },
 
-  mapInquiryToBaseDb(inq) {
+  mapInquiryToExtendedDb(inq) {
     if (!inq) return null;
-    const msg = inq.message || inq.content || inq.body || inq.memo || '';
+    const msg = inq.message || inq.content || inq.body || inq.memo || inq.region || '';
+    const inqType = inq.type || inq.category || 'other';
     const dateStr = inq.submittedAt || inq.created_at || inq.createdAt || new Date().toISOString();
     return {
       id: String(inq.id),
       name: String(inq.name || ''),
       phone: String(inq.phone || ''),
-      type: String(inq.type || inq.category || 'other'),
+      type: String(inqType),
+      category: String(inqType),
       message: String(msg),
+      region: String(msg),
       status: String(inq.status || 'pending'),
       created_at: dateStr
     };
@@ -1318,12 +1320,10 @@ window.SupabaseSync = {
 
   mapInquiryToMinimalDb(inq) {
     if (!inq) return null;
-    const msg = inq.message || inq.content || inq.body || '';
     return {
       id: String(inq.id),
       name: String(inq.name || ''),
       phone: String(inq.phone || ''),
-      message: String(msg),
       status: String(inq.status || 'pending')
     };
   },
@@ -1331,16 +1331,17 @@ window.SupabaseSync = {
   mapDbToInquiry(dbInq) {
     if (!dbInq) return null;
     const msg = dbInq.message || dbInq.content || dbInq.body || dbInq.inquiry_text || dbInq.memo || dbInq.region || '';
+    const inqType = dbInq.type || dbInq.category || 'other';
     const dt = dbInq.submittedAt || dbInq.created_at || dbInq.submitted_at || dbInq.createdAt || new Date().toISOString();
     return {
       id: String(dbInq.id),
       name: dbInq.name || '',
       phone: dbInq.phone || '',
-      type: dbInq.type || dbInq.category || 'other',
-      category: dbInq.category || dbInq.type || 'other',
+      type: inqType,
+      category: inqType,
       message: msg,
       content: msg,
-      region: dbInq.region || '',
+      region: msg,
       status: dbInq.status || 'pending',
       submittedAt: dt,
       created_at: dt
@@ -1350,18 +1351,18 @@ window.SupabaseSync = {
   // 3초 간편문의 저장/갱신 (다단계 Fallback + 안전한 DB 저장 보장)
   async upsertInquiry(inq) {
     if (!window.supabaseClient || !inq || !inq.id) return false;
-    const fullPayload = this.mapInquiryToDb(inq);
+    const standardPayload = this.mapInquiryToDb(inq);
     try {
-      // 1) 전체 컬럼 포함하여 upsert 시도
-      const { error: fullErr } = await window.supabaseClient.from('inquiries').upsert([fullPayload], { onConflict: 'id' });
-      if (!fullErr) return true;
+      // 1) 표준 DB 스키마(category, region 포함)로 upsert 시도
+      const { error: stdErr } = await window.supabaseClient.from('inquiries').upsert([standardPayload], { onConflict: 'id' });
+      if (!stdErr) return true;
 
-      // 2) 컬럼 오류 발생 시 표준 기본 컬럼으로 fallback upsert
-      const basePayload = this.mapInquiryToBaseDb(inq);
-      const { error: baseErr } = await window.supabaseClient.from('inquiries').upsert([basePayload], { onConflict: 'id' });
-      if (!baseErr) return true;
+      // 2) 확장 컬럼 지원 시도
+      const extPayload = this.mapInquiryToExtendedDb(inq);
+      const { error: extErr } = await window.supabaseClient.from('inquiries').upsert([extPayload], { onConflict: 'id' });
+      if (!extErr) return true;
 
-      // 3) 최소 필수 컬럼으로 fallback upsert
+      // 3) 최소 필수 컬럼 fallback
       const minPayload = this.mapInquiryToMinimalDb(inq);
       const { error: minErr } = await window.supabaseClient.from('inquiries').upsert([minPayload], { onConflict: 'id' });
       if (!minErr) return true;
@@ -1373,7 +1374,7 @@ window.SupabaseSync = {
         phone: inq.phone || ''
       }).eq('id', String(inq.id));
       
-      console.warn('Supabase upsertInquiry fallback used, full error:', fullErr.message);
+      console.warn('Supabase upsertInquiry fallback used, std error:', stdErr.message);
       return true;
     } catch (e) {
       console.error('Supabase upsertInquiry exception:', e);

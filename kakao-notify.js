@@ -78,6 +78,7 @@ const KakaoNotifier = (function () {
 
   // 1. 3초 간편 문의 접수 알림
   function notifyInquiry(inquiry) {
+    if (!inquiry) return;
     const typeNames = {
       'eligibility': '지원 대상/자격 문의',
       'documents': '제출 서류/신청 문의',
@@ -85,10 +86,11 @@ const KakaoNotifier = (function () {
       'constructor': '시공업체 제휴 문의',
       'other': '기타 일반 문의'
     };
-    const typeLabel = typeNames[inquiry.type] || inquiry.type || '일반 문의';
+    const typeLabel = typeNames[inquiry.type] || typeNames[inquiry.category] || inquiry.type || inquiry.category || '일반 문의';
+    const msgText = inquiry.message || inquiry.content || inquiry.body || inquiry.region || '';
 
     const title = '💬 3초 간편 문의가 접수되었습니다!';
-    const message = `• 고객 성함: ${inquiry.name}\n• 연락처: ${inquiry.phone}\n• 문의 유형: ${typeLabel}\n• 문의 내용:\n"${inquiry.message}"`;
+    const message = `• 고객 성함: ${inquiry.name || '미입력'}\n• 연락처: ${inquiry.phone || '미입력'}\n• 문의 유형: ${typeLabel}\n• 문의 내용:\n"${msgText}"`;
 
     return sendToMe(title, message, 'https://ganpans.com/dashboard.html');
   }
