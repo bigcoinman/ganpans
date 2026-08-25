@@ -1979,29 +1979,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const curUsers = JSON.parse(localStorage.getItem('users')) || users || [];
-    const curApps = JSON.parse(localStorage.getItem('applications')) || [];
-
-    let allBusinessItems = [];
-    curUsers.forEach(u => {
-      if (u.items && Array.isArray(u.items)) {
-        u.items.forEach(item => {
-          allBusinessItems.push({
-            user: u,
-            item: item
-          });
-        });
-      }
-    });
-
-    allBusinessItems.sort((a, b) => {
-      const timeA = new Date(a.item.registeredAt || a.item.appliedAt || a.item.createdAt || a.item.created_at || a.user.createdAt || 0).getTime();
-      const timeB = new Date(b.item.registeredAt || b.item.appliedAt || b.item.createdAt || b.item.created_at || b.user.createdAt || 0).getTime();
-      if (timeB !== timeA && !isNaN(timeA) && !isNaN(timeB)) {
-        return timeB - timeA;
-      }
-      return String(b.item.id || '').localeCompare(String(a.item.id || ''), undefined, { numeric: true, sensitivity: 'base' });
-    });
+    const allBusinessItems = (window.DataStore && typeof window.DataStore.getAdminBizItems === 'function')
+      ? window.DataStore.getAdminBizItems()
+      : [];
 
     if (allBusinessItems.length === 0) {
       alert('다운로드할 영업 물건 데이터가 없습니다.');
