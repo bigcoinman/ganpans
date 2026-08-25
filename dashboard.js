@@ -2226,12 +2226,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (type === 'receipt') {
           app.receiptStatus = value;
         } else {
-          app.constructionStatus = value;
           app.progressStatus = value;
-          if (value === '지원대기중') app.status = 'pending';
-          else if (value === '승인 완료' || value === '대상자선정' || value === '간판시공 준비중' || value === '간판시공완료') app.status = 'approved';
-          else if (value === '반려됨') app.status = 'rejected';
-          else if (value === '지원사업 포기') app.status = 'giveup';
+          if (value === '대상자선정' || value === '간판시공 준비중' || value === '간판시공완료') {
+            app.status = 'approved';
+            app.constructionStatus = (value === '간판시공완료' ? 'completed' : (value === '간판시공 준비중' ? 'in_construction' : 'before_construction'));
+          } else if (value === '지원사업 탈락' || value === '반려됨') {
+            app.status = 'rejected';
+            app.constructionStatus = value;
+          } else if (value === '지원사업 포기') {
+            app.status = 'giveup';
+            app.constructionStatus = value;
+          } else {
+            app.status = 'pending';
+            app.constructionStatus = value;
+          }
         }
         targetApp = app;
         appMatched = true;
@@ -3422,7 +3430,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let targetApp = null;
     apps = apps.map(app => {
       if (String(app.id) === String(id)) {
-        targetApp = { ...app, status: newStatus };
+        let progStatus = '심사대기';
+        if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') progStatus = '서류제출 & 접수예정';
+        else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') progStatus = '지원사업 탈락';
+        else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') progStatus = '지원사업 포기';
+        targetApp = { ...app, status: newStatus, progressStatus: progStatus, constructionStatus: progStatus };
         return targetApp;
       }
       return app;
@@ -3440,11 +3452,13 @@ document.addEventListener('DOMContentLoaded', () => {
           u.items = u.items.map(it => {
             if (String(it.id) === String(targetApp.id) || String(it.appRefId) === String(targetApp.id)) {
               let updatedProgress = '지원대기중';
-              if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') updatedProgress = '승인 완료';
-              else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') updatedProgress = '반려됨';
+              if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') updatedProgress = '서류제출 & 접수예정';
+              else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') updatedProgress = '지원사업 탈락';
               else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') updatedProgress = '지원사업 포기';
+              else updatedProgress = '심사대기';
 
               it.progressStatus = updatedProgress;
+              it.constructionStatus = updatedProgress;
               itemMatched = true;
               usersUpdated = true;
             }
@@ -3834,7 +3848,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         const rStatus = (matchedItem && matchedItem.receiptStatus) || app.receiptStatus || '접수예정';
-        const pStatus = (matchedItem && matchedItem.progressStatus) || app.constructionStatus || app.progressStatus || (app.status === 'approved' ? '대상자선정' : '지원대기중');
+        const pStatus = (matchedItem && matchedItem.progressStatus) || app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
 
         bizList.push({
           id: app.id,
@@ -4327,18 +4341,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const apps = JSON.parse(localStorage.getItem('applications')) || [];
     const allUsers = JSON.parse(localStorage.getItem('users')) || [];
 
-    // --- 신청 건수 집계 ---
-    const approvedApps = apps.filter(a => a.status === 'approved');
-    const inConstructionApps = approvedApps.filter(a =>
-      a.constructionStatus === 'in_construction' || a.constructionStatus === 'after_construction'
-    );
-    const completedApps = apps.filter(a => a.constructionStatus === 'completed');
+    // --- 시공업체 진행현황 실존 목록 기반 집계 (SSOT: 시공업체 진행현황 목록에 있을 때만 카운트) ---
+    const constJobs = (window.DataStore && typeof window.DataStore.getConstructionJobs === 'function')
+      ? window.DataStore.getConstructionJobs()
+      : [];
 
-    // --- 시공 파이프라인 단계별 집계 (승인된 건만) ---
-    const pipeBefore = approvedApps.filter(a => !a.constructionStatus || a.constructionStatus === 'before_construction').length;
-    const pipeIn = approvedApps.filter(a => a.constructionStatus === 'in_construction').length;
-    const pipeAfter = approvedApps.filter(a => a.constructionStatus === 'after_construction').length;
-    const pipeCompleted = approvedApps.filter(a => a.constructionStatus === 'completed').length;
+    const approvedCount = constJobs.length; // 총 대상자 선정 건수 = 시공업체 진행현황 목록에 실존하는 건수
+    const inConstructionCount = constJobs.filter(j =>
+      j.constructionStatus === 'in_construction' || j.constructionStatus === 'after_construction' || j.progressStatus === '간판시공 준비중'
+    ).length;
+    const completedCount = constJobs.filter(j =>
+      j.constructionStatus === 'completed' || j.progressStatus === '간판시공완료'
+    ).length;
+
+    // --- 시공 파이프라인 단계별 집계 (시공 진행현황 실존 건 기준) ---
+    const pipeBefore = constJobs.filter(j =>
+      (!j.constructionStatus || j.constructionStatus === 'before_construction' || j.progressStatus === '대상자선정') &&
+      j.constructionStatus !== 'in_construction' && j.constructionStatus !== 'after_construction' && j.constructionStatus !== 'completed' &&
+      j.progressStatus !== '간판시공 준비중' && j.progressStatus !== '간판시공완료'
+    ).length;
+    const pipeIn = constJobs.filter(j => j.constructionStatus === 'in_construction' || j.progressStatus === '간판시공 준비중').length;
+    const pipeAfter = constJobs.filter(j => j.constructionStatus === 'after_construction').length;
+    const pipeCompleted = constJobs.filter(j => j.constructionStatus === 'completed' || j.progressStatus === '간판시공완료').length;
 
     // --- 회원 집계 ---
     const bizMembers = allUsers.filter(u => u.role === 'business').length;
@@ -4358,9 +4382,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statToday) statToday.textContent = todayCount.toLocaleString() + '명';
     if (statTotal) statTotal.textContent = totalCount.toLocaleString() + '명';
     if (statApps) statApps.textContent = apps.length + '건';
-    if (statApproved) statApproved.textContent = approvedApps.length + '건';
-    if (statInConst) statInConst.textContent = inConstructionApps.length + '건';
-    if (statCompleted) statCompleted.textContent = completedApps.length + '건';
+    if (statApproved) statApproved.textContent = approvedCount + '건';
+    if (statInConst) statInConst.textContent = inConstructionCount + '건';
+    if (statCompleted) statCompleted.textContent = completedCount + '건';
     if (statTotalMembers) statTotalMembers.textContent = allUsers.length + '명';
     if (statBizMembers) statBizMembers.textContent = bizMembers + '명';
     if (statConstMembers) statConstMembers.textContent = constMembers + '개';

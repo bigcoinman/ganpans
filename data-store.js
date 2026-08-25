@@ -221,7 +221,7 @@
             }
 
             const rStatus = (matchedItem && matchedItem.receiptStatus) || app.receiptStatus || '접수예정';
-            const pStatus = (matchedItem && matchedItem.progressStatus) || app.constructionStatus || app.progressStatus || (app.status === 'approved' ? '대상자선정' : '지원대기중');
+            const pStatus = (matchedItem && matchedItem.progressStatus) || app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
 
             bizList.push({
               id: app.id,
@@ -292,7 +292,7 @@
         }
 
         const rStatus = (matchedItem && matchedItem.receiptStatus) || app.receiptStatus || '접수예정';
-        const pStatus = (matchedItem && matchedItem.progressStatus) || app.constructionStatus || app.progressStatus || (app.status === 'approved' ? '대상자선정' : '지원대기중');
+        const pStatus = (matchedItem && matchedItem.progressStatus) || app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
 
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
         const itemObj = {
@@ -344,6 +344,123 @@
       });
 
       return allItems;
+    },
+
+    // --- 시공업체 진행현황 실존 목록 단일 진실의 원천(SSOT) 수집 함수 ---
+    getConstructionJobs: function () {
+      const apps = this.getApplications();
+      const curUsers = this.getUsers();
+      const allConstJobs = [];
+
+      // 1) From users' items (영업물건)
+      curUsers.forEach(u => {
+        if (u.items && Array.isArray(u.items)) {
+          u.items.forEach(item => {
+            const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
+            const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
+            const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus)) || '').trim();
+
+            // 오직 '대상자선정', '간판시공 준비중', '간판시공완료' 또는 시공 진행/완료인 건만 허용
+            const isEligible = (
+              pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
+              cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
+            ) && (
+              pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
+              pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
+            );
+
+            if (isEligible) {
+              let cName = item.assignedConstructorName || '';
+              let cCode = '';
+              let cPhone = '';
+              if (item.assignedConstructorId) {
+                const cu = curUsers.find(x => x.id === item.assignedConstructorId || x.constCode === item.assignedConstructorId);
+                if (cu) {
+                  cName = cu.businessName || cu.pendingBusinessName || cu.name || cu.id;
+                  cCode = cu.constCode || '';
+                  cPhone = cu.phone || '';
+                } else {
+                  cName = item.assignedConstructorName || item.assignedConstructorId;
+                }
+              }
+              allConstJobs.push({
+                id: item.id,
+                isBizItemJob: true,
+                bizItemOwnerId: u.id,
+                bizOwnerName: u.name,
+                storeName: item.name || '-',
+                ownerName: `${u.name} (영업자)`,
+                ownerPhone: item.phone || u.phone || '-',
+                storeAddress: item.address || '-',
+                signType: item.signType || 'LED 채널/플렉스',
+                assignedConstructorId: item.assignedConstructorId || '',
+                assignedConstructorName: cName || '미배정',
+                assignedConstructorCode: cCode,
+                assignedConstructorPhone: cPhone,
+                progressStatus: pStatus,
+                constructionStatus: item.constructionStatus || (pStatus === '간판시공완료' ? 'completed' : (pStatus === '간판시공 준비중' ? 'in_construction' : 'before_construction')),
+                constructionPhotos: item.constructionPhotos || [],
+                invoicePhotos: item.invoicePhotos || [],
+                createdAt: item.assignedAt || item.createdAt || new Date().toISOString()
+              });
+            }
+          });
+        }
+      });
+
+      // 2) From applications (온라인 신청서)
+      apps.forEach(app => {
+        const pStatus = String(app.progressStatus || app.constructionStatus || '').trim();
+        const cStatus = String(app.constructionStatus || '').trim();
+
+        const isEligible = (
+          pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
+          cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
+        ) && (
+          pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
+          pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
+        );
+
+        if (isEligible) {
+          if (!allConstJobs.some(j => String(j.id) === String(app.id))) {
+            let cName = app.assignedConstructorName || '';
+            let cCode = '';
+            let cPhone = '';
+            if (app.assignedConstructorId) {
+              const cu = curUsers.find(x => x.id === app.assignedConstructorId || x.constCode === app.assignedConstructorId);
+              if (cu) {
+                cName = cu.businessName || cu.pendingBusinessName || cu.name || cu.id;
+                cCode = cu.constCode || '';
+                cPhone = cu.phone || '';
+              } else {
+                cName = app.assignedConstructorName || app.assignedConstructorId;
+              }
+            }
+            allConstJobs.push({
+              id: app.id,
+              isBizItemJob: false,
+              bizItemOwnerId: null,
+              bizOwnerName: '',
+              storeName: app.storeName || '-',
+              ownerName: app.ownerName || '-',
+              ownerPhone: app.ownerPhone || '-',
+              storeAddress: app.storeAddress || '-',
+              signType: app.signType || 'LED 채널/플렉스',
+              assignedConstructorId: app.assignedConstructorId || '',
+              assignedConstructorName: cName || '미배정',
+              assignedConstructorCode: cCode,
+              assignedConstructorPhone: cPhone,
+              progressStatus: pStatus,
+              constructionStatus: app.constructionStatus || (pStatus === '간판시공완료' ? 'completed' : (pStatus === '간판시공 준비중' ? 'in_construction' : 'before_construction')),
+              constructionPhotos: app.constructionPhotos || [],
+              invoicePhotos: app.invoicePhotos || [],
+              createdAt: app.appliedAt || app.createdAt || new Date().toISOString()
+            });
+          }
+        }
+      });
+
+      return allConstJobs;
     },
 
     // --- 관리자 권한 다각도 정밀 판정 ---
