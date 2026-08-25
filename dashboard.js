@@ -1712,28 +1712,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Render Business Items (with pagination & search)
     managerItemsList.innerHTML = '';
-    const allBusinessItems = [];
-
-    users.forEach(u => {
-      if (u.role === 'business' && u.items && u.items.length > 0) {
-        u.items.forEach(item => {
-          allBusinessItems.push({
-            user: u,
-            item: item
-          });
-        });
-      }
-    });
-
-    // 최근 신청 / 등록된 업체 최상단 정렬 (최신순 내림차순)
-    allBusinessItems.sort((a, b) => {
-      const timeA = new Date(a.item.registeredAt || a.item.appliedAt || a.item.createdAt || a.item.created_at || a.user.createdAt || 0).getTime();
-      const timeB = new Date(b.item.registeredAt || b.item.appliedAt || b.item.createdAt || b.item.created_at || b.user.createdAt || 0).getTime();
-      if (timeB !== timeA && !isNaN(timeA) && !isNaN(timeB)) {
-        return timeB - timeA;
-      }
-      return String(b.item.id || '').localeCompare(String(a.item.id || ''), undefined, { numeric: true, sensitivity: 'base' });
-    });
+    const allBusinessItems = (window.DataStore && typeof window.DataStore.getAdminBizItems === 'function')
+      ? window.DataStore.getAdminBizItems()
+      : [];
 
     // 검색어 필터링 (아이디/이름/코드검색, 최대 30자)
     const searchManagerItemsInput = document.getElementById('search-manager-items-input');
@@ -1809,7 +1790,8 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             `;
           } else {
-            const constructors = users.filter(usr => usr.role === 'constructor');
+            const curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : users;
+            const constructors = curUsers.filter(usr => usr.role === 'constructor');
             let constOptions = '<option value="">시공사 선택...</option>';
             constructors.forEach(c => {
               const constName = c.businessName || c.pendingBusinessName || c.name || c.id;
@@ -1829,9 +1811,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
 
-        const apps = JSON.parse(localStorage.getItem('applications')) || [];
-        const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
-        const rawDate = item.createdAt || item.registeredAt || item.appliedAt || item.date || (matchingApp ? (matchingApp.appliedAt || matchingApp.createdAt) : '') || '';
+        const rawDate = item.registeredAt || item.appliedAt || item.createdAt || item.date || '';
         let itemDateText = '-';
         if (rawDate) {
           const d = new Date(rawDate);
@@ -1842,6 +1822,9 @@ document.addEventListener('DOMContentLoaded', () => {
             itemDateText = String(rawDate).slice(0, 10).replace(/\./g, '-');
           }
         }
+
+        const curReceipt = String(item.receiptStatus || '접수예정').trim();
+        const curProgress = String(item.progressStatus || '지원대기중').trim();
 
         row.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -1864,20 +1847,20 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="display: flex; align-items: center; gap: 6px;">
               <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">접수:</label>
               <select class="status-select select-receipt-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff;">
-                <option value="업체신청" ${(item.receiptStatus === '업체신청') ? 'selected' : ''}>업체신청</option>
-                <option value="접수예정" ${(item.receiptStatus === '접수예정' || !item.receiptStatus || item.receiptStatus === '접수 대기') ? 'selected' : ''}>접수예정</option>
-                <option value="접수완료" ${(item.receiptStatus === '접수완료' || item.receiptStatus === '접수 완료' || item.receiptStatus.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
+                <option value="업체신청" ${(curReceipt === '업체신청') ? 'selected' : ''}>업체신청</option>
+                <option value="접수예정" ${(curReceipt === '접수예정' || curReceipt === '접수 대기' || !curReceipt) ? 'selected' : ''}>접수예정</option>
+                <option value="접수완료" ${(curReceipt === '접수완료' || curReceipt === '접수 완료' || curReceipt.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
               </select>
             </div>
             
             <div style="display: flex; align-items: center; gap: 6px;">
               <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">진행:</label>
               <select class="status-select select-progress-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff;">
-                <option value="지원대기중" ${(item.progressStatus === '지원대기중' || !item.progressStatus || item.progressStatus === '심사 대기') ? 'selected' : ''}>지원대기중</option>
-                <option value="심사대기" ${(item.progressStatus === '심사대기' || item.progressStatus === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
-                <option value="대상자선정" ${(item.progressStatus === '대상자선정' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
-                <option value="간판시공 준비중" ${(item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
-                <option value="간판시공완료" ${(item.progressStatus === '간판시공완료' || item.progressStatus === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
+                <option value="지원대기중" ${(curProgress === '지원대기중' || curProgress === '심사 대기' || !curProgress) ? 'selected' : ''}>지원대기중</option>
+                <option value="심사대기" ${(curProgress === '심사대기' || curProgress === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
+                <option value="대상자선정" ${(curProgress === '대상자선정' || curProgress === '서류 심사 통과' || curProgress === '현장 실사 중' || curProgress === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
+                <option value="간판시공 준비중" ${(curProgress === '간판시공 준비중' || curProgress === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
+                <option value="간판시공완료" ${(curProgress === '간판시공완료' || curProgress === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
               </select>
             </div>
 
@@ -2196,80 +2179,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const updateItemStatus = (uid, itemId, type, value) => {
     if (!activeUser || activeUser.role !== 'admin') return;
-    let targetItem = null;
-    users = users.map(u => {
-      if (String(u.id) === String(uid)) {
-        const updatedItems = (u.items || []).map(item => {
-          if (String(item.id) === String(itemId)) {
-            if (type === 'receipt') {
-              targetItem = { ...item, receiptStatus: value };
-            } else {
-              targetItem = { ...item, progressStatus: value };
-            }
-            return targetItem;
-          }
-          return item;
-        });
-        return { ...u, items: updatedItems };
-      }
-      return u;
-    });
-
-    localStorage.setItem('users', JSON.stringify(users));
-
-    // applications 테이블에도 해당 ID의 신청서가 있다면 상태 양방향 동기화
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
-    let appMatched = false;
-    let targetApp = null;
-    apps = apps.map(app => {
-      if (String(app.id) === String(itemId) || (targetItem && targetItem.appRefId && String(app.id) === String(targetItem.appRefId))) {
-        if (type === 'receipt') {
-          app.receiptStatus = value;
-        } else {
-          app.progressStatus = value;
-          if (value === '대상자선정' || value === '간판시공 준비중' || value === '간판시공완료') {
-            app.status = 'approved';
-            app.constructionStatus = (value === '간판시공완료' ? 'completed' : (value === '간판시공 준비중' ? 'in_construction' : 'before_construction'));
-          } else if (value === '지원사업 탈락' || value === '반려됨') {
-            app.status = 'rejected';
-            app.constructionStatus = value;
-          } else if (value === '지원사업 포기') {
-            app.status = 'giveup';
-            app.constructionStatus = value;
-          } else {
-            app.status = 'pending';
-            app.constructionStatus = value;
-          }
-        }
-        targetApp = app;
-        appMatched = true;
-      }
-      return app;
-    });
-
-    if (appMatched) {
-      localStorage.setItem('applications', JSON.stringify(apps));
+    if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
+      return window.DataStore.updateItemStatus(uid, itemId, type, value);
     }
-
-    // Supabase DB 비동기 백그라운드 완전 동기화 (Non-blocking)
-    (async () => {
-      if (window.SupabaseSync) {
-        try {
-          const updatedUser = users.find(u => String(u.id) === String(uid));
-          if (updatedUser) {
-            await window.SupabaseSync.updateUser(uid, { items: updatedUser.items || [] });
-          }
-          if (targetApp) {
-            await window.SupabaseSync.upsertApplication(targetApp);
-          }
-        } catch (err) {
-          console.warn('Supabase updateItemStatus sync notice:', err);
-        }
-      }
-    })();
-
-    updateSessionUI();
-    window.dispatchEvent(new CustomEvent('supabase-data-synced'));
   };
   window.updateItemStatus = updateItemStatus;
 

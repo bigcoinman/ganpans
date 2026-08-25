@@ -639,6 +639,132 @@
       return { success: true, isBizItem: isNowBizItem };
     },
 
+    // --- 3-2. 영업물건 접수상태(receiptStatus) 및 진행상태(progressStatus) 통합 변경 (SSOT 보장) ---
+    updateItemStatus: function (uid, itemId, type, value) {
+      let apps = this.getApplications();
+      let users = this.getUsers();
+      let targetItem = null;
+      let targetApp = null;
+      let updatedUserIds = [];
+
+      const cleanVal = String(value || '').trim();
+      const targetIdStr = String(itemId || '').trim();
+
+      // 1) users.items 내 모든 매칭 항목 갱신 (uid 불일치 시에도 itemId/appRefId로 전수 탐색)
+      users = users.map(u => {
+        if (u.items && Array.isArray(u.items)) {
+          let userItemModified = false;
+          const updatedItems = u.items.map(item => {
+            const isMatch = String(item.id) === targetIdStr || 
+                            (item.appRefId && String(item.appRefId) === targetIdStr) || 
+                            (uid && String(u.id) === String(uid) && String(item.id) === targetIdStr);
+            if (isMatch) {
+              userItemModified = true;
+              if (type === 'receipt') {
+                targetItem = { ...item, receiptStatus: cleanVal };
+              } else {
+                targetItem = { ...item, progressStatus: cleanVal };
+              }
+              return targetItem;
+            }
+            return item;
+          });
+          if (userItemModified) {
+            if (!updatedUserIds.includes(u.id)) updatedUserIds.push(u.id);
+            return { ...u, items: updatedItems };
+          }
+        }
+        return u;
+      });
+
+      // 2) applications 내 매칭 항목 갱신
+      apps = apps.map(app => {
+        const isMatch = String(app.id) === targetIdStr || 
+                        (targetItem && targetItem.appRefId && String(app.id) === String(targetItem.appRefId));
+        if (isMatch) {
+          if (type === 'receipt') {
+            app.receiptStatus = cleanVal;
+          } else {
+            app.progressStatus = cleanVal;
+            if (cleanVal === '대상자선정' || cleanVal === '간판시공 준비중' || cleanVal === '간판시공완료') {
+              app.status = 'approved';
+              app.constructionStatus = (cleanVal === '간판시공완료' ? 'completed' : (cleanVal === '간판시공 준비중' ? 'in_construction' : 'before_construction'));
+            } else if (cleanVal === '지원사업 탈락' || cleanVal === '반려됨') {
+              app.status = 'rejected';
+              app.constructionStatus = cleanVal;
+            } else if (cleanVal === '지원사업 포기') {
+              app.status = 'giveup';
+              app.constructionStatus = cleanVal;
+            } else {
+              app.status = 'pending';
+              app.constructionStatus = cleanVal;
+            }
+          }
+          targetApp = app;
+        }
+        return app;
+      });
+
+      // 3) 만약 users.items에 아직 없었지만 영업자가 지정된 신청서인 경우, 영업자의 items에도 자동 생성/갱신
+      if (targetApp && updatedUserIds.length === 0) {
+        const refCode = String(targetApp.referrerCode || '').trim().toLowerCase();
+        const appUser = String(targetApp.userId || '').trim().toLowerCase();
+        let assignedUser = users.find(u =>
+          (u.role === 'business' || u.role === 'admin') &&
+          ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
+            (u.id && String(u.id).trim().toLowerCase() === refCode) ||
+            (u.name && String(u.name).trim().toLowerCase() === refCode) ||
+            (appUser && String(u.id).trim().toLowerCase() === appUser))
+        );
+        if (assignedUser) {
+          if (!assignedUser.items) assignedUser.items = [];
+          const existingIdx = assignedUser.items.findIndex(it => String(it.id) === String(targetApp.id) || String(it.appRefId) === String(targetApp.id));
+          const newItemData = {
+            id: String(targetApp.id),
+            appRefId: String(targetApp.id),
+            name: targetApp.storeName || targetApp.shopName || targetApp.ownerName || '영업물건',
+            phone: targetApp.ownerPhone || targetApp.phone || '',
+            address: targetApp.storeAddress || targetApp.address || '',
+            receiptStatus: targetApp.receiptStatus || '접수예정',
+            progressStatus: targetApp.progressStatus || '지원대기중',
+            registeredAt: targetApp.appliedAt || targetApp.createdAt || new Date().toISOString()
+          };
+          if (existingIdx >= 0) {
+            assignedUser.items[existingIdx] = { ...assignedUser.items[existingIdx], ...newItemData };
+          } else {
+            assignedUser.items.push(newItemData);
+          }
+          if (!updatedUserIds.includes(assignedUser.id)) updatedUserIds.push(assignedUser.id);
+        }
+      }
+
+      this.saveApplications(apps);
+      this.saveUsers(users);
+
+      // 4) Supabase DB 비동기 백그라운드 저장 (Non-blocking)
+      (async () => {
+        try {
+          if (window.SupabaseSync) {
+            if (targetApp) {
+              await window.SupabaseSync.upsertApplication(targetApp);
+            }
+            for (const uId of updatedUserIds) {
+              const uObj = users.find(u => u.id === uId);
+              if (uObj) {
+                await window.SupabaseSync.updateUser(uId, { items: uObj.items || [] });
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[DataStore] updateItemStatus sync notice:', err);
+        }
+      })();
+
+      // 5) 모든 대시보드 화면 0초 즉시 동기화
+      this.notifyAll();
+      return { success: true };
+    },
+
     // --- 4. 온라인 간편 지원 신청서 영구 삭제 ---
     deleteApplication: function (appId, btnEl) {
       if (!appId) return { success: false };
@@ -977,6 +1103,14 @@
     const res = window.DataStore.clearAllInquiries();
     alert('모든 간편 문의 내역이 성공적으로 초기화되었습니다.');
     return res;
+  };
+
+  // 영업물건 접수/진행상태 변경 전역 브릿지
+  window.updateItemStatus = function (uid, itemId, type, value) {
+    return window.DataStore.updateItemStatus(uid, itemId, type, value);
+  };
+  window.updateItemStatusMob = function (uid, itemId, type, value) {
+    return window.DataStore.updateItemStatus(uid, itemId, type, value);
   };
 
   // --- 공통 간판 종류 변경 핸들러 (PC웹 & 모바일 공용) ---

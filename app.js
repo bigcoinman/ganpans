@@ -3044,19 +3044,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div style="display:flex; align-items:center; gap: 6px;">
                                 <span style="font-size: 0.88rem; font-weight: 700; width: 50px; color: #475569;">접수:</span>
                                 <select class="status-select-mob select-receipt-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
-                                    <option value="업체신청" ${(item.receiptStatus === '업체신청') ? 'selected' : ''}>업체신청</option>
-                                    <option value="접수예정" ${(item.receiptStatus === '접수예정' || !item.receiptStatus || item.receiptStatus === '접수 대기') ? 'selected' : ''}>접수예정</option>
-                                    <option value="접수완료" ${(item.receiptStatus === '접수완료' || item.receiptStatus === '접수 완료' || item.receiptStatus.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
+                                    <option value="업체신청" ${(String(item.receiptStatus || '').trim() === '업체신청') ? 'selected' : ''}>업체신청</option>
+                                    <option value="접수예정" ${(String(item.receiptStatus || '').trim() === '접수예정' || String(item.receiptStatus || '').trim() === '접수 대기' || !item.receiptStatus) ? 'selected' : ''}>접수예정</option>
+                                    <option value="접수완료" ${(String(item.receiptStatus || '').trim() === '접수완료' || String(item.receiptStatus || '').trim() === '접수 완료' || String(item.receiptStatus || '').includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
                                 </select>
                             </div>
                             <div style="display:flex; align-items:center; gap: 6px;">
                                 <span style="font-size: 0.88rem; font-weight: 700; width: 50px; color: #475569;">진행:</span>
                                 <select class="status-select-mob select-progress-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
-                                    <option value="지원대기중" ${(item.progressStatus === '지원대기중' || !item.progressStatus || item.progressStatus === '심사 대기') ? 'selected' : ''}>지원대기중</option>
-                                    <option value="심사대기" ${(item.progressStatus === '심사대기' || item.progressStatus === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
-                                    <option value="대상자선정" ${(item.progressStatus === '대상자선정' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
-                                    <option value="간판시공 준비중" ${(item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
-                                    <option value="간판시공완료" ${(item.progressStatus === '간판시공완료' || item.progressStatus === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
+                                    <option value="지원대기중" ${(String(item.progressStatus || '').trim() === '지원대기중' || String(item.progressStatus || '').trim() === '심사 대기' || !item.progressStatus) ? 'selected' : ''}>지원대기중</option>
+                                    <option value="심사대기" ${(String(item.progressStatus || '').trim() === '심사대기' || String(item.progressStatus || '').trim() === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
+                                    <option value="대상자선정" ${(String(item.progressStatus || '').trim() === '대상자선정' || String(item.progressStatus || '').trim() === '서류 심사 통과' || String(item.progressStatus || '').trim() === '현장 실사 중' || String(item.progressStatus || '').trim() === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
+                                    <option value="간판시공 준비중" ${(String(item.progressStatus || '').trim() === '간판시공 준비중' || String(item.progressStatus || '').trim() === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
+                                    <option value="간판시공완료" ${(String(item.progressStatus || '').trim() === '간판시공완료' || String(item.progressStatus || '').trim() === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
                                 </select>
                             </div>
 
@@ -3842,81 +3842,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateItemStatusMob(uid, itemId, type, value) {
         if (!activeUser || activeUser.role !== 'admin') return;
-        let targetItem = null;
-        users = users.map(u => {
-            if (String(u.id) === String(uid)) {
-                const updatedItems = (u.items || []).map(item => {
-                    if (String(item.id) === String(itemId)) {
-                        if (type === 'receipt') {
-                            targetItem = { ...item, receiptStatus: value };
-                        } else {
-                            targetItem = { ...item, progressStatus: value };
-                        }
-                        return targetItem;
-                    }
-                    return item;
-                });
-                return { ...u, items: updatedItems };
-            }
-            return u;
-        });
-
-        localStorage.setItem('users', JSON.stringify(users));
-
-        // applications 테이블에도 해당 ID의 신청서가 있다면 상태 양방향 동기화
-        let apps = JSON.parse(localStorage.getItem('applications')) || [];
-        let appMatched = false;
-        let targetApp = null;
-        apps = apps.map(app => {
-            if (String(app.id) === String(itemId) || (targetItem && targetItem.appRefId && String(app.id) === String(targetItem.appRefId))) {
-                if (type === 'receipt') {
-                    app.receiptStatus = value;
-                } else {
-                    app.progressStatus = value;
-                    if (value === '대상자선정' || value === '간판시공 준비중' || value === '간판시공완료') {
-                        app.status = 'approved';
-                        app.constructionStatus = (value === '간판시공완료' ? 'completed' : (value === '간판시공 준비중' ? 'in_construction' : 'before_construction'));
-                    } else if (value === '지원사업 탈락' || value === '반려됨') {
-                        app.status = 'rejected';
-                        app.constructionStatus = value;
-                    } else if (value === '지원사업 포기') {
-                        app.status = 'giveup';
-                        app.constructionStatus = value;
-                    } else {
-                        app.status = 'pending';
-                        app.constructionStatus = value;
-                    }
-                }
-                targetApp = app;
-                appMatched = true;
-            }
-            return app;
-        });
-
-        if (appMatched) {
-            applications = apps;
-            localStorage.setItem('applications', JSON.stringify(apps));
+        if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
+            return window.DataStore.updateItemStatus(uid, itemId, type, value);
         }
-
-        // Supabase DB 비동기 백그라운드 완전 동기화 (Non-blocking)
-        (async () => {
-            if (window.SupabaseSync) {
-                try {
-                    const updatedUser = users.find(u => String(u.id) === String(uid));
-                    if (updatedUser) {
-                        await window.SupabaseSync.updateUser(uid, { items: updatedUser.items || [] });
-                    }
-                    if (targetApp) {
-                        await window.SupabaseSync.upsertApplication(targetApp);
-                    }
-                } catch (err) {
-                    console.warn('Supabase updateItemStatusMob sync notice:', err);
-                }
-            }
-        })();
-
-        renderStatusTab();
-        window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     }
     window.updateItemStatusMob = updateItemStatusMob;
 
