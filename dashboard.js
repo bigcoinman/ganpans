@@ -484,13 +484,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 다른 탭/창에서 데이터 변경 시 0초 즉각 갱신
   window.addEventListener('storage', (e) => {
-    if (e.key === 'applications' || e.key === 'users') {
+    if (e.key === 'applications' || e.key === 'users' || e.key === 'inquiries') {
       users = JSON.parse(localStorage.getItem('users')) || [];
       applications = JSON.parse(localStorage.getItem('applications')) || [];
       if (activeUser && activeUser.role === 'admin') {
         renderApplicationsList();
         renderManagerPanel();
         renderAdminStats();
+        renderInquiriesList();
       } else if (activeUser && activeUser.role === 'business') {
         renderBusinessDashboard();
         renderUserApplicationsList();
@@ -2869,7 +2870,9 @@ document.addEventListener('DOMContentLoaded', () => {
       })();
     if (!currentAdmin) return;
 
-    const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+    const inquiries = (window.DataStore && typeof window.DataStore.getInquiries === 'function')
+      ? window.DataStore.getInquiries()
+      : (JSON.parse(localStorage.getItem('inquiries')) || []);
     const paginationInquiriesContainer = document.getElementById('pagination-manager-inquiries');
 
     if (inquiries.length === 0) {
@@ -2886,8 +2889,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Sort inquiries descending (latest first)
     const sortedInquiries = [...inquiries].sort((a, b) => {
-      const timeA = new Date(a.submittedAt || 0).getTime();
-      const timeB = new Date(b.submittedAt || 0).getTime();
+      const timeA = new Date(a.submittedAt || a.created_at || a.createdAt || 0).getTime();
+      const timeB = new Date(b.submittedAt || b.created_at || b.createdAt || 0).getTime();
       return timeB - timeA;
     });
 
@@ -2913,7 +2916,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.style.transition = 'background 0.2s ease';
       
       const padZero = (n) => String(n).padStart(2, '0');
-      const d = new Date(inq.submittedAt || Date.now());
+      const d = new Date(inq.submittedAt || inq.created_at || inq.createdAt || Date.now());
       const dateText = `${d.getFullYear()}.${padZero(d.getMonth() + 1)}.${padZero(d.getDate())} ${padZero(d.getHours())}:${padZero(d.getMinutes())}`;
 
       const typeLabel = typeMap[inq.type] || inq.type || '일반 문의';
@@ -2934,6 +2937,8 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
+      const msgText = inq.message || inq.content || inq.body || inq.region || '';
+
       tr.innerHTML = `
         <td style="padding: 14px 16px; color: var(--text-secondary); font-family: monospace; white-space: nowrap;">${dateText}</td>
         <td style="padding: 14px 16px; font-weight: 600; color: var(--text-primary);">
@@ -2946,7 +2951,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <span style="background: rgba(99, 102, 241, 0.1); color: var(--accent-primary); border: 1px solid rgba(99, 102, 241, 0.2); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">${escapeHtml(typeLabel)}</span>
         </td>
         <td style="padding: 14px 16px; color: var(--text-primary); max-width: 320px; line-height: 1.4; word-break: break-word;">
-          ${escapeHtml(inq.message)}
+          ${escapeHtml(msgText)}
         </td>
         <td class="inq-status-cell" style="padding: 14px 16px; text-align: center; white-space: nowrap;">${statusBadge}</td>
         <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">${actionButtons}</td>
@@ -5114,17 +5119,34 @@ function initAIAssistant() {
         return;
       }
 
-      const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
       const newInquiry = {
         id: 'INQ-' + Date.now(),
         name,
         phone,
         type,
         message,
+        status: 'pending',
         submittedAt: new Date().toISOString()
       };
-      inquiries.push(newInquiry);
-      localStorage.setItem('inquiries', JSON.stringify(inquiries));
+
+      if (window.DataStore && typeof window.DataStore.upsertInquiry === 'function') {
+        window.DataStore.upsertInquiry(newInquiry);
+      } else {
+        const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+        inquiries.unshift(newInquiry);
+        localStorage.setItem('inquiries', JSON.stringify(inquiries));
+        if (window.SupabaseSync && typeof window.SupabaseSync.upsertInquiry === 'function') {
+          window.SupabaseSync.upsertInquiry(newInquiry);
+        }
+      }
+
+      if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyInquiry === 'function') {
+        window.KakaoNotifier.notifyInquiry(newInquiry);
+      }
+
+      if (typeof window.renderInquiriesList === 'function') {
+        window.renderInquiriesList();
+      }
 
       alert('간편 문의 접수가 정상 완료되었습니다.\n담당자가 확인 후 연락처로 신속히 연락드리겠습니다.');
       closeInquiryModal();

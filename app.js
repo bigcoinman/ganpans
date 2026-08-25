@@ -2356,7 +2356,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 다른 탭/창에서 데이터 변경 시 모바일 화면 0초 즉각 갱신
     window.addEventListener('storage', (e) => {
-        if (e.key === 'applications' || e.key === 'users') {
+        if (e.key === 'applications' || e.key === 'users' || e.key === 'inquiries') {
             users = JSON.parse(localStorage.getItem('users')) || [];
             applications = JSON.parse(localStorage.getItem('applications')) || [];
             if (activeUser && activeUser.role === 'admin') {
@@ -3030,14 +3030,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // 5) Render Inquiries list (3초 간편문의 접수건)
         const inquiriesList = document.getElementById('admin-inquiries-list-mob');
         if (inquiriesList) {
-            const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+            const inquiries = (window.DataStore && typeof window.DataStore.getInquiries === 'function')
+                ? window.DataStore.getInquiries()
+                : (JSON.parse(localStorage.getItem('inquiries')) || []);
             inquiriesList.innerHTML = '';
             if (inquiries.length === 0) {
                 inquiriesList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.92rem;">접수된 3초 간편 문의 내역이 없습니다.</p>';
             } else {
                 const sortedInquiries = [...inquiries].sort((a, b) => {
-                    const timeA = new Date(a.submittedAt || 0).getTime();
-                    const timeB = new Date(b.submittedAt || 0).getTime();
+                    const timeA = new Date(a.submittedAt || a.created_at || a.createdAt || 0).getTime();
+                    const timeB = new Date(b.submittedAt || b.created_at || b.createdAt || 0).getTime();
                     return timeB - timeA;
                 });
 
@@ -4872,7 +4874,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
             const newInquiry = {
                 id: 'INQ-' + Date.now(),
                 name,
@@ -4882,17 +4883,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 status: 'pending',
                 submittedAt: new Date().toISOString()
             };
-            inquiries.push(newInquiry);
-            localStorage.setItem('inquiries', JSON.stringify(inquiries));
 
-            // Supabase Sync
-            if (window.SupabaseSync) {
-                window.SupabaseSync.upsertInquiry(newInquiry);
+            if (window.DataStore && typeof window.DataStore.upsertInquiry === 'function') {
+                window.DataStore.upsertInquiry(newInquiry);
+            } else {
+                const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+                inquiries.unshift(newInquiry);
+                localStorage.setItem('inquiries', JSON.stringify(inquiries));
+                if (window.SupabaseSync && typeof window.SupabaseSync.upsertInquiry === 'function') {
+                    window.SupabaseSync.upsertInquiry(newInquiry);
+                }
             }
 
             // 카카오톡 관리자 실시간 알림 발송
             if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyInquiry === 'function') {
                 window.KakaoNotifier.notifyInquiry(newInquiry);
+            }
+
+            if (typeof window.renderAdminDashboardMob === 'function') {
+                window.renderAdminDashboardMob(true);
             }
 
             alert('간편 문의 접수가 정상 완료되었습니다.\n담당자가 확인 후 연락처로 신속히 연락드리겠습니다.');

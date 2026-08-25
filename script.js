@@ -3317,7 +3317,6 @@ function initModalsAndSearch() {
         return;
       }
 
-      const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
       const newInquiry = {
         id: 'INQ-' + Date.now(),
         name,
@@ -3327,11 +3326,16 @@ function initModalsAndSearch() {
         status: 'pending',
         submittedAt: new Date().toISOString()
       };
-      inquiries.push(newInquiry);
-      localStorage.setItem('inquiries', JSON.stringify(inquiries));
 
-      if (window.SupabaseSync) {
-        window.SupabaseSync.upsertInquiry(newInquiry);
+      if (window.DataStore && typeof window.DataStore.upsertInquiry === 'function') {
+        window.DataStore.upsertInquiry(newInquiry);
+      } else {
+        const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
+        inquiries.unshift(newInquiry);
+        localStorage.setItem('inquiries', JSON.stringify(inquiries));
+        if (window.SupabaseSync && typeof window.SupabaseSync.upsertInquiry === 'function') {
+          window.SupabaseSync.upsertInquiry(newInquiry);
+        }
       }
 
       if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyInquiry === 'function') {

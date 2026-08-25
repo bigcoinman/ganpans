@@ -658,7 +658,132 @@
       return { success: true, status: newStatus };
     },
 
-    // --- 7. 전체 대시보드 화면 동기화 브로드캐스트 (0초 반응) ---
+    // --- 7. 3초 간편문의 (Inquiries) 통합 관리 엔진 ---
+    getDeletedInquiryIds: function () {
+      try {
+        return JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
+      } catch (e) {
+        return [];
+      }
+    },
+
+    getInquiries: function () {
+      try {
+        const inqs = JSON.parse(localStorage.getItem('inquiries')) || [];
+        const deletedIds = this.getDeletedInquiryIds();
+        return inqs.filter(i => i && i.id && !deletedIds.includes(String(i.id)));
+      } catch (e) {
+        console.error('[DataStore] getInquiries error:', e);
+        return [];
+      }
+    },
+
+    saveInquiries: function (inqs) {
+      try {
+        localStorage.setItem('inquiries', JSON.stringify(inqs));
+        return true;
+      } catch (e) {
+        console.error('[DataStore] saveInquiries error:', e);
+        return false;
+      }
+    },
+
+    upsertInquiry: function (inq) {
+      if (!inq || !inq.id) return { success: false };
+      let inqs = this.getInquiries();
+      const index = inqs.findIndex(i => String(i.id) === String(inq.id));
+      if (index >= 0) {
+        inqs[index] = { ...inqs[index], ...inq };
+      } else {
+        inqs.unshift(inq);
+      }
+      this.saveInquiries(inqs);
+
+      if (window.SupabaseSync && typeof window.SupabaseSync.upsertInquiry === 'function') {
+        window.SupabaseSync.upsertInquiry(inq);
+      }
+
+      this.notifyAll();
+      return { success: true, inquiry: inq };
+    },
+
+    toggleInquiryStatus: function (id, btnEl) {
+      let inqs = this.getInquiries();
+      let inqIndex = inqs.findIndex(i => String(i.id) === String(id));
+      if (inqIndex === -1 && btnEl) {
+        const rowOrCard = btnEl.closest('tr') || btnEl.closest('.admin-inquiry-card-mob') || btnEl.closest('div');
+        if (rowOrCard) {
+          const phoneEl = rowOrCard.querySelector('a[href^="tel:"]');
+          const phoneText = phoneEl ? phoneEl.textContent.replace(/[^0-9]/g, '') : '';
+          if (phoneText) {
+            inqIndex = inqs.findIndex(i => (i.phone || '').replace(/[^0-9]/g, '') === phoneText);
+          }
+        }
+      }
+
+      if (inqIndex >= 0) {
+        const target = inqs[inqIndex];
+        const curStatus = target.status;
+        const isNowResolved = (curStatus !== 'resolved' && curStatus !== 'completed' && curStatus !== '확인완료' && curStatus !== '상담완료');
+        const newStatus = isNowResolved ? 'resolved' : 'pending';
+        target.status = newStatus;
+        inqs[inqIndex] = target;
+        this.saveInquiries(inqs);
+
+        if (window.SupabaseSync && typeof window.SupabaseSync.upsertInquiry === 'function') {
+          window.SupabaseSync.upsertInquiry(target);
+        }
+
+        this.notifyAll();
+        return { success: true, isResolved: isNowResolved, status: newStatus };
+      }
+      return { success: false };
+    },
+
+    deleteInquiry: function (id, btnEl) {
+      if (!id) return { success: false };
+      let inqs = this.getInquiries();
+      let target = inqs.find(i => String(i.id) === String(id));
+      if (!target && btnEl) {
+        const rowOrCard = btnEl.closest('tr') || btnEl.closest('.admin-inquiry-card-mob') || btnEl.closest('div');
+        if (rowOrCard) {
+          const phoneEl = rowOrCard.querySelector('a[href^="tel:"]');
+          const phoneText = phoneEl ? phoneEl.textContent.replace(/[^0-9]/g, '') : '';
+          if (phoneText) {
+            target = inqs.find(i => (i.phone || '').replace(/[^0-9]/g, '') === phoneText);
+          }
+        }
+      }
+
+      const targetId = target ? target.id : id;
+      let deletedIds = this.getDeletedInquiryIds();
+      if (!deletedIds.includes(String(targetId))) {
+        deletedIds.push(String(targetId));
+        localStorage.setItem('deleted_inquiry_ids', JSON.stringify(deletedIds));
+      }
+
+      inqs = inqs.filter(i => String(i.id) !== String(targetId));
+      this.saveInquiries(inqs);
+
+      if (window.SupabaseSync && typeof window.SupabaseSync.deleteInquiry === 'function') {
+        window.SupabaseSync.deleteInquiry(targetId);
+      }
+
+      this.notifyAll();
+      return { success: true, deletedId: targetId };
+    },
+
+    clearAllInquiries: function () {
+      localStorage.setItem('inquiries', JSON.stringify([]));
+      localStorage.setItem('inquiries_purged_flag', 'true');
+      if (window.SupabaseSync && typeof window.SupabaseSync.clearAllInquiries === 'function') {
+        window.SupabaseSync.clearAllInquiries();
+      }
+      this.notifyAll();
+      return { success: true };
+    },
+
+    // --- 8. 전체 대시보드 화면 동기화 브로드캐스트 (0초 반응) ---
     notifyAll: function () {
       try {
         if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
@@ -666,6 +791,7 @@
         if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
         if (typeof window.renderBusinessDashboard === 'function') window.renderBusinessDashboard();
         if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
+        if (typeof window.renderInquiriesList === 'function') window.renderInquiriesList();
         if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
         if (typeof window.renderBusinessDashboardMob === 'function') window.renderBusinessDashboardMob();
         if (typeof window.renderBizRegisteredItemsMob === 'function') window.renderBizRegisteredItemsMob();
@@ -701,5 +827,31 @@
   };
   window.deleteUserAdminMob = function (userId, btnEl) {
     return window.DataStore.deleteUser(userId, btnEl);
+  };
+  window.toggleInquiryStatus = function (inqId, btnEl) {
+    return window.DataStore.toggleInquiryStatus(inqId, btnEl);
+  };
+  window.toggleInquiryStatusMob = function (inqId, btnEl) {
+    return window.DataStore.toggleInquiryStatus(inqId, btnEl);
+  };
+  window.deleteInquiryAdmin = function (inqId, btnEl) {
+    if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
+    const res = window.DataStore.deleteInquiry(inqId, btnEl);
+    alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
+    return res;
+  };
+  window.deleteInquiryAdminMob = function (inqId, e) {
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
+    const btnEl = (e instanceof Element) ? e : (e && e.target instanceof Element ? e.target.closest('button') : null);
+    const res = window.DataStore.deleteInquiry(inqId, btnEl);
+    alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
+    return res;
+  };
+  window.clearAllInquiriesAdmin = function () {
+    if (!confirm('정말로 모든 3초 간편 문의 접수 내역을 영구 삭제하고 초기화하시겠습니까?\n삭제 후 복구할 수 없습니다.')) return;
+    const res = window.DataStore.clearAllInquiries();
+    alert('모든 간편 문의 내역이 성공적으로 초기화되었습니다.');
+    return res;
   };
 })();
