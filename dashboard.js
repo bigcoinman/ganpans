@@ -2994,8 +2994,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const dateText = `${d.getFullYear()}.${padZero(d.getMonth() + 1)}.${padZero(d.getDate())} ${padZero(d.getHours())}:${padZero(d.getMinutes())}`;
 
       const typeLabel = typeMap[inq.type] || inq.type || '일반 문의';
-      const isResolved = (inq.status === 'resolved' || inq.status === 'completed' || inq.status === '확인완료' || inq.status === '상담완료');
-
       const statusBadge = isResolved
         ? `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-check"></i> 확인 완료</span>`
         : `<span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-clock"></i> 확인 대기</span>`;
@@ -3039,7 +3037,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   window.renderInquiriesList = renderInquiriesList;
 
-  // --- Render Manager Constructor Progress (시공업체 진행현황 관리자 뷰) ---
+  // --- Render Manager Constructor Progress (시공업체 진행현황 관리자 뷰 - 7대 컬럼 전면 개편) ---
   let constProgressCurrentPage = 1;
   const constProgressPerPage = 10;
 
@@ -3048,123 +3046,214 @@ document.addEventListener('DOMContentLoaded', () => {
     renderManagerConstProgress();
   };
 
+  // 간판 종류 변경 핸들러
+  window.updateJobSignType = (id, signType) => {
+    const trimmed = String(signType || '').trim();
+    if (!trimmed) return;
+
+    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let updatedUid = null;
+
+    apps = apps.map(a => {
+      if (String(a.id) === String(id)) {
+        return { ...a, signType: trimmed };
+      }
+      return a;
+    });
+    localStorage.setItem('applications', JSON.stringify(apps));
+
+    curUsers = curUsers.map(u => {
+      if (u.items && Array.isArray(u.items)) {
+        const updatedItems = u.items.map(it => {
+          if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
+            updatedUid = u.id;
+            return { ...it, signType: trimmed };
+          }
+          return it;
+        });
+        return { ...u, items: updatedItems };
+      }
+      return u;
+    });
+    localStorage.setItem('users', JSON.stringify(curUsers));
+
+    if (window.SupabaseSync) {
+      const app = apps.find(a => String(a.id) === String(id));
+      if (app) window.SupabaseSync.upsertApplication(app);
+      if (updatedUid) {
+        const u = curUsers.find(usr => usr.id === updatedUid);
+        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+      }
+    }
+  };
+
+  // 간판 디자인 시안 확정 토글 (점주/관리자 양방향 연동)
+  window.toggleDraftApproval = (id, newDraftStatus) => {
+    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let updatedUid = null;
+    const approvedTime = (newDraftStatus === 'admin_approved' || newDraftStatus === 'owner_approved') ? new Date().toISOString() : null;
+
+    apps = apps.map(a => {
+      if (String(a.id) === String(id)) {
+        return { ...a, draftStatus: newDraftStatus, draftApprovedAt: approvedTime };
+      }
+      return a;
+    });
+    localStorage.setItem('applications', JSON.stringify(apps));
+
+    curUsers = curUsers.map(u => {
+      if (u.items && Array.isArray(u.items)) {
+        const updatedItems = u.items.map(it => {
+          if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
+            updatedUid = u.id;
+            return { ...it, draftStatus: newDraftStatus, draftApprovedAt: approvedTime };
+          }
+          return it;
+        });
+        return { ...u, items: updatedItems };
+      }
+      return u;
+    });
+    localStorage.setItem('users', JSON.stringify(curUsers));
+
+    if (window.SupabaseSync) {
+      const app = apps.find(a => String(a.id) === String(id));
+      if (app) window.SupabaseSync.upsertApplication(app);
+      if (updatedUid) {
+        const u = curUsers.find(usr => usr.id === updatedUid);
+        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+      }
+    }
+
+    if (newDraftStatus === 'admin_approved') {
+      alert('관리자 직권으로 [간판 디자인 시안]을 최종 확정하였습니다.\n신청 점주 마이페이지 및 시공사 화면에 실시간으로 반영됩니다.');
+    } else if (newDraftStatus === 'pending') {
+      alert('간판 디자인 시안 확정을 취소하고 [검토중] 상태로 변경하였습니다.');
+    }
+
+    renderManagerConstProgress();
+  };
+
+  // 점주가 직접 간판 디자인 시안을 최종 승인/확정하는 핸들러
+  window.approveDraftByOwner = (id) => {
+    window.toggleDraftApproval(id, 'owner_approved');
+    alert('간판 디자인 시안을 최종 승인하셨습니다!\n시공사와 최고관리자 화면에 즉시 공유되어 간판 제작 및 시공이 진행됩니다.');
+    if (typeof renderUserApplicationsList === 'function') renderUserApplicationsList();
+    if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
+  };
+
+  // 간판 디자인 시안 크게보기 모달
+  window.viewDraftModal = (id) => {
+    const jobs = (window.DataStore && typeof window.DataStore.getConstructionJobs === 'function')
+      ? window.DataStore.getConstructionJobs()
+      : [];
+    const job = jobs.find(j => String(j.id) === String(id));
+    if (!job || !job.signDraftPhotos || job.signDraftPhotos.length === 0) {
+      alert('등록된 간판 디자인 시안이 없습니다.');
+      return;
+    }
+
+    const modalId = 'modal-view-draft-preview';
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = modalId;
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;';
+      document.body.appendChild(modal);
+    }
+
+    const photosHtml = job.signDraftPhotos.map((src, idx) => `
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">시안 #${idx + 1}</div>
+        <img src="${sanitizeUrl(src)}" alt="간판 디자인 시안 #${idx + 1}" style="max-width: 100%; max-height: 70vh; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); object-fit: contain;">
+      </div>
+    `).join('');
+
+    let statusBadgeText = '시안 검토중';
+    if (job.draftStatus === 'owner_approved') statusBadgeText = '점주 시안확정 완료';
+    else if (job.draftStatus === 'admin_approved') statusBadgeText = '관리자 직권확정 완료';
+
+    modal.innerHTML = `
+      <div style="background: white; border-radius: 14px; padding: 24px; max-width: 750px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary);"><i class="fa-solid fa-palette" style="color: #6366f1;"></i> 간판 디자인 시안 확인</h3>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">상호명: <strong>${escapeHtml(job.storeName)}</strong> | 간판종류: <strong>${escapeHtml(job.signType)}</strong> (${statusBadgeText})</div>
+          </div>
+          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
+        </div>
+        <div>${photosHtml}</div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px;">
+          ${(job.draftStatus !== 'owner_approved' && job.draftStatus !== 'admin_approved') ? `
+            <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved'); document.getElementById('${modalId}').style.display='none';" style="padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-check"></i> 관리자 직권 시안확정</button>
+          ` : `
+            <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'pending'); document.getElementById('${modalId}').style.display='none';" style="padding: 8px 16px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-rotate-left"></i> 시안 확정 취소</button>
+          `}
+          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="padding: 8px 16px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">닫기</button>
+        </div>
+      </div>
+    `;
+    modal.style.display = 'flex';
+  };
+
+  // 시공 후 사진 확인 모달
+  window.viewConstructionPhotosModal = (id) => {
+    const jobs = (window.DataStore && typeof window.DataStore.getConstructionJobs === 'function')
+      ? window.DataStore.getConstructionJobs()
+      : [];
+    const job = jobs.find(j => String(j.id) === String(id));
+    if (!job || !job.constructionPhotos || job.constructionPhotos.length === 0) {
+      alert('등록된 시공 후 사진 증빙이 없습니다.');
+      return;
+    }
+
+    const modalId = 'modal-view-const-photos-preview';
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = modalId;
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;';
+      document.body.appendChild(modal);
+    }
+
+    const photosHtml = job.constructionPhotos.map((src, idx) => `
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">시공 후 사진 #${idx + 1}</div>
+        <img src="${sanitizeUrl(src)}" alt="시공 후 사진 #${idx + 1}" style="max-width: 100%; max-height: 70vh; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); object-fit: contain;">
+      </div>
+    `).join('');
+
+    modal.innerHTML = `
+      <div style="background: white; border-radius: 14px; padding: 24px; max-width: 750px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary);"><i class="fa-solid fa-camera" style="color: #10b981;"></i> 시공 후 사진 증빙 (${job.constructionPhotos.length}장)</h3>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">상호명: <strong>${escapeHtml(job.storeName)}</strong> | 시공사: <strong>${escapeHtml(job.assignedConstructorName)}</strong></div>
+          </div>
+          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
+        </div>
+        <div>${photosHtml}</div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px;">
+          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="padding: 8px 16px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">닫기</button>
+        </div>
+      </div>
+    `;
+    modal.style.display = 'flex';
+  };
+
   const renderManagerConstProgress = () => {
     if (activeUser.role !== 'admin') return;
     const constTableBody = document.getElementById('manager-const-progress-table-body');
     if (!constTableBody) return;
 
-    const apps = JSON.parse(localStorage.getItem('applications')) || [];
-    const curUsers = JSON.parse(localStorage.getItem('users')) || [];
     const paginationContainer = document.getElementById('pagination-manager-const-progress');
 
-    let allConstJobs = [];
-
-    // 1) From users' items (오직 명시적으로 '대상자선정' 이상 진행된 건만 시공업체 진행현황에 포함)
-    curUsers.forEach(u => {
-      if (u.items && Array.isArray(u.items)) {
-        u.items.forEach(item => {
-          const matchingApp = apps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
-          const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
-          const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '').trim();
-
-          // 오직 '대상자선정', '간판시공 준비중', '간판시공완료'인 건만 허용
-          const isEligible = (
-            pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-            cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
-          ) && (
-            pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
-            pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
-          );
-
-          if (isEligible) {
-            let cName = item.assignedConstructorName || '';
-            let cCode = '';
-            let cPhone = '';
-            if (item.assignedConstructorId) {
-              const cu = curUsers.find(x => x.id === item.assignedConstructorId || x.constCode === item.assignedConstructorId);
-              if (cu) {
-                cName = cu.businessName || cu.pendingBusinessName || cu.name || cu.id;
-                cCode = cu.constCode || '';
-                cPhone = cu.phone || '';
-              } else {
-                cName = item.assignedConstructorName || item.assignedConstructorId;
-              }
-            }
-            allConstJobs.push({
-              id: item.id,
-              isBizItemJob: true,
-              bizItemOwnerId: u.id,
-              bizOwnerName: u.name,
-              storeName: item.name || '-',
-              ownerName: `${u.name} (영업자)`,
-              ownerPhone: item.phone || u.phone || '-',
-              storeAddress: item.address || '-',
-              signType: item.signType || 'LED 채널/플렉스',
-              assignedConstructorId: item.assignedConstructorId || '',
-              assignedConstructorName: cName || '미배정',
-              assignedConstructorCode: cCode,
-              assignedConstructorPhone: cPhone,
-              constructionStatus: item.constructionStatus || 'before_construction',
-              constructionPhotos: item.constructionPhotos || [],
-              invoicePhotos: item.invoicePhotos || [],
-              createdAt: item.assignedAt || item.createdAt || new Date().toISOString()
-            });
-          }
-        });
-      }
-    });
-
-    // 2) From applications (오직 명시적으로 '대상자선정' 이상 진행된 건만 시공업체 진행현황에 포함)
-    apps.forEach(app => {
-      const pStatus = String(app.progressStatus || app.constructionStatus || '').trim();
-      const cStatus = String(app.constructionStatus || '').trim();
-
-      // 오직 '대상자선정', '간판시공 준비중', '간판시공완료'인 건만 허용
-      const isEligible = (
-        pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-        cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
-      ) && (
-        pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
-        pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
-      );
-
-      if (isEligible) {
-        if (!allConstJobs.some(j => String(j.id) === String(app.id))) {
-          let cName = app.assignedConstructorName || '';
-          let cCode = '';
-          let cPhone = '';
-          if (app.assignedConstructorId) {
-            const cu = curUsers.find(x => x.id === app.assignedConstructorId || x.constCode === app.assignedConstructorId);
-            if (cu) {
-              cName = cu.businessName || cu.pendingBusinessName || cu.name || cu.id;
-              cCode = cu.constCode || '';
-              cPhone = cu.phone || '';
-            } else {
-              cName = app.assignedConstructorName || app.assignedConstructorId;
-            }
-          }
-          allConstJobs.push({
-            id: app.id,
-            isBizItemJob: false,
-            bizItemOwnerId: null,
-            bizOwnerName: app.referrerCode || '본사접수',
-            storeName: app.storeName || '-',
-            ownerName: app.ownerName || '-',
-            ownerPhone: app.ownerPhone || app.phone || '-',
-            storeAddress: app.storeAddress || '-',
-            signType: app.signType || '간판',
-            assignedConstructorId: app.assignedConstructorId || '',
-            assignedConstructorName: cName || '미배정',
-            assignedConstructorCode: cCode,
-            assignedConstructorPhone: cPhone,
-            constructionStatus: app.constructionStatus || 'before_construction',
-            constructionPhotos: app.constructionPhotos || [],
-            invoicePhotos: app.invoicePhotos || [],
-            createdAt: app.appliedAt || app.createdAt || new Date().toISOString()
-          });
-        }
-      }
-    });
+    // 시공업체 진행현황 실존 목록 (DataStore SSOT)
+    const allConstJobs = (window.DataStore && typeof window.DataStore.getConstructionJobs === 'function')
+      ? window.DataStore.getConstructionJobs()
+      : [];
 
     // Sort descending by date
     allConstJobs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -3202,7 +3291,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const emptyMsg = searchKeyword ? `검색어 [${escapeHtml(searchKeyword)}] 에 일치하는 시공 진행건이 없습니다.` : '배정된 시공 진행 물건이 없습니다.';
       constTableBody.innerHTML = `
         <tr>
-          <td colspan="6" class="text-muted" style="text-align: center; padding: 40px 0;">${emptyMsg}</td>
+          <td colspan="7" class="text-muted" style="text-align: center; padding: 40px 0;">${emptyMsg}</td>
         </tr>
       `;
       if (paginationContainer) paginationContainer.innerHTML = '';
@@ -3227,12 +3316,81 @@ document.addEventListener('DOMContentLoaded', () => {
       const d = new Date(job.createdAt);
       const dateText = !isNaN(d.getTime()) ? `${d.getFullYear()}.${padZero(d.getMonth() + 1)}.${padZero(d.getDate())}` : '-';
 
+      // 1. 간판 종류 설정 (플렉스 간판, LED 채널 간판, 돌출 간판, 그외 기타)
+      const currentSignType = String(job.signType || '플렉스 간판').trim();
+      const standardSignTypes = ['플렉스 간판', 'LED 채널 간판', '돌출 간판'];
+      const isCustomSignType = !standardSignTypes.includes(currentSignType) && currentSignType !== '';
+      const selectedDropdownVal = isCustomSignType ? 'custom' : (currentSignType || '플렉스 간판');
+
+      const signTypeHtml = `
+        <div style="margin-top: 6px;">
+          <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+            <select class="select-job-signtype" data-id="${job.id}" style="padding: 4px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid #93c5fd; color: #1e40af; background: #eff6ff; cursor: pointer;">
+              <option value="플렉스 간판" ${selectedDropdownVal === '플렉스 간판' ? 'selected' : ''}>1. 플렉스 간판</option>
+              <option value="LED 채널 간판" ${selectedDropdownVal === 'LED 채널 간판' ? 'selected' : ''}>2. LED 채널 간판</option>
+              <option value="돌출 간판" ${selectedDropdownVal === '돌출 간판' ? 'selected' : ''}>3. 돌출 간판</option>
+              <option value="custom" ${selectedDropdownVal === 'custom' ? 'selected' : ''}>4. 그외 기타 (직접입력)</option>
+            </select>
+          </div>
+          <div class="custom-signtype-container" id="custom-signtype-wrap-${job.id}" style="display: ${selectedDropdownVal === 'custom' ? 'flex' : 'none'}; margin-top: 4px; gap: 4px;">
+            <input type="text" class="input-custom-signtype" data-id="${job.id}" value="${isCustomSignType ? escapeHtml(currentSignType) : ''}" placeholder="기타 간판종류 직접입력" style="padding: 4px 8px; font-size: 0.74rem; border-radius: 6px; border: 1px solid #cbd5e1; width: 140px;" onchange="window.updateJobSignType('${job.id}', this.value)">
+          </div>
+        </div>
+      `;
+
+      // 2. 간판 디자인 시안 확인 (5번 컬럼)
+      const draftPhotos = job.signDraftPhotos || [];
+      const draftCount = draftPhotos.length;
+      let draftBadge = '';
+      if (draftCount > 0) {
+        let draftStatusHtml = '';
+        if (job.draftStatus === 'owner_approved') {
+          draftStatusHtml = `<span style="background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 9999px; font-weight: 700; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-circle-check"></i> 점주 시안확정</span>`;
+        } else if (job.draftStatus === 'admin_approved') {
+          draftStatusHtml = `
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+              <span style="background: #dbeafe; color: #1e40af; padding: 3px 8px; border-radius: 9999px; font-weight: 700; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-user-shield"></i> 관리자 직권확정</span>
+              <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'pending')" style="background: none; border: none; color: #94a3b8; text-decoration: underline; font-size: 0.7rem; cursor: pointer;">확정 취소</button>
+            </div>
+          `;
+        } else {
+          draftStatusHtml = `
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <span style="background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 9999px; font-weight: 700; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-clock"></i> 시안 검토중</span>
+              <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved')" style="padding: 3px 8px; font-size: 0.72rem; font-weight: 700; background: #2563eb; color: white; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+                <i class="fa-solid fa-check"></i> 관리자 직권확정
+              </button>
+            </div>
+          `;
+        }
+
+        draftBadge = `
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+            <button type="button" onclick="window.viewDraftModal('${job.id}')" style="background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="디자인 시안 보기">
+              <i class="fa-solid fa-palette"></i> 시안 (${draftCount}장)
+            </button>
+            ${draftStatusHtml}
+          </div>
+        `;
+      } else {
+        draftBadge = `
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <span style="color: #94a3b8; font-size: 0.75rem;"><i class="fa-solid fa-hourglass-start"></i> 시안 미등록</span>
+          </div>
+        `;
+      }
+
+      // 3. 5단계 시공 진행 상태 (6번 컬럼)
       const st = job.constructionStatus || 'before_construction';
       let statusColor = '#475569';
       let statusBg = '#ffffff';
       let statusBorder = '#cbd5e1';
 
-      if (st === 'in_construction') {
+      if (st === 'design_draft') {
+        statusColor = '#86198f';
+        statusBg = '#fdf4ff';
+        statusBorder = '#f5d0fe';
+      } else if (st === 'in_construction') {
         statusColor = '#92400e';
         statusBg = '#fef3c7';
         statusBorder = '#fde68a';
@@ -3246,28 +3404,16 @@ document.addEventListener('DOMContentLoaded', () => {
         statusBorder = '#93c5fd';
       }
 
-      const pCount = job.constructionPhotos ? job.constructionPhotos.length : 0;
-      const iCount = job.invoicePhotos ? job.invoicePhotos.length : 0;
+      // 4. 시공 증빙 (시공 후 사진 3~5컷 - 7번 컬럼)
+      const afterPhotos = job.constructionPhotos || [];
+      const afterCount = afterPhotos.length;
       let proofBadge = '';
-      if (pCount > 0 || iCount > 0) {
-        let photosLinks = '';
-        if (pCount > 0) {
-          const firstPhoto = job.constructionPhotos[0];
-          photosLinks += `
-            <a href="${sanitizeUrl(firstPhoto)}" target="_blank" style="font-size: 0.73rem; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="시공 사진 보기">
-              <i class="fa-solid fa-camera"></i> 사진 ${pCount}장
-            </a>
-          `;
-        }
-        if (iCount > 0) {
-          const firstInvoice = job.invoicePhotos[0];
-          photosLinks += `
-            <a href="${sanitizeUrl(firstInvoice)}" target="_blank" style="font-size: 0.73rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 4px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="세금계산서/증빙 보기">
-              <i class="fa-solid fa-file-invoice-dollar"></i> 계산서 ${iCount}장
-            </a>
-          `;
-        }
-        proofBadge = `<div style="display: flex; gap: 5px; align-items: center; justify-content: center; flex-wrap: wrap;">${photosLinks}</div>`;
+      if (afterCount > 0) {
+        proofBadge = `
+          <button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="시공 후 사진 보기">
+            <i class="fa-solid fa-camera"></i> 시공 후 (${afterCount}장)
+          </button>
+        `;
       } else {
         proofBadge = '<span style="color: #94a3b8; font-size: 0.75rem;">증빙 미등록</span>';
       }
@@ -3286,17 +3432,20 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;">
             <i class="fa-solid fa-user"></i> ${escapeHtml(job.ownerName)} (${escapeHtml(job.ownerPhone)})
           </div>
+          ${job.bizOwnerName ? `<div style="font-size: 0.72rem; color: var(--accent-primary); margin-top: 1px;"><i class="fa-solid fa-user-tie"></i> ${escapeHtml(job.bizOwnerName)}</div>` : ''}
         </td>
         <td style="padding: 14px 16px;">
           <div style="font-size: 0.82rem; color: #334155;"><i class="fa-solid fa-location-dot" style="color: var(--accent-primary);"></i> ${escapeHtml(job.storeAddress)}</div>
-          <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">간판: <strong style="color: var(--accent-primary);">${escapeHtml(job.signType)}</strong></div>
+          ${signTypeHtml}
         </td>
+        <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">${draftBadge}</td>
         <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">
           <select class="status-select select-admin-const-status" data-id="${job.id}" style="padding: 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: ${statusBg}; cursor: pointer;">
-            <option value="before_construction" ${st === 'before_construction' ? 'selected' : ''}>시공 전</option>
-            <option value="in_construction" ${st === 'in_construction' ? 'selected' : ''}>시공 진행 중</option>
-            <option value="after_construction" ${st === 'after_construction' ? 'selected' : ''}>완료 보고됨</option>
-            <option value="completed" ${st === 'completed' ? 'selected' : ''}>정산 종결</option>
+            <option value="before_construction" ${st === 'before_construction' ? 'selected' : ''}>1. 시공 전</option>
+            <option value="design_draft" ${st === 'design_draft' ? 'selected' : ''}>2. 간판 디자인 시안 및 교정 중</option>
+            <option value="in_construction" ${st === 'in_construction' ? 'selected' : ''}>3. 시공 진행 중</option>
+            <option value="after_construction" ${st === 'after_construction' ? 'selected' : ''}>4. 완료 보고됨</option>
+            <option value="completed" ${st === 'completed' ? 'selected' : ''}>5. 정산 종결</option>
           </select>
         </td>
         <td style="padding: 14px 16px; text-align: center;">${proofBadge}</td>
@@ -3308,13 +3457,32 @@ document.addEventListener('DOMContentLoaded', () => {
       paginationContainer.innerHTML = renderPaginationControls(totalCount, constProgressPerPage, constProgressCurrentPage, 'window.changeConstProgressPage');
     }
 
-    // Attach status update listener
+    // Attach status update listener (5단계 상태 변경)
     constTableBody.querySelectorAll('.select-admin-const-status').forEach(sel => {
       sel.addEventListener('change', (e) => {
         const id = e.target.dataset.id;
         const val = e.target.value;
         updateJobConstructionStatus(id, val);
         renderManagerConstProgress();
+      });
+    });
+
+    // Attach signType dropdown change listener
+    constTableBody.querySelectorAll('.select-job-signtype').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const id = e.target.dataset.id;
+        const val = e.target.value;
+        const customWrap = document.getElementById(`custom-signtype-wrap-${id}`);
+        if (val === 'custom') {
+          if (customWrap) {
+            customWrap.style.display = 'flex';
+            const input = customWrap.querySelector('input');
+            if (input) input.focus();
+          }
+        } else {
+          if (customWrap) customWrap.style.display = 'none';
+          window.updateJobSignType(id, val);
+        }
       });
     });
   };
@@ -3710,6 +3878,23 @@ document.addEventListener('DOMContentLoaded', () => {
         <td style="padding: 12px 16px;">
           <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">${escapeHtml(app.storeName || '-')}</div>
           ${app.storeAddress ? `<div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(app.storeAddress)}</div>` : ''}
+          ${(() => {
+            const draftPhotos = app.signDraftPhotos || app.designPhotos || [];
+            const draftCount = draftPhotos.length;
+            if (draftCount === 0) return '';
+            const isApproved = app.draftStatus === 'owner_approved' || app.draftStatus === 'admin_approved';
+            return `
+              <div style="margin-top: 6px; padding: 4px 8px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <button type="button" onclick="window.viewDraftModal('${app.id}')" style="padding: 2px 6px; font-size: 0.72rem; font-weight: 700; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; border-radius: 4px; cursor: pointer;">
+                  <i class="fa-solid fa-palette"></i> 디자인 시안 (${draftCount}장)
+                </button>
+                ${isApproved 
+                  ? `<span style="font-size: 0.72rem; color: #166534; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> ${app.draftStatus === 'owner_approved' ? '점주 시안확정' : '관리자 직권확정'}</span>`
+                  : `<button type="button" onclick="window.approveDraftByOwner('${app.id}')" style="padding: 2px 6px; font-size: 0.72rem; font-weight: 700; background: #16a34a; color: white; border: none; border-radius: 4px; cursor: pointer;"><i class="fa-solid fa-check"></i> 시안 승인</button>`
+                }
+              </div>
+            `;
+          })()}
         </td>
         <td style="padding: 12px 16px; width: 110px; white-space: nowrap;">
           ${(() => {
@@ -4254,7 +4439,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const trackVisitor = async () => {
     const RESET_KEY = 'visitor_reset_flag_20260817';
 
-    // 기존 하드코딩 가짜 수치(1420, 34 등) 초기화
+    // 기존 하드코딩 수치 초기화
     if (localStorage.getItem(RESET_KEY) !== 'done') {
       localStorage.removeItem('visitor_total');
       localStorage.removeItem('visitor_today');
@@ -4354,15 +4539,22 @@ document.addEventListener('DOMContentLoaded', () => {
       j.constructionStatus === 'completed' || j.progressStatus === '간판시공완료'
     ).length;
 
-    // --- 시공 파이프라인 단계별 집계 (시공 진행현황 실존 건 기준) ---
+    // --- 시공 파이프라인 단계별 집계 (5단계 SSOT 기준) ---
     const pipeBefore = constJobs.filter(j =>
-      (!j.constructionStatus || j.constructionStatus === 'before_construction' || j.progressStatus === '대상자선정') &&
-      j.constructionStatus !== 'in_construction' && j.constructionStatus !== 'after_construction' && j.constructionStatus !== 'completed' &&
-      j.progressStatus !== '간판시공 준비중' && j.progressStatus !== '간판시공완료'
+      !j.constructionStatus || j.constructionStatus === 'before_construction'
     ).length;
-    const pipeIn = constJobs.filter(j => j.constructionStatus === 'in_construction' || j.progressStatus === '간판시공 준비중').length;
-    const pipeAfter = constJobs.filter(j => j.constructionStatus === 'after_construction').length;
-    const pipeCompleted = constJobs.filter(j => j.constructionStatus === 'completed' || j.progressStatus === '간판시공완료').length;
+    const pipeDraft = constJobs.filter(j =>
+      j.constructionStatus === 'design_draft' || j.progressStatus === '간판 디자인 시안 및 교정 중'
+    ).length;
+    const pipeIn = constJobs.filter(j =>
+      j.constructionStatus === 'in_construction' || j.progressStatus === '간판시공 준비중'
+    ).length;
+    const pipeAfter = constJobs.filter(j =>
+      j.constructionStatus === 'after_construction' || (j.progressStatus === '간판시공완료' && j.constructionStatus !== 'completed')
+    ).length;
+    const pipeCompleted = constJobs.filter(j =>
+      j.constructionStatus === 'completed'
+    ).length;
 
     // --- 회원 집계 ---
     const bizMembers = allUsers.filter(u => u.role === 'business').length;
@@ -4389,12 +4581,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statBizMembers) statBizMembers.textContent = bizMembers + '명';
     if (statConstMembers) statConstMembers.textContent = constMembers + '개';
 
-    // --- 파이프라인 바 업데이트 ---
+    // --- 5단계 파이프라인 바 업데이트 ---
     const pipeBeforeEl = document.getElementById('pipe-before');
+    const pipeDraftEl = document.getElementById('pipe-draft');
     const pipeInEl = document.getElementById('pipe-in');
     const pipeAfterEl = document.getElementById('pipe-after');
     const pipeCompletedEl = document.getElementById('pipe-completed');
     if (pipeBeforeEl) pipeBeforeEl.textContent = pipeBefore;
+    if (pipeDraftEl) pipeDraftEl.textContent = pipeDraft;
     if (pipeInEl) pipeInEl.textContent = pipeIn;
     if (pipeAfterEl) pipeAfterEl.textContent = pipeAfter;
     if (pipeCompletedEl) pipeCompletedEl.textContent = pipeCompleted;
@@ -4403,7 +4597,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Track current visit on page load
   trackVisitor();
 
-  // --- Constructor Dashboard & Jobs Management ---
+  // --- Constructor Dashboard & Jobs Management (시공사 파트너 뷰) ---
   const renderConstructorDashboard = () => {
     if (!constructorJobsTableBody) return;
     constructorJobsTableBody.innerHTML = '';
@@ -4434,14 +4628,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: item.id,
                 isBizItemJob: true,
                 bizItemOwnerId: u.id,
-                storeName: item.name,
+                storeName: item.name || (matchingApp && matchingApp.storeName) || '-',
                 ownerName: `${u.name} (영업자)`,
-                ownerPhone: item.phone || u.phone || '-',
-                storeAddress: item.address,
-                signType: item.signType || 'LED 채널/플렉스',
-                constructionStatus: item.constructionStatus || 'before_construction',
-                constructionPhotos: item.constructionPhotos || [],
-                invoicePhotos: item.invoicePhotos || [],
+                ownerPhone: item.phone || (matchingApp && (matchingApp.ownerPhone || matchingApp.phone)) || u.phone || '-',
+                storeAddress: item.address || (matchingApp && matchingApp.storeAddress) || '-',
+                signType: item.signType || (matchingApp && matchingApp.signType) || '플렉스 간판',
+                constructionStatus: item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || 'before_construction',
+                signDraftPhotos: item.signDraftPhotos || (matchingApp && matchingApp.signDraftPhotos) || (item.designPhotos || (matchingApp && matchingApp.designPhotos) || []),
+                draftStatus: item.draftStatus || (matchingApp && matchingApp.draftStatus) || 'pending',
+                constructionPhotos: item.constructionPhotos || (matchingApp && matchingApp.constructionPhotos) || [],
                 createdAt: item.assignedAt || item.createdAt || new Date().toISOString()
               });
             }
@@ -4465,7 +4660,21 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         if (isEligible) {
-          myJobs.push(app);
+          myJobs.push({
+            id: app.id,
+            isBizItemJob: false,
+            bizItemOwnerId: null,
+            storeName: app.storeName || '-',
+            ownerName: app.ownerName || '-',
+            ownerPhone: app.ownerPhone || app.phone || '-',
+            storeAddress: app.storeAddress || '-',
+            signType: app.signType || '플렉스 간판',
+            constructionStatus: app.constructionStatus || 'before_construction',
+            signDraftPhotos: app.signDraftPhotos || app.designPhotos || [],
+            draftStatus: app.draftStatus || 'pending',
+            constructionPhotos: app.constructionPhotos || app.afterPhotos || [],
+            createdAt: app.appliedAt || app.createdAt || new Date().toISOString()
+          });
         }
       }
     });
@@ -4505,39 +4714,61 @@ document.addEventListener('DOMContentLoaded', () => {
       
       let statusBadge = '';
       if (job.constructionStatus === 'before_construction') {
-        statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">시공 전</span>';
+        statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">1. 시공 전</span>';
+      } else if (job.constructionStatus === 'design_draft') {
+        statusBadge = '<span style="background: #fdf4ff; color: #86198f; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">2. 시안 및 교정 중</span>';
       } else if (job.constructionStatus === 'in_construction') {
-        statusBadge = '<span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">시공 진행 중</span>';
+        statusBadge = '<span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">3. 시공 진행 중</span>';
       } else if (job.constructionStatus === 'after_construction') {
-        statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">완료 보고됨</span>';
+        statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">4. 완료 보고됨</span>';
       } else if (job.constructionStatus === 'completed') {
-        statusBadge = '<span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">정산 종결</span>';
+        statusBadge = '<span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">5. 정산 종결</span>';
+      }
+
+      // 시안 승인 여부 안내
+      let draftNoticeHtml = '';
+      const draftCount = job.signDraftPhotos ? job.signDraftPhotos.length : 0;
+      if (job.draftStatus === 'owner_approved') {
+        draftNoticeHtml = '<div style="font-size: 0.72rem; color: #166534; font-weight: 700; margin-top: 2px;"><i class="fa-solid fa-circle-check"></i> 점주 시안확정 완료</div>';
+      } else if (job.draftStatus === 'admin_approved') {
+        draftNoticeHtml = '<div style="font-size: 0.72rem; color: #1e40af; font-weight: 700; margin-top: 2px;"><i class="fa-solid fa-user-shield"></i> 관리자 시안확정 완료</div>';
+      } else if (draftCount > 0) {
+        draftNoticeHtml = '<div style="font-size: 0.72rem; color: #d97706; font-weight: 700; margin-top: 2px;"><i class="fa-solid fa-clock"></i> 시안 검토 대기중</div>';
       }
 
       // Upload/Report actions column
       let actionsHtml = '';
       if (job.constructionStatus === 'completed') {
-        actionsHtml = '<span style="color: var(--text-muted); font-size: 0.8rem;">정산 완료 및 검수 종결</span>';
+        actionsHtml = '<span style="color: var(--text-muted); font-size: 0.8rem;"><i class="fa-solid fa-circle-check" style="color: #2563eb;"></i> 최종 정산 종결 완료</span>';
       } else {
         actionsHtml = `
-          <div style="display: flex; flex-direction: column; gap: 8px; align-items: center; padding: 8px;">
-            <div style="display: flex; gap: 8px; width: 100%;">
-              <div style="flex: 1; text-align: left;">
-                <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">시공 사진 (${job.constructionPhotos ? job.constructionPhotos.length : 0}/20)</label>
-                <input type="file" class="const-photo-input" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.7rem; width: 100%;">
-              </div>
-              <div style="flex: 1; text-align: left;">
-                <label style="font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 2px;">정산서/계산서</label>
-                <input type="file" class="const-invoice-input" data-id="${job.id}" accept="image/*,application/pdf" style="font-size: 0.7rem; width: 100%;">
-              </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; align-items: stretch; padding: 8px;">
+            <!-- 1. 간판 디자인 시안 업로드 (2MB 자동 압축) -->
+            <div style="background: #fdf4ff; border: 1px solid #f5d0fe; padding: 6px 10px; border-radius: 6px; text-align: left;">
+              <label style="font-size: 0.72rem; font-weight: 700; color: #86198f; display: block; margin-bottom: 3px;">
+                <i class="fa-solid fa-palette"></i> 간판 디자인 시안 등록 (${draftCount}장)
+              </label>
+              <input type="file" class="const-draft-input" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.72rem; width: 100%;">
+              ${draftNoticeHtml}
+            </div>
+
+            <!-- 2. 시공 후 사진 업로드 (3~5컷, 2MB 자동 압축) -->
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 10px; border-radius: 6px; text-align: left;">
+              <label style="font-size: 0.72rem; font-weight: 700; color: #166534; display: block; margin-bottom: 3px;">
+                <i class="fa-solid fa-camera"></i> 시공 후 사진 등록 (${job.constructionPhotos ? job.constructionPhotos.length : 0}/5)
+              </label>
+              <input type="file" class="const-photo-input" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.72rem; width: 100%;">
             </div>
             
-            <div style="display: flex; gap: 8px; width: 100%; justify-content: flex-end; margin-top: 4px;">
-              <select class="status-select select-const-status" data-id="${job.id}" style="padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: white;">
-                <option value="before_construction" ${job.constructionStatus === 'before_construction' ? 'selected' : ''}>시공 전</option>
-                <option value="in_construction" ${job.constructionStatus === 'in_construction' ? 'selected' : ''}>시공 중</option>
+            <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center; margin-top: 4px;">
+              <select class="status-select select-const-status" data-id="${job.id}" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; border: 1px solid #cbd5e1; background: white;">
+                <option value="before_construction" ${job.constructionStatus === 'before_construction' ? 'selected' : ''}>1. 시공 전</option>
+                <option value="design_draft" ${job.constructionStatus === 'design_draft' ? 'selected' : ''}>2. 시안/교정 중</option>
+                <option value="in_construction" ${job.constructionStatus === 'in_construction' ? 'selected' : ''}>3. 시공 진행 중</option>
               </select>
-              <button class="btn btn-primary btn-sm btn-report-job-complete" data-id="${job.id}" style="padding: 4px 8px; font-size: 0.72rem; background: var(--accent-success); border: none; border-radius: 4px; cursor: pointer; color: white;"><i class="fa-solid fa-paper-plane"></i> 시공 완료 보고</button>
+              <button class="btn btn-primary btn-sm btn-report-job-complete" data-id="${job.id}" style="padding: 5px 10px; font-size: 0.74rem; background: #16a34a; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                <i class="fa-solid fa-paper-plane"></i> 시공 완료 보고
+              </button>
             </div>
           </div>
         `;
@@ -4550,7 +4781,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-phone"></i> ${escapeHtml(job.ownerPhone)}</div>
         </td>
         <td style="padding: 12px 16px; color: var(--text-secondary);">${escapeHtml(job.storeAddress)}</td>
-        <td style="padding: 12px 16px;"><span style="font-weight: 700; color: var(--accent-primary); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">${escapeHtml(job.signType === 'NEON' || job.signType === 'neon' || !job.signType ? '플렉스' : job.signType)}</span></td>
+        <td style="padding: 12px 16px;"><span style="font-weight: 700; color: var(--accent-primary); border: 1px solid #bfdbfe; background: #eff6ff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">${escapeHtml(job.signType || '플렉스 간판')}</span></td>
         <td style="padding: 12px 16px; text-align: center;">${statusBadge}</td>
         <td style="padding: 12px 16px; text-align: center;">${actionsHtml}</td>
       `;
@@ -4573,22 +4804,24 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
+    // 디자인 시안 업로드 (2MB 자동 압축)
+    document.querySelectorAll('.const-draft-input').forEach(input => {
+      input.addEventListener('change', async (e) => {
+        const id = e.target.dataset.id;
+        const files = Array.from(e.target.files);
+        if (files.length > 0) {
+          await handleJobDraftUpload(id, files);
+        }
+      });
+    });
+
+    // 시공 후 사진 업로드 (2MB 자동 압축)
     document.querySelectorAll('.const-photo-input').forEach(input => {
       input.addEventListener('change', async (e) => {
         const id = e.target.dataset.id;
         const files = Array.from(e.target.files);
         if (files.length > 0) {
           await handleJobPhotoUpload(id, files);
-        }
-      });
-    });
-
-    document.querySelectorAll('.const-invoice-input').forEach(input => {
-      input.addEventListener('change', async (e) => {
-        const id = e.target.dataset.id;
-        const file = e.target.files[0];
-        if (file) {
-          await handleJobInvoiceUpload(id, file);
         }
       });
     });
@@ -4611,7 +4844,7 @@ document.addEventListener('DOMContentLoaded', () => {
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
         const updatedItems = u.items.map(item => {
-          if (String(item.id) === String(id)) {
+          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
             updatedUid = u.id;
             return { ...item, constructionStatus: val };
           }
@@ -4630,24 +4863,103 @@ document.addEventListener('DOMContentLoaded', () => {
     renderConstructorDashboard();
   };
 
-  const handleJobPhotoUpload = async (id, files) => {
-    const limit = 3 * 1024 * 1024;
-    const uploadedUrls = [];
+  // 간판 디자인 시안 업로드 핸들러 (2MB 이하 강제 자동 압축)
+  const handleJobDraftUpload = async (id, files) => {
+    const uploadedBase64List = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      let processedFile = file;
-      if (file.size > limit) {
-        processedFile = await resizeImageToLimit(file, limit);
+      let base64 = '';
+      if (typeof compressImageToBase64 === 'function') {
+        base64 = await compressImageToBase64(file, 2 * 1024 * 1024);
+      } else {
+        base64 = await new Promise((res) => {
+          const reader = new FileReader();
+          reader.onload = (e) => res(e.target.result);
+          reader.readAsDataURL(file);
+        });
       }
-      uploadedUrls.push(URL.createObjectURL(processedFile));
+      if (base64) uploadedBase64List.push(base64);
     }
 
     // 1) applications
     let apps = JSON.parse(localStorage.getItem('applications')) || [];
     apps = apps.map(app => {
       if (String(app.id) === String(id)) {
-        const existing = app.constructionPhotos || [];
-        const merged = existing.concat(uploadedUrls).slice(0, 20);
+        const existing = app.signDraftPhotos || app.designPhotos || [];
+        const merged = existing.concat(uploadedBase64List).slice(0, 10);
+        return { 
+          ...app, 
+          signDraftPhotos: merged, 
+          draftStatus: 'pending',
+          constructionStatus: 'design_draft' // 시안 업로드 시 자동으로 2단계 '시안 및 교정 중' 전환
+        };
+      }
+      return app;
+    });
+    localStorage.setItem('applications', JSON.stringify(apps));
+
+    // 2) users.items
+    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let updatedUid = null;
+    curUsers = curUsers.map(u => {
+      if (u.items && Array.isArray(u.items)) {
+        const updatedItems = u.items.map(item => {
+          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
+            updatedUid = u.id;
+            const existing = item.signDraftPhotos || item.designPhotos || [];
+            const merged = existing.concat(uploadedBase64List).slice(0, 10);
+            return { 
+              ...item, 
+              signDraftPhotos: merged, 
+              draftStatus: 'pending',
+              constructionStatus: 'design_draft'
+            };
+          }
+          return item;
+        });
+        return { ...u, items: updatedItems };
+      }
+      return u;
+    });
+    localStorage.setItem('users', JSON.stringify(curUsers));
+
+    if (window.SupabaseSync) {
+      const app = apps.find(a => String(a.id) === String(id));
+      if (app) window.SupabaseSync.upsertApplication(app);
+      if (updatedUid) {
+        const u = curUsers.find(usr => usr.id === updatedUid);
+        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+      }
+    }
+
+    alert('간판 디자인 시안이 2MB 이하로 자동 최적화되어 등록되었습니다.\n점주 및 최고관리자 화면에 실시간으로 공유됩니다.');
+    renderConstructorDashboard();
+  };
+
+  // 시공 후 사진 업로드 핸들러 (2MB 이하 강제 자동 압축)
+  const handleJobPhotoUpload = async (id, files) => {
+    const uploadedBase64List = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      let base64 = '';
+      if (typeof compressImageToBase64 === 'function') {
+        base64 = await compressImageToBase64(file, 2 * 1024 * 1024);
+      } else {
+        base64 = await new Promise((res) => {
+          const reader = new FileReader();
+          reader.onload = (e) => res(e.target.result);
+          reader.readAsDataURL(file);
+        });
+      }
+      if (base64) uploadedBase64List.push(base64);
+    }
+
+    // 1) applications
+    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    apps = apps.map(app => {
+      if (String(app.id) === String(id)) {
+        const existing = app.constructionPhotos || app.afterPhotos || [];
+        const merged = existing.concat(uploadedBase64List).slice(0, 5); // 3~5컷
         return { ...app, constructionPhotos: merged };
       }
       return app;
@@ -4660,10 +4972,10 @@ document.addEventListener('DOMContentLoaded', () => {
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
         const updatedItems = u.items.map(item => {
-          if (String(item.id) === String(id)) {
+          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
             updatedUid = u.id;
-            const existing = item.constructionPhotos || [];
-            const merged = existing.concat(uploadedUrls).slice(0, 20);
+            const existing = item.constructionPhotos || item.afterPhotos || [];
+            const merged = existing.concat(uploadedBase64List).slice(0, 5);
             return { ...item, constructionPhotos: merged };
           }
           return item;
@@ -4673,60 +4985,17 @@ document.addEventListener('DOMContentLoaded', () => {
       return u;
     });
     localStorage.setItem('users', JSON.stringify(curUsers));
-    if (updatedUid && window.SupabaseSync) {
-      const u = curUsers.find(usr => usr.id === updatedUid);
-      if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-    }
 
-    alert('시공 현장 사진이 업로드되었습니다.');
-    renderConstructorDashboard();
-  };
-
-  const handleJobInvoiceUpload = async (id, file) => {
-    const limit = 3 * 1024 * 1024;
-    let processedFile = file;
-    if (file.size > limit) {
-      processedFile = await resizeImageToLimit(file, limit);
-    }
-    const url = URL.createObjectURL(processedFile);
-
-    // 1) applications
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
-    apps = apps.map(app => {
-      if (String(app.id) === String(id)) {
-        const existing = app.invoicePhotos || [];
-        existing.push(url);
-        return { ...app, invoicePhotos: existing };
+    if (window.SupabaseSync) {
+      const app = apps.find(a => String(a.id) === String(id));
+      if (app) window.SupabaseSync.upsertApplication(app);
+      if (updatedUid) {
+        const u = curUsers.find(usr => usr.id === updatedUid);
+        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
       }
-      return app;
-    });
-    localStorage.setItem('applications', JSON.stringify(apps));
-
-    // 2) users.items
-    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
-    let updatedUid = null;
-    curUsers = curUsers.map(u => {
-      if (u.items && Array.isArray(u.items)) {
-        const updatedItems = u.items.map(item => {
-          if (String(item.id) === String(id)) {
-            updatedUid = u.id;
-            const existing = item.invoicePhotos || [];
-            existing.push(url);
-            return { ...item, invoicePhotos: existing };
-          }
-          return item;
-        });
-        return { ...u, items: updatedItems };
-      }
-      return u;
-    });
-    localStorage.setItem('users', JSON.stringify(curUsers));
-    if (updatedUid && window.SupabaseSync) {
-      const u = curUsers.find(usr => usr.id === updatedUid);
-      if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
     }
 
-    alert('정산용 세금계산서/증빙서류가 업로드되었습니다.');
+    alert('시공 후 사진이 2MB 이하로 자동 압축되어 등록되었습니다.');
     renderConstructorDashboard();
   };
 
@@ -4738,7 +5007,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!targetJob) {
       curUsers.forEach(u => {
         if (u.items) {
-          const found = u.items.find(it => String(it.id) === String(id));
+          const found = u.items.find(it => String(it.id) === String(id) || String(it.appRefId) === String(id));
           if (found) targetJob = found;
         }
       });
@@ -4746,12 +5015,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!targetJob) return;
 
-    if (!targetJob.constructionPhotos || targetJob.constructionPhotos.length === 0) {
-      alert('최소 1장 이상의 시공 현장 사진을 등록해 주세요.');
-      return;
-    }
-    if (!targetJob.invoicePhotos || targetJob.invoicePhotos.length === 0) {
-      alert('세금계산서 또는 지출 영수증 증빙 서류를 등록해 주세요.');
+    const photos = targetJob.constructionPhotos || targetJob.afterPhotos || [];
+    if (photos.length === 0) {
+      alert('시공 완료 보고를 위해 최소 1장 이상의 시공 후 사진(권장 3~5장)을 등록해 주세요.');
       return;
     }
 
@@ -4761,6 +5027,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return { 
           ...a, 
           constructionStatus: 'after_construction',
+          progressStatus: '간판시공완료',
           constructionCompletedAt: Date.now()
         };
       }
@@ -4773,11 +5040,12 @@ document.addEventListener('DOMContentLoaded', () => {
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
         const updatedItems = u.items.map(item => {
-          if (String(item.id) === String(id)) {
+          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
             updatedUid = u.id;
             return { 
               ...item, 
               constructionStatus: 'after_construction',
+              progressStatus: '간판시공완료',
               constructionCompletedAt: Date.now()
             };
           }
@@ -4788,12 +5056,17 @@ document.addEventListener('DOMContentLoaded', () => {
       return u;
     });
     localStorage.setItem('users', JSON.stringify(curUsers));
-    if (updatedUid && window.SupabaseSync) {
-      const u = curUsers.find(usr => usr.id === updatedUid);
-      if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+
+    if (window.SupabaseSync) {
+      const app = apps.find(a => String(a.id) === String(id));
+      if (app) window.SupabaseSync.upsertApplication(app);
+      if (updatedUid) {
+        const u = curUsers.find(usr => usr.id === updatedUid);
+        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+      }
     }
 
-    alert('시공 완료 보고 및 증빙 제출이 완료되었습니다.\n관리자 검수 및 정산이 진행됩니다.');
+    alert('시공 완료 보고가 완료되었습니다.\n최고관리자의 최종 시공 사진 검수 후 정산 종결 처리가 진행됩니다.');
     renderConstructorDashboard();
   };
 
