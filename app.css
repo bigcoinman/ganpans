@@ -1076,7 +1076,7 @@ body.mobile-app-body {
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 16px;
-    margin: 16px;
+    margin: 0 0 16px 0;
 }
 
 .conversion-panel h4 {
@@ -1108,11 +1108,48 @@ body.mobile-app-body {
     border-left: 3px solid #f59e0b;
 }
 
+/* Dashboard Containers Standard Padding & Icon Protection */
+#status-normal-container,
+#status-business-container,
+#status-constructor-container,
+#status-admin-container {
+    padding: 0 16px 24px 16px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+}
+
+#status-business-container .biz-link-panel-mob {
+    margin: 0 0 20px 0 !important;
+}
+
+#status-normal-container .section-title,
+#status-business-container .section-title,
+#status-constructor-container .section-title {
+    text-align: left !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin: 0 0 12px 0 !important;
+    padding: 4px 2px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+#status-normal-container .section-title i,
+#status-business-container .section-title i,
+#status-constructor-container .section-title i,
+#status-business-container h4 i,
+#status-admin-container h4 i {
+    flex-shrink: 0 !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
 .application-mobile-list {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 0 16px;
+    padding: 0;
 }
 
 .app-card-mob {
@@ -1182,7 +1219,7 @@ body.mobile-app-body {
     flex-direction: column;
     gap: 12px;
     margin-bottom: 20px;
-    padding: 0 16px;
+    padding: 0;
 }
 
 .biz-card-mob {
