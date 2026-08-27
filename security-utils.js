@@ -1900,24 +1900,6 @@ if (typeof window !== 'undefined') {
           items: []
         };
         if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
-      } else if (idValLower === 'constuser' && (pwVal === 'const123!' || pwVal === 'const123')) {
-        user = {
-          id: 'constuser',
-          pw: typeof sha256 === 'function' ? sha256('const123!') : 'const123!',
-          name: '박시공',
-          address: '경기도 수원시 권선구 권선로 301',
-          email: 'park@naver.com',
-          phone: '010-5555-4444',
-          role: 'constructor',
-          isSNS: false,
-          bizCode: null,
-          constCode: 'CO-2026-9090',
-          businessName: '(주)경기가온시공',
-          licenseNumber: '120-81-12345',
-          conversionStatus: 'approved',
-          items: []
-        };
-        if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
       }
     }
 

@@ -1867,22 +1867,6 @@ function initAuthAndDashboard() {
         bizCode: null,
         conversionStatus: 'none',
         items: []
-      },
-      {
-        id: 'constuser',
-        pw: typeof sha256 === 'function' ? sha256('const123!') : 'const123!',
-        name: '박시공',
-        address: '경기도 수원시 권선구 권선로 301',
-        email: 'park@naver.com',
-        phone: '010-5555-4444',
-        role: 'constructor',
-        isSNS: false,
-        bizCode: null,
-        constCode: 'CO-2026-9090',
-        businessName: '(주)경기가온시공',
-        licenseNumber: '120-81-12345',
-        conversionStatus: 'approved',
-        items: []
       }
     ];
     localStorage.setItem('users', JSON.stringify(defaultUsers));
@@ -1902,26 +1886,6 @@ function initAuthAndDashboard() {
       isSNS: false,
       bizCode: null,
       conversionStatus: 'none',
-      items: []
-    });
-    localStorage.setItem('users', JSON.stringify(users));
-  }
-
-  if (users && !users.some(u => u.id === 'constuser')) {
-    users.push({
-      id: 'constuser',
-      pw: typeof sha256 === 'function' ? sha256('const123!') : 'const123!',
-      name: '박시공',
-      address: '경기도 수원시 권선구 권선로 301',
-      email: 'park@naver.com',
-      phone: '010-5555-4444',
-      role: 'constructor',
-      isSNS: false,
-      bizCode: null,
-      constCode: 'CO-2026-9090',
-      businessName: '(주)경기가온시공',
-      licenseNumber: '120-81-12345',
-      conversionStatus: 'approved',
       items: []
     });
     localStorage.setItem('users', JSON.stringify(users));
@@ -2635,26 +2599,6 @@ function initAuthAndDashboard() {
             role: 'business',
             isSNS: false,
             bizCode: 'B-260712',
-            conversionStatus: 'approved',
-            items: []
-          };
-          if (window.SupabaseSync) {
-            window.SupabaseSync.upsertUser(user).then(() => {});
-          }
-        } else if (idVal.toLowerCase() === 'constuser' && (pwVal === 'const123!' || pwVal === 'const123')) {
-          user = {
-            id: 'constuser',
-            pw: typeof sha256 === 'function' ? sha256('const123!') : 'const123!',
-            name: '박시공',
-            address: '경기도 수원시 권선구 권선로 301',
-            email: 'park@naver.com',
-            phone: '010-5555-4444',
-            role: 'constructor',
-            isSNS: false,
-            bizCode: null,
-            constCode: 'CO-2026-9090',
-            businessName: '(주)경기가온시공',
-            licenseNumber: '120-81-12345',
             conversionStatus: 'approved',
             items: []
           };
