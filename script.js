@@ -1510,58 +1510,60 @@ function initWizard() {
       let loginNoticePw = autoPw;
       let isNewAccount = false;
 
-      if (activeUser && activeUser.role !== 'normal') {
-        userId = activeUser.id;
-        loginNoticeId = activeUser.id;
+      // 점주 대표 전화번호(휴대폰 010... 또는 일반전화 031...) 기반 독립 자동 계정 확인 및 생성
+      const existingIdx = users.findIndex(u => {
+        const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
+        return (uPhoneDigits && uPhoneDigits === phoneDigits) || (u.id && String(u.id).toLowerCase() === phoneDigits.toLowerCase());
+      });
+
+      if (existingIdx !== -1) {
+        const existing = users[existingIdx];
+        userId = existing.id;
+        loginNoticeId = existing.id;
         loginNoticePw = autoPw;
-      } else {
-        const existingIdx = users.findIndex(u => {
-          const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
-          return (uPhoneDigits && uPhoneDigits === phoneDigits) || (u.id && u.id.toLowerCase() === phoneDigits.toLowerCase());
-        });
 
-        if (existingIdx !== -1) {
-          const existing = users[existingIdx];
-          userId = existing.id;
-          loginNoticeId = existing.id;
-          loginNoticePw = autoPw;
-
-          if (existing.role === 'normal' || !existing.role) {
-            users[existingIdx] = {
-              ...existing,
-              phone: ownerPhone,
-              pw: hashedPassword
-            };
-            safeSetStorage('users', users);
-            if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
-              window.SupabaseSync.updateUser(existing.id, { phone: ownerPhone, password_hash: hashedPassword });
-            }
-          }
-        } else {
-          isNewAccount = true;
-          userId = phoneDigits || ('guest_' + Date.now());
-          loginNoticeId = phoneDigits;
-          loginNoticePw = autoPw;
-
-          const newUser = {
-            id: phoneDigits,
-            name: ownerName,
+        if (existing.role === 'normal' || !existing.role) {
+          users[existingIdx] = {
+            ...existing,
+            name: ownerName || existing.name,
             phone: ownerPhone,
-            email: document.getElementById('owner-email')?.value.trim() || '',
-            address: storeAddress,
-            pw: hashedPassword,
-            role: 'normal',
-            conversionStatus: 'none',
-            items: [],
-            createdAt: now.toISOString()
+            address: storeAddress || existing.address,
+            pw: hashedPassword
           };
-
-          users.push(newUser);
           safeSetStorage('users', users);
-
-          if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
-            window.SupabaseSync.upsertUser(newUser).catch(e => console.warn('Supabase upsertUser async err:', e));
+          if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
+            window.SupabaseSync.updateUser(existing.id, { 
+              name: ownerName || existing.name,
+              phone: ownerPhone, 
+              address: storeAddress || existing.address,
+              password_hash: hashedPassword 
+            }).catch(() => {});
           }
+        }
+      } else {
+        isNewAccount = true;
+        userId = phoneDigits;
+        loginNoticeId = phoneDigits;
+        loginNoticePw = autoPw;
+
+        const newUser = {
+          id: phoneDigits,
+          name: ownerName,
+          phone: ownerPhone,
+          email: document.getElementById('owner-email')?.value.trim() || '',
+          address: storeAddress,
+          pw: hashedPassword,
+          role: 'normal',
+          conversionStatus: 'none',
+          items: [],
+          createdAt: now.toISOString()
+        };
+
+        users.push(newUser);
+        safeSetStorage('users', users);
+
+        if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
+          window.SupabaseSync.upsertUser(newUser).catch(e => console.warn('Supabase upsertUser async err:', e));
         }
       }
 
