@@ -1367,11 +1367,17 @@
 
   // 영업물건 접수/진행상태 변경 전역 브릿지
   // --- 신청서 담당 영업자 수정/변경 모달 전역 브릿지 (PC웹 & 모바일 공용) ---
-  window.openAssignBizUserModal = function (appId) {
+  window.openAssignBizUserModal = function (appId, event) {
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
     if (!appId) return;
     const targetId = String(appId).trim();
     const apps = (window.DataStore ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []));
-    const app = apps.find(a => String(a.id) === targetId);
+    let app = apps.find(a => String(a.id) === targetId || String(a.id).trim() === targetId || String(a.appRefId) === targetId);
+    if (!app) {
+      const rawApps = JSON.parse(localStorage.getItem('applications')) || [];
+      app = rawApps.find(a => String(a.id) === targetId || String(a.id).trim() === targetId);
+    }
     if (!app) {
       alert('해당 신청서 정보를 찾을 수 없습니다.');
       return;
@@ -1410,13 +1416,13 @@
     };
 
     const modalHtml = `
-      <div id="assign-bizuser-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.55); z-index: 100000; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(4px);">
-        <div style="background: #ffffff; border-radius: 16px; width: 100%; max-width: 440px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); overflow: hidden;">
+      <div id="assign-bizuser-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.55); z-index: 1000000; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(4px); touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
+        <div style="background: #ffffff; border-radius: 16px; width: 100%; max-width: 440px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); overflow: hidden; pointer-events: auto;">
           <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 18px 20px; color: #ffffff; display: flex; align-items: center; justify-content: space-between;">
             <h4 style="margin: 0; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
               <i class="fa-solid fa-user-pen"></i> 담당 영업자 수정 / 변경
             </h4>
-            <button type="button" onclick="document.getElementById('assign-bizuser-modal').remove()" style="background: transparent; border: none; color: #ffffff; font-size: 1.4rem; cursor: pointer; line-height: 1;">&times;</button>
+            <button type="button" onclick="document.getElementById('assign-bizuser-modal').remove()" style="background: transparent; border: none; color: #ffffff; font-size: 1.4rem; cursor: pointer; line-height: 1; padding: 0 4px;">&times;</button>
           </div>
           <div style="padding: 20px; box-sizing: border-box;">
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 0.88rem; line-height: 1.6;">
@@ -1447,6 +1453,13 @@
     `;
 
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const modalOverlay = document.getElementById('assign-bizuser-modal');
+    if (modalOverlay) {
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) modalOverlay.remove();
+      });
+    }
 
     const confirmBtn = document.getElementById('btn-confirm-assign-bizuser');
     if (confirmBtn) {
