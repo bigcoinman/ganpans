@@ -1026,9 +1026,11 @@
     },
 
     // --- 4. 온라인 간편 지원 신청서 영구 삭제 ---
-    deleteApplication: function (appId, btnEl) {
+    deleteApplication: function (appId, btnEl, event) {
+      if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+      if (event && typeof event.preventDefault === 'function') event.preventDefault();
       if (!appId) return { success: false };
-      const targetId = String(appId);
+      const targetId = String(appId).trim();
 
       if (!confirm('[주의] 지원 신청 접수 건 [' + targetId + ']을(를) 정말로 영구 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.')) {
         return { success: false, cancelled: true };
@@ -1036,11 +1038,11 @@
 
       // 1) 0초 즉각 DOM 요소 제거 (낙관적 UI)
       if (btnEl) {
-        const card = btnEl.closest('tr') || btnEl.closest('.admin-app-card') || btnEl.closest('div[style*="border"]');
+        const card = (btnEl instanceof Element) ? (btnEl.closest('tr') || btnEl.closest('.admin-app-card') || btnEl.closest('div[style*="border"]') || btnEl.closest('.app-card') || btnEl.closest('.card')) : null;
         if (card) card.remove();
       }
 
-      // 2) deleted_application_ids 등록
+      // 2) deleted_application_ids 등록 및 로컬/클라우드 영구 동기화
       let deletedAppIds = this.getDeletedAppIds();
       if (!deletedAppIds.includes(targetId)) {
         deletedAppIds.push(targetId);
@@ -1049,14 +1051,14 @@
 
       // 3) applications 배열에서 영구 제거
       let apps = this.getApplications();
-      apps = apps.filter(a => String(a.id) !== targetId);
+      apps = apps.filter(a => a && String(a.id).trim() !== targetId && String(a.appRefId || '').trim() !== targetId);
       this.saveApplications(apps);
 
       // 4) users.items 에서도 연계 물건 영구 제거
       let users = this.getUsers();
       users = users.map(u => {
         if (u.items && u.items.length > 0) {
-          const cleanedItems = u.items.filter(it => String(it.id) !== targetId && String(it.appRefId) !== targetId);
+          const cleanedItems = u.items.filter(it => it && String(it.id).trim() !== targetId && String(it.appRefId || '').trim() !== targetId);
           if (cleanedItems.length !== u.items.length) {
             if (window.SupabaseSync) window.SupabaseSync.updateUser(u.id, { items: cleanedItems });
           }
@@ -1066,8 +1068,8 @@
       });
       this.saveUsers(users);
 
-      // 5) Supabase DB 영구 삭제
-      if (window.SupabaseSync) {
+      // 5) Supabase DB 영구 삭제 (Non-blocking)
+      if (window.SupabaseSync && typeof window.SupabaseSync.deleteApplication === 'function') {
         window.SupabaseSync.deleteApplication(targetId);
       }
 
@@ -1293,6 +1295,13 @@
     // --- 8. 전체 대시보드 화면 동기화 브로드캐스트 (0초 반응) ---
     notifyAll: function () {
       try {
+        // 사용자가 드롭다운(SELECT)이나 텍스트입력(INPUT)을 조작 중일 때는 전체 DOM 재생성을 스킵하여 드롭다운 닫힘 완벽 방지
+        const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+        const isFormActive = window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA'));
+        if (isFormActive) {
+          return;
+        }
+
         if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
         if (typeof window.renderManagerPanel === 'function') window.renderManagerPanel();
         if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
@@ -1308,8 +1317,6 @@
         if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
         if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
         if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
-
-        window.dispatchEvent(new Event('supabase-data-synced'));
       } catch (e) {
         console.error('[DataStore] notifyAll error:', e);
       }
@@ -1326,11 +1333,15 @@
   window.toggleBizItemMob = function (appId, btnEl) {
     return window.DataStore.toggleBizItem(appId);
   };
-  window.deleteApplicationAdmin = function (appId, btnEl) {
-    return window.DataStore.deleteApplication(appId, btnEl);
+  window.deleteApplicationAdmin = function (appId, btnEl, event) {
+    if (window.DataStore && typeof window.DataStore.deleteApplication === 'function') {
+      return window.DataStore.deleteApplication(appId, btnEl, event);
+    }
   };
-  window.deleteApplicationAdminMob = function (appId, btnEl) {
-    return window.DataStore.deleteApplication(appId, btnEl);
+  window.deleteApplicationAdminMob = function (appId, btnEl, event) {
+    if (window.DataStore && typeof window.DataStore.deleteApplication === 'function') {
+      return window.DataStore.deleteApplication(appId, btnEl, event);
+    }
   };
   window.deleteUserAdmin = function (userId, btnEl) {
     return window.DataStore.deleteUser(userId, btnEl);

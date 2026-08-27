@@ -446,7 +446,15 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // --- Supabase 실시간 양방향 데이터 동기화 리스너 ---
+  window.isInteractingWithForm = false;
   window.addEventListener('supabase-data-synced', (e) => {
+    // 사용자가 드롭다운(SELECT)이나 텍스트입력(INPUT)을 조작 중일 때는 전체 DOM 재생성을 스킵하여 드롭다운 닫힘 완벽 방지
+    const activeEl = document.activeElement;
+    const isFormActive = window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA'));
+    if (isFormActive) {
+      return;
+    }
+
     users = JSON.parse(localStorage.getItem('users')) || [];
     applications = JSON.parse(localStorage.getItem('applications')) || [];
     
@@ -2638,7 +2646,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 1. 상태 변경 셀렉트 (캐럿 아이콘 포함)
       actionButtons += `
         <div style="position: relative; display: inline-flex; align-items: center;">
-          <select class="status-select select-app-status-pc" data-id="${app.id}" onchange="window.updateApplicationStatus('${app.id}', this.value)" style="padding: 5px 26px 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 4px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 30px; line-height: 1.2; position: relative; z-index: 5;">
+          <select class="status-select select-app-status-pc" data-id="${app.id}" onfocus="window.isInteractingWithForm = true;" onmousedown="window.isInteractingWithForm = true;" ontouchstart="event.stopPropagation(); window.isInteractingWithForm = true;" onblur="setTimeout(() => { window.isInteractingWithForm = false; }, 2000);" onchange="window.isInteractingWithForm = false; window.updateApplicationStatus('${app.id}', this.value)" style="padding: 5px 26px 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 4px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 30px; line-height: 1.2; position: relative; z-index: 5; touch-action: manipulation;">
             <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사 대기</option>
             <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
             <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
@@ -2670,7 +2678,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // 3. 삭제 버튼 (항상 노출 - 최고관리자 영구 삭제)
       actionButtons += `
-        <button type="button" class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" onclick="window.deleteApplicationAdmin('${app.id}', this)" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+        <button type="button" class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" onclick="event.stopPropagation(); event.preventDefault(); window.deleteApplicationAdmin('${app.id}', this, event); return false;" ontouchstart="event.stopPropagation();" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px; touch-action: manipulation;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
       </div>`;
 
       // 영업담당자 이름 매칭 (예: 김만석영업자)
