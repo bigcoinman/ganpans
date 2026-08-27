@@ -2580,8 +2580,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (activeUser.role !== 'admin') return;
     if (!applicationsTableBody) return;
 
-    const apps = JSON.parse(localStorage.getItem('applications')) || [];
-    const curUsersList = JSON.parse(localStorage.getItem('users')) || users || [];
+    const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') 
+      ? window.DataStore.getApplications() 
+      : (JSON.parse(localStorage.getItem('applications')) || []);
+    const curUsersList = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || users || []);
     const paginationAppsContainer = document.getElementById('pagination-manager-apps');
 
     // 검색어 필터링 (아이디/이름/코드검색, 최대 30자)
