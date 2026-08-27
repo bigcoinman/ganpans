@@ -1568,19 +1568,26 @@ function initWizard() {
       }
 
       let customId = '';
+      const dateTag = String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
 
       if (referrerCode) {
-        const bizUser = users.find(u => u.role === 'business' && u.bizCode === referrerCode);
-        const bizItems = bizUser ? (bizUser.items || []) : [];
-        if (typeof generateBizItemId === 'function') {
-          customId = generateBizItemId(referrerCode, bizItems);
-        } else {
-          const nextNum = String(bizItems.length + 1).padStart(4, '0');
-          customId = `${referrerCode}-${nextNum}`;
-        }
+        const matchingToday = apps.filter(a => a.id && String(a.id).startsWith(`${referrerCode}-${dateTag}`));
+        const nextSeq = String(matchingToday.length + 1).padStart(3, '0');
+        customId = `${referrerCode}-${dateTag}-${nextSeq}`;
       } else {
-        customId = typeof generateApplicationId === 'function' ? generateApplicationId(apps) : `P-${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}001`;
+        customId = typeof generateApplicationId === 'function' 
+          ? generateApplicationId(apps) 
+          : `P-${dateTag}001`;
       }
+
+      // 신규 접수 건이 과거 삭제 캐시로 인해 차단되지 않도록 deleted_application_ids 자동 정리
+      try {
+        let deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
+        if (deletedAppIds.includes(customId)) {
+          deletedAppIds = deletedAppIds.filter(id => id !== customId);
+          localStorage.setItem('deleted_application_ids', JSON.stringify(deletedAppIds));
+        }
+      } catch (eDel) {}
 
       const newApp = {
         id: customId,

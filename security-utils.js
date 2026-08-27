@@ -1552,6 +1552,13 @@ window.SupabaseSync = {
           }
         } catch (eStats) {}
 
+        // Supabase에 실존하는 신청서는 삭제 캐시에서 자동 정리하여 100% 정상 수집 보장
+        const supaAppIds = supaApps.map(sa => String(sa.id));
+        if (localDeletedAppIds.some(id => supaAppIds.includes(String(id)))) {
+          localDeletedAppIds = localDeletedAppIds.filter(id => !supaAppIds.includes(String(id)));
+          localStorage.setItem('deleted_application_ids', JSON.stringify(localDeletedAppIds));
+        }
+
         const freshApps = supaApps
           .map(sa => this.mapDbToApp(sa))
           .filter(a => a && a.id && !localDeletedAppIds.includes(String(a.id)));

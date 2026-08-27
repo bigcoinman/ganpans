@@ -2387,7 +2387,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        renderAdminDashboardMob();
+        renderAdminDashboardMob(true);
     };
 
     // --- Supabase 실시간 양방향 데이터 동기화 리스너 (모바일) ---

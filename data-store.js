@@ -14,7 +14,16 @@
     getApplications: function () {
       try {
         const apps = JSON.parse(localStorage.getItem('applications')) || [];
-        const deletedAppIds = this.getDeletedAppIds();
+        let deletedAppIds = this.getDeletedAppIds();
+        // 실존 apps에 존재하는 건은 deletedAppIds에서 자동 정리하여 100% 정상 표시 보장
+        if (deletedAppIds.length > 0 && apps.length > 0) {
+          const validIds = apps.map(a => String(a.id));
+          const cleanedDel = deletedAppIds.filter(id => !validIds.includes(String(id)));
+          if (cleanedDel.length !== deletedAppIds.length) {
+            localStorage.setItem('deleted_application_ids', JSON.stringify(cleanedDel));
+            deletedAppIds = cleanedDel;
+          }
+        }
         return apps.filter(a => a && a.id && !deletedAppIds.includes(String(a.id)));
       } catch (e) {
         console.error('[DataStore] getApplications error:', e);
