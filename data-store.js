@@ -44,7 +44,16 @@
     getUsers: function () {
       try {
         const users = JSON.parse(localStorage.getItem('users')) || [];
-        const deletedUserIds = this.getDeletedUserIds();
+        let deletedUserIds = this.getDeletedUserIds();
+        // 실존 users에 존재하는 건은 deletedUserIds에서 자동 정리하여 100% 정상 표시 보장
+        if (deletedUserIds.length > 0 && users.length > 0) {
+          const validIds = users.map(u => String(u.id));
+          const cleanedDel = deletedUserIds.filter(id => !validIds.includes(String(id)));
+          if (cleanedDel.length !== deletedUserIds.length) {
+            localStorage.setItem('deleted_user_ids', JSON.stringify(cleanedDel));
+            deletedUserIds = cleanedDel;
+          }
+        }
         return users.filter(u => {
           if (!u || !u.id) return false;
           const uId = String(u.id);

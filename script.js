@@ -1541,10 +1541,14 @@ function initWizard() {
           }
         }
       } else {
-        isNewAccount = true;
-        userId = phoneDigits;
-        loginNoticeId = phoneDigits;
-        loginNoticePw = autoPw;
+        // 신규 점주 계정이 과거 삭제 캐시로 차단되지 않도록 deleted_user_ids 자동 정리
+        try {
+          let deletedUserIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+          if (deletedUserIds.includes(phoneDigits)) {
+            deletedUserIds = deletedUserIds.filter(id => id !== phoneDigits);
+            localStorage.setItem('deleted_user_ids', JSON.stringify(deletedUserIds));
+          }
+        } catch (eDelU) {}
 
         const newUser = {
           id: phoneDigits,

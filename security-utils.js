@@ -1475,12 +1475,18 @@ window.SupabaseSync = {
           }
         } catch (eStats) {}
 
+        // Supabase에 실존하는 정상 회원은 삭제 캐시에서 자동 정리하여 100% 정상 수집 보장
+        const supaUserIds = supaUsers.filter(su => su.role !== 'deleted').map(su => String(su.id).toLowerCase());
+        if (localDeletedIds.some(id => supaUserIds.includes(String(id).toLowerCase()))) {
+          localDeletedIds = localDeletedIds.filter(id => !supaUserIds.includes(String(id).toLowerCase()));
+          localStorage.setItem('deleted_user_ids', JSON.stringify(localDeletedIds));
+        }
+
         const freshUsers = supaUsers
           .map(su => this.mapDbToUser(su))
           .filter(u => {
             if (!u || !u.id) return false;
             if (u.role === 'deleted') return false;
-            // deleted_user_ids에 등록된 사용자는 DB에 살아있어도 부활 차단
             const uIdLower = String(u.id).toLowerCase();
             if (localDeletedIds.some(did => String(did).toLowerCase() === uIdLower)) return false;
             return true;
