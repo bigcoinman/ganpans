@@ -1170,6 +1170,11 @@ function initWizard() {
   }
 
   function renderPhotosPreview() {
+    const photoCountEl = document.getElementById('apply-photo-count');
+    if (photoCountEl) {
+      photoCountEl.textContent = `선택된 사진: ${uploadedPhotos.length} / 10장`;
+    }
+
     if (fileNameDisplay) {
       if (uploadedPhotos.length > 0) {
         fileNameDisplay.textContent = `✓ 업로드된 사진 (${uploadedPhotos.length}/10장): ${uploadedPhotos.map(p => p.name).join(', ')}`;
