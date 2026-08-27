@@ -1489,7 +1489,9 @@ window.SupabaseSync = {
 
         const hasAdmin = freshUsers.some(u => String(u.id).toLowerCase() === 'admin');
         if (!hasAdmin) {
-          const defaultAdmin = {
+          const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+          const existingLocalAdmin = localUsers.find(u => String(u.id).toLowerCase() === 'admin');
+          const defaultAdmin = existingLocalAdmin || {
             id: 'admin',
             pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
             name: '최고관리자',
@@ -1809,9 +1811,12 @@ if (typeof window !== 'undefined') {
 
     const idValLower = idVal.toLowerCase();
 
-    // 1) 최고관리자 (admin) 직통 즉각 로그인 (0초 무조건 통과)
+    // 1) 최고관리자 (admin) 직통 즉각 로그인 (기존 변경 개인정보 100% 보존)
     if (idValLower === 'admin' || idValLower === 'administrator' || idValLower === 'superadmin') {
-      const adminUser = {
+      let users = JSON.parse(localStorage.getItem('users')) || [];
+      let existingAdmin = users.find(u => String(u.id).toLowerCase() === 'admin');
+
+      const adminUser = existingAdmin ? { ...existingAdmin, role: 'admin' } : {
         id: 'admin',
         pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
         name: '최고관리자',
@@ -1825,10 +1830,12 @@ if (typeof window !== 'undefined') {
         items: []
       };
 
-      let users = JSON.parse(localStorage.getItem('users')) || [];
-      if (!users.some(u => String(u.id).toLowerCase() === 'admin')) {
+      if (!existingAdmin) {
         users.push(adminUser);
         localStorage.setItem('users', JSON.stringify(users));
+        if (window.SupabaseSync) {
+          window.SupabaseSync.upsertUser(adminUser).catch(() => {});
+        }
       }
 
       if (rememberMe) {
@@ -1839,10 +1846,6 @@ if (typeof window !== 'undefined') {
         sessionStorage.setItem('activeUser', JSON.stringify(adminUser));
         localStorage.removeItem('activeUser_remember');
         localStorage.removeItem('activeUser');
-      }
-
-      if (window.SupabaseSync) {
-        window.SupabaseSync.upsertUser(adminUser).catch(() => {});
       }
 
       const authModal = document.getElementById('auth-modal');

@@ -2428,12 +2428,14 @@ function initAuthAndDashboard() {
 
       const idValLower = idVal.toLowerCase();
 
-      // 최고관리자(admin) 및 시스템 핵심 계정 초고속 직통 로그인 보장
+      // 최고관리자(admin) 및 시스템 핵심 계정 초고속 직통 로그인 보장 (기존 변경 개인정보 100% 보존)
       if (idValLower === 'admin' || idValLower === 'administrator' || idValLower === 'superadmin') {
-        const defaultAdminHash = '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7';
-        const adminUser = {
+        let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
+        let existingAdmin = currentUsers.find(u => String(u.id).toLowerCase() === 'admin');
+
+        const adminUser = existingAdmin ? { ...existingAdmin, role: 'admin' } : {
           id: 'admin',
-          pw: defaultAdminHash,
+          pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
           name: '최고관리자',
           address: '경기도 수원시 영통구 청명남로 10',
           email: 'admin@ganpan.go.kr',
@@ -2445,10 +2447,12 @@ function initAuthAndDashboard() {
           items: []
         };
 
-        let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
-        if (!currentUsers.some(u => String(u.id).toLowerCase() === 'admin')) {
+        if (!existingAdmin) {
           currentUsers.push(adminUser);
           localStorage.setItem('users', JSON.stringify(currentUsers));
+          if (window.SupabaseSync) {
+            window.SupabaseSync.upsertUser(adminUser).catch(() => {});
+          }
         }
 
         if (rememberMe) {
@@ -2459,10 +2463,6 @@ function initAuthAndDashboard() {
           sessionStorage.setItem('activeUser', JSON.stringify(adminUser));
           localStorage.removeItem('activeUser_remember');
           localStorage.removeItem('activeUser');
-        }
-
-        if (window.SupabaseSync) {
-          window.SupabaseSync.upsertUser(adminUser).catch(() => {});
         }
 
         alert('최고관리자님, 반갑습니다!');
