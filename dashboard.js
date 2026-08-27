@@ -970,8 +970,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Image Resize & Compression (2MB Limit Guarantee) ---
-  const resizeImageToLimit = (file, maxSizeBytes = 2 * 1024 * 1024) => {
+  // --- Image Resize & Compression (1MB Limit Guarantee) ---
+  const resizeImageToLimit = (file, maxSizeBytes = 1 * 1024 * 1024) => {
     return new Promise((resolve) => {
       if (file.size <= maxSizeBytes) {
         resolve(file);
@@ -1204,7 +1204,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let base64Photo = '';
       if (selectedPhotos.length > 0) {
         try {
-          base64Photo = await compressImageToBase64(selectedPhotos[0], 2 * 1024 * 1024);
+          base64Photo = await compressImageToBase64(selectedPhotos[0], 1 * 1024 * 1024);
         } catch (err) {
           console.warn('Image compression warning:', err);
         }
@@ -3403,7 +3403,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         let base64Data = '';
         if (typeof compressImageToBase64 === 'function') {
-          base64Data = await compressImageToBase64(file, 2 * 1024 * 1024);
+          base64Data = await compressImageToBase64(file, 1 * 1024 * 1024);
         } else {
           base64Data = await new Promise((resolve) => {
             const reader = new FileReader();
@@ -4607,14 +4607,14 @@ document.addEventListener('DOMContentLoaded', () => {
     renderConstructorDashboard();
   };
 
-  // 간판 디자인 시안 업로드 핸들러 (2MB 이하 강제 자동 압축)
+  // 간판 디자인 시안 업로드 핸들러 (1MB 이하 강제 자동 압축)
   const handleJobDraftUpload = async (id, files) => {
     const uploadedBase64List = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       let base64 = '';
       if (typeof compressImageToBase64 === 'function') {
-        base64 = await compressImageToBase64(file, 2 * 1024 * 1024);
+        base64 = await compressImageToBase64(file, 1 * 1024 * 1024);
       } else {
         base64 = await new Promise((res) => {
           const reader = new FileReader();
@@ -4676,18 +4676,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    alert('간판 디자인 시안이 2MB 이하로 자동 최적화되어 등록되었습니다.\n점주 및 최고관리자 화면에 실시간으로 공유됩니다.');
+    alert('간판 디자인 시안이 1MB 이하로 자동 최적화되어 등록되었습니다.\n점주 및 최고관리자 화면에 실시간으로 공유됩니다.');
     renderConstructorDashboard();
   };
 
-  // 시공 후 사진 업로드 핸들러 (2MB 이하 강제 자동 압축)
+  // 시공 후 사진 업로드 핸들러 (1MB 이하 강제 자동 압축)
   const handleJobPhotoUpload = async (id, files) => {
     const uploadedBase64List = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       let base64 = '';
       if (typeof compressImageToBase64 === 'function') {
-        base64 = await compressImageToBase64(file, 2 * 1024 * 1024);
+        base64 = await compressImageToBase64(file, 1 * 1024 * 1024);
       } else {
         base64 = await new Promise((res) => {
           const reader = new FileReader();

@@ -1326,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 let base64Data = '';
                 if (typeof compressImageToBase64 === 'function') {
-                    base64Data = await compressImageToBase64(file, 2 * 1024 * 1024);
+                    base64Data = await compressImageToBase64(file, 1 * 1024 * 1024);
                 } else {
                     base64Data = await new Promise((resolve) => {
                         const reader = new FileReader();
@@ -4251,14 +4251,14 @@ document.addEventListener('DOMContentLoaded', () => {
         renderConstructorDashboardMob();
     }
 
-    // 모바일 시공사 간판 디자인 시안 2MB 압축 업로드
+    // 모바일 시공사 간판 디자인 시안 1MB 압축 업로드
     async function handleJobDraftUploadMob(id, files) {
         const uploadedBase64List = [];
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             let base64 = null;
             if (typeof compressImageToBase64 === 'function') {
-                base64 = await compressImageToBase64(file, 2 * 1024 * 1024);
+                base64 = await compressImageToBase64(file, 1 * 1024 * 1024);
             } else {
                 base64 = await new Promise((res) => {
                     const reader = new FileReader();
@@ -4318,18 +4318,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        alert('간판 디자인 시안이 2MB 이하로 자동 압축되어 업로드되었습니다.\n신청 점주 및 관리자 화면에 즉시 공유됩니다.');
+        alert('간판 디자인 시안이 1MB 이하로 자동 압축되어 업로드되었습니다.\n신청 점주 및 관리자 화면에 즉시 공유됩니다.');
         renderConstructorDashboardMob();
     }
 
-    // 모바일 시공사 시공 후 사진 2MB 압축 업로드 (3~5컷)
+    // 모바일 시공사 시공 후 사진 1MB 압축 업로드 (3~5컷)
     async function handleJobPhotoUploadMob(id, files) {
         const uploadedBase64List = [];
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             let base64 = null;
             if (typeof compressImageToBase64 === 'function') {
-                base64 = await compressImageToBase64(file, 2 * 1024 * 1024);
+                base64 = await compressImageToBase64(file, 1 * 1024 * 1024);
             } else {
                 base64 = await new Promise((res) => {
                     const reader = new FileReader();

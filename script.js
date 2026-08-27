@@ -1149,7 +1149,7 @@ function initWizard() {
       try {
         let base64 = '';
         if (typeof compressImageToBase64 === 'function') {
-          base64 = await compressImageToBase64(file, 2 * 1024 * 1024);
+          base64 = await compressImageToBase64(file, 1 * 1024 * 1024);
         } else {
           base64 = await new Promise(res => {
             const reader = new FileReader();
