@@ -1128,34 +1128,64 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Normal client conversion request
+    // Normal client conversion request (1회 클릭 즉각 실행)
+    function requestBusinessConversionMob() {
+        const curUser = (typeof getActiveUser === 'function' ? getActiveUser() : null) || activeUser;
+        if (!curUser) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
+
+        if (curUser.role === 'business' || curUser.bizCode) {
+            alert('이미 영업자 회원으로 승인되어 있습니다.');
+            return;
+        }
+        if (curUser.conversionStatus === 'pending') {
+            alert('이미 영업자 승인 대기 중입니다. 최고관리자 승인 후 영업코드가 발급됩니다.');
+            return;
+        }
+
+        if (confirm('영업자 회원으로 전환을 신청하시겠습니까?\n신청 후 최고관리자 승인을 통해 영업자 코드가 발급됩니다.')) {
+            curUser.conversionStatus = 'pending';
+            activeUser = curUser;
+
+            users = (JSON.parse(localStorage.getItem('users')) || []).map(u => u.id === curUser.id ? { ...u, conversionStatus: 'pending' } : u);
+            localStorage.setItem('users', JSON.stringify(users));
+            localStorage.setItem('activeUser', JSON.stringify(curUser));
+            sessionStorage.setItem('activeUser', JSON.stringify(curUser));
+
+            // 0초 즉각 화면 갱신 (1번 클릭으로 즉각 '영업자 승인 대기중' 전환)
+            renderStatusTab();
+            updateDrawerProfile();
+            updateHeaderAuthButton();
+
+            if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+                window.DataStore.notifyAll();
+            }
+            window.dispatchEvent(new CustomEvent('supabase-data-synced'));
+
+            alert('영업자 회원 전환 신청이 접수되었습니다.\n최고관리자 승인 후 영업코드가 정상 발급됩니다.');
+
+            // Supabase 비동기 클라우드 영구 저장
+            if (window.SupabaseSync) {
+                window.SupabaseSync.updateUser(curUser.id, {
+                    conversion_status: 'pending'
+                }).catch(() => {});
+            }
+
+            // 카카오 알림톡 발송
+            if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyBusinessConversion === 'function') {
+                window.KakaoNotifier.notifyBusinessConversion(curUser);
+            }
+        }
+    }
+    window.requestBusinessConversionMob = requestBusinessConversionMob;
+
     const btnRequestConversionMob = document.getElementById('btn-request-conversion-mob');
     if (btnRequestConversionMob) {
-        btnRequestConversionMob.addEventListener('click', () => {
-            if (confirm('영업자 회원으로 전환을 신청하시겠습니까? 신청 후 최고관리자 승인을 통해 영업코드가 발급됩니다.')) {
-                activeUser.conversionStatus = 'pending';
-                users = users.map(u => u.id === activeUser.id ? { ...u, conversionStatus: 'pending' } : u);
-                localStorage.setItem('users', JSON.stringify(users));
-                localStorage.setItem('activeUser', JSON.stringify(activeUser));
-                sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
-
-                // Supabase Sync
-                if (window.SupabaseSync) {
-                    window.SupabaseSync.updateUser(activeUser.id, {
-                        conversion_status: 'pending'
-                    });
-                }
-
-                // 카카오톡 관리자 실시간 알림 발송
-                if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyBusinessConversion === 'function') {
-                    window.KakaoNotifier.notifyBusinessConversion(activeUser);
-                }
-
-                alert('영업자 회원 전환 신청이 완료되었습니다.\n최고관리자 승인 후 영업자 코드가 발급되며 영업물건을 등록할 수 있습니다.');
-                renderStatusTab();
-                updateDrawerProfile();
-                updateHeaderAuthButton();
-            }
+        btnRequestConversionMob.addEventListener('click', (e) => {
+            e.preventDefault();
+            requestBusinessConversionMob();
         });
     }
 
@@ -4680,40 +4710,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Drawer transition request handlers
+    // Drawer transition request handlers (1회 클릭 즉각 실행)
     const drawerBtnConversion = document.getElementById('drawer-btn-conversion');
     if (drawerBtnConversion) {
         drawerBtnConversion.addEventListener('click', (e) => {
             e.preventDefault();
             closeDrawer();
             switchTab('status');
-            setTimeout(() => {
-                const pcBtn = document.getElementById('btn-request-conversion-mob');
-                if (pcBtn && pcBtn.style.display !== 'none' && document.getElementById('status-normal-container').style.display !== 'none') {
-                    pcBtn.click();
-                } else {
-                    if (confirm('영업자 회원으로 전환을 신청하시겠습니까? 신청 후 최고관리자 승인을 통해 영업코드가 발급됩니다.')) {
-                        activeUser.conversionStatus = 'pending';
-                        users = users.map(u => u.id === activeUser.id ? { ...u, conversionStatus: 'pending' } : u);
-                        localStorage.setItem('users', JSON.stringify(users));
-                        localStorage.setItem('activeUser', JSON.stringify(activeUser));
-
-                        if (window.SupabaseSync) {
-                            window.SupabaseSync.updateUser(activeUser.id, {
-                                conversion_status: 'pending'
-                            });
-                        }
-
-                        if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyBusinessConversion === 'function') {
-                            window.KakaoNotifier.notifyBusinessConversion(activeUser);
-                        }
-
-                        alert('회원 전환 신청이 접수되었습니다. 최고관리자(admin) 계정 로그인 승인 후 영업코드가 정상 발급됩니다.');
-                        renderStatusTab();
-                        updateDrawerProfile();
-                    }
-                }
-            }, 150);
+            requestBusinessConversionMob();
         });
     }
 
