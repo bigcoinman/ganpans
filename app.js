@@ -597,21 +597,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 영업자 전용 간판바로 접수하기 원터치 이동
+    // 영업자 전용 온라인 간편 지원 신청 원터치 직통 이동
     function openDirectBizApplyMob() {
         closeDrawer();
-        switchTab('status');
-        setTimeout(() => {
-            const uploadForm = document.getElementById('mobile-upload-form-mob') || document.querySelector('.biz-mobile-upload-box') || document.getElementById('view-status');
-            if (uploadForm) {
-                uploadForm.scrollIntoView({ behavior: 'smooth' });
-                if (uploadForm.id === 'mobile-upload-form-mob' || uploadForm.classList.contains('biz-mobile-upload-box')) {
-                    uploadForm.style.transition = 'box-shadow 0.3s ease';
-                    uploadForm.style.boxShadow = '0 0 0 3px #ca8a04';
-                    setTimeout(() => { uploadForm.style.boxShadow = ''; }, 1500);
-                }
-            }
-        }, 120);
+        switchTab('apply');
     }
     window.openDirectBizApplyMob = openDirectBizApplyMob;
 

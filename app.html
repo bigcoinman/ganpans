@@ -88,8 +88,8 @@
             <a href="#" id="drawer-item-status" onclick="switchTab('status'); closeDrawer(); return false;"><i class="fa-solid fa-list-check"></i> 신청/영업 현황</a>
             <a href="#" id="drawer-item-refresh" onclick="window.triggerAppRefresh && window.triggerAppRefresh(); closeDrawer(); return false;"><i class="fa-solid fa-rotate-right"></i> 데이터 최신 새로고침</a>
             
-            <!-- 영업자 전용: 간판바로 접수하기 버튼 -->
-            <a href="#" id="drawer-item-direct-biz" class="drawer-btn-gold" style="display: none;" onclick="openDirectBizApplyMob(); return false;"><i class="fa-solid fa-camera-retro"></i> 간판바로 접수하기</a>
+            <!-- 영업자 전용: 온라인 간편 지원 신청 버튼 -->
+            <a href="#" id="drawer-item-direct-biz" class="drawer-btn-gold" style="display: none;" onclick="openDirectBizApplyMob(); return false;"><i class="fa-solid fa-file-signature"></i> 온라인 간편 지원 신청</a>
 
             <a href="#" id="drawer-item-apply" onclick="switchTab('apply'); closeDrawer(); return false;"><i class="fa-solid fa-file-signature"></i> 지원사업 간편 신청</a>
             <div class="drawer-divider" id="drawer-divider-main"></div>
@@ -1330,35 +1330,20 @@
                         </div>
                     </div>
 
-                    <!-- Mobile Simulator (Field photo uploads) inside app -->
-                    <div class="app-section">
-                        <h4 class="section-title" style="font-size: 1.2rem; margin-bottom: 12px;"><i class="fa-solid fa-camera"></i> 신규 현장 영업물건 카메라 접수</h4>
-                        <form id="mobile-upload-form-mob" onsubmit="event.preventDefault();" style="background: white; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
-                            <div class="phone-form-group" style="margin-bottom: 12px;">
-                                <label for="mob-item-name-mob" style="font-size: 1.15rem; font-weight: 700; display: block; margin-bottom: 6px;">상호명</label>
-                                <input type="text" id="mob-item-name-mob" placeholder="상호명을 입력해 주세요" required class="form-input" style="padding: 12px 14px; font-size: 1.15rem; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
-                            </div>
-                            <div class="phone-form-group" style="margin-bottom: 12px;">
-                                <label for="mob-item-phone-mob" style="font-size: 1.15rem; font-weight: 700; display: block; margin-bottom: 6px;">전화번호</label>
-                                <input type="tel" id="mob-item-phone-mob" placeholder="전화번호를 입력해 주세요" required class="form-input" style="padding: 12px 14px; font-size: 1.15rem; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
-                            </div>
-                            <div class="phone-form-group" style="margin-bottom: 12px;">
-                                <label for="mob-item-address-mob" style="font-size: 1.15rem; font-weight: 700; display: block; margin-bottom: 6px;">설치 주소</label>
-                                <input type="text" id="mob-item-address-mob" placeholder="설치 주소를 입력해 주세요" required class="form-input" style="padding: 12px 14px; font-size: 1.15rem; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
-                            </div>
-                            <div class="phone-form-group" style="margin-bottom: 12px;">
-                                <label style="font-size: 0.95rem; font-weight: 700; display: block; margin-bottom: 4px;">현장 사진 업로드 <span style="font-weight: normal; font-size: 0.85rem; color: var(--text-muted);">(최대 20장)</span></label>
-                                <div class="mobile-file-zone" id="mobile-file-zone-mob" style="border: 2px dashed var(--accent-primary); border-radius: 10px; padding: 22px; text-align: center; cursor: pointer; background: #fafbff;">
-                                    <i class="fa-solid fa-camera" style="font-size: 2.2rem; color: var(--accent-primary); margin-bottom: 8px;"></i>
-                                    <p style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; margin: 0;">사진 촬영 또는 갤러리 선택</p>
-                                    <input type="file" id="mob-photos-input-mob" accept="image/*" multiple style="display: none;">
-                                    <input type="file" id="mob-camera-input-mob" accept="image/*" capture="environment" style="display: none;">
-                                </div>
-                                <div id="mob-photo-previews-mob" class="mob-photo-previews" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;"></div>
-                                <div id="mob-photo-count-mob" style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 6px; font-weight: 600;">선택된 사진: 0 / 20장</div>
-                            </div>
-                            <button type="submit" id="btn-submit-biz-item-mob" class="btn btn-primary" style="width: 100%; margin-top: 14px; padding: 12px; font-size: 1.05rem; font-weight: 700; border-radius: 8px;">현장 물건으로 등록</button>
-                        </form>
+                    <!-- 온라인 간편 지원 신청 배너 카드 (앱 메인과 100% 동일한 신청 엔진 연동) -->
+                    <div class="app-section" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.08) 0%, rgba(99, 102, 241, 0.12) 100%); border: 1.5px solid rgba(99, 102, 241, 0.35); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.08);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                            <h4 style="font-size: 1.2rem; font-weight: 800; color: var(--accent-primary); margin: 0; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-file-signature"></i> 온라인 간편 지원 신청
+                            </h4>
+                            <span style="font-size: 0.75rem; background: var(--accent-primary); color: #fff; padding: 3px 8px; border-radius: 6px; font-weight: 700;">영업자 전용 직통</span>
+                        </div>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px;">
+                            현장에서 발굴한 점포의 정보를 간편하게 접수하세요. 본인의 영업자 코드가 자동으로 적용되며 접수 즉시 최고관리자 대시보드와 실시간 연동됩니다.
+                        </p>
+                        <button type="button" id="btn-open-biz-apply-mob" onclick="openDirectBizApplyMob(); return false;" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1.05rem; font-weight: 700; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);">
+                            <i class="fa-solid fa-paper-plane"></i> 온라인 간편 지원 신청하기
+                        </button>
                     </div>
 
                     <!-- 1. 내 온라인 간편 지원 신청 내역 (검색 + 접기/펼치기 토글 + 현장사진 2줄 버튼) -->
