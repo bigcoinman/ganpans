@@ -1531,7 +1531,24 @@ window.SupabaseSync = {
       const { data: supaApps, error: appsErr } = await window.supabaseClient.from('applications').select('*');
       let appsChanged = false;
       if (!appsErr && Array.isArray(supaApps)) {
-        const freshApps = supaApps.map(sa => this.mapDbToApp(sa)).filter(a => a && a.id);
+        let localDeletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
+        try {
+          const { data: statsRow } = await window.supabaseClient.from('site_stats')
+            .select('today_date')
+            .eq('id', 'deleted_application_ids')
+            .maybeSingle();
+          if (statsRow && statsRow.today_date) {
+            const cloudDeleted = JSON.parse(statsRow.today_date) || [];
+            cloudDeleted.forEach(id => {
+              if (!localDeletedAppIds.includes(String(id))) localDeletedAppIds.push(String(id));
+            });
+            localStorage.setItem('deleted_application_ids', JSON.stringify(localDeletedAppIds));
+          }
+        } catch (eStats) {}
+
+        const freshApps = supaApps
+          .map(sa => this.mapDbToApp(sa))
+          .filter(a => a && a.id && !localDeletedAppIds.includes(String(a.id)));
         const newAppsStr = JSON.stringify(freshApps);
         if (oldAppsStr !== newAppsStr) {
           localStorage.setItem('applications', newAppsStr);
@@ -1543,10 +1560,24 @@ window.SupabaseSync = {
       const { data: supaInqs, error: inqsErr } = await window.supabaseClient.from('inquiries').select('*');
       let inqsChanged = false;
       if (!inqsErr && Array.isArray(supaInqs)) {
-        let deletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
+        let localDeletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
+        try {
+          const { data: inqStatsRow } = await window.supabaseClient.from('site_stats')
+            .select('today_date')
+            .eq('id', 'deleted_inquiry_ids')
+            .maybeSingle();
+          if (inqStatsRow && inqStatsRow.today_date) {
+            const cloudDeleted = JSON.parse(inqStatsRow.today_date) || [];
+            cloudDeleted.forEach(id => {
+              if (!localDeletedInqIds.includes(String(id))) localDeletedInqIds.push(String(id));
+            });
+            localStorage.setItem('deleted_inquiry_ids', JSON.stringify(localDeletedInqIds));
+          }
+        } catch (eInqStats) {}
+
         const freshInqs = supaInqs
           .map(si => this.mapDbToInquiry(si))
-          .filter(i => i && i.id && !deletedInqIds.includes(String(i.id)));
+          .filter(i => i && i.id && !localDeletedInqIds.includes(String(i.id)));
         const newInqsStr = JSON.stringify(freshInqs);
         if (oldInqsStr !== newInqsStr) {
           localStorage.setItem('inquiries', newInqsStr);
