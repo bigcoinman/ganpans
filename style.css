@@ -2087,8 +2087,7 @@ input:checked+.slider-round:before {
   height: 100vh !important;
   background-color: rgba(0, 0, 0, 0.4) !important;
   backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
-  z-index: 20000 !important;
+  z-index: 99999 !important;
   display: none !important;
   align-items: flex-end !important;
   justify-content: center !important;
@@ -2108,11 +2107,12 @@ input:checked+.slider-round:before {
   max-width: 500px !important;
   background-color: #ffffff !important;
   border-radius: 20px 20px 0 0 !important;
-  padding: 16px 20px calc(20px + env(safe-area-inset-bottom)) !important;
+  padding: 16px 20px calc(28px + env(safe-area-inset-bottom)) !important;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15) !important;
   transform: translateY(100%) !important;
   transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94) !important;
-  max-height: 80% !important;
+  max-height: 85vh !important;
+  overflow-y: auto !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
