@@ -1269,19 +1269,18 @@ window.SupabaseSync = {
     return false;
   },
 
-  // 6. 지원 신청서 삭제
+  // 6. 지원 신청서 DB 완전 영구 삭제 (재접수 시 충돌 방지)
   async deleteApplication(appId) {
     if (!appId) return;
+    const targetId = String(appId).trim();
     try {
-      // 1) 로컬 삭제 목록에 등록하여 syncAllData에서 부활 영구 차단
-      let deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
-      if (!deletedAppIds.includes(String(appId))) {
-        deletedAppIds.push(String(appId));
-        localStorage.setItem('deleted_application_ids', JSON.stringify(deletedAppIds));
-      }
-
       if (window.supabaseClient) {
-        await window.supabaseClient.from('applications').delete().eq('id', String(appId));
+        // 1) applications 테이블에서 영구 완전 삭제
+        await window.supabaseClient.from('applications').delete().eq('id', targetId);
+        // 2) 혹시 business_items 테이블에도 남아있다면 동시 완전 삭제
+        try {
+          await window.supabaseClient.from('business_items').delete().eq('id', targetId);
+        } catch (eBiz) {}
       }
     } catch (e) {
       console.error('Supabase deleteApplication error:', e);
