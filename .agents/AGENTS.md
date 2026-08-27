@@ -86,26 +86,37 @@ git worktree add "../{프로젝트명}-dev" -b develop
 
 ---
 
-## 최고관리자 ↔ 영업자 실시간 4대 상호 동시 연동 필수 매트릭스 (Permanent Sync Matrix)
+## 최고관리자 ↔ 영업자 ↔ 시공업체 실시간 6대 상호 동시 연동 필수 매트릭스 (Permanent 6-Way Sync Matrix)
 
-다음 **2개 핵심 업무 그룹의 4대 화면은 데이터 변경 시 0초 만에 완벽하게 실시간 동시 연동**되어야 한다:
+신청서 관리 건 & 영업물건 관리 건 모두 다음 **6개 화면이 0초 만에 실시간으로 완벽하게 일치**해야 한다:
+1. **`최고관리자 모바일 앱` (항상 1순위)**
+2. **`최고관리자 PC웹`**
+3. **`영업자 모바일 앱 (현황 대시보드)`**
+4. **`영업자 PC웹 (전용 대시보드)`**
+5. **`시공업체 모바일 앱 (현황 대시보드)`**
+6. **`시공업체 PC웹 (전용 대시보드)`**
+
+---
 
 ### [업무 그룹 A] 간편 지원 신청서 건
-1. **최고관리자 PC웹**: "신청서 목록" (`renderApplicationsList`)
-2. **최고관리자 모바일 앱**: "신청서목록" (`renderAdminDashboardMob`)
-3. **영업자 PC웹 (영업자 전용 대시보드)**: "내 온라인 간편 지원 신청 내역" (`renderUserApplicationsList`)
-4. **영업자 모바일 앱 (현황 대시보드)**: "내 온라인 간편 지원 신청 내역" (`renderUserApplicationsMob`)
-- **동기화 규칙**: 심사 상태(심사 대기, 서류제출 & 접수예정, 지원사업 탈락, 지원사업 포기), 현장사진 등록, 영업물건으로 변경(`isBizItem`) 토글 시 위 4개 화면에 실시간으로 즉시 100% 동시 반영한다.
+1. **최고관리자 모바일 앱**: "신청서목록" (`renderAdminDashboardMob`)
+2. **최고관리자 PC웹**: "신청서 목록" (`renderApplicationsList`)
+3. **영업자 모바일 앱**: "내 온라인 간편 지원 신청 내역" (`renderUserApplicationsMob`)
+4. **영업자 PC웹**: "내 온라인 간편 지원 신청 내역" (`renderUserApplicationsList`)
+5. **시공업체 모바일 앱 / PC웹**: 배정된 신청 건 실시간 조회
+- **동기화 규칙**: 심사 상태(심사 대기, 서류제출 & 접수예정, 지원사업 탈락, 지원사업 포기), 현장사진 등록, 영업물건으로 변경(`isBizItem`) 토글 시 위 6개 화면에 실시간으로 즉시 100% 동시 반영한다.
 - **개발 시 주의사항**: `DataStore.notifyAll()` 또는 `supabase-data-synced` 이벤트 발생 시 위 모든 렌더링 함수가 조건에 맞게 빠짐없이 호출되도록 보장해야 한다. 영업자의 신청서 필터링은 `userId`뿐만 아니라 `ownerPhone`, `ownerName`, `referrerCode(bizCode)` 등을 활용한 **다각도 정밀 매칭**을 사용해야 한다.
 
 ### [업무 그룹 B] 영업물건 (공단/진흥원 접수) 현황 및 진행상황 건
-1. **최고관리자 PC웹**: "영업물건 진행상황" (`renderManagerPanel`, `renderBizRegisteredTable`)
-2. **최고관리자 모바일 앱**: "영업물건 진행상황" (`renderAdminDashboardMob`, `renderBizItemsListMob`)
-3. **영업자 PC웹 (영업자 전용 대시보드)**: "내 영업물건 현황 및 진행상황" (`renderBizRegisteredTable`)
-4. **영업자 모바일 앱 (현황 대시보드)**: "내 영업물건 현황 및 진행상황" (`renderBizRegisteredItemsMob`, `renderBusinessDashboardMob`)
+1. **최고관리자 모바일 앱**: "영업물건 진행상황" (`renderAdminDashboardMob`, `renderBizItemsListMob`)
+2. **최고관리자 PC웹**: "영업물건 진행상황" (`renderManagerPanel`, `renderBizRegisteredTable`)
+3. **영업자 모바일 앱**: "내 영업물건 현황 및 진행상황" (`renderBizRegisteredItemsMob`, `renderBusinessDashboardMob`)
+4. **영업자 PC웹**: "내 영업물건 현황 및 진행상황" (`renderBizRegisteredTable`)
+5. **시공업체 모바일 앱**: "시공업체 진행현황" (`renderConstructorDashboardMob`)
+6. **시공업체 PC웹**: "시공업체 진행현황" (`renderConstructorPanel`)
 - **동기화 규칙**: 접수상태(업체신청, 접수예정, 접수완료), 진행상태(지원대기중, 심사대기, 대상자선정, 간판시공 준비중, 간판시공완료), 시공사 배정 변경 시 `users.items`와 `applications` 양방향으로 즉시 100% 동시 반영한다.
-- **개발 시 주의사항**: 앱과 PC웹 모두 함수명을 오타 없이 명확히 호출해야 한다. (예: `renderBizDashboardMob`가 아닌 `renderBusinessDashboardMob` 호출 등)
-- **SSOT 검증 규칙**: 영업자 화면의 `getBizItemsForUser`는 최고관리자 대시보드 `applications`에 실존하고 `isBizItem === true`로 승인된 건만 수집하며, 관리자 대시보드에 존재하지 않는 건은 절대 노출하지 않는다.
+- **개발 시 주의사항**: 앱과 PC웹 모두 함수명을 오타 없이 명확히 호출해야 한다.
+- **SSOT 검증 규칙**: 영업자 및 시공업체 화면의 물건 목록은 최고관리자 대시보드 `applications`에 실존하고 승인/배정된 건만 수집하며, 관리자 대시보드에 존재하지 않는 건은 절대 노출하지 않는다.
 
 ---
 
