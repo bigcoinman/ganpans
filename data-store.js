@@ -1380,11 +1380,12 @@
     const allUsers = (window.DataStore ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []));
     const deletedIds = (window.DataStore ? window.DataStore.getDeletedUserIds() : (JSON.parse(localStorage.getItem('deleted_user_ids')) || []));
     
-    // 승인된 영업자 목록 추출 (삭제된 계정 배제)
+    // 승인된 영업자 목록 추출 (시공사 전용 회원은 배제하고, 영업자 코드 보유자 및 영업자만 정밀 추출)
     const bizUsers = allUsers.filter(u => {
       if (!u || !u.id) return false;
       if (deletedIds.includes(String(u.id))) return false;
-      return (u.role === 'business' || u.conversionStatus === 'approved' || (u.bizCode && u.bizCode.length > 0));
+      if (u.role === 'constructor' && !u.bizCode) return false;
+      return (u.role === 'business' || (u.bizCode && String(u.bizCode).trim().length > 0));
     });
 
     // 현재 배정된 영업자 확인
