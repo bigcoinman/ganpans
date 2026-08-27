@@ -243,24 +243,8 @@
 
         // 최고관리자는 전체 조회, 영업자는 오직 본인 귀속 건만 조회
         if (this.isAdmin(user) || isMyReferrer || isMyUser || isMyPhone || isMyName) {
-          let matchedItem = null;
-          const allUsers = this.getUsers();
-          for (const u of allUsers) {
-            if (u.items && Array.isArray(u.items)) {
-              const found = u.items.find(it => 
-                String(it.id) === String(app.id) || 
-                String(it.appRefId) === String(app.id) ||
-                (normalizeStr(it.name) === normalizeStr(app.storeName) && normalizePhone(it.phone) === normalizePhone(app.ownerPhone))
-              );
-              if (found) {
-                matchedItem = found;
-                break;
-              }
-            }
-          }
-
-          const rStatus = (matchedItem && matchedItem.receiptStatus) || app.receiptStatus || '접수예정';
-          const pStatus = (matchedItem && matchedItem.progressStatus) || app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
+          const rStatus = app.receiptStatus || '접수예정';
+          const pStatus = app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
 
           const bizObj = {
             id: app.id,
@@ -357,23 +341,8 @@
           );
         }
 
-        let matchedItem = null;
-        for (const u of users) {
-          if (u.items && Array.isArray(u.items)) {
-            const found = u.items.find(it => 
-              String(it.id) === String(app.id) || 
-              String(it.appRefId) === String(app.id) ||
-              (normalizeStr(it.name) === normalizeStr(app.storeName) && normalizePhone(it.phone) === normalizePhone(app.ownerPhone))
-            );
-            if (found) {
-              matchedItem = found;
-              break;
-            }
-          }
-        }
-
-        const rStatus = (matchedItem && matchedItem.receiptStatus) || app.receiptStatus || '접수예정';
-        const pStatus = (matchedItem && matchedItem.progressStatus) || app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
+        const rStatus = app.receiptStatus || '접수예정';
+        const pStatus = app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
 
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
         const itemObj = {
@@ -387,38 +356,14 @@
           progressStatus: pStatus,
           photos: photosList,
           registeredAt: app.appliedAt || app.createdAt || new Date().toISOString(),
-          assignedConstructorId: app.assignedConstructorId || (matchedItem && matchedItem.assignedConstructorId) || '',
-          assignedConstructorName: app.assignedConstructorName || (matchedItem && matchedItem.assignedConstructorName) || ''
+          assignedConstructorId: app.assignedConstructorId || '',
+          assignedConstructorName: app.assignedConstructorName || ''
         };
 
         if (!isDuplicate(allItems, itemObj)) {
           allItems.push({
             user: assignedUser || { id: 'admin', name: '최고관리자', role: 'admin', bizCode: 'ADMIN' },
             item: itemObj
-          });
-        }
-      });
-
-      // 2) users.items 중에서도 applications와 대조하여 isBizItem === false 인 건은 100% 제외하고, 중복이 아닌 건만 수집
-      users.forEach(u => {
-        if (u.role === 'business' && u.items && u.items.length > 0) {
-          u.items.forEach(item => {
-            if (isPurged(item)) return;
-            const matchingApp = apps.find(a => 
-              String(a.id) === String(item.id) || 
-              String(a.id) === String(item.appRefId) ||
-              (normalizeStr(a.storeName) === normalizeStr(item.name) && normalizePhone(a.ownerPhone || a.phone) === normalizePhone(item.phone))
-            );
-            if (matchingApp && (matchingApp.isBizItem === false || String(matchingApp.isBizItem) === 'false')) {
-              return; // 관리자가 해제한 건은 절대 표시하지 않음!
-            }
-
-            if (!isDuplicate(allItems, item)) {
-              allItems.push({
-                user: u,
-                item: item
-              });
-            }
           });
         }
       });
@@ -549,75 +494,7 @@
         });
       };
 
-      // 1) From users' items (영업물건)
-      curUsers.forEach(u => {
-        if (u.items && Array.isArray(u.items)) {
-          u.items.forEach(item => {
-            const matchingApp = apps.find(a => 
-              String(a.id) === String(item.id) || 
-              (item.appRefId && String(a.id) === String(item.appRefId)) ||
-              (normalizeStr(a.storeName || a.shopName) === normalizeStr(item.name) && normalizePhone(a.ownerPhone || a.phone) === normalizePhone(item.phone))
-            );
-            const pStatus = String(item.progressStatus || (matchingApp && (matchingApp.progressStatus || matchingApp.constructionStatus)) || '').trim();
-            const cStatus = String(item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || '').trim();
-
-            // 오직 '대상자선정', '간판시공 준비중', '간판시공완료' 또는 시공 진행/완료인 건만 허용
-            const isEligible = (
-              pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-              cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
-            ) && (
-              pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
-              pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
-            );
-
-            if (isEligible) {
-              const salesInfo = resolveSalesperson(matchingApp, item, u);
-              let cName = item.assignedConstructorName || '';
-              let cCode = '';
-              let cPhone = '';
-              if (item.assignedConstructorId) {
-                const cu = curUsers.find(x => x.id === item.assignedConstructorId || x.constCode === item.assignedConstructorId);
-                if (cu) {
-                  cName = cu.businessName || cu.pendingBusinessName || cu.name || cu.id;
-                  cCode = cu.constCode || '';
-                  cPhone = cu.phone || '';
-                } else {
-                  cName = item.assignedConstructorName || item.assignedConstructorId;
-                }
-              }
-              const jobObj = {
-                id: item.id,
-                appRefId: item.appRefId || (matchingApp ? matchingApp.id : null),
-                isBizItemJob: true,
-                bizItemOwnerId: salesInfo.bizOwnerId,
-                bizOwnerName: salesInfo.bizOwnerName,
-                bizCode: salesInfo.bizCode,
-                bizLabel: salesInfo.bizLabel,
-                storeName: item.name || (matchingApp && (matchingApp.storeName || matchingApp.shopName)) || '-',
-                ownerName: (matchingApp && matchingApp.ownerName) || item.ownerName || '점주',
-                ownerPhone: (matchingApp && (matchingApp.ownerPhone || matchingApp.phone)) || item.phone || '-',
-                storeAddress: item.address || (matchingApp && matchingApp.storeAddress) || '-',
-                signType: item.signType || (matchingApp && matchingApp.signType) || '플렉스 간판',
-                assignedConstructorId: item.assignedConstructorId || '',
-                assignedConstructorName: cName || '미배정',
-                assignedConstructorCode: cCode,
-                assignedConstructorPhone: cPhone,
-                progressStatus: pStatus,
-                constructionStatus: item.constructionStatus || (matchingApp && matchingApp.constructionStatus) || (pStatus === '간판시공완료' ? 'completed' : (pStatus === '간판시공 준비중' ? 'in_construction' : (pStatus === '간판 디자인 시안 및 교정 중' ? 'design_draft' : 'before_construction'))),
-                signDraftPhotos: item.signDraftPhotos || (matchingApp && matchingApp.signDraftPhotos) || (item.designPhotos || (matchingApp && matchingApp.designPhotos) || []),
-                draftStatus: item.draftStatus || (matchingApp && matchingApp.draftStatus) || 'pending',
-                draftApprovedAt: item.draftApprovedAt || (matchingApp && matchingApp.draftApprovedAt) || null,
-                constructionPhotos: item.constructionPhotos || (matchingApp && matchingApp.constructionPhotos) || (item.afterPhotos || (matchingApp && matchingApp.afterPhotos) || []),
-                createdAt: item.assignedAt || item.createdAt || new Date().toISOString()
-              };
-
-              if (!isDuplicateJob(allConstJobs, jobObj)) {
-                allConstJobs.push(jobObj);
-              }
-            }
-          });
-        }
-      });
+      // applications 단일 원천에서 시공 적격 및 배정 물건 수집 (SSOT)
 
       // 2) From applications (온라인 신청서)
       apps.forEach(app => {
