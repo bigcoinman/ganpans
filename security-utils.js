@@ -1557,8 +1557,22 @@ window.SupabaseSync = {
           .filter(a => a && a.id && !localDeletedAppIds.includes(String(a.id)));
         const newAppsStr = JSON.stringify(freshApps);
         if (oldAppsStr !== newAppsStr) {
-          localStorage.setItem('applications', newAppsStr);
-          appsChanged = true;
+          try {
+            localStorage.setItem('applications', newAppsStr);
+            appsChanged = true;
+          } catch (qErr) {
+            try {
+              const lightApps = freshApps.map(a => ({
+                ...a,
+                photos: (a.photos && a.photos.length > 0) ? [a.photos[0]] : [],
+                fileData: ''
+              }));
+              localStorage.setItem('applications', JSON.stringify(lightApps));
+              appsChanged = true;
+            } catch (qErr2) {
+              console.error('Applications localStorage save failed:', qErr2);
+            }
+          }
         }
       }
 
