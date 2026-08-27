@@ -1075,7 +1075,12 @@ function initWizard() {
 
   const uploadArea = document.getElementById('file-upload-area');
   const uploadInput = document.getElementById('store-photo');
+  const uploadCameraInput = document.getElementById('store-photo-camera');
   const fileNameDisplay = document.getElementById('uploaded-file-name');
+  const photoChoiceOverlay = document.getElementById('photo-choice-overlay');
+  const btnChoiceCamera = document.getElementById('btn-choice-camera');
+  const btnChoiceGallery = document.getElementById('btn-choice-gallery');
+  const btnChoiceCancel = document.getElementById('btn-choice-cancel');
 
   if (steps.length === 0) return;
 
@@ -1090,7 +1095,18 @@ function initWizard() {
   let uploadedPhotos = [];
   const photosPreviewContainer = document.getElementById('uploaded-photos-preview');
 
-  if (uploadArea && uploadInput) {
+  if (uploadArea) {
+    uploadArea.addEventListener('click', (e) => {
+      // Direct input click bypass
+      if (e.target === uploadInput || e.target === uploadCameraInput) return;
+      if (photoChoiceOverlay) {
+        window.currentPhotoTarget = 'apply';
+        photoChoiceOverlay.classList.add('active');
+      } else if (uploadInput) {
+        uploadInput.click();
+      }
+    });
+
     ['dragenter', 'dragover'].forEach(eventName => {
       uploadArea.addEventListener(eventName, (e) => {
         e.preventDefault();
@@ -1113,12 +1129,58 @@ function initWizard() {
       }
     });
 
-    uploadInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files.length) {
-        handlePhotoFiles(e.target.files);
+    if (uploadInput) {
+      uploadInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length) {
+          handlePhotoFiles(e.target.files);
+        }
+        uploadInput.value = '';
+      });
+    }
+
+    if (uploadCameraInput) {
+      uploadCameraInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length) {
+          handlePhotoFiles(e.target.files);
+        }
+        uploadCameraInput.value = '';
+      });
+    }
+  }
+
+  if (photoChoiceOverlay) {
+    photoChoiceOverlay.addEventListener('click', (e) => {
+      if (e.target === photoChoiceOverlay) {
+        photoChoiceOverlay.classList.remove('active');
       }
-      uploadInput.value = '';
     });
+
+    if (btnChoiceCancel) {
+      btnChoiceCancel.addEventListener('click', () => {
+        photoChoiceOverlay.classList.remove('active');
+      });
+    }
+
+    if (btnChoiceCamera) {
+      btnChoiceCamera.addEventListener('click', () => {
+        photoChoiceOverlay.classList.remove('active');
+        if (window.currentPhotoTarget === 'apply') {
+          const storeCam = document.getElementById('store-photo-camera');
+          if (storeCam) storeCam.click();
+          else if (uploadInput) uploadInput.click();
+        }
+      });
+    }
+
+    if (btnChoiceGallery) {
+      btnChoiceGallery.addEventListener('click', () => {
+        photoChoiceOverlay.classList.remove('active');
+        if (window.currentPhotoTarget === 'apply') {
+          const storeGal = document.getElementById('store-photo');
+          if (storeGal) storeGal.click();
+        }
+      });
+    }
   }
 
   async function handlePhotoFiles(fileList) {

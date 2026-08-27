@@ -925,7 +925,8 @@
                                     <div class="file-upload-area" id="file-upload-area" style="border: 2px dashed #1e40af; border-radius: 10px; padding: 22px; text-align: center; cursor: pointer; background: #fafbff;">
                                         <i class="fa-solid fa-camera" style="font-size: 2.2rem; color: #1e40af; margin-bottom: 8px;"></i>
                                         <p style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; margin: 0;">사진 촬영 또는 갤러리 선택</p>
-                                        <input type="file" id="store-photo" accept=".jpg, .jpeg, .png, image/jpeg, image/png" multiple>
+                                        <input type="file" id="store-photo" accept="image/*" multiple style="display: none;">
+                                        <input type="file" id="store-photo-camera" accept="image/*" capture="environment" style="display: none;">
                                         <div id="uploaded-file-name" class="uploaded-file-name"></div>
                                         <div id="uploaded-photos-preview" class="uploaded-photos-preview"></div>
                                     </div>
@@ -1924,15 +1925,47 @@
         </div>
     </div>
 
+    <!-- Bottom Sheet for Photo Source Selection -->
+    <div class="bottom-sheet-overlay" id="photo-choice-overlay">
+        <div class="bottom-sheet-container" id="photo-choice-sheet">
+            <div class="bottom-sheet-handle"></div>
+            <div class="bottom-sheet-header">
+                <h4>사진 추가 방식 선택</h4>
+                <p>현장 사진 등록 방식을 선택해 주세요</p>
+            </div>
+            <div class="bottom-sheet-options">
+                <button type="button" class="sheet-option-btn" id="btn-choice-camera">
+                    <div class="option-icon camera-bg">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <div class="option-info">
+                        <span class="option-title">실시간 촬영</span>
+                        <span class="option-desc">카메라로 현장 사진을 직접 촬영합니다.</span>
+                    </div>
+                </button>
+                <button type="button" class="sheet-option-btn" id="btn-choice-gallery">
+                    <div class="option-icon gallery-bg">
+                        <i class="fa-solid fa-images"></i>
+                    </div>
+                    <div class="option-info">
+                        <span class="option-title">갤러리 선택</span>
+                        <span class="option-desc">앨범에서 저장된 사진들을 다중 선택합니다.</span>
+                    </div>
+                </button>
+            </div>
+            <button type="button" class="bottom-sheet-close-btn" id="btn-choice-cancel">취소</button>
+        </div>
+    </div>
+
     <!-- JSZip Library for multi-photo zip packaging -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js?v=20260827_step2_photo_ui"></script>
-    <script src="security-utils.js?v=20260827_step2_photo_ui"></script>
-    <script src="data-store.js?v=20260827_step2_photo_ui"></script>
-    <script src="kakao-notify.js?v=20260827_step2_photo_ui"></script>
-    <script src="script.js?v=20260827_step2_photo_ui"></script>
+    <script src="supabase-config.js?v=20260827_camera_choice"></script>
+    <script src="security-utils.js?v=20260827_camera_choice"></script>
+    <script src="data-store.js?v=20260827_camera_choice"></script>
+    <script src="kakao-notify.js?v=20260827_camera_choice"></script>
+    <script src="script.js?v=20260827_camera_choice"></script>
 </body>
 
 </html>

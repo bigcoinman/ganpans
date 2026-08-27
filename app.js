@@ -1863,6 +1863,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (mobFileZoneMob) {
         mobFileZoneMob.addEventListener('click', () => {
+            window.currentPhotoTarget = 'biz';
             if (photoChoiceOverlay) {
                 photoChoiceOverlay.classList.add('active');
             } else if (mobPhotosInputMob) {
@@ -1887,18 +1888,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Camera option
-        if (btnChoiceCamera && mobCameraInputMob) {
+        if (btnChoiceCamera) {
             btnChoiceCamera.addEventListener('click', () => {
                 photoChoiceOverlay.classList.remove('active');
-                mobCameraInputMob.click();
+                if (window.currentPhotoTarget === 'apply') {
+                    const storeCamera = document.getElementById('store-photo-camera');
+                    if (storeCamera) storeCamera.click();
+                    else if (mobCameraInputMob) mobCameraInputMob.click();
+                } else if (mobCameraInputMob) {
+                    mobCameraInputMob.click();
+                }
             });
         }
 
         // Gallery option
-        if (btnChoiceGallery && mobPhotosInputMob) {
+        if (btnChoiceGallery) {
             btnChoiceGallery.addEventListener('click', () => {
                 photoChoiceOverlay.classList.remove('active');
-                mobPhotosInputMob.click();
+                if (window.currentPhotoTarget === 'apply') {
+                    const storeGallery = document.getElementById('store-photo');
+                    if (storeGallery) storeGallery.click();
+                    else if (mobPhotosInputMob) mobPhotosInputMob.click();
+                } else if (mobPhotosInputMob) {
+                    mobPhotosInputMob.click();
+                }
             });
         }
     }
