@@ -2773,8 +2773,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const searchAppsInput = document.getElementById('search-apps-input-mob');
             const qApps = searchAppsInput && searchAppsInput.value ? searchAppsInput.value.trim().slice(0, 30).toLowerCase() : '';
 
+            // 최신 신청서 목록 수집 (SSOT)
+            const curApps = window.DataStore ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
             // Sort applications by applied date descending (latest first)
-            let sortedApps = [...applications].sort((a, b) => {
+            let sortedApps = [...curApps].sort((a, b) => {
                 const timeA = new Date(a.appliedAt || a.createdAt || a.created_at || 0).getTime();
                 const timeB = new Date(b.appliedAt || b.createdAt || b.created_at || 0).getTime();
                 if (timeB !== timeA && !isNaN(timeA) && !isNaN(timeB)) {
