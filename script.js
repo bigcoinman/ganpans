@@ -1087,8 +1087,28 @@ function initWizard() {
   const urlParams = new URLSearchParams(window.location.search);
   const refCode = urlParams.get('ref');
   const referrerInput = document.getElementById('referrer-code');
-  if (refCode && referrerInput) {
-    referrerInput.value = refCode.trim();
+  const loggedUser = (typeof getActiveUser === 'function') ? getActiveUser() : null;
+
+  if (referrerInput) {
+    if (loggedUser && loggedUser.role === 'business' && loggedUser.bizCode) {
+      referrerInput.value = loggedUser.bizCode;
+      referrerInput.readOnly = true;
+      referrerInput.style.backgroundColor = '#f1f5f9';
+      referrerInput.style.color = '#334155';
+      referrerInput.style.fontWeight = '700';
+      referrerInput.title = `담당 영업자 (${loggedUser.name || ''}) 코드가 자동 적용되었습니다.`;
+      
+      const refLabel = document.querySelector('label[for="referrer-code"]');
+      if (refLabel && !document.getElementById('biz-auto-badge')) {
+        const badge = document.createElement('span');
+        badge.id = 'biz-auto-badge';
+        badge.style.cssText = 'margin-left: 6px; font-size: 0.76rem; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 9999px; font-weight: 700;';
+        badge.innerHTML = `<i class="fa-solid fa-lock"></i> 영업자 본인 자동지정 (${loggedUser.name || '영업자'})`;
+        refLabel.appendChild(badge);
+      }
+    } else if (refCode) {
+      referrerInput.value = refCode.trim();
+    }
   }
 
   let currentStep = 0;
@@ -1574,6 +1594,9 @@ function initWizard() {
         photosCount: photos.length,
         appliedAt: now.toISOString(),
         status: 'pending',
+        isBizItem: false,
+        receiptStatus: '접수완료',
+        progressStatus: '심사대기',
         referrerCode,
         autoAccount: {
           id: loginNoticeId,
@@ -1593,6 +1616,7 @@ function initWizard() {
         }
       }
 
+      // Supabase 클라우드 영구 저장 및 0초 전역 동기화 발화 (SSOT)
       if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
         window.SupabaseSync.upsertApplication(newApp).then(() => {
           if (typeof window.SupabaseSync.syncAllData === 'function') {
@@ -1601,42 +1625,11 @@ function initWizard() {
         }).catch(supaErr => console.warn('Supabase upsertApplication error:', supaErr));
       }
 
-      if (referrerCode) {
-        let bizUserFound = false;
-
-        const newBizItem = {
-          id: customId,
-          name: storeName,
-          address: storeAddress,
-          photosCount: photos.length,
-          receiptStatus: '접수 완료 (간판지원단)',
-          progressStatus: '심사 대기',
-          photos: photos
-        };
-
-        users = users.map(u => {
-          if (u.role === 'business' && u.bizCode === referrerCode) {
-            u.items = u.items || [];
-            if (!u.items.some(item => item.id === customId)) {
-              u.items.push(newBizItem);
-              bizUserFound = true;
-            }
-          }
-          return u;
-        });
-
-        if (bizUserFound) {
-          safeSetStorage('users', users);
-
-          if (activeUser && activeUser.role === 'business' && activeUser.bizCode === referrerCode) {
-            activeUser.items = activeUser.items || [];
-            if (!activeUser.items.some(item => item.id === customId)) {
-              activeUser.items.push(newBizItem);
-              safeSetStorage('activeUser', activeUser);
-            }
-          }
-        }
+      // 0초 전역 동기화 브로드캐스트
+      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+        window.DataStore.notifyAll();
       }
+      window.dispatchEvent(new CustomEvent('supabase-data-synced', { detail: { newApp } }));
 
       const appIdContainer = document.getElementById('success-app-id-container');
       if (appIdContainer) appIdContainer.textContent = customId;

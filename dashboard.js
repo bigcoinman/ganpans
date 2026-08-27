@@ -3562,6 +3562,12 @@ document.addEventListener('DOMContentLoaded', () => {
     alert(`[${targetApp ? (targetApp.storeName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`);
     updateSessionUI();
 
+    // 전역 0초 동시 연동 브로드캐스트 발화 (6대 화면 실시간 동기화)
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll();
+    }
+    window.dispatchEvent(new CustomEvent('supabase-data-synced', { detail: { targetApp } }));
+
     // 3) Supabase DB 백그라운드 비동기 영구 저장 (Non-blocking)
     (async () => {
       if (window.SupabaseSync) {
@@ -3597,8 +3603,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   window.updateApplicationStatus = updateApplicationStatus;
 
-  
-
   const deleteApplication = (id) => {
     if (activeUser.role !== 'admin') return;
     if (!confirm('정말로 이 지원 신청 접수 건을 삭제하시겠습니까?')) return;
@@ -3631,23 +3635,26 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${year}.${month}.${day}`;
   };
 
-  // 신청 상태 뱃지 헬퍼
+  // 신청 상태 뱃지 헬퍼 (한글/영문 100% 완전 포괄 매핑)
   const getAppStatusBadgeHtml = (app) => {
-    if (app.status === 'approved') {
-      if (app.constructionStatus === 'before_construction') {
+    const s = String(app.status || '').trim();
+    const cs = String(app.constructionStatus || app.progressStatus || '').trim();
+
+    if (s === 'approved' || s === '서류제출 & 접수예정' || s === '서류제출&접수예정' || s === '승인 완료' || s === '승인완료') {
+      if (cs === 'before_construction' || cs === '시공 전' || cs === '시공사배정') {
         return `<span style="background: #e2e8f0; color: #475569; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-link"></i> 시공사 배정 (시공 전)</span>`;
-      } else if (app.constructionStatus === 'in_construction') {
+      } else if (cs === 'in_construction' || cs === '시공 진행 중' || cs === '시공중' || cs === '간판시공 준비중') {
         return `<span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-screwdriver-wrench"></i> 시공 진행 중</span>`;
-      } else if (app.constructionStatus === 'after_construction') {
+      } else if (cs === 'after_construction' || cs === '시공 완료 (검수 중)' || cs === '검수중') {
         return `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-spinner fa-spin"></i> 시공 완료 (검수 중)</span>`;
-      } else if (app.constructionStatus === 'completed') {
+      } else if (cs === 'completed' || cs === '정산 종결 (최종 완료)' || cs === '정산완료' || cs === '간판시공완료') {
         return `<span style="background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-file-invoice-dollar"></i> 정산 종결 (최종 완료)</span>`;
       } else {
-        return `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-check"></i> 승인 완료</span>`;
+        return `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-check"></i> 서류제출 & 접수예정</span>`;
       }
-    } else if (app.status === 'rejected' || app.status === '지원사업 탈락' || app.status === '지원사업탈락') {
+    } else if (s === 'rejected' || s === '지원사업 탈락' || s === '지원사업탈락' || s === '반려됨') {
       return `<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>`;
-    } else if (app.status === 'giveup' || app.status === '지원사업 포기' || app.status === '지원사업포기') {
+    } else if (s === 'giveup' || s === '지원사업 포기' || s === '지원사업포기') {
       return `<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-ban"></i> 지원사업 포기</span>`;
     } else {
       return `<span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-clock"></i> 심사 대기</span>`;

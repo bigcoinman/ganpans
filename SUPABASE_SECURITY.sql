@@ -168,4 +168,11 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
 
+-- 10. Supabase Realtime WebSocket 실시간 브로드캐스트 활성화 (0초 동시 연동 필수)
+ALTER PUBLICATION supabase_realtime ADD TABLE public.applications;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.users;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.inquiries;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.site_stats;
+
+
 

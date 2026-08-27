@@ -1256,19 +1256,22 @@ document.addEventListener('DOMContentLoaded', () => {
             constStatus = statusObj.constructionStatus || statusObj.progressStatus || '';
         }
 
-        if (constStatus === '간판시공완료' || constStatus === '시공 완료' || constStatus === '정산 완료') {
+        const s = String(status).trim();
+        const cs = String(constStatus).trim();
+
+        if (cs === '간판시공완료' || cs === '시공 완료' || cs === '정산 완료' || cs === 'completed') {
             return '<span style="background: #fdf4ff; color: #a855f7; border: 1px solid #f0abfc; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-screwdriver-wrench"></i> 시공 완료</span>';
         }
-        if (constStatus === '대상자선정' || constStatus === '간판시공 준비중') {
+        if (cs === '대상자선정' || cs === '간판시공 준비중' || cs === 'in_construction' || cs === 'after_construction') {
             return '<span style="background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
         }
-        if (status === 'approved' || status === '서류제출 & 접수예정' || status === '승인 완료') {
-            return '<span style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 승인 완료</span>';
+        if (s === 'approved' || s === '서류제출 & 접수예정' || s === '서류제출&접수예정' || s === '승인 완료' || s === '승인완료') {
+            return '<span style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 서류제출 & 접수예정</span>';
         }
-        if (status === 'rejected' || status === '지원사업 탈락' || status === '반려됨') {
+        if (s === 'rejected' || s === '지원사업 탈락' || s === '지원사업탈락' || s === '반려됨') {
             return '<span style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 탈락</span>';
         }
-        if (status === 'giveup' || status === '지원사업 포기' || status === '지원사업포기') {
+        if (s === 'giveup' || s === '지원사업 포기' || s === '지원사업포기') {
             return '<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-ban"></i> 포기</span>';
         }
         return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 심사 대기</span>';
@@ -3714,6 +3717,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2) 즉각 UI 갱신 및 완료 알림 (0초 지연)
         alert(`[${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`);
         renderStatusTab();
+
+        // 전역 0초 동시 연동 브로드캐스트 발화 (6대 화면 실시간 동기화)
+        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+            window.DataStore.notifyAll();
+        }
+        window.dispatchEvent(new CustomEvent('supabase-data-synced', { detail: { targetApp } }));
 
         // 3) Supabase DB 백그라운드 비동기 영구 저장 (Non-blocking)
         (async () => {
