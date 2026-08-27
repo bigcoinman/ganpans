@@ -2914,7 +2914,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div>신청번호: <span style="font-family: monospace; font-weight: 600; color: #475569;">${app.id}</span></div>
                             <div>대표자: <strong style="color: var(--text-primary);">${app.ownerName}</strong> (${app.ownerPhone})</div>
                             <div>주소: <span style="color: #475569;">${app.storeAddress}</span></div>
-                            ${bizUserName ? `<div style="color: var(--accent-primary); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-user-tie" style="color: var(--accent-secondary);"></i> 담당자 : ${escapeHtml(bizUserName)}</div>` : ''}
+                            ${bizUserName ? `<div style="color: var(--accent-primary); font-weight: 700; margin-top: 6px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; padding-top: 4px; border-top: 1px dashed #e2e8f0;">
+                                <span style="display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-user-tie" style="color: var(--accent-secondary);"></i> 담당자 : ${escapeHtml(bizUserName)}</span>
+                                <button type="button" onclick="window.openAssignBizUserModal('${app.id}'); return false;" style="padding: 4px 10px; font-size: 0.78rem; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-user-pen"></i> 영업자 수정/변경</button>
+                            </div>` : `<div style="color: #64748b; font-weight: 600; margin-top: 6px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; padding-top: 4px; border-top: 1px dashed #e2e8f0;">
+                                <span style="display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-building" style="color: #94a3b8;"></i> 담당자 : 본사직접접수</span>
+                                <button type="button" onclick="window.openAssignBizUserModal('${app.id}'); return false;" style="padding: 4px 10px; font-size: 0.78rem; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-user-pen"></i> 영업자 수정/변경</button>
+                            </div>`}
                         </div>
                         ${fileAttachmentHtml}
                         ${actionsHtml}

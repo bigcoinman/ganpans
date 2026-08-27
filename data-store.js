@@ -998,6 +998,33 @@
       return { success: true };
     },
 
+    // --- 3-3. 신청서 담당 영업자 지정 / 변경 (최고관리자 권한) ---
+    updateApplicationReferrer: function (appId, newBizCode) {
+      if (!appId) return { success: false, error: '유효하지 않은 신청서입니다.' };
+      const targetId = String(appId).trim();
+      const codeVal = newBizCode ? String(newBizCode).trim() : '';
+
+      let apps = this.getApplications();
+      const targetApp = apps.find(a => String(a.id) === targetId);
+      if (!targetApp) return { success: false, error: '해당 신청서를 찾을 수 없습니다.' };
+
+      // 1) 신청서 referrerCode 갱신
+      targetApp.referrerCode = codeVal;
+      targetApp.referrer_code = codeVal;
+      targetApp.updatedAt = new Date().toISOString();
+
+      this.saveApplications(apps);
+
+      // 2) Supabase 비동기 클라우드 DB 저장 (Non-blocking)
+      if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
+        window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
+      }
+
+      // 3) 6개 화면 실시간 동기화
+      this.notifyAll();
+      return { success: true, app: targetApp };
+    },
+
     // --- 4. 온라인 간편 지원 신청서 영구 삭제 ---
     deleteApplication: function (appId, btnEl) {
       if (!appId) return { success: false };
@@ -1339,12 +1366,122 @@
   };
 
   // 영업물건 접수/진행상태 변경 전역 브릿지
-  window.updateItemStatus = function (uid, itemId, type, value) {
-    return window.DataStore.updateItemStatus(uid, itemId, type, value);
+  // --- 신청서 담당 영업자 수정/변경 모달 전역 브릿지 (PC웹 & 모바일 공용) ---
+  window.openAssignBizUserModal = function (appId) {
+    if (!appId) return;
+    const targetId = String(appId).trim();
+    const apps = (window.DataStore ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []));
+    const app = apps.find(a => String(a.id) === targetId);
+    if (!app) {
+      alert('해당 신청서 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    const allUsers = (window.DataStore ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []));
+    const deletedIds = (window.DataStore ? window.DataStore.getDeletedUserIds() : (JSON.parse(localStorage.getItem('deleted_user_ids')) || []));
+    
+    // 승인된 영업자 목록 추출 (삭제된 계정 배제)
+    const bizUsers = allUsers.filter(u => {
+      if (!u || !u.id) return false;
+      if (deletedIds.includes(String(u.id))) return false;
+      return (u.role === 'business' || u.conversionStatus === 'approved' || (u.bizCode && u.bizCode.length > 0));
+    });
+
+    // 현재 배정된 영업자 확인
+    const curRef = String(app.referrerCode || '').trim();
+    let currentBizName = '담당자 없음 (본사 직접 접수)';
+    if (curRef) {
+      const matched = bizUsers.find(u => u.bizCode === curRef || u.id === curRef);
+      if (matched) {
+        currentBizName = `${matched.name} (${matched.bizCode || matched.id})`;
+      } else {
+        currentBizName = `${curRef} 영업자`;
+      }
+    }
+
+    // 기존 모달 제거 후 재생성
+    let existingModal = document.getElementById('assign-bizuser-modal');
+    if (existingModal) existingModal.remove();
+
+    const escapeText = (str) => {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    };
+
+    const modalHtml = `
+      <div id="assign-bizuser-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.55); z-index: 100000; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(4px);">
+        <div style="background: #ffffff; border-radius: 16px; width: 100%; max-width: 440px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 18px 20px; color: #ffffff; display: flex; align-items: center; justify-content: space-between;">
+            <h4 style="margin: 0; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-user-pen"></i> 담당 영업자 수정 / 변경
+            </h4>
+            <button type="button" onclick="document.getElementById('assign-bizuser-modal').remove()" style="background: transparent; border: none; color: #ffffff; font-size: 1.4rem; cursor: pointer; line-height: 1;">&times;</button>
+          </div>
+          <div style="padding: 20px; box-sizing: border-box;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 0.88rem; line-height: 1.6;">
+              <div><strong>신청 업체:</strong> <span style="color: #1e293b; font-weight: 700;">${escapeText(app.shopName || app.storeName || '-')}</span></div>
+              <div><strong>대표자명:</strong> <span>${escapeText(app.ownerName || '-')}</span> (${escapeText(app.ownerPhone || '-')})</div>
+              <div><strong>신청번호:</strong> <span style="font-family: monospace; color: #64748b;">${escapeText(app.id)}</span></div>
+              <div style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e1;"><strong>현재 담당:</strong> <span style="color: #2563eb; font-weight: 700;">${escapeText(currentBizName)}</span></div>
+            </div>
+
+            <label style="display: block; font-weight: 700; font-size: 0.92rem; color: #334155; margin-bottom: 6px;">새로 배정할 담당 영업자 선택</label>
+            <select id="modal-select-bizuser" style="width: 100%; padding: 12px 14px; font-size: 0.95rem; border: 1.5px solid #3b82f6; border-radius: 8px; background: #ffffff; color: #1e293b; font-weight: 600; outline: none; margin-bottom: 18px; box-sizing: border-box;">
+              <option value="" ${!curRef ? 'selected' : ''}>-- 담당자 없음 (본사 직접 접수) --</option>
+              ${bizUsers.map(u => {
+                const code = u.bizCode || u.id;
+                const isSelected = (curRef && (curRef === u.bizCode || curRef === u.id)) ? 'selected' : '';
+                const phoneText = u.phone ? ` - ${u.phone}` : '';
+                return `<option value="${code}" ${isSelected}>${escapeText(u.name)} (${escapeText(code)})${escapeText(phoneText)}</option>`;
+              }).join('')}
+            </select>
+
+            <div style="display: flex; gap: 10px;">
+              <button type="button" onclick="document.getElementById('assign-bizuser-modal').remove()" style="flex: 1; padding: 12px; font-size: 0.95rem; font-weight: 600; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer;">취소</button>
+              <button type="button" id="btn-confirm-assign-bizuser" style="flex: 2; padding: 12px; font-size: 0.95rem; font-weight: 700; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">저장 및 배정 완료</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const confirmBtn = document.getElementById('btn-confirm-assign-bizuser');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        const selectEl = document.getElementById('modal-select-bizuser');
+        const selectedCode = selectEl ? selectEl.value : '';
+        const selectedText = selectEl ? selectEl.options[selectEl.selectedIndex].text : '';
+
+        if (window.DataStore && typeof window.DataStore.updateApplicationReferrer === 'function') {
+          window.DataStore.updateApplicationReferrer(targetId, selectedCode);
+        } else {
+          // Fallback
+          const curApps = JSON.parse(localStorage.getItem('applications')) || [];
+          const t = curApps.find(a => String(a.id) === targetId);
+          if (t) {
+            t.referrerCode = selectedCode;
+            t.referrer_code = selectedCode;
+            localStorage.setItem('applications', JSON.stringify(curApps));
+            if (window.SupabaseSync) window.SupabaseSync.upsertApplication(t);
+          }
+        }
+
+        const modalEl = document.getElementById('assign-bizuser-modal');
+        if (modalEl) modalEl.remove();
+
+        alert(`[${app.shopName || app.storeName || targetId}]의 담당 영업자가 '${selectedText}'(으)로 변경되었습니다.\n영업자 및 시공업체 화면에 실시간 동시 반영됩니다.`);
+
+        // Re-render
+        if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
+        if (typeof window.renderAdminDashboard === 'function') window.renderAdminDashboard();
+        if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob();
+        if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
+      });
+    }
   };
-  window.updateItemStatusMob = function (uid, itemId, type, value) {
-    return window.DataStore.updateItemStatus(uid, itemId, type, value);
-  };
+  window.openAssignBizUserModalMob = window.openAssignBizUserModal;
 
   // --- 공통 간판 종류 변경 핸들러 (PC웹 & 모바일 공용) ---
   window.updateJobSignType = function (id, signType) {

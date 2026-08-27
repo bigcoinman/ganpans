@@ -2708,8 +2708,11 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-weight: 700; color: ${bizUserName === '본사직접접수' ? '#64748b' : 'var(--accent-primary)'}; font-size: 0.85rem; display: flex; align-items: center; gap: 4px;">
             <i class="fa-solid ${bizUserName === '본사직접접수' ? 'fa-building' : 'fa-user-tie'}" style="color: ${bizUserName === '본사직접접수' ? '#94a3b8' : 'var(--accent-secondary)'}; font-size: 0.82rem;"></i> ${escapeHtml(bizUserName)}
           </div>
-          <div style="font-family: monospace; font-size: 0.76rem; font-weight: 600; color: #475569; margin-top: 3px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; display: inline-block; border: 1px solid #e2e8f0;">
-            ${escapeHtml(String(app.id || ''))}
+          <div style="display: flex; align-items: center; gap: 4px; margin-top: 4px;">
+            <span style="font-family: monospace; font-size: 0.76rem; font-weight: 600; color: #475569; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
+              ${escapeHtml(String(app.id || ''))}
+            </span>
+            <button type="button" onclick="window.openAssignBizUserModal('${app.id}'); return false;" style="padding: 3px 8px; font-size: 0.72rem; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; transition: all 0.2s;" title="담당 영업자 수정/변경"><i class="fa-solid fa-user-pen"></i> 영업자 수정/변경</button>
           </div>
         </td>
         <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">
