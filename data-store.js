@@ -1194,6 +1194,9 @@
         if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
         if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
         if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
+
+        // 전역 실시간 브로드캐스트 발화
+        window.dispatchEvent(new CustomEvent('supabase-data-synced'));
       } catch (e) {
         console.error('[DataStore] notifyAll error:', e);
       }

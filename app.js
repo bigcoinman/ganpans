@@ -5592,5 +5592,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // 초기 로드 시 Supabase 최신 데이터 즉시 동기화 실행
     syncAdminDataFromSupabaseMob();
 
+    // --- 실시간 6대 화면 0초 동시 연동 리스너 (모바일 앱 대시보드 자동 리렌더링) ---
+    const handleRealtimeSyncMob = () => {
+        if (window.isInteractingWithForm) return; // 폼 조작 중에는 DOM 보호
+        if (typeof renderStatusTab === 'function') renderStatusTab();
+        if (typeof updateDrawerProfile === 'function') updateDrawerProfile();
+        if (typeof updateHeaderAuthButton === 'function') updateHeaderAuthButton();
+    };
+
+    window.addEventListener('supabase-data-synced', handleRealtimeSyncMob);
+    window.addEventListener('storage', (e) => {
+        if (!e.key || e.key === 'applications' || e.key === 'users' || e.key === 'site_stats' || e.key === 'inquiries') {
+            handleRealtimeSyncMob();
+        }
+    });
+
+    if (window.DataStore && typeof window.DataStore.subscribe === 'function') {
+        window.DataStore.subscribe(handleRealtimeSyncMob);
+    }
+
 });
 

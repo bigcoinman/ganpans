@@ -5649,5 +5649,27 @@ function initAIAssistant() {
       }
     });
   }
+
+  // --- 실시간 6대 화면 0초 동시 연동 리스너 (최고관리자 대시보드 자동 리렌더링) ---
+  const handleRealtimeSync = () => {
+    if (window.isInteractingWithForm) return; // 폼 입력/선택 중에는 DOM 보호
+    if (typeof updateSessionUI === 'function') updateSessionUI();
+    if (typeof renderDashboard === 'function') renderDashboard();
+    if (typeof renderApplicationsList === 'function') renderApplicationsList();
+    if (typeof renderBizRegisteredTable === 'function') renderBizRegisteredTable();
+    if (typeof renderConstructorPanel === 'function') renderConstructorPanel();
+    if (typeof renderManagerPanel === 'function') renderManagerPanel();
+  };
+
+  window.addEventListener('supabase-data-synced', handleRealtimeSync);
+  window.addEventListener('storage', (e) => {
+    if (!e.key || e.key === 'applications' || e.key === 'users' || e.key === 'site_stats' || e.key === 'inquiries') {
+      handleRealtimeSync();
+    }
+  });
+
+  if (window.DataStore && typeof window.DataStore.subscribe === 'function') {
+    window.DataStore.subscribe(handleRealtimeSync);
+  }
 }
 
