@@ -1035,16 +1035,22 @@ window.SupabaseSync = {
 
     const photoName = (!fileData && dbApp.image_url) ? dbApp.image_url : (dbApp.file_name || '현장사진.jpg');
 
-    let isBizItem = false;
-    let receiptStatus = '접수예정';
+    let isBizItem = Boolean(dbApp.is_biz_item || dbApp.isBizItem);
+    let receiptStatus = dbApp.receipt_status || dbApp.receiptStatus || '접수예정';
     if (dbApp.memo) {
       try {
         const parsedMemo = typeof dbApp.memo === 'string' ? JSON.parse(dbApp.memo) : dbApp.memo;
         if (parsedMemo && typeof parsedMemo === 'object') {
           if (parsedMemo.isBizItem !== undefined) isBizItem = Boolean(parsedMemo.isBizItem);
           if (parsedMemo.receiptStatus) receiptStatus = parsedMemo.receiptStatus;
+        } else if (typeof dbApp.memo === 'string' && (dbApp.memo.includes('"isBizItem":true') || dbApp.memo.includes('"isBizItem": true'))) {
+          isBizItem = true;
         }
-      } catch (e) {}
+      } catch (e) {
+        if (typeof dbApp.memo === 'string' && (dbApp.memo.includes('"isBizItem":true') || dbApp.memo.includes('"isBizItem": true'))) {
+          isBizItem = true;
+        }
+      }
     }
 
     return {
