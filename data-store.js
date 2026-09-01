@@ -315,14 +315,10 @@
         });
       };
 
-      // 1) applications 중 영업물건 적격 건 수집 (최우선 단일 진실의 원천)
+      // 1) applications 중 isBizItem: true 인 건 수집 (최우선 단일 진실의 원천)
       apps.forEach(app => {
-        const isApprovedBizItem = Boolean(
-          app.isBizItem === true || 
-          String(app.isBizItem) === 'true' || 
-          (app.id && String(app.id).startsWith('B-'))
-        );
-        if (!isApprovedBizItem) return; // 비활성화/미승인 건은 제외!
+        const isApprovedBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
+        if (!isApprovedBizItem) return; // 비활성화/미승인 건은 절대 제외!
 
         // 담당 영업자 찾기 (6중 다각도 정밀 매칭)
         let assignedUser = null;
