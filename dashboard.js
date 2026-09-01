@@ -445,10 +445,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (bizRegSec) bizRegSec.style.display = 'none';
     }
 
-    // Supabase 실시간 데이터 백그라운드 동기화
-    if (window.SupabaseSync) {
-      window.SupabaseSync.syncAllData();
-    }
   };
 
   // --- Supabase 실시간 양방향 데이터 동기화 리스너 ---

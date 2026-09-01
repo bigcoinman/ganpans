@@ -1529,8 +1529,25 @@ window.SupabaseSync = {
       const { data: supaApps, error: appsErr } = await window.supabaseClient.from('applications').select('*');
       let appsChanged = false;
       if (!appsErr && Array.isArray(supaApps)) {
+        const localApps = JSON.parse(localStorage.getItem('applications')) || [];
         const freshApps = supaApps
-          .map(sa => this.mapDbToApp(sa))
+          .map(sa => {
+            const appObj = this.mapDbToApp(sa);
+            const localApp = localApps.find(la => String(la.id) === String(appObj.id));
+            if (localApp) {
+              const localTime = new Date(localApp.updatedAt || localApp.appliedAt || 0).getTime();
+              const remoteTime = new Date(sa.updated_at || sa.applied_at || sa.created_at || 0).getTime();
+              if (localTime > remoteTime) {
+                appObj.isBizItem = localApp.isBizItem;
+                appObj.receiptStatus = localApp.receiptStatus;
+                appObj.progressStatus = localApp.progressStatus;
+                appObj.salespersonId = localApp.salespersonId || appObj.salespersonId;
+                appObj.salespersonName = localApp.salespersonName || appObj.salespersonName;
+                appObj.updatedAt = localApp.updatedAt;
+              }
+            }
+            return appObj;
+          })
           .filter(a => a && a.id);
         const newAppsStr = JSON.stringify(freshApps);
         if (oldAppsStr !== newAppsStr) {

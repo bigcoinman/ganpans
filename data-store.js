@@ -632,6 +632,7 @@
       const isCurrentlyBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
       const isNowBizItem = !isCurrentlyBizItem;
       app.isBizItem = isNowBizItem;
+      app.updatedAt = new Date().toISOString();
 
       // 1) 0초 즉각 낙관적 UI 버튼 상태 갱신
       if (btnEl) {
@@ -1239,7 +1240,6 @@
         if (typeof window.renderBizRegisteredItemsMob === 'function') window.renderBizRegisteredItemsMob();
         if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
         if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
-        if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
 
         // 전역 실시간 브로드캐스트 발화
         window.dispatchEvent(new CustomEvent('supabase-data-synced'));
