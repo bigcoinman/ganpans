@@ -640,8 +640,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (confirm('영업자 회원으로 전환을 신청하시겠습니까? 신청 후 매니저 승인 단계를 통해 코드가 부여됩니다.')) {
         activeUser.conversionStatus = 'pending';
         users = users.map(u => u.id === activeUser.id ? { ...u, conversionStatus: 'pending' } : u);
-        localStorage.setItem('users', JSON.stringify(users));
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+          window.DataStore.saveUsers(users);
+        } else {
+          localStorage.setItem('users', JSON.stringify(users));
+        }
         localStorage.setItem('activeUser', JSON.stringify(activeUser));
+        sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+          window.DataStore.notifyAll();
+        }
+        window.dispatchEvent(new CustomEvent('supabase-data-synced'));
 
         // Supabase Sync
         if (window.SupabaseSync) {
@@ -700,8 +710,18 @@ document.addEventListener('DOMContentLoaded', () => {
         pendingLicenseNumber: lNum
       } : u);
 
-      localStorage.setItem('users', JSON.stringify(users));
+      if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+        window.DataStore.saveUsers(users);
+      } else {
+        localStorage.setItem('users', JSON.stringify(users));
+      }
       localStorage.setItem('activeUser', JSON.stringify(activeUser));
+      sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+        window.DataStore.notifyAll();
+      }
+      window.dispatchEvent(new CustomEvent('supabase-data-synced'));
 
       // Supabase Sync
       if (window.SupabaseSync) {

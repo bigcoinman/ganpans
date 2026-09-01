@@ -2596,24 +2596,28 @@ document.addEventListener('DOMContentLoaded', () => {
             syncAdminDataFromSupabaseMob();
         }
 
+        // SSOT 유저 목록을 최상단에서 일괄 로드
+        const allStoreUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+            ? window.DataStore.getUsers()
+            : (JSON.parse(localStorage.getItem('users')) || []);
+
         // 0) Render All Users list (회원정보관리)
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');
         if (allUsersListMob) {
-            let curUsers = window.DataStore ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
             const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-            curUsers = curUsers.filter(u => {
+            let displayUsers = allStoreUsers.filter(u => {
                 if (!u || !u.id) return false;
                 const uId = String(u.id);
                 const uDigits = uId.replace(/[^0-9]/g, '');
                 const uPhoneDigits = String(u.phone || '').replace(/[^0-9]/g, '');
                 return !deletedIds.includes(uId) && (!uDigits || !deletedIds.includes(uDigits)) && (!uPhoneDigits || !deletedIds.includes(uPhoneDigits));
             });
-            curUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(curUsers) : curUsers;
+            displayUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(displayUsers) : displayUsers;
             const searchInput = document.getElementById('search-all-users-input-mob');
             const q = searchInput && searchInput.value ? searchInput.value.trim().slice(0, 30).toLowerCase() : '';
 
             if (q) {
-                curUsers = curUsers.filter(u =>
+                displayUsers = displayUsers.filter(u =>
                     (u.id && u.id.toLowerCase().includes(q)) ||
                     (u.name && u.name.toLowerCase().includes(q)) ||
                     (u.phone && u.phone.includes(q)) ||
@@ -2623,10 +2627,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             allUsersListMob.innerHTML = '';
-            if (curUsers.length === 0) {
+            if (displayUsers.length === 0) {
                 allUsersListMob.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">등록/검색된 회원이 없습니다.</p>';
             } else {
-                curUsers.forEach(u => {
+                displayUsers.forEach(u => {
                     const card = document.createElement('div');
                     card.className = 'admin-user-card-mob';
                     card.style.background = '#ffffff';
@@ -2688,7 +2692,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1) Render Salesperson Requests (conversionStatus === 'pending')
         const requestsList = document.getElementById('admin-requests-list-mob');
         if (requestsList) {
-            const pendingUsers = curUsers.filter(u => u.conversionStatus === 'pending');
+            const pendingUsers = allStoreUsers.filter(u => u && u.conversionStatus === 'pending');
             if (pendingUsers.length === 0) {
                 requestsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">승인 대기 중인 영업자 회원 신청건이 없습니다.</p>';
             } else {
@@ -2702,11 +2706,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.style.borderRadius = '10px';
                     card.style.border = '1px solid var(--border-color)';
                     card.innerHTML = `
-                        <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 6px; color: var(--text-primary);">아이디: ${u.id} (${u.name})</div>
-                        <div style="font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">연락처: <strong style="color: var(--accent-primary);">${u.phone}</strong> / 주소: ${u.address}</div>
+                        <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 6px; color: var(--text-primary);">아이디: ${escapeHtml(u.id)} (${escapeHtml(u.name)})</div>
+                        <div style="font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">연락처: <strong style="color: var(--accent-primary);">${escapeHtml(u.phone)}</strong> / 주소: ${escapeHtml(u.address || '-')}</div>
                         <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end;">
-                            <button class="btn btn-secondary btn-sm btn-reject-user-mob" data-uid="${u.id}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;"><i class="fa-solid fa-xmark"></i> 반려</button>
-                            <button class="btn btn-primary btn-sm btn-approve-user-mob" data-uid="${u.id}" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-check"></i> 승인</button>
+                            <button class="btn btn-secondary btn-sm btn-reject-user-mob" data-uid="${escapeHtml(u.id)}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;"><i class="fa-solid fa-xmark"></i> 반려</button>
+                            <button class="btn btn-primary btn-sm btn-approve-user-mob" data-uid="${escapeHtml(u.id)}" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-check"></i> 승인</button>
                         </div>
                     `;
                     requestsList.appendChild(card);
@@ -2730,7 +2734,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2) Render Constructor Requests (conversionStatus === 'pending_constructor')
         const constructorsList = document.getElementById('admin-constructors-list-mob');
         if (constructorsList) {
-            const pendingConst = curUsers.filter(u => u.conversionStatus === 'pending_constructor');
+            const pendingConst = allStoreUsers.filter(u => u && u.conversionStatus === 'pending_constructor');
             if (pendingConst.length === 0) {
                 constructorsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">승인 대기 중인 시공업체 회원 신청건이 없습니다.</p>';
             } else {
@@ -2744,13 +2748,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.style.borderRadius = '10px';
                     card.style.border = '1px solid var(--border-color)';
                     card.innerHTML = `
-                        <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 6px; color: var(--text-primary);">아이디: ${u.id} (${u.name})</div>
+                        <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 6px; color: var(--text-primary);">아이디: ${escapeHtml(u.id)} (${escapeHtml(u.name)})</div>
                         <div style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.4;">업체명: <strong style="color: var(--text-primary);">${escapeHtml(u.pendingBusinessName)}</strong></div>
                         <div style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.4;">등록번호: <strong style="color: var(--text-primary);">${escapeHtml(u.pendingLicenseNumber)}</strong></div>
-                        <div style="font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">연락처: <strong style="color: var(--accent-primary);">${u.phone}</strong> / 주소: ${u.address}</div>
+                        <div style="font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">연락처: <strong style="color: var(--accent-primary);">${escapeHtml(u.phone)}</strong> / 주소: ${escapeHtml(u.address || '-')}</div>
                         <div class="admin-action-row-mob" style="display:flex; gap: 8px; justify-content: flex-end;">
-                            <button class="btn btn-secondary btn-sm btn-reject-const-mob" data-uid="${u.id}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;"><i class="fa-solid fa-xmark"></i> 반려</button>
-                            <button class="btn btn-primary btn-sm btn-approve-const-mob" data-uid="${u.id}" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-check"></i> 승인</button>
+                            <button class="btn btn-secondary btn-sm btn-reject-const-mob" data-uid="${escapeHtml(u.id)}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 6px;"><i class="fa-solid fa-xmark"></i> 반려</button>
+                            <button class="btn btn-primary btn-sm btn-approve-const-mob" data-uid="${escapeHtml(u.id)}" style="padding: 6px 14px; font-size: 0.85rem; background: var(--accent-success); border: none; color: white; border-radius: 6px;"><i class="fa-solid fa-check"></i> 승인</button>
                         </div>
                     `;
                     constructorsList.appendChild(card);
@@ -2765,7 +2769,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 constructorsList.querySelectorAll('.btn-reject-const-mob').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const uid = e.target.closest('button').dataset.uid;
-                        rejectUserConversionMob(uid);
+                        rejectConstructorConversionMob(uid);
                     });
                 });
             }
