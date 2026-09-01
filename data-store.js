@@ -14,17 +14,7 @@
     getApplications: function () {
       try {
         const apps = JSON.parse(localStorage.getItem('applications')) || [];
-        let deletedAppIds = this.getDeletedAppIds();
-        // 실존 apps에 존재하는 건은 deletedAppIds에서 자동 정리하여 100% 정상 표시 보장
-        if (deletedAppIds.length > 0 && apps.length > 0) {
-          const validIds = apps.map(a => String(a.id));
-          const cleanedDel = deletedAppIds.filter(id => !validIds.includes(String(id)));
-          if (cleanedDel.length !== deletedAppIds.length) {
-            localStorage.setItem('deleted_application_ids', JSON.stringify(cleanedDel));
-            deletedAppIds = cleanedDel;
-          }
-        }
-        return apps.filter(a => a && a.id && !deletedAppIds.includes(String(a.id)));
+        return apps.filter(a => a && a.id);
       } catch (e) {
         console.error('[DataStore] getApplications error:', e);
         return [];
@@ -289,15 +279,7 @@
     getAdminBizItems: function () {
       const apps = this.getApplications();
       const users = this.getUsers();
-      const deletedBizIds = this.getDeletedBizItemIds();
       const allItems = [];
-
-      const isPurged = (it) => {
-        if (!it) return false;
-        const itId = String(it.id || '').trim();
-        const itRef = String(it.appRefId || '').trim();
-        return deletedBizIds.includes(itId) || deletedBizIds.includes(itRef);
-      };
 
       const normalizeStr = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
       const normalizePhone = (p) => String(p || '').replace(/[^0-9]/g, '');
@@ -335,7 +317,6 @@
 
       // 1) applications 중 isBizItem: true 인 건 수집 (최우선 단일 진실의 원천)
       apps.forEach(app => {
-        if (isPurged(app)) return;
         const isApprovedBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
         if (!isApprovedBizItem) return; // 비활성화/미승인 건은 절대 제외!
 

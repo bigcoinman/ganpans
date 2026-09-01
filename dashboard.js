@@ -328,9 +328,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Session & UI Sync ---
   const updateSessionUI = () => {
     // Reload active user details from local storage to keep DB state in sync
-    const currentDbUser = users.find(u => u.id === activeUser.id);
-    if (currentDbUser) {
-      activeUser = sanitizeUser(currentDbUser);
+    const freshDbUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function')
+      ? window.DataStore.getActiveUser()
+      : (JSON.parse(localStorage.getItem('activeUser')) || activeUser);
+    if (freshDbUser) {
+      activeUser = sanitizeUser(freshDbUser);
       localStorage.setItem('activeUser', JSON.stringify(activeUser));
     }
 
