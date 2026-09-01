@@ -1469,40 +1469,9 @@ window.SupabaseSync = {
       const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
       let usersChanged = false;
       if (!usersErr && Array.isArray(supaUsers)) {
-        // deleted_user_ids: 로컬 + site_stats(cloud) 병합하여 완전한 삭제 목록 구성
-        let localDeletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-        try {
-          // site_stats에 저장된 삭제 목록도 가져와서 병합 (다른 기기에서 삭제한 경우 반영)
-          const { data: statsRow } = await window.supabaseClient.from('site_stats')
-            .select('today_date')
-            .eq('id', 'deleted_user_ids')
-            .maybeSingle();
-          if (statsRow && statsRow.today_date) {
-            const cloudDeleted = JSON.parse(statsRow.today_date) || [];
-            cloudDeleted.forEach(id => {
-              if (!localDeletedIds.includes(id)) localDeletedIds.push(id);
-            });
-            localStorage.setItem('deleted_user_ids', JSON.stringify(localDeletedIds));
-          }
-        } catch (eStats) {}
-
-        // Supabase에 실존하는 정상 회원은 삭제 캐시에서 자동 정리하여 100% 정상 수집 보장
-        const supaUserIds = supaUsers.filter(su => su && su.role !== 'deleted').map(su => String(su.id).toLowerCase());
-        const supaPhones = supaUsers.filter(su => su && su.role !== 'deleted').map(su => String(su.phone || '').replace(/[^0-9]/g, '')).filter(Boolean);
-        if (localDeletedIds.some(id => supaUserIds.includes(String(id).toLowerCase()) || (supaPhones.length > 0 && supaPhones.includes(String(id).replace(/[^0-9]/g, ''))))) {
-          localDeletedIds = localDeletedIds.filter(id => !supaUserIds.includes(String(id).toLowerCase()) && !supaPhones.includes(String(id).replace(/[^0-9]/g, '')));
-          localStorage.setItem('deleted_user_ids', JSON.stringify(localDeletedIds));
-        }
-
         const freshUsers = supaUsers
           .map(su => this.mapDbToUser(su))
-          .filter(u => {
-            if (!u || !u.id) return false;
-            if (u.role === 'deleted') return false;
-            const uIdLower = String(u.id).toLowerCase();
-            if (localDeletedIds.some(did => String(did).toLowerCase() === uIdLower)) return false;
-            return true;
-          });
+          .filter(u => u && u.id && u.role !== 'deleted');
 
         const hasAdmin = freshUsers.some(u => String(u.id).toLowerCase() === 'admin');
         if (!hasAdmin) {
@@ -1554,31 +1523,9 @@ window.SupabaseSync = {
       const { data: supaApps, error: appsErr } = await window.supabaseClient.from('applications').select('*');
       let appsChanged = false;
       if (!appsErr && Array.isArray(supaApps)) {
-        let localDeletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
-        try {
-          const { data: statsRow } = await window.supabaseClient.from('site_stats')
-            .select('today_date')
-            .eq('id', 'deleted_application_ids')
-            .maybeSingle();
-          if (statsRow && statsRow.today_date) {
-            const cloudDeleted = JSON.parse(statsRow.today_date) || [];
-            cloudDeleted.forEach(id => {
-              if (!localDeletedAppIds.includes(String(id))) localDeletedAppIds.push(String(id));
-            });
-            localStorage.setItem('deleted_application_ids', JSON.stringify(localDeletedAppIds));
-          }
-        } catch (eStats) {}
-
-        // Supabase에 실존하는 신청서는 삭제 캐시에서 자동 정리하여 100% 정상 수집 보장
-        const supaAppIds = supaApps.map(sa => String(sa.id));
-        if (localDeletedAppIds.some(id => supaAppIds.includes(String(id)))) {
-          localDeletedAppIds = localDeletedAppIds.filter(id => !supaAppIds.includes(String(id)));
-          localStorage.setItem('deleted_application_ids', JSON.stringify(localDeletedAppIds));
-        }
-
         const freshApps = supaApps
           .map(sa => this.mapDbToApp(sa))
-          .filter(a => a && a.id && !localDeletedAppIds.includes(String(a.id)));
+          .filter(a => a && a.id);
         const newAppsStr = JSON.stringify(freshApps);
         if (oldAppsStr !== newAppsStr) {
           try {
