@@ -1106,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="app-card-body-row">접수번호: <strong>${app.id}</strong></div>
                 <div class="app-card-footer">
                     <span class="badge-status ${statusClass}">${statusLabel}</span>
-                    <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 4px 10px; font-size: 0.65rem;">신청취소</button>
+                    <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 14px; font-size: 0.90rem; font-weight: 600; border-radius: 8px;">신청취소</button>
                 </div>
             `;
             myAppsList.appendChild(card);
