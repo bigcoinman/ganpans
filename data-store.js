@@ -259,18 +259,21 @@
         const isApprovedBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
         if (!isApprovedBizItem) return;
 
-        const refCode = String(app.referrerCode || '').trim().toLowerCase();
+        const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
         const appUser = String(app.userId || '').trim().toLowerCase();
         const appOwner = String(app.ownerName || '').trim().toLowerCase();
         const appPhone = String(app.ownerPhone || '').replace(/[^0-9]/g, '');
+        const appId = String(app.id || '').trim().toLowerCase();
 
-        const isMyReferrer = (myBizCode && refCode === myBizCode) || (myUserId && refCode === myUserId) || (myUserName && refCode === myUserName);
+        const isMyIdPrefix = Boolean(myBizCode && appId.startsWith(myBizCode + '-'));
+        const isMyReferrer = (myBizCode && (refCode === myBizCode || isMyIdPrefix)) || (myUserId && refCode === myUserId) || (myUserName && refCode === myUserName);
         const isMyUser = (myUserId && appUser === myUserId);
         const isMyPhone = (myPhone && appPhone && myPhone === appPhone);
         const isMyName = (myUserName && appOwner && myUserName === appOwner);
+        const isMyItem = Boolean(user.items && Array.isArray(user.items) && user.items.some(it => String(it.id).toLowerCase() === appId));
 
         // 최고관리자는 전체 조회, 영업자는 오직 본인 귀속 건만 조회
-        if (this.isAdmin(user) || isMyReferrer || isMyUser || isMyPhone || isMyName) {
+        if (this.isAdmin(user) || isMyReferrer || isMyUser || isMyPhone || isMyName || isMyIdPrefix || isMyItem) {
           const rStatus = app.receiptStatus || '접수예정';
           const pStatus = app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
 
@@ -352,14 +355,22 @@
 
         // 담당 영업자 찾기
         let assignedUser = null;
-        const refCode = String(app.referrerCode || '').trim().toLowerCase();
+        const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
         const appUser = String(app.userId || '').trim().toLowerCase();
+        const appId = String(app.id || '').trim().toLowerCase();
+
         if (refCode) {
           assignedUser = users.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
             ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
               (u.id && String(u.id).trim().toLowerCase() === refCode) ||
               (u.name && String(u.name).trim().toLowerCase() === refCode))
+          );
+        }
+        if (!assignedUser && appId) {
+          assignedUser = users.find(u =>
+            (u.role === 'business' || u.role === 'admin') &&
+            u.bizCode && appId.startsWith(String(u.bizCode).trim().toLowerCase() + '-')
           );
         }
         if (!assignedUser && appUser) {
@@ -662,8 +673,9 @@
       if (isNowBizItem) {
         // 영업물건 등록: 담당 영업자 1명 특정
         let targetUser = null;
-        const refCode = String(app.referrerCode || '').trim().toLowerCase();
+        const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
         const appUser = String(app.userId || '').trim().toLowerCase();
+        const appId = String(app.id || '').trim().toLowerCase();
 
         if (refCode) {
           targetUser = curUsers.find(u =>
@@ -671,6 +683,12 @@
             ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
               (u.id && String(u.id).trim().toLowerCase() === refCode) ||
               (u.name && String(u.name).trim().toLowerCase() === refCode))
+          );
+        }
+        if (!targetUser && appId) {
+          targetUser = curUsers.find(u =>
+            (u.role === 'business' || u.role === 'admin') &&
+            u.bizCode && appId.startsWith(String(u.bizCode).trim().toLowerCase() + '-')
           );
         }
         if (!targetUser && appUser) {

@@ -4136,51 +4136,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
-    let myItems = activeUser.items || [];
-
-    let bizList = [];
-
-    // 1) applications 중 최고관리자가 '영업물건으로 변경'(isBizItem: true)을 체크한 건만 수집
-    apps.forEach(app => {
-      if (app.isBizItem !== true) return;
-
-      const isMyReferrer = activeUser.bizCode && app.referrerCode === activeUser.bizCode;
-      const isMyItem = myItems.some(i => String(i.id) === String(app.id));
-      const isMyUser = app.userId && app.userId === activeUser.id;
-      if (isMyReferrer || isMyItem || isMyUser) {
-        bizList.push({
-          id: app.id,
-          date: app.appliedAt || new Date().toISOString(),
-          ownerName: app.ownerName || app.name || '-',
-          ownerPhone: app.ownerPhone || app.phone || '',
-          storeName: app.storeName || app.shopName || app.name || '-',
-          storeAddress: app.storeAddress || app.address || '',
-          statusObj: app
-        });
-      }
-    });
-
-    // 2) myItems 중에서도 applications에 매칭되는 건이 있다면 isBizItem === true 인 경우만 허용
-    myItems.forEach(item => {
-      const matchingApp = apps.find(a => String(a.id) === String(item.id));
-      if (matchingApp && matchingApp.isBizItem !== true) return;
-
-      if (!bizList.some(b => String(b.id) === String(item.id))) {
-        bizList.push({
-          id: item.id,
-          date: item.registeredAt || new Date().toISOString(),
-          ownerName: item.name || '-',
-          ownerPhone: item.phone || '',
-          storeName: item.name || '-',
-          storeAddress: item.address || '',
-          statusObj: {
-            status: item.receiptStatus === '승인완료' ? 'approved' : 'pending',
-            constructionStatus: item.progressStatus
-          }
-        });
-      }
-    });
+    let bizList = (window.DataStore && typeof window.DataStore.getBizItemsForUser === 'function')
+      ? window.DataStore.getBizItemsForUser(activeUser)
+      : [];
 
     if (bizList.length === 0) {
       alert('다운로드할 내 영업 물건 데이터가 없습니다.');
