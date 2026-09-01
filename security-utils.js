@@ -1529,8 +1529,16 @@ window.SupabaseSync = {
       const { data: supaApps, error: appsErr } = await window.supabaseClient.from('applications').select('*');
       let appsChanged = false;
       if (!appsErr && Array.isArray(supaApps)) {
+        const localApps = JSON.parse(localStorage.getItem('applications')) || [];
         const freshApps = supaApps
-          .map(sa => this.mapDbToApp(sa))
+          .map(sa => {
+            const appObj = this.mapDbToApp(sa);
+            const localApp = localApps.find(la => String(la.id) === String(appObj.id));
+            if (localApp && (localApp.isBizItem === true || String(localApp.isBizItem) === 'true')) {
+              appObj.isBizItem = true;
+            }
+            return appObj;
+          })
           .filter(a => a && a.id);
         const newAppsStr = JSON.stringify(freshApps);
         if (oldAppsStr !== newAppsStr) {
