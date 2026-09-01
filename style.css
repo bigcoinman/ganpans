@@ -2304,10 +2304,13 @@ input:checked+.slider-round:before {
 
 /* Application Summary Design Review Card */
 .summary-card {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.85);
   border-radius: 12px;
-  padding: 24px;
+  padding: 20px;
   border: 1px solid var(--border-color);
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .summary-card h4 {
@@ -2315,23 +2318,48 @@ input:checked+.slider-round:before {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 10px;
   margin-bottom: 16px;
+  font-size: 1.15rem;
+  font-weight: 700;
 }
 
 .summary-list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .summary-list {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+
+.summary-item {
+  min-width: 0;
+  max-width: 100%;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .summary-item span {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
   display: block;
+  margin-bottom: 3px;
 }
 
 .summary-item strong {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--text-primary);
+  font-weight: 700;
+  display: block;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.35;
 }
 
 /* Submission success modal */

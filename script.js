@@ -1374,8 +1374,9 @@ function initWizard() {
     const ownerPhone = document.getElementById('owner-phone')?.value || '-';
     const storeName = document.getElementById('app-shop-name')?.value || '-';
     const storeAddress = document.getElementById('store-address')?.value || '-';
-    const fileUploaded = uploadedPhotos.length > 0
-      ? `${uploadedPhotos.length}장 첨부됨 (${uploadedPhotos.map(p => p.name).join(', ')})`
+    const photoCount = uploadedPhotos.length;
+    const fileUploaded = photoCount > 0
+      ? `현장사진 총 ${photoCount}장 첨부 완료 (정상 등록)`
       : '업로드 파일 없음';
     const referrerVal = document.getElementById('referrer-code')?.value.trim() || '-';
 
