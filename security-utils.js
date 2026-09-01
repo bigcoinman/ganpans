@@ -615,7 +615,7 @@ if (typeof document !== 'undefined') {
     initGlobalSupabaseClient();
   });
 }
-// 6-1. 회원 목록 정렬 함수 (최고관리자 최상단 + 최신 가입일순 정렬)
+// 6-1. 회원 목록 정렬 함수 (최고관리자 최상단 + 전환신청 대기자 우선 + 최신 가입일순 정렬)
 function sortUsersLatestFirst(userList) {
   if (!Array.isArray(userList)) return [];
   return [...userList].sort((a, b) => {
@@ -623,14 +623,21 @@ function sortUsersLatestFirst(userList) {
     if (a.role === 'admin' && b.role !== 'admin') return -1;
     if (a.role !== 'admin' && b.role === 'admin') return 1;
 
-    // 2) 가입일시 최신순 (내림차순, 최신 가입자가 먼저 표시)
-    const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
-    const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+    // 2) 전환 신청 대기중(pending)인 회원 우선 정렬
+    const isPendingA = (a.conversionStatus === 'pending' || a.conversionStatus === 'pending_constructor') ? 1 : 0;
+    const isPendingB = (b.conversionStatus === 'pending' || b.conversionStatus === 'pending_constructor') ? 1 : 0;
+    if (isPendingB !== isPendingA) {
+      return isPendingB - isPendingA;
+    }
+
+    // 3) 가입일시 최신순 (내림차순, 최신 가입자가 먼저 표시)
+    const timeA = (a.createdAt || a.created_at) ? new Date(a.createdAt || a.created_at).getTime() : 0;
+    const timeB = (b.createdAt || b.created_at) ? new Date(b.createdAt || b.created_at).getTime() : 0;
     if (timeB !== timeA) {
       return timeB - timeA;
     }
 
-    // 3) 가입일시 동일 시 ID 알파벳/숫자 역순
+    // 4) 가입일시 동일 시 ID 알파벳/숫자 역순
     return String(b.id || '').localeCompare(String(a.id || ''));
   });
 }
@@ -1476,9 +1483,10 @@ window.SupabaseSync = {
         } catch (eStats) {}
 
         // Supabase에 실존하는 정상 회원은 삭제 캐시에서 자동 정리하여 100% 정상 수집 보장
-        const supaUserIds = supaUsers.filter(su => su.role !== 'deleted').map(su => String(su.id).toLowerCase());
-        if (localDeletedIds.some(id => supaUserIds.includes(String(id).toLowerCase()))) {
-          localDeletedIds = localDeletedIds.filter(id => !supaUserIds.includes(String(id).toLowerCase()));
+        const supaUserIds = supaUsers.filter(su => su && su.role !== 'deleted').map(su => String(su.id).toLowerCase());
+        const supaPhones = supaUsers.filter(su => su && su.role !== 'deleted').map(su => String(su.phone || '').replace(/[^0-9]/g, '')).filter(Boolean);
+        if (localDeletedIds.some(id => supaUserIds.includes(String(id).toLowerCase()) || (supaPhones.length > 0 && supaPhones.includes(String(id).replace(/[^0-9]/g, ''))))) {
+          localDeletedIds = localDeletedIds.filter(id => !supaUserIds.includes(String(id).toLowerCase()) && !supaPhones.includes(String(id).replace(/[^0-9]/g, '')));
           localStorage.setItem('deleted_user_ids', JSON.stringify(localDeletedIds));
         }
 
@@ -2138,6 +2146,7 @@ if (typeof window !== 'undefined') {
     }
 
     try {
+      const nowIso = new Date().toISOString();
       const newUser = {
         id: idVal,
         pw: typeof sha256 === 'function' ? sha256(pwVal) : pwVal,
@@ -2149,7 +2158,8 @@ if (typeof window !== 'undefined') {
         isSNS: false,
         bizCode: null,
         conversionStatus: 'none',
-        items: []
+        items: [],
+        createdAt: nowIso
       };
 
       // 1) Supabase 클라우드 저장

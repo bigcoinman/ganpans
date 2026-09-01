@@ -523,6 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
       users = JSON.parse(localStorage.getItem('users')) || [];
       applications = JSON.parse(localStorage.getItem('applications')) || [];
       if (activeUser && activeUser.role === 'admin') {
+        renderAllUsersList();
         renderApplicationsList();
         renderManagerPanel();
         renderAdminStats();
@@ -1445,7 +1446,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const paginationContainer = document.getElementById('pagination-manager-all-users');
     if (!allUsersTableBody) return;
 
-    let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let currentUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') 
+      ? window.DataStore.getUsers() 
+      : (JSON.parse(localStorage.getItem('users')) || []);
     currentUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(currentUsers) : currentUsers;
 
     // 검색 필터링
@@ -1652,7 +1655,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Render Requests (with pagination)
     managerRequestsList.innerHTML = '';
-    const pendingUsers = users.filter(u => u.conversionStatus === 'pending' || u.conversionStatus === 'pending_constructor');
+    const currentUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || users || []);
+    const pendingUsers = currentUsers.filter(u => u.conversionStatus === 'pending' || u.conversionStatus === 'pending_constructor');
     const paginationRequestsContainer = document.getElementById('pagination-manager-requests');
 
     if (pendingUsers.length === 0) {

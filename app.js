@@ -1139,7 +1139,11 @@ document.addEventListener('DOMContentLoaded', () => {
             activeUser = curUser;
 
             users = (JSON.parse(localStorage.getItem('users')) || []).map(u => u.id === curUser.id ? { ...u, conversionStatus: 'pending' } : u);
-            localStorage.setItem('users', JSON.stringify(users));
+            if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+                window.DataStore.saveUsers(users);
+            } else {
+                localStorage.setItem('users', JSON.stringify(users));
+            }
             localStorage.setItem('activeUser', JSON.stringify(curUser));
             sessionStorage.setItem('activeUser', JSON.stringify(curUser));
 
@@ -2684,7 +2688,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1) Render Salesperson Requests (conversionStatus === 'pending')
         const requestsList = document.getElementById('admin-requests-list-mob');
         if (requestsList) {
-            const pendingUsers = users.filter(u => u.conversionStatus === 'pending');
+            const pendingUsers = curUsers.filter(u => u.conversionStatus === 'pending');
             if (pendingUsers.length === 0) {
                 requestsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">승인 대기 중인 영업자 회원 신청건이 없습니다.</p>';
             } else {
@@ -2726,7 +2730,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2) Render Constructor Requests (conversionStatus === 'pending_constructor')
         const constructorsList = document.getElementById('admin-constructors-list-mob');
         if (constructorsList) {
-            const pendingConst = users.filter(u => u.conversionStatus === 'pending_constructor');
+            const pendingConst = curUsers.filter(u => u.conversionStatus === 'pending_constructor');
             if (pendingConst.length === 0) {
                 constructorsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">승인 대기 중인 시공업체 회원 신청건이 없습니다.</p>';
             } else {

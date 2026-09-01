@@ -2386,6 +2386,7 @@ function initAuthAndDashboard() {
         return;
       }
 
+      const nowIso = new Date().toISOString();
       const newUser = {
         id: idVal,
         pw: typeof sha256 === 'function' ? sha256(pwVal) : pwVal,
@@ -2397,7 +2398,8 @@ function initAuthAndDashboard() {
         isSNS: false,
         bizCode: null,
         conversionStatus: 'none',
-        items: []
+        items: [],
+        createdAt: nowIso
       };
 
       if (window.SupabaseSync) {
