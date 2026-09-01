@@ -1599,28 +1599,6 @@ function initWizard() {
         }
       }
 
-      let customId = '';
-      const dateTag = String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
-
-      if (referrerCode) {
-        customId = typeof generateBizItemId === 'function' 
-          ? generateBizItemId(referrerCode, apps) 
-          : `${referrerCode}-${String(apps.length + 1).padStart(3, '0')}`;
-      } else {
-        customId = typeof generateApplicationId === 'function' 
-          ? generateApplicationId(apps) 
-          : `P-${dateTag}001`;
-      }
-
-      // 신규 접수 건이 과거 삭제 캐시로 인해 차단되지 않도록 deleted_application_ids 자동 정리
-      try {
-        let deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
-        if (deletedAppIds.includes(customId)) {
-          deletedAppIds = deletedAppIds.filter(id => id !== customId);
-          localStorage.setItem('deleted_application_ids', JSON.stringify(deletedAppIds));
-        }
-      } catch (eDel) {}
-
       const loggedUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function') 
         ? window.DataStore.getActiveUser() 
         : (JSON.parse(localStorage.getItem('activeUser')) || null);
@@ -1628,6 +1606,19 @@ function initWizard() {
       const finalReferrerCode = (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin') && loggedUser.bizCode)
         ? loggedUser.bizCode
         : (referrerCode || (loggedUser ? (loggedUser.bizCode || loggedUser.id) : ''));
+
+      let customId = '';
+      const dateTag = String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
+
+      if (finalReferrerCode) {
+        customId = typeof generateBizItemId === 'function' 
+          ? generateBizItemId(finalReferrerCode, apps) 
+          : `${finalReferrerCode}-${String(apps.length + 1).padStart(3, '0')}`;
+      } else {
+        customId = typeof generateApplicationId === 'function' 
+          ? generateApplicationId(apps) 
+          : `P-${dateTag}001`;
+      }
 
       const newApp = {
         id: customId,

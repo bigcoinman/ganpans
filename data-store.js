@@ -923,9 +923,21 @@
       const targetApp = apps.find(a => String(a.id) === targetId);
       if (!targetApp) return { success: false, error: '해당 신청서를 찾을 수 없습니다.' };
 
-      // 1) 신청서 referrerCode 갱신
+      // 1) 신청서 referrerCode 갱신 및 영업자 정보 동기화
       targetApp.referrerCode = codeVal;
       targetApp.referrer_code = codeVal;
+      if (codeVal) {
+        const users = this.getUsers();
+        const salesUser = users.find(u =>
+          (u.role === 'business' || u.role === 'admin') &&
+          ((u.bizCode && String(u.bizCode).trim().toLowerCase() === codeVal.toLowerCase()) ||
+            (u.id && String(u.id).trim().toLowerCase() === codeVal.toLowerCase()))
+        );
+        if (salesUser) {
+          targetApp.salespersonId = salesUser.id;
+          targetApp.salespersonName = salesUser.name;
+        }
+      }
       targetApp.updatedAt = new Date().toISOString();
 
       this.saveApplications(apps);
