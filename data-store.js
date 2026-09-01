@@ -204,6 +204,7 @@
       // 항상 users 저장소에서 가장 최신의 사용자 정보(bizCode, items 등)를 동기화
       const users = this.getUsers();
       const user = users.find(u => String(u.id).toLowerCase() === String(rawUser.id).toLowerCase()) || rawUser;
+      const apps = this.getApplications();
 
       const adminItems = this.getAdminBizItems();
 
@@ -243,14 +244,30 @@
         const entryPhone = String(u.phone || '').replace(/[^0-9]/g, '');
         const itId = String(it.id || '').trim().toLowerCase();
 
+        // 1) assignedUser가 나인지 확인
         const isUserMatch = (myUserId && entryUserId === myUserId) ||
                             (myBizCode && entryBizCode === myBizCode) ||
                             (myUserName && entryUserName === myUserName) ||
-                            (myPhone && entryPhone && myPhone === entryPhone);
+                            (myPhone && entryPhone === myPhone);
+        // 2) 고유 접수번호 접두사가 내 코드인지 확인
         const isPrefixMatch = Boolean(myBizCode && itId.startsWith(myBizCode + '-'));
+        // 3) 내 items 목록에 등록되어 있는지 확인
         const isMyItemMatch = Boolean(user.items && Array.isArray(user.items) && user.items.some(i => String(i.id).toLowerCase() === itId || String(i.appRefId).toLowerCase() === itId));
+        // 4) applications의 원본 건에서 내가 신청/추천했는지 직접 전수 대조
+        const rawApp = apps.find(a => String(a.id).toLowerCase() === itId || String(a.appRefId).toLowerCase() === itId);
+        let isRawAppMatch = false;
+        if (rawApp) {
+          const rawRef = String(rawApp.referrerCode || rawApp.referrer_code || '').trim().toLowerCase();
+          const rawUser = String(rawApp.userId || rawApp.registeredBy || rawApp.submitterId || rawApp.salespersonId || '').trim().toLowerCase();
+          const rawPhone = String(rawApp.ownerPhone || '').replace(/[^0-9]/g, '');
+          const rawOwner = String(rawApp.ownerName || '').trim().toLowerCase();
+          isRawAppMatch = (myBizCode && (rawRef === myBizCode || itId.startsWith(myBizCode + '-'))) ||
+                          (myUserId && (rawUser === myUserId || rawRef === myUserId)) ||
+                          (myUserName && (rawOwner === myUserName || rawRef === myUserName)) ||
+                          (myPhone && rawPhone === myPhone);
+        }
 
-        if (isUserMatch || isPrefixMatch || isMyItemMatch) {
+        if (isUserMatch || isPrefixMatch || isMyItemMatch || isRawAppMatch) {
           myBizList.push({
             id: it.id,
             date: it.registeredAt || new Date().toISOString(),
@@ -322,14 +339,15 @@
         const isApprovedBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
         if (!isApprovedBizItem) return; // 비활성화/미승인 건은 절대 제외!
 
-        // 담당 영업자 찾기 (5중 다각도 정밀 매칭)
+        // 담당 영업자 찾기 (6중 다각도 정밀 매칭)
         let assignedUser = null;
         const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
-        const appUser = String(app.userId || '').trim().toLowerCase();
+        const appUser = String(app.userId || app.registeredBy || app.submitterId || app.salespersonId || '').trim().toLowerCase();
         const appId = String(app.id || '').trim().toLowerCase();
         const appPhone = String(app.ownerPhone || '').replace(/[^0-9]/g, '');
         const appOwner = String(app.ownerName || '').trim().toLowerCase();
 
+        // 1. referrerCode로 탐색 (코드, ID, 이름)
         if (refCode) {
           assignedUser = users.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
@@ -338,18 +356,28 @@
               (u.name && String(u.name).trim().toLowerCase() === refCode))
           );
         }
+        // 2. appId 접두사로 탐색 (예: B-260901-)
         if (!assignedUser && appId) {
           assignedUser = users.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
             u.bizCode && appId.startsWith(String(u.bizCode).trim().toLowerCase() + '-')
           );
         }
+        // 3. appUser (userId, registeredBy, submitterId)로 탐색
         if (!assignedUser && appUser) {
           assignedUser = users.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
-            (u.id && String(u.id).trim().toLowerCase() === appUser)
+            (String(u.id).trim().toLowerCase() === appUser || (u.bizCode && String(u.bizCode).trim().toLowerCase() === appUser))
           );
         }
+        // 4. users.items에 등록된 영업자 탐색
+        if (!assignedUser) {
+          assignedUser = users.find(u =>
+            u.role === 'business' && u.items && Array.isArray(u.items) &&
+            u.items.some(it => String(it.id).toLowerCase() === appId || String(it.appRefId).toLowerCase() === appId)
+          );
+        }
+        // 5. 신청자 연락처/성명으로 영업자 탐색
         if (!assignedUser && appPhone) {
           assignedUser = users.find(u =>
             (u.role === 'business' || u.role === 'admin') &&

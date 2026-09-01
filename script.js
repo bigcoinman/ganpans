@@ -1621,9 +1621,21 @@ function initWizard() {
         }
       } catch (eDel) {}
 
+      const loggedUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function') 
+        ? window.DataStore.getActiveUser() 
+        : (JSON.parse(localStorage.getItem('activeUser')) || null);
+
+      const finalReferrerCode = (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin') && loggedUser.bizCode)
+        ? loggedUser.bizCode
+        : (referrerCode || (loggedUser ? (loggedUser.bizCode || loggedUser.id) : ''));
+
       const newApp = {
         id: customId,
-        userId,
+        userId: (loggedUser && loggedUser.role === 'business') ? loggedUser.id : userId,
+        applicantUserId: userId,
+        registeredBy: loggedUser ? loggedUser.id : (phoneDigits || 'guest'),
+        salespersonId: (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin')) ? loggedUser.id : '',
+        salespersonName: (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin')) ? loggedUser.name : '',
         ownerName,
         ownerPhone,
         storeName,
@@ -1638,7 +1650,7 @@ function initWizard() {
         isBizItem: false,
         receiptStatus: '접수완료',
         progressStatus: '심사대기',
-        referrerCode,
+        referrerCode: finalReferrerCode,
         autoAccount: {
           id: loginNoticeId,
           pw: loginNoticePw,
