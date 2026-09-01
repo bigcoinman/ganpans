@@ -1616,6 +1616,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderBizRegisteredItemsMob() {
         const bizListContainer = document.getElementById('biz-items-list-mobile');
         if (!bizListContainer) return;
+        if (window.DataStore && activeUser) {
+            const freshMe = window.DataStore.getActiveUser();
+            if (freshMe) activeUser = freshMe;
+        }
         if (!activeUser || activeUser.role !== 'business') return;
 
         // DataStore로부터 단일 격리된 본인 영업물건 가져오기 (타인 물건 100% 차단)
@@ -1707,6 +1711,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderBusinessDashboardMob() {
+        if (window.DataStore && activeUser) {
+            const freshMe = window.DataStore.getActiveUser();
+            if (freshMe) activeUser = freshMe;
+        }
         if (!activeUser || activeUser.role !== 'business') return;
         if (window.DataStore && typeof window.DataStore.cleanGhostItems === 'function') {
             window.DataStore.cleanGhostItems();
