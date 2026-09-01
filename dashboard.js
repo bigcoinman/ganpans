@@ -344,6 +344,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     headerUserName.textContent = `${activeUser.name}님 (${activeUser.id}) (${roleText})`;
 
+    if (typeof window.updateReferrerField === 'function') {
+      window.updateReferrerField();
+    }
+
     // Check Role and adjust UI visibility
     const dashboardGrid = document.querySelector('.dashboard-grid');
     const managerAdminPanel = document.querySelector('.manager-admin-panel');

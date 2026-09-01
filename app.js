@@ -436,6 +436,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateDrawerProfile() {
         activeUser = getActiveUser() || null;
+        if (typeof window.updateReferrerField === 'function') {
+            window.updateReferrerField();
+        }
 
         // 메뉴 요소 참조
         const itemHome = document.getElementById('drawer-item-home');
@@ -656,6 +659,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     tab.classList.remove('active');
                 }
             });
+            if (typeof window.updateReferrerField === 'function') {
+                window.updateReferrerField();
+            }
             // Scroll to the apply section inside home view
             setTimeout(() => {
                 const appSection = document.getElementById('apply-section');
@@ -700,6 +706,9 @@ document.addEventListener('DOMContentLoaded', () => {
             activeTab.scrollTop = 0;
         }
         updateHeaderAuthButton();
+        if (typeof window.updateReferrerField === 'function') {
+            window.updateReferrerField();
+        }
     }
     window.switchTab = switchTab;
 
@@ -2402,6 +2411,9 @@ document.addEventListener('DOMContentLoaded', () => {
         activeUser = getActiveUser() || null;
         updateDrawerProfile();
         updateHeaderAuthButton();
+        if (typeof window.updateReferrerField === 'function') {
+            window.updateReferrerField();
+        }
 
         // 사용자가 드롭다운(SELECT)이나 텍스트입력(INPUT)을 조작 중일 때는 전체 DOM 재생성을 스킵하여 깜빡임/닫힘 완벽 방지
         const activeEl = document.activeElement;

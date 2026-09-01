@@ -1084,32 +1084,59 @@ function initWizard() {
 
   if (steps.length === 0) return;
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const refCode = urlParams.get('ref');
-  const referrerInput = document.getElementById('referrer-code');
-  const loggedUser = (typeof getActiveUser === 'function') ? getActiveUser() : null;
+  function updateReferrerField() {
+    const referrerInput = document.getElementById('referrer-code');
+    if (!referrerInput) return;
 
-  if (referrerInput) {
-    if (loggedUser && loggedUser.role === 'business' && loggedUser.bizCode) {
-      referrerInput.value = loggedUser.bizCode;
-      referrerInput.readOnly = true;
-      referrerInput.style.backgroundColor = '#f1f5f9';
-      referrerInput.style.color = '#334155';
-      referrerInput.style.fontWeight = '700';
-      referrerInput.title = `담당 영업자 (${loggedUser.name || ''}) 코드가 자동 적용되었습니다.`;
-      
-      const refLabel = document.querySelector('label[for="referrer-code"]');
-      if (refLabel && !document.getElementById('biz-auto-badge')) {
-        const badge = document.createElement('span');
-        badge.id = 'biz-auto-badge';
-        badge.style.cssText = 'margin-left: 6px; font-size: 0.76rem; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 9999px; font-weight: 700;';
-        badge.innerHTML = `<i class="fa-solid fa-lock"></i> 영업자 본인 자동지정 (${loggedUser.name || '영업자'})`;
-        refLabel.appendChild(badge);
+    const loggedUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function')
+      ? window.DataStore.getActiveUser()
+      : ((typeof getActiveUser === 'function') ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser'))));
+
+    const refLabel = document.querySelector('label[for="referrer-code"]');
+    const existingBadge = document.getElementById('biz-auto-badge');
+
+    if (loggedUser && (loggedUser.role === 'business' || loggedUser.bizCode)) {
+      const code = loggedUser.bizCode || loggedUser.biz_code || '';
+      if (code) {
+        referrerInput.value = code;
+        referrerInput.readOnly = true;
+        referrerInput.style.backgroundColor = '#f1f5f9';
+        referrerInput.style.color = '#334155';
+        referrerInput.style.fontWeight = '700';
+        referrerInput.title = `담당 영업자 (${loggedUser.name || ''}) 코드가 자동 적용되었습니다.`;
+
+        if (refLabel && !existingBadge) {
+          const badge = document.createElement('span');
+          badge.id = 'biz-auto-badge';
+          badge.style.cssText = 'margin-left: 6px; font-size: 0.76rem; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 9999px; font-weight: 700;';
+          badge.innerHTML = `<i class="fa-solid fa-lock"></i> 영업자 본인 자동지정 (${loggedUser.name || '영업자'})`;
+          refLabel.appendChild(badge);
+        } else if (existingBadge) {
+          existingBadge.innerHTML = `<i class="fa-solid fa-lock"></i> 영업자 본인 자동지정 (${loggedUser.name || '영업자'})`;
+        }
+        return;
       }
-    } else if (refCode) {
+    }
+
+    // 비회원 또는 일반회원인 경우
+    referrerInput.readOnly = false;
+    referrerInput.style.backgroundColor = '';
+    referrerInput.style.color = '';
+    referrerInput.style.fontWeight = '';
+    referrerInput.title = '';
+    if (existingBadge && existingBadge.parentNode) {
+      existingBadge.parentNode.removeChild(existingBadge);
+    }
+
+    // URL 파라미터 ?ref= 체크
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref');
+    if (refCode && !referrerInput.value) {
       referrerInput.value = refCode.trim();
     }
   }
+  window.updateReferrerField = updateReferrerField;
+  updateReferrerField();
 
   let currentStep = 0;
   let uploadedPhotos = [];
@@ -1718,6 +1745,9 @@ function initWizard() {
     if (document.getElementById('referrer-code')) {
       document.getElementById('referrer-code').value = '';
     }
+    if (typeof updateReferrerField === 'function') {
+      updateReferrerField();
+    }
     if (uploadInput) uploadInput.value = '';
     uploadedPhotos = [];
     renderPhotosPreview();
@@ -2169,6 +2199,10 @@ function initAuthAndDashboard() {
       if (authBtn) authBtn.style.display = 'inline-flex';
       if (userInfoArea) userInfoArea.style.display = 'none';
       if (navDashboard) navDashboard.style.display = 'none';
+    }
+
+    if (typeof updateReferrerField === 'function') {
+      updateReferrerField();
     }
   };
 
