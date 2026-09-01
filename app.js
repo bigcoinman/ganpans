@@ -1540,7 +1540,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
             card.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                    <h5 style="font-size: 1.31rem; font-weight: 700; color: var(--text-primary); margin: 0;">${escapeHtml(app.storeName || app.shopName || '-')}</h5>
+                    <h5 style="font-size: 1.7rem; font-weight: 700; color: var(--text-primary); margin: 0; line-height: 1.25;">${escapeHtml(app.storeName || app.shopName || '-')}</h5>
                     <div>${statusBadge}</div>
                 </div>
                 <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 5px 0;">

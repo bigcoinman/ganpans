@@ -3862,7 +3862,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${app.ownerPhone ? `<div style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-phone" style="color: var(--accent-primary);"></i> ${escapeHtml(app.ownerPhone)}</div>` : ''}
         </td>
         <td style="padding: 12px 16px;">
-          <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">${escapeHtml(app.storeName || '-')}</div>
+          <div style="font-weight: 700; color: var(--text-primary); font-size: 1.15rem; line-height: 1.3;">${escapeHtml(app.storeName || '-')}</div>
           ${app.storeAddress ? `<div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(app.storeAddress)}</div>` : ''}
           ${(() => {
             const draftPhotos = app.signDraftPhotos || app.designPhotos || [];
