@@ -754,65 +754,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!bizItemsList) return;
     bizItemsList.innerHTML = '';
     
-    // 동기화: 신청서(applications) 데이터와 영업자의 items 매핑 상태 업데이트
-    let items = activeUser.items || [];
-    const apps = JSON.parse(localStorage.getItem('applications')) || [];
-    let itemsUpdated = false;
-
-    items = items.map(item => {
-      // GP- 또는 P-로 시작하는 신청건인 경우, applications의 최신 심사 결과를 반영
-      if (typeof item.id === 'string' && (item.id.startsWith('GP-') || item.id.startsWith('P-'))) {
-        const matchingApp = apps.find(app => app.id === item.id);
-        if (matchingApp) {
-          let updatedProgress = item.progressStatus;
-          if (matchingApp.status === 'approved') {
-            if (matchingApp.constructionStatus === 'before_construction') {
-              updatedProgress = '시공사 배정 (시공 전)';
-            } else if (matchingApp.constructionStatus === 'in_construction') {
-              updatedProgress = '시공 진행 중';
-            } else if (matchingApp.constructionStatus === 'after_construction') {
-              updatedProgress = '시공 완료 (검수 중)';
-            } else if (matchingApp.constructionStatus === 'completed') {
-              updatedProgress = '정산 종결 (최종 완료)';
-            } else {
-              updatedProgress = '승인 완료';
-            }
-          } else if (matchingApp.status === 'rejected' || matchingApp.status === '지원사업 탈락' || matchingApp.status === '지원사업탈락') {
-            updatedProgress = '반려됨';
-          } else if (matchingApp.status === 'giveup' || matchingApp.status === '지원사업 포기' || matchingApp.status === '지원사업포기') {
-            updatedProgress = '지원사업 포기';
-          } else {
-            updatedProgress = '심사 대기';
-          }
-
-          if (item.progressStatus !== updatedProgress) {
-            item.progressStatus = updatedProgress;
-            itemsUpdated = true;
-          }
-        }
-      }
-      return item;
-    });
-
-    // 만약 관리자가 applications에서 isBizItem을 해제(false)했다면 items 목록에서도 자동 제거
-    const cleanedItems = items.filter(item => {
-      const matchingApp = apps.find(app => String(app.id) === String(item.id));
-      if (matchingApp && matchingApp.isBizItem === false) {
-        itemsUpdated = true;
-        return false;
-      }
-      return true;
-    });
-    items = cleanedItems;
-
-    if (itemsUpdated) {
-      activeUser.items = items;
-      users = users.map(u => u.id === activeUser.id ? { ...u, items } : u);
-      localStorage.setItem('users', JSON.stringify(users));
-      localStorage.setItem('activeUser', JSON.stringify(activeUser));
+    if (window.DataStore && activeUser) {
+      const freshMe = window.DataStore.getActiveUser();
+      if (freshMe) activeUser = freshMe;
     }
 
-    if (items.length === 0) {
+    const apps = JSON.parse(localStorage.getItem('applications')) || [];
+    const bizList = (window.DataStore && typeof window.DataStore.getBizItemsForUser === 'function')
+      ? window.DataStore.getBizItemsForUser(activeUser)
+      : [];
+
+    if (bizList.length === 0) {
       bizItemsList.innerHTML = `
         <div class="empty-list-msg">
           <i class="fa-solid fa-folder-open" style="font-size: 2.5rem; margin-bottom: 15px; opacity: 0.5;"></i>
@@ -823,7 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 최근 신청한 업체: 최신 2개 업체만 표시
-    const recentItems = [...items].slice(-2).reverse();
+    const recentItems = [...bizList].slice(0, 2);
 
     recentItems.forEach(item => {
       const card = document.createElement('div');
