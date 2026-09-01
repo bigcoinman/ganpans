@@ -198,104 +198,74 @@
 
     // --- 2. 영업물건 전용 데이터 조회 (최고관리자 대시보드 절대 SSOT 기반 & 완벽한 중복 방지) ---
     getBizItemsForUser: function (targetUser) {
-      const user = targetUser || this.getActiveUser();
-      if (!user) return [];
+      const rawUser = targetUser || this.getActiveUser();
+      if (!rawUser) return [];
 
-      const apps = this.getApplications();
-      const deletedBizIds = this.getDeletedBizItemIds();
-      const bizList = [];
+      // 항상 users 저장소에서 가장 최신의 사용자 정보(bizCode, items 등)를 동기화
+      const users = this.getUsers();
+      const user = users.find(u => String(u.id).toLowerCase() === String(rawUser.id).toLowerCase()) || rawUser;
 
-      const isPurged = (it) => {
-        if (!it) return false;
-        const itId = String(it.id || '').trim();
-        const itRef = String(it.appRefId || '').trim();
-        const itName = String(it.name || it.storeName || it.shopName || '').replace(/\s+/g, '').toLowerCase();
-        return deletedBizIds.some(del => {
-          const cleanDel = String(del).replace(/\s+/g, '').toLowerCase();
-          return itId === del || itRef === del || (itName && cleanDel && (itName === cleanDel || itName.includes(cleanDel) || cleanDel.includes(itName)));
+      const adminItems = this.getAdminBizItems();
+
+      if (this.isAdmin(user)) {
+        // 최고관리자는 모든 승인된 영업물건 조회
+        return adminItems.map(entry => {
+          const it = entry.item;
+          return {
+            id: it.id,
+            date: it.registeredAt || new Date().toISOString(),
+            ownerName: it.name || '-',
+            ownerPhone: it.phone || '',
+            storeName: it.name || '-',
+            storeAddress: it.address || '',
+            statusObj: it,
+            receiptStatus: it.receiptStatus,
+            progressStatus: it.progressStatus,
+            assignedUser: entry.user
+          };
         });
-      };
+      }
 
-      const normalizeStr = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
-      const normalizePhone = (p) => String(p || '').replace(/[^0-9]/g, '');
-
-      const isDuplicateInBizList = (list, item) => {
-        if (!item) return true;
-        const tId = String(item.id || '').trim();
-        const tRef = String(item.appRefId || '').trim();
-        const tName = normalizeStr(item.storeName || item.shopName || item.name);
-        const tPhone = normalizePhone(item.ownerPhone || item.phone);
-        const tAddr = normalizeStr(item.storeAddress || item.address);
-
-        return list.some(b => {
-          const bId = String(b.id || '').trim();
-          const bRef = String(b.statusObj ? (b.statusObj.appRefId || b.statusObj.id) : '').trim();
-          const bName = normalizeStr(b.storeName || b.ownerName);
-          const bPhone = normalizePhone(b.ownerPhone);
-          const bAddr = normalizeStr(b.storeAddress);
-
-          // 1) ID 또는 appRefId 매칭
-          if (tId && (bId === tId || bRef === tId)) return true;
-          if (tRef && (bId === tRef || bRef === tRef)) return true;
-
-          // 2) 상호명 + 전화번호 매칭
-          if (tName && bName && tName === bName && tPhone && bPhone && tPhone === bPhone) return true;
-
-          // 3) 상호명 + 주소 매칭
-          if (tName && bName && tName === bName && tAddr && bAddr && (tAddr === bAddr || tAddr.includes(bAddr) || bAddr.includes(tAddr))) return true;
-
-          return false;
-        });
-      };
-
+      // 영업자: getAdminBizItems()에서 본인에게 귀속된 건을 100% 동일하게 추출 (SSOT 완벽 일치)
       const myBizCode = String(user.bizCode || '').trim().toLowerCase();
       const myUserId = String(user.id || '').trim().toLowerCase();
       const myUserName = String(user.name || '').trim().toLowerCase();
       const myPhone = String(user.phone || '').replace(/[^0-9]/g, '');
 
-      // 오직 applications 중 최고관리자가 isBizItem: true 로 승인한 실존 건만 수집 (부존재 일치 100%)
-      apps.forEach(app => {
-        if (isPurged(app)) return;
-        const isApprovedBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
-        if (!isApprovedBizItem) return;
+      const myBizList = [];
+      adminItems.forEach(entry => {
+        const u = entry.user || {};
+        const it = entry.item || {};
 
-        const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
-        const appUser = String(app.userId || '').trim().toLowerCase();
-        const appOwner = String(app.ownerName || '').trim().toLowerCase();
-        const appPhone = String(app.ownerPhone || '').replace(/[^0-9]/g, '');
-        const appId = String(app.id || '').trim().toLowerCase();
+        const entryUserId = String(u.id || '').trim().toLowerCase();
+        const entryBizCode = String(u.bizCode || '').trim().toLowerCase();
+        const entryUserName = String(u.name || '').trim().toLowerCase();
+        const entryPhone = String(u.phone || '').replace(/[^0-9]/g, '');
+        const itId = String(it.id || '').trim().toLowerCase();
 
-        const isMyIdPrefix = Boolean(myBizCode && appId.startsWith(myBizCode + '-'));
-        const isMyReferrer = (myBizCode && (refCode === myBizCode || isMyIdPrefix)) || (myUserId && refCode === myUserId) || (myUserName && refCode === myUserName);
-        const isMyUser = (myUserId && appUser === myUserId);
-        const isMyPhone = (myPhone && appPhone && myPhone === appPhone);
-        const isMyName = (myUserName && appOwner && myUserName === appOwner);
-        const isMyItem = Boolean(user.items && Array.isArray(user.items) && user.items.some(it => String(it.id).toLowerCase() === appId));
+        const isUserMatch = (myUserId && entryUserId === myUserId) ||
+                            (myBizCode && entryBizCode === myBizCode) ||
+                            (myUserName && entryUserName === myUserName) ||
+                            (myPhone && entryPhone && myPhone === entryPhone);
+        const isPrefixMatch = Boolean(myBizCode && itId.startsWith(myBizCode + '-'));
+        const isMyItemMatch = Boolean(user.items && Array.isArray(user.items) && user.items.some(i => String(i.id).toLowerCase() === itId || String(i.appRefId).toLowerCase() === itId));
 
-        // 최고관리자는 전체 조회, 영업자는 오직 본인 귀속 건만 조회
-        if (this.isAdmin(user) || isMyReferrer || isMyUser || isMyPhone || isMyName || isMyIdPrefix || isMyItem) {
-          const rStatus = app.receiptStatus || '접수예정';
-          const pStatus = app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
-
-          const bizObj = {
-            id: app.id,
-            date: app.appliedAt || app.createdAt || new Date().toISOString(),
-            ownerName: app.ownerName || app.name || '-',
-            ownerPhone: app.ownerPhone || app.phone || '',
-            storeName: app.storeName || app.shopName || app.name || '-',
-            storeAddress: app.storeAddress || app.address || '',
-            statusObj: app,
-            receiptStatus: rStatus,
-            progressStatus: pStatus
-          };
-
-          if (!isDuplicateInBizList(bizList, bizObj)) {
-            bizList.push(bizObj);
-          }
+        if (isUserMatch || isPrefixMatch || isMyItemMatch) {
+          myBizList.push({
+            id: it.id,
+            date: it.registeredAt || new Date().toISOString(),
+            ownerName: it.name || '-',
+            ownerPhone: it.phone || '',
+            storeName: it.name || '-',
+            storeAddress: it.address || '',
+            statusObj: it,
+            receiptStatus: it.receiptStatus,
+            progressStatus: it.progressStatus
+          });
         }
       });
 
-      return bizList;
+      return myBizList;
     },
 
     // --- 최고관리자 전용 전체 영업물건 진행상황 목록 (중복 100% 완전 배제 & SSOT) ---
@@ -309,7 +279,6 @@
         if (!it) return false;
         const itId = String(it.id || '').trim();
         const itRef = String(it.appRefId || '').trim();
-        const itName = String(it.name || it.storeName || it.shopName || '').replace(/\s+/g, '').toLowerCase();
         return deletedBizIds.includes(itId) || deletedBizIds.includes(itRef);
       };
 
@@ -353,11 +322,13 @@
         const isApprovedBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
         if (!isApprovedBizItem) return; // 비활성화/미승인 건은 절대 제외!
 
-        // 담당 영업자 찾기
+        // 담당 영업자 찾기 (5중 다각도 정밀 매칭)
         let assignedUser = null;
         const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
         const appUser = String(app.userId || '').trim().toLowerCase();
         const appId = String(app.id || '').trim().toLowerCase();
+        const appPhone = String(app.ownerPhone || '').replace(/[^0-9]/g, '');
+        const appOwner = String(app.ownerName || '').trim().toLowerCase();
 
         if (refCode) {
           assignedUser = users.find(u =>
@@ -377,6 +348,18 @@
           assignedUser = users.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
             (u.id && String(u.id).trim().toLowerCase() === appUser)
+          );
+        }
+        if (!assignedUser && appPhone) {
+          assignedUser = users.find(u =>
+            (u.role === 'business' || u.role === 'admin') &&
+            u.phone && String(u.phone).replace(/[^0-9]/g, '') === appPhone
+          );
+        }
+        if (!assignedUser && appOwner) {
+          assignedUser = users.find(u =>
+            (u.role === 'business' || u.role === 'admin') &&
+            u.name && String(u.name).trim().toLowerCase() === appOwner
           );
         }
 
