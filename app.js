@@ -2063,7 +2063,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let apps = JSON.parse(localStorage.getItem('applications')) || [];
                 const itemId = typeof generateBizItemId === 'function'
                     ? generateBizItemId(activeUser.bizCode, apps)
-                    : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(4, '0')}`;
+                    : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(3, '0')}`;
 
                 // 1. 최고관리자 [신청서 목록(applications)]에 등록 (사진 데이터 포함)
                 const newApp = {

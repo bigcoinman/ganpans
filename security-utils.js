@@ -787,7 +787,7 @@ function generateApplicationId(appsList) {
   return `${prefix}${nextSeq}`;
 }
 
-// 10. 영업자 간판접수신청 물건 고유번호 생성 헬퍼 (규칙: {bizCode}-0001 ~ 순차 증가)
+// 10. 영업자 간판접수신청 물건 고유번호 생성 헬퍼 (규칙: {bizCode}-001 ~ 순차 증가, 예: B-260901-001)
 function generateBizItemId(bizCode, userItems) {
   const code = (bizCode && typeof bizCode === 'string') ? bizCode : (typeof generateBizCode === 'function' ? generateBizCode() : 'B-260801');
   const prefix = `${code}-`;
@@ -814,7 +814,7 @@ function generateBizItemId(bizCode, userItems) {
     }
   });
 
-  const nextSeq = String(maxSeq + 1).padStart(4, '0');
+  const nextSeq = String(maxSeq + 1).padStart(3, '0');
   return `${prefix}${nextSeq}`;
 }
 

@@ -1602,9 +1602,9 @@ function initWizard() {
       const dateTag = String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
 
       if (referrerCode) {
-        const matchingToday = apps.filter(a => a.id && String(a.id).startsWith(`${referrerCode}-${dateTag}`));
-        const nextSeq = String(matchingToday.length + 1).padStart(3, '0');
-        customId = `${referrerCode}-${dateTag}-${nextSeq}`;
+        customId = typeof generateBizItemId === 'function' 
+          ? generateBizItemId(referrerCode, apps) 
+          : `${referrerCode}-${String(apps.length + 1).padStart(3, '0')}`;
       } else {
         customId = typeof generateApplicationId === 'function' 
           ? generateApplicationId(apps) 

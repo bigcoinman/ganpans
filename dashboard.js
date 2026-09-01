@@ -1244,7 +1244,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       let apps = JSON.parse(localStorage.getItem('applications')) || [];
-      const itemId = typeof generateBizItemId === 'function' ? generateBizItemId(activeUser.bizCode, apps) : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(4, '0')}`;
+      const itemId = typeof generateBizItemId === 'function' ? generateBizItemId(activeUser.bizCode, apps) : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(3, '0')}`;
 
       const newApp = {
         id: itemId,
