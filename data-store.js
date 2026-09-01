@@ -536,12 +536,12 @@
         const pStatus = String(app.progressStatus || app.constructionStatus || '').trim();
         const cStatus = String(app.constructionStatus || '').trim();
 
-        const isEligible = (
+        const isEligible = Boolean(
+          app.assignedConstructorId ||
           pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-          cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
+          cStatus === 'before_construction' || cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
         ) && (
-          pStatus !== '지원대기중' && pStatus !== '심사대기' && pStatus !== '서류제출 & 접수예정' &&
-          pStatus !== '서류 보완 필요' && pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
+          pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
         );
 
         if (isEligible) {
