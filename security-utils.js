@@ -789,7 +789,9 @@ function generateApplicationId(appsList) {
 
 // 10. 영업자 간판접수신청 물건 고유번호 생성 헬퍼 (규칙: {bizCode}-001 ~ 순차 증가, 예: B-260901-001)
 function generateBizItemId(bizCode, userItems) {
-  const code = (bizCode && typeof bizCode === 'string') ? bizCode : (typeof generateBizCode === 'function' ? generateBizCode() : 'B-260801');
+  const code = (bizCode && typeof bizCode === 'string' && bizCode.trim()) 
+    ? bizCode.trim() 
+    : (typeof generateBizCode === 'function' ? generateBizCode() : 'B-260801');
   const prefix = `${code}-`;
   const items = Array.isArray(userItems) ? [...userItems] : [];
 
@@ -806,8 +808,10 @@ function generateBizItemId(bizCode, userItems) {
   let maxSeq = 0;
   items.forEach(item => {
     if (item && item.id && typeof item.id === 'string' && item.id.startsWith(prefix)) {
-      const seqStr = item.id.slice(prefix.length);
-      const seqNum = parseInt(seqStr, 10);
+      // split('-')의 마지막 토큰만 안전하게 추출하여 순번 파싱 (과거 날짜가 포함된 긴 ID도 100% 정상 파싱)
+      const parts = item.id.split('-');
+      const lastToken = parts[parts.length - 1];
+      const seqNum = parseInt(lastToken, 10);
       if (!isNaN(seqNum) && seqNum > maxSeq) {
         maxSeq = seqNum;
       }
