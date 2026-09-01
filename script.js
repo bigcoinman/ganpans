@@ -1620,13 +1620,31 @@ function initWizard() {
           : `P-${dateTag}001`;
       }
 
+      let assignedSalespersonId = '';
+      let assignedSalespersonName = '';
+      if (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin')) {
+        assignedSalespersonId = loggedUser.id;
+        assignedSalespersonName = loggedUser.name;
+      } else if (finalReferrerCode) {
+        const matchedSales = users.find(u =>
+          (u.role === 'business' || u.role === 'admin') &&
+          ((u.bizCode && String(u.bizCode).trim().toLowerCase() === String(finalReferrerCode).trim().toLowerCase()) ||
+           (u.id && String(u.id).trim().toLowerCase() === String(finalReferrerCode).trim().toLowerCase()) ||
+           (u.name && String(u.name).trim().toLowerCase() === String(finalReferrerCode).trim().toLowerCase()))
+        );
+        if (matchedSales) {
+          assignedSalespersonId = matchedSales.id;
+          assignedSalespersonName = matchedSales.name;
+        }
+      }
+
       const newApp = {
         id: customId,
         userId: (loggedUser && loggedUser.role === 'business') ? loggedUser.id : userId,
         applicantUserId: userId,
         registeredBy: loggedUser ? loggedUser.id : (phoneDigits || 'guest'),
-        salespersonId: (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin')) ? loggedUser.id : '',
-        salespersonName: (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin')) ? loggedUser.name : '',
+        salespersonId: assignedSalespersonId,
+        salespersonName: assignedSalespersonName,
         ownerName,
         ownerPhone,
         storeName,

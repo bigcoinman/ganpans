@@ -288,28 +288,16 @@
         if (!targetItem) return true;
         const tId = String(targetItem.id || '').trim();
         const tRef = String(targetItem.appRefId || '').trim();
-        const tName = normalizeStr(targetItem.name || targetItem.storeName || targetItem.shopName);
-        const tPhone = normalizePhone(targetItem.phone || targetItem.ownerPhone);
-        const tAddr = normalizeStr(targetItem.address || targetItem.storeAddress);
 
         return existingList.some(entry => {
           const eItem = entry.item;
           if (!eItem) return false;
           const eId = String(eItem.id || '').trim();
           const eRef = String(eItem.appRefId || '').trim();
-          const eName = normalizeStr(eItem.name || eItem.storeName || eItem.shopName);
-          const ePhone = normalizePhone(eItem.phone || eItem.ownerPhone);
-          const eAddr = normalizeStr(eItem.address || eItem.storeAddress);
 
-          // 1) ID 또는 appRefId 일치
+          // 1) 고유 ID 또는 appRefId 일치 시에만 중복으로 판정
           if (tId && (eId === tId || eRef === tId)) return true;
           if (tRef && (eId === tRef || eRef === tRef)) return true;
-
-          // 2) 상호명 + 전화번호 일치
-          if (tName && eName && tName === eName && tPhone && ePhone && tPhone === ePhone) return true;
-
-          // 3) 상호명 + 주소 일치
-          if (tName && eName && tName === eName && tAddr && eAddr && (tAddr === eAddr || tAddr.includes(eAddr) || eAddr.includes(tAddr))) return true;
 
           return false;
         });
@@ -688,6 +676,14 @@
             (u.role === 'business' || u.role === 'admin') &&
             (u.id && String(u.id).trim().toLowerCase() === appUser)
           );
+        }
+
+        if (targetUser) {
+          app.salespersonId = targetUser.id;
+          app.salespersonName = targetUser.name;
+          if (targetUser.bizCode && !app.referrerCode) {
+            app.referrerCode = targetUser.bizCode;
+          }
         }
 
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
