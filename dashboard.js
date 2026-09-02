@@ -953,8 +953,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Image Resize & Compression (1MB Limit Guarantee) ---
-  const resizeImageToLimit = (file, maxSizeBytes = 1 * 1024 * 1024) => {
+  // --- Image Resize & Compression (300KB Limit Guarantee) ---
+  const resizeImageToLimit = (file, maxSizeBytes = 300 * 1024) => {
     return new Promise((resolve) => {
       if (file.size <= maxSizeBytes) {
         resolve(file);
@@ -969,8 +969,8 @@ document.addEventListener('DOMContentLoaded', () => {
           let width = img.width;
           let height = img.height;
 
-          // Resize long edge to max 1600px
-          const max_size = 1600;
+          // Resize long edge to max 1200px
+          const max_size = 1200;
           if (width > max_size || height > max_size) {
             if (width > height) {
               height *= max_size / width;
@@ -986,7 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
 
-          let quality = 0.9;
+          let quality = 0.75;
           let dataUrl = canvas.toDataURL('image/jpeg', quality);
           let size = Math.round((dataUrl.length - 22) * 3 / 4);
 
@@ -1187,7 +1187,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let base64Photo = '';
       if (selectedPhotos.length > 0) {
         try {
-          base64Photo = await compressImageToBase64(selectedPhotos[0], 1 * 1024 * 1024);
+          base64Photo = await compressImageToBase64(selectedPhotos[0], 300 * 1024);
         } catch (err) {
           console.warn('Image compression warning:', err);
         }
@@ -2751,8 +2751,8 @@ document.addEventListener('DOMContentLoaded', () => {
           ${(() => {
             const photosArr = (Array.isArray(app.photos) && app.photos.length > 0) ? app.photos.filter(p => p && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:'))) : [];
             const photoSrc = (photosArr.length > 0) ? photosArr[0] : (app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : ''));
-            const hasPhoto = Boolean((photosArr.length > 0) || (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))));
-            const count = photosArr.length > 0 ? photosArr.length : (hasPhoto ? 1 : 0);
+            const hasPhoto = Boolean((photosArr.length > 0) || (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))) || app.hasPhoto || (app.photosCount > 0));
+            const count = photosArr.length > 0 ? photosArr.length : (app.photosCount || (hasPhoto ? 1 : 0));
             return `
               <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
                 <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.76rem; font-weight: 700; color: #16a34a; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 6px; cursor: pointer; width: 92px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="${hasPhoto ? '현장사진 변경/재등록' : '현장사진 등록'}">
@@ -3438,7 +3438,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         let base64Data = '';
         if (typeof compressImageToBase64 === 'function') {
-          base64Data = await compressImageToBase64(file, 1 * 1024 * 1024);
+          base64Data = await compressImageToBase64(file, 300 * 1024);
         } else {
           base64Data = await new Promise((resolve) => {
             const reader = new FileReader();
@@ -3858,8 +3858,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 photoList = [app.image_url];
               }
             }
-            const count = photoList.length;
-            const hasPhoto = count > 0;
+            let count = photoList.length;
+            let hasPhoto = count > 0 || Boolean(app.hasPhoto || (app.photosCount > 0));
+            if (!count && hasPhoto) count = app.photosCount || 1;
 
             const downloadBtn = hasPhoto
               ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="padding: 4px 8px; font-size: 0.74rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; width: 100%; box-sizing: border-box; text-align: center; box-shadow: 0 1px 2px rgba(37,99,235,0.1); transition: background 0.15s;" title="${count > 1 ? `현장사진 ${count}장 다운로드` : '현장사진 다운로드'}"><i class="fa-solid ${count > 1 ? 'fa-file-zipper' : 'fa-download'}" style="color: #2563eb;"></i> ${count > 1 ? `다운 (${count}장)` : '다운로드'}</button>`
@@ -4619,7 +4620,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const file = files[i];
       let base64 = '';
       if (typeof compressImageToBase64 === 'function') {
-        base64 = await compressImageToBase64(file, 1 * 1024 * 1024);
+        base64 = await compressImageToBase64(file, 300 * 1024);
       } else {
         base64 = await new Promise((res) => {
           const reader = new FileReader();
@@ -4692,7 +4693,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const file = files[i];
       let base64 = '';
       if (typeof compressImageToBase64 === 'function') {
-        base64 = await compressImageToBase64(file, 1 * 1024 * 1024);
+        base64 = await compressImageToBase64(file, 300 * 1024);
       } else {
         base64 = await new Promise((res) => {
           const reader = new FileReader();

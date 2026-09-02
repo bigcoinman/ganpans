@@ -1361,7 +1361,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 let base64Data = '';
                 if (typeof compressImageToBase64 === 'function') {
-                    base64Data = await compressImageToBase64(file, 1 * 1024 * 1024);
+                    base64Data = await compressImageToBase64(file, 300 * 1024);
                 } else {
                     base64Data = await new Promise((resolve) => {
                         const reader = new FileReader();
@@ -1529,8 +1529,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     photoList = [app.image_url];
                 }
             }
-            const count = photoList.length;
-            const hasPhoto = count > 0;
+            let count = photoList.length;
+            let hasPhoto = count > 0 || Boolean(app.hasPhoto || (app.photosCount > 0));
+            if (!count && hasPhoto) count = app.photosCount || 1;
 
             const downloadBtn = hasPhoto
                 ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${count > 1 ? `현장사진 ${count}장 다운로드` : '현장사진 다운로드'}">
@@ -1842,8 +1843,8 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedPhotosMob = [];
     };
 
-    // 고화질 모바일 사진을 안전하고 가볍게(최대 1200px, 80% 품질) DataURL로 압축하는 유틸리티
-    const fileToCompressedDataUrl = (file, maxDimension = 1200, quality = 0.8) => {
+    // 고화질 모바일 사진을 안전하고 가볍게(최대 1200px, 75% 품질, 300KB 미만) DataURL로 압축하는 유틸리티
+    const fileToCompressedDataUrl = (file, maxDimension = 1200, quality = 0.75) => {
         return new Promise((resolve) => {
             if (!file) {
                 resolve('');
@@ -1898,7 +1899,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            const dataUrl = await fileToCompressedDataUrl(file, 1200, 0.8);
+            const dataUrl = await fileToCompressedDataUrl(file, 1200, 0.75);
             if (dataUrl) {
                 selectedPhotosMob.push({
                     name: file.name || `현장사진_${selectedPhotosMob.length + 1}.jpg`,
@@ -2869,8 +2870,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     let fileAttachmentHtml = '';
                     const photosArr = (Array.isArray(app.photos) && app.photos.length > 0) ? app.photos.filter(p => p && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:'))) : [];
                     const photoSrc = (photosArr.length > 0) ? photosArr[0] : (app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : ''));
-                    const hasPhoto = Boolean((photosArr.length > 0) || (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))));
-                    const count = photosArr.length > 0 ? photosArr.length : (hasPhoto ? 1 : 0);
+                    const hasPhoto = Boolean((photosArr.length > 0) || (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))) || app.hasPhoto || (app.photosCount > 0));
+                    const count = photosArr.length > 0 ? photosArr.length : (app.photosCount || (hasPhoto ? 1 : 0));
 
                     fileAttachmentHtml = `
                         <div style="margin-top: 10px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -4342,7 +4343,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const file = files[i];
             let base64 = null;
             if (typeof compressImageToBase64 === 'function') {
-                base64 = await compressImageToBase64(file, 1 * 1024 * 1024);
+                base64 = await compressImageToBase64(file, 300 * 1024);
             } else {
                 base64 = await new Promise((res) => {
                     const reader = new FileReader();
@@ -4413,7 +4414,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const file = files[i];
             let base64 = null;
             if (typeof compressImageToBase64 === 'function') {
-                base64 = await compressImageToBase64(file, 1 * 1024 * 1024);
+                base64 = await compressImageToBase64(file, 300 * 1024);
             } else {
                 base64 = await new Promise((res) => {
                     const reader = new FileReader();
