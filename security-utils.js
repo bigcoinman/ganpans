@@ -1580,70 +1580,23 @@ window.SupabaseSync = {
             return true;
           });
 
-        const coreDefaultUsers = [
-          {
-            id: 'admin',
-            pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
-            name: '최고관리자',
-            address: '경기도 수원시 영통구 청명남로 10',
-            email: 'admin@ganpan.go.kr',
-            phone: '010-0000-0000',
-            role: 'admin',
-            isSNS: false,
-            bizCode: null,
-            conversionStatus: 'none',
-            items: []
-          },
-          {
-            id: 'bizuser',
-            pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
-            name: '김영업',
-            address: '경기도 성남시 분당구 판교역로 235',
-            email: 'kim@naver.com',
-            phone: '010-9876-5432',
-            role: 'business',
-            isSNS: false,
-            bizCode: 'B-260712',
-            conversionStatus: 'approved',
-            items: []
-          },
-          {
-            id: 'bugsman2026',
-            pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
-            name: '김나완',
-            address: '서울특별시 송파구 올림픽로 300',
-            email: 'bugsman@naver.com',
-            phone: '010-9999-8888',
-            role: 'business',
-            isSNS: false,
-            bizCode: 'B-260901',
-            conversionStatus: 'approved',
-            items: []
-          },
-          {
-            id: 'constuser',
-            pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
-            name: '박시공',
-            address: '인천광역시 부평구 부평대로 50',
-            email: 'const@naver.com',
-            phone: '010-3333-4444',
-            role: 'constructor',
-            isSNS: false,
-            bizCode: null,
-            constCode: 'C-260801',
-            conversionStatus: 'approved',
-            pendingBusinessName: '(주)우주간판시공',
-            pendingLicenseNumber: '123-45-67890',
-            items: []
-          }
-        ];
-
-        // 기본 계정 누락 시 자동 보강 및 Supabase 업로드
-        for (const cUser of coreDefaultUsers) {
-          if (!freshUsers.some(u => String(u.id).toLowerCase() === cUser.id.toLowerCase())) {
-            freshUsers.push(cUser);
-            this.upsertUser(cUser).catch(() => {});
-          }
+        // 최고관리자(admin) 계정만 필수 존재 보장 (다른 데모 계정은 사용자가 삭제 시 절대 강제 부활/재생성 금지)
+        const adminUser = {
+          id: 'admin',
+          pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
+          name: '최고관리자',
+          address: '경기도 수원시 영통구 청명남로 10',
+          email: 'admin@ganpan.go.kr',
+          phone: '010-0000-0000',
+          role: 'admin',
+          isSNS: false,
+          bizCode: null,
+          conversionStatus: 'none',
+          items: []
+        };
+        if (!freshUsers.some(u => String(u.id).toLowerCase() === 'admin')) {
+          freshUsers.unshift(adminUser);
+          this.upsertUser(adminUser).catch(() => {});
         }
 
         // 로컬에 등록된 신규/신청 회원(users)이 Supabase와 동기화 전 유실되지 않도록 완벽 병합 및 자동 업로드

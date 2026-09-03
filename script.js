@@ -1884,42 +1884,6 @@ function initAuthAndDashboard() {
   if (!localStorage.getItem('users')) {
     const defaultUsers = [
       {
-        id: 'testuser',
-        pw: 'e1dddc844ca8ad19718295dbf2f0ed6746b459c2e3582ef8bf909812a24d9fe7',
-        name: '홍길동',
-        address: '경기도 수원시 영통구 청명남로 10',
-        email: 'hong@naver.com',
-        phone: '010-1234-5678',
-        role: 'normal',
-        isSNS: false,
-        bizCode: null,
-        conversionStatus: 'none',
-        items: []
-      },
-      {
-        id: 'bizuser',
-        pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
-        name: '김영업',
-        address: '경기도 성남시 분당구 판교역로 235',
-        email: 'kim@naver.com',
-        phone: '010-9876-5432',
-        role: 'business',
-        isSNS: false,
-        bizCode: 'B-260712',
-        conversionStatus: 'approved',
-        items: [
-          {
-            id: 1,
-            name: '삼동콩나물국밥',
-            address: '경기도 수원시 장안구 경수대로 990',
-            photosCount: 3,
-            receiptStatus: '접수예정',
-            progressStatus: '지원대기중',
-            photos: ['placeholder1.jpg', 'placeholder2.jpg', 'placeholder3.jpg']
-          }
-        ]
-      },
-      {
         id: 'admin',
         pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
         name: '최고관리자',
