@@ -1521,8 +1521,6 @@ document.addEventListener('DOMContentLoaded', () => {
         roleBadge = '<span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">영업자</span>';
       } else if (u.role === 'constructor') {
         roleBadge = '<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">시공사</span>';
-      } else if (u.isApplicantOwner) {
-        roleBadge = '<span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;" title="' + escapeHtml(u.applicantStore || '신청업체') + '">점주(신청)</span>';
       }
 
       let codeText = '-';
@@ -1530,6 +1528,8 @@ document.addEventListener('DOMContentLoaded', () => {
         codeText = `<strong style="color: var(--accent-secondary);">${escapeHtml(u.bizCode)}</strong>`;
       } else if (u.role === 'constructor' && u.constCode) {
         codeText = `<strong style="color: var(--accent-success);">${escapeHtml(u.constCode)}</strong>`;
+      } else if (u.referrerCode) {
+        codeText = `<strong style="color: var(--accent-secondary);">${escapeHtml(u.referrerCode)}</strong>`;
       }
 
       const deleteBtn = u.role === 'admin' 

@@ -2608,13 +2608,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (u.role === 'admin') roleBadge = '<span style="background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">최고관리자</span>';
                     else if (u.role === 'business') roleBadge = `<span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">영업자 (${u.bizCode || '-'})</span>`;
                     else if (u.role === 'constructor') roleBadge = `<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">시공사 (${u.constCode || '-'})</span>`;
-                    else if (u.isApplicantOwner) {
-                        if (u.referrerCode) {
-                            roleBadge = `<span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">점주 (영업: ${escapeHtml(u.referrerCode)})</span>`;
-                        } else {
-                            roleBadge = `<span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">점주 (직접신청)</span>`;
-                        }
-                    }
 
                     const deleteBtn = u.role === 'admin' ? '' : `
                         <button type="button" class="btn btn-secondary btn-sm btn-delete-user-mob" onclick="window.deleteUserAdminMob('${escapeHtml(u.id)}', this, event)" style="padding: 6px 14px; font-size: 0.85rem; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2; border-radius: 6px; cursor: pointer; touch-action: manipulation; font-weight: 600;">
@@ -2635,7 +2628,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5; text-align: left;">
                             <div>성명: <strong style="color: var(--text-primary);">${escapeHtml(u.name || '-')}</strong> ${u.applicantStore ? `<span style="color: #64748b; font-size: 0.88rem;">(${escapeHtml(u.applicantStore)})</span>` : ''}</div>
                             <div>연락처: <a href="tel:${escapeHtml(u.phone || '')}" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;">${escapeHtml(u.phone || '-')}</a></div>
-                            ${u.referrerCode ? `<div>신청경로: <strong style="color: var(--accent-secondary);"><i class="fa-solid fa-user-tie"></i> 영업자 접수 (${escapeHtml(u.referrerCode)})</strong></div>` : (u.isApplicantOwner ? `<div>신청경로: <span style="color: #64748b;"><i class="fa-solid fa-globe"></i> 온라인 직접신청</span></div>` : '')}
+                            ${u.referrerCode ? `<div>담당영업자: <strong style="color: var(--accent-secondary);">${escapeHtml(u.referrerCode)}</strong></div>` : ''}
                             ${u.email && u.email !== '-' ? `<div>이메일: <span style="color: #475569;">${escapeHtml(u.email)}</span></div>` : ''}
                             ${u.address && u.address !== '-' ? `<div>주소: <span style="color: #475569;">${escapeHtml(u.address)}</span></div>` : ''}
                         </div>
