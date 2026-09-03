@@ -3763,7 +3763,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
 
     function updateItemStatusMob(uid, itemId, type, value) {
-        if (!activeUser || activeUser.role !== 'admin') return;
         if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
             return window.DataStore.updateItemStatus(uid, itemId, type, value);
         }
@@ -3771,14 +3770,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateItemStatusMob = updateItemStatusMob;
 
     function deleteManagerItemMob(uid, itemId) {
-        if (!activeUser || activeUser.role !== 'admin') {
-            alert('최고 관리자만 영업 물건을 삭제할 수 있습니다.');
-            return;
-        }
-
         let targetItemName = '해당 영업 물건';
         let targetAppRefId = '';
-        let curUsers = JSON.parse(localStorage.getItem('users')) || users || [];
+        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || users || []);
         curUsers.forEach(u => {
             if (u.items && Array.isArray(u.items)) {
                 const found = u.items.find(it => String(it.id) === String(itemId) || String(it.appRefId) === String(itemId));
@@ -3824,27 +3818,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return u;
         });
-        users = curUsers;
-        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(curUsers);
+        } else {
+            localStorage.setItem('users', JSON.stringify(curUsers));
+        }
 
         // 3) activeUser 세션 갱신
-        let activeU = getActiveUser() || activeUser;
+        let activeU = (window.DataStore && typeof window.DataStore.getActiveUser === 'function') ? window.DataStore.getActiveUser() : (getActiveUser() || activeUser);
         if (activeU && activeU.items) {
             activeU.items = activeU.items.filter(it => !isMatchTarget(it));
-            localStorage.setItem('activeUser', JSON.stringify(activeU));
+            if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+                window.DataStore.setActiveUser(activeU);
+            } else {
+                localStorage.setItem('activeUser', JSON.stringify(activeU));
+            }
             activeUser = activeU;
         }
 
         // 4) applications 에서도 isBizItem 해제
-        let curApps = JSON.parse(localStorage.getItem('applications')) || [];
+        let curApps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
         curApps = curApps.map(app => {
             if (isMatchTarget(app)) {
                 return { ...app, isBizItem: false };
             }
             return app;
         });
-        applications = curApps;
-        localStorage.setItem('applications', JSON.stringify(curApps));
+        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            window.DataStore.saveApplications(curApps);
+        } else {
+            localStorage.setItem('applications', JSON.stringify(curApps));
+        }
 
         // 5) Supabase DB Sync
         if (window.SupabaseSync) {
@@ -3860,22 +3864,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         alert(`[${targetItemName}] 영업 물건이 안전하게 영구 삭제되었습니다.`);
+        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+            window.DataStore.notifyAll(true);
+        }
         renderStatusTab();
     }
     window.deleteManagerItemMob = deleteManagerItemMob;
 
     // 모바일 영업 물건에 시공사 배정 (applications 단일 원천 SSOT)
     function assignConstructorToBizItemMob(uid, itemId, btnEl) {
-        if (!activeUser || activeUser.role !== 'admin') return;
         const container = btnEl.closest('div');
-        const select = container.querySelector('.select-constructor-bizitem-mob');
+        const select = container ? container.querySelector('.select-constructor-bizitem-mob') : null;
         const constId = select ? select.value : '';
         if (!constId) {
             alert('배정할 시공사를 선택해 주세요.');
             return;
         }
 
-        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
         const constUser = curUsers.find(u => String(u.id) === String(constId));
         if (!constUser) {
             alert('선택된 시공사 정보를 찾을 수 없습니다.');
@@ -3886,7 +3892,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let targetItemName = '영업 물건';
 
         // 1) applications 단일 원천 갱신
-        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
         let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
         if (targetApp) {
             targetItemName = targetApp.storeName || targetApp.shopName || targetItemName;
@@ -3894,14 +3900,18 @@ document.addEventListener('DOMContentLoaded', () => {
             targetApp.assignedConstructorName = constName;
             targetApp.constructionStatus = targetApp.constructionStatus && targetApp.constructionStatus !== 'none' ? targetApp.constructionStatus : 'before_construction';
             targetApp.assignedAt = new Date().toISOString();
-            localStorage.setItem('applications', JSON.stringify(apps));
+            if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+                window.DataStore.saveApplications(apps);
+            } else {
+                localStorage.setItem('applications', JSON.stringify(apps));
+            }
 
             if (window.SupabaseSync) {
                 window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
             }
         }
 
-        // 2) users.items 동기화 (구버전 호환)
+        // 2) users.items 동기화
         curUsers = curUsers.map(u => {
             if (String(u.id) === String(uid)) {
                 const updatedItems = (u.items || []).map(item => {
@@ -3922,7 +3932,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return u;
         });
 
-        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(curUsers);
+        } else {
+            localStorage.setItem('users', JSON.stringify(curUsers));
+        }
 
         if (window.SupabaseSync) {
             const updatedUser = curUsers.find(u => String(u.id) === String(uid));
@@ -3933,11 +3947,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        alert(`[${targetItemName}] 영업 물건에 시공사 [${constName}]가 성공적으로 배정되었습니다.`);
+        const msg = `[${targetItemName}] 영업 물건에 시공사 [${constName}]가 성공적으로 배정되었습니다.`;
+        if (typeof window.showToast === 'function') {
+            window.showToast(msg);
+        } else {
+            alert(msg);
+        }
         renderStatusTab();
 
         if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-            window.DataStore.notifyAll();
+            window.DataStore.notifyAll(true);
         }
         window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     }
@@ -3945,7 +3964,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 모바일 배정 시공사 변경 (초기화)
     function reassignConstructorItemMob(uid, itemId) {
-        if (!activeUser || activeUser.role !== 'admin') return;
+        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
+        let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
+        if (targetApp) {
+            targetApp.assignedConstructorId = null;
+            targetApp.assignedConstructorName = null;
+            if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+                window.DataStore.saveApplications(apps);
+            } else {
+                localStorage.setItem('applications', JSON.stringify(apps));
+            }
+            if (window.SupabaseSync) {
+                window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
+            }
+        }
 
         // 1) applications 단일 원천 초기화
         let apps = JSON.parse(localStorage.getItem('applications')) || [];
