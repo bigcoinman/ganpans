@@ -1952,15 +1952,22 @@ if (typeof window !== 'undefined') {
       const form = document.getElementById('login-form');
       if (form) form.reset();
 
+      alert('최고관리자님, 반갑습니다!');
+
       if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
       if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
       if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
       
-      if (typeof window.switchTab === 'function') {
-        window.switchTab('home');
-      }
       if (typeof window.renderAdminDashboardMob === 'function') {
         window.renderAdminDashboardMob(true);
+      }
+      if (typeof window.switchTab === 'function') {
+        window.switchTab('status');
+      }
+
+      // PC 웹인 경우 대시보드로 이동
+      if (window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/')) {
+        window.location.href = 'dashboard.html';
       }
 
       window.dispatchEvent(new CustomEvent('supabase-data-synced'));
@@ -2008,7 +2015,6 @@ if (typeof window !== 'undefined') {
           const isPwMatch = (data.password_hash === hashedPassword) || (data.password_hash === pwVal) || isDemoMatch;
           if (isPwMatch) {
             user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : (typeof sanitizeUser === 'function' ? sanitizeUser(data) : data);
-            // 패스워드 해시가 최신 해시와 다르면 백그라운드로 안전하게 최신화
             if (data.password_hash !== hashedPassword && window.supabaseClient) {
               window.supabaseClient.from('users').update({ password_hash: hashedPassword }).eq('id', data.id).then(() => {});
             }
@@ -2115,16 +2121,30 @@ if (typeof window !== 'undefined') {
       const form = document.getElementById('login-form');
       if (form) form.reset();
 
+      alert(`'${user.name || user.id}'님, 환영합니다!`);
+
       if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
       if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
       if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
       if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
+      
       if (typeof window.switchTab === 'function') {
-        window.switchTab('home');
+        if (user.role === 'business' || user.role === 'constructor' || user.role === 'admin') {
+          window.switchTab('status');
+        } else {
+          window.switchTab('home');
+        }
       }
+
       if (typeof window.renderAdminDashboardMob === 'function' && user.role === 'admin') {
         window.renderAdminDashboardMob(true);
       }
+
+      // PC 웹에서 영업자/시공사/관리자 로그인 시 대시보드로 이동
+      if ((window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/')) && (user.role === 'business' || user.role === 'constructor' || user.role === 'admin')) {
+        window.location.href = 'dashboard.html';
+      }
+
       window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     } else {
       alert('아이디 또는 비밀번호가 올바르지 않거나 이미 삭제된 회원입니다.');
