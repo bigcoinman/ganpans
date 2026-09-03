@@ -448,7 +448,7 @@ async function downloadIndividualPhotos(appOrId) {
 }
 window.downloadIndividualPhotos = downloadIndividualPhotos;
 
-// 사진 다운로드 & 갤러리 모달 팝업 표시
+// 사진 다운로드 & 갤러리 모달 팝업 표시 (미리보기를 보며 개별 다운로드)
 async function showPhotoDownloadModal(appOrId) {
   let app = await ensureApplicationPhotosLoaded(appOrId);
   if (!app) {
@@ -484,16 +484,6 @@ async function showPhotoDownloadModal(appOrId) {
     return;
   }
 
-  if (photos.length === 1) {
-    const a = document.createElement('a');
-    a.href = photos[0];
-    a.download = `${safeStoreName}_현장사진_1.jpg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    return;
-  }
-
   let modal = document.getElementById('photo-download-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -503,46 +493,40 @@ async function showPhotoDownloadModal(appOrId) {
   }
 
   modal.innerHTML = `
-    <div style="background:#ffffff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid #e2e8f0;">
+    <div style="background:#ffffff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid #e2e8f0;">
       <div style="padding:16px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="width:36px;height:36px;border-radius:10px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">
             <i class="fa-solid fa-images"></i>
           </div>
           <div>
-            <h3 style="margin:0;font-size:1.02rem;font-weight:700;color:#1e293b;">${escapeHtml(storeName)} 현장사진 다운로드</h3>
-            <p style="margin:2px 0 0;font-size:0.8rem;color:#64748b;">총 ${photos.length}장의 사진이 등록되어 있습니다</p>
+            <h3 style="margin:0;font-size:1.02rem;font-weight:700;color:#1e293b;">${escapeHtml(storeName)} 현장사진 (${photos.length}장)</h3>
+            <p style="margin:2px 0 0;font-size:0.8rem;color:#64748b;">원하시는 사진의 [다운로드] 버튼을 눌러 개별 저장하세요</p>
           </div>
         </div>
         <button type="button" onclick="document.getElementById('photo-download-modal').style.display='none'" style="background:none;border:none;font-size:1.4rem;color:#94a3b8;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;" title="닫기">&times;</button>
       </div>
 
-      <div style="padding:20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:16px;">
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <button type="button" onclick="window.downloadIndividualPhotos('${app.id}');document.getElementById('photo-download-modal').style.display='none';" style="padding:13px 16px;background:linear-gradient(135deg, #2563eb, #1d4ed8);color:#ffffff;border:none;border-radius:10px;font-size:0.92rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 6px -1px rgba(37,99,235,0.25);transition:all 0.15s;">
-            <i class="fa-solid fa-cloud-arrow-down" style="font-size:1.05rem;"></i> 전체 사진 바로 저장 (${photos.length}장 일괄 다운로드)
-          </button>
-        </div>
-
-        <div>
-          <div style="font-size:0.84rem;font-weight:700;color:#475569;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
-            <i class="fa-regular fa-image"></i> 사진 미리보기 및 개별 저장
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(95px, 1fr));gap:8px;max-height:220px;overflow-y:auto;padding:2px;">
-            ${photos.map((p, idx) => `
-              <div style="position:relative;border-radius:8px;overflow:hidden;border:1px solid #cbd5e1;background:#f8fafc;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;">
-                <img src="${sanitizeUrl(p)}" alt="사진 ${idx + 1}" style="width:100%;height:100%;object-fit:cover;">
-                <a href="${sanitizeUrl(p)}" download="${safeStoreName}_현장사진_${idx + 1}.jpg" style="position:absolute;bottom:4px;right:4px;background:rgba(15,23,42,0.85);color:#ffffff;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:0.72rem;text-decoration:none;box-shadow:0 2px 4px rgba(0,0,0,0.3);" title="이 사진만 다운로드">
-                  <i class="fa-solid fa-download"></i>
+      <div style="padding:20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:12px;padding:2px;">
+          ${photos.map((p, idx) => `
+            <div style="border-radius:10px;overflow:hidden;border:1px solid #cbd5e1;background:#f8fafc;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <div style="position:relative;width:100%;aspect-ratio:1/1;background:#0f172a;overflow:hidden;">
+                <img src="${sanitizeUrl(p)}" alt="사진 ${idx + 1}" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" onclick="window.open('${sanitizeUrl(p)}', '_blank');" title="클릭하여 원본 크게보기">
+                <span style="position:absolute;top:4px;left:4px;background:rgba(15,23,42,0.75);color:#ffffff;font-size:0.72rem;font-weight:700;padding:2px 6px;border-radius:4px;">#${idx + 1}</span>
+              </div>
+              <div style="padding:8px;display:flex;justify-content:center;background:#ffffff;">
+                <a href="${sanitizeUrl(p)}" download="${safeStoreName}_현장사진_${idx + 1}.jpg" style="display:inline-flex;align-items:center;justify-content:center;gap:4px;width:100%;padding:6px 0;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;font-size:0.76rem;font-weight:700;text-decoration:none;transition:all 0.15s;" title="이 사진 개별 다운로드">
+                  <i class="fa-solid fa-download"></i> 다운로드
                 </a>
               </div>
-            `).join('')}
-          </div>
+            </div>
+          `).join('')}
         </div>
       </div>
 
       <div style="padding:12px 20px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;">
-        <button type="button" onclick="document.getElementById('photo-download-modal').style.display='none'" style="padding:7px 18px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;font-size:0.84rem;font-weight:600;cursor:pointer;">닫기</button>
+        <button type="button" onclick="document.getElementById('photo-download-modal').style.display='none'" style="padding:7px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;font-size:0.84rem;font-weight:600;cursor:pointer;">닫기</button>
       </div>
     </div>
   `;

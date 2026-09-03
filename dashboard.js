@@ -3191,8 +3191,8 @@ document.addEventListener('DOMContentLoaded', () => {
                   <i class="fa-solid fa-camera" style="font-size: 0.76rem;"></i> 사진 등록
                 </button>
                 ${hasPhoto ? `
-                  <button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.74rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; width: 92px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="${count > 1 ? `현장사진 ${count}장 ZIP 압축 다운로드` : '현장사진 다운로드'}">
-                    <i class="fa-solid ${count > 1 ? 'fa-file-zipper' : 'fa-download'}" style="font-size: 0.72rem; color: #2563eb;"></i> ${count > 1 ? `다운 (${count}장)` : '다운로드'}
+                  <button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.74rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; width: 92px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}">
+                    <i class="fa-solid ${count > 1 ? 'fa-images' : 'fa-download'}" style="font-size: 0.72rem; color: #2563eb;"></i> ${count > 1 ? `사진 (${count}장)` : '다운로드'}
                   </button>
                 ` : `
                   <button type="button" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.74rem; font-weight: 500; color: #94a3b8; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; cursor: not-allowed; width: 92px; height: 28px; box-sizing: border-box;" title="등록된 사진 없음">
@@ -4319,7 +4319,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!count && hasPhoto) count = app.photosCount || 1;
 
             const downloadBtn = hasPhoto
-              ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="padding: 4px 8px; font-size: 0.74rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; width: 100%; box-sizing: border-box; text-align: center; box-shadow: 0 1px 2px rgba(37,99,235,0.1); transition: background 0.15s;" title="${count > 1 ? `현장사진 ${count}장 다운로드` : '현장사진 다운로드'}"><i class="fa-solid ${count > 1 ? 'fa-file-zipper' : 'fa-download'}" style="color: #2563eb;"></i> ${count > 1 ? `다운 (${count}장)` : '다운로드'}</button>`
+              ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="padding: 4px 8px; font-size: 0.74rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; width: 100%; box-sizing: border-box; text-align: center; box-shadow: 0 1px 2px rgba(37,99,235,0.1); transition: background 0.15s;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}"><i class="fa-solid ${count > 1 ? 'fa-images' : 'fa-download'}" style="color: #2563eb;"></i> ${count > 1 ? `사진 (${count}장)` : '다운로드'}</button>`
               : `<button type="button" disabled style="padding: 4px 8px; font-size: 0.74rem; background: #e2e8f0; color: #94a3b8; border: 1px solid #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; box-sizing: border-box; cursor: not-allowed;"><i class="fa-solid fa-download"></i> 다운로드</button>`;
 
             return `
