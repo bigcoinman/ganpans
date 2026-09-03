@@ -2424,7 +2424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function renderAdminDashboardMob(skipSync = false) {
+    function renderAdminDashboardMob(skipSync = false) {
         const totalStat = document.getElementById('admin-stat-total-mob');
         const visitorsStat = document.getElementById('admin-stat-visitors-mob');
         const totalVisitorsStat = document.getElementById('admin-stat-total-visitors-mob');
@@ -2499,29 +2499,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pCompletedEl) pCompletedEl.textContent = pipeCompleted;
 
 
-        // Supabase에서 최신 방문자 통계 동기화 (가능한 경우)
+        // Supabase에서 최신 방문자 통계 비동기 백그라운드 동기화 (UI 블로킹 완전 제거)
         if (window.supabaseClient) {
-            try {
-                const { data } = await window.supabaseClient
-                    .from('site_stats')
-                    .select('*')
-                    .eq('id', 'visitor_counter')
-                    .single();
-                if (data) {
-                    if (data.today_date === todayStr && data.today_count > todayCount) {
-                        todayCount = data.today_count;
-                        localStorage.setItem('visitor_today', todayCount.toString());
-                        if (visitorsStat) visitorsStat.textContent = `${todayCount}명`;
+            (async () => {
+                try {
+                    const { data } = await window.supabaseClient
+                        .from('site_stats')
+                        .select('*')
+                        .eq('id', 'visitor_counter')
+                        .single();
+                    if (data) {
+                        if (data.today_date === todayStr && data.today_count > todayCount) {
+                            todayCount = data.today_count;
+                            localStorage.setItem('visitor_today', todayCount.toString());
+                            if (visitorsStat) visitorsStat.textContent = `${todayCount}명`;
+                        }
+                        if (data.total_count > totalCount) {
+                            totalCount = data.total_count;
+                            localStorage.setItem('visitor_total', totalCount.toString());
+                            if (totalVisitorsStat) totalVisitorsStat.textContent = `${totalCount}명`;
+                        }
                     }
-                    if (data.total_count > totalCount) {
-                        totalCount = data.total_count;
-                        localStorage.setItem('visitor_total', totalCount.toString());
-                        if (totalVisitorsStat) totalVisitorsStat.textContent = `${totalCount}명`;
-                    }
+                } catch (e) {
+                    // Fallback to localStorage
                 }
-            } catch (e) {
-                // Fallback to localStorage
-            }
+            })();
         }
 
         if (!skipSync) {
@@ -2810,7 +2812,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let actionsHtml = `
                         <div class="admin-action-row-mob" style="display:flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-top: 12px;">
                             <div style="position: relative; display: inline-flex; align-items: center;">
-                                <select class="status-select-mob select-app-status-mob" data-id="${app.id}" onchange="window.updateApplicationStatusMob && window.updateApplicationStatusMob('${app.id}', this.value);" style="padding: 6px 10px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background-color: ${statusBg}; cursor: pointer; height: 36px; line-height: 1.2;">
+                                <select class="status-select-mob select-app-status-mob" data-id="${app.id}" onchange="window.updateApplicationStatusMob && window.updateApplicationStatusMob('${app.id}', this.value, this);" style="padding: 6px 10px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background-color: ${statusBg}; cursor: pointer; height: 36px; line-height: 1.2;">
                                     <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사 대기</option>
                                     <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
                                     <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
