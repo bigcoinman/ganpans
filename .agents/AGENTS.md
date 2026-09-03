@@ -84,7 +84,14 @@ git worktree add "../{프로젝트명}-dev" -b develop
   - **2단계 (함수 및 권한 바인딩 검사)**: 호출할 JS 함수가 정상 정의되어 있고, `undefined`, 문법 오류(`node -c`), 또는 잘못된 권한 조건으로 인한 침묵 리턴이 없는지 검사
   - **3단계 (가상 실행 및 데이터 동기화 검사)**: 버튼 클릭 및 액션 발생 시 데이터가 DB/저장소에 정상 기록되고, 대상 화면(영업자/관리자 등)에 정상 리렌더링되는지 가상 시뮬레이션 동작 검증
 
+### 9. 트래픽 폭증 방어 및 대역폭 최적화 영구 규칙 (Bandwidth & Egress Protection Rule)
+- **1) 목록 조회 시 사진 데이터 제외 (Column Selection)**: 대시보드 목록(전체 신청서 목록, 영업물건 목록 등)을 동기화하거나 조회할 때는 무거운 Base64 사진 컬럼(`image_url`, `construction_photos`, `construction_invoice`)을 제외하고 텍스트 메타데이터만 선별 조회(`select('id, user_id, owner_name, ...')`)하여 대역폭 전송량을 99% 이상 절감한다.
+- **2) 사진 온디맨드 단일 조회 (On-demand Single Fetch)**: 사진 데이터는 사용자가 [사진 보기], [모달 열기], [다운로드] 버튼을 직접 클릭했을 때만 해당 1건에 대해 개별 쿼리(`eq('id', appId)`)로 단일 조회하여 가져온다.
+- **3) 사진 강제 자동 압축 (200~300KB Strict Compression)**: 신청서 제출, 현장 사진 업로드, 시공 완료 사진 등록 등 모든 이미지 업로드 시 긴 변 최대 1200px, 퀄리티 0.75, 최대 300KB 이하로 강제 압축(`compressImageFile`, `compressImageToBase64`) 후 DB에 저장한다.
+- **4) 불필요한 Polling 타이머 금지**: 모든 실시간 동기화는 Supabase Realtime WebSocket 이벤트 또는 사용자 액션 기반으로 동작하며, 짧은 주기(수 초 단위)의 무제한 전체 DB 재조회 타이머 설정을 엄격히 금지한다.
+
 ---
+
 
 ## 최고관리자 ↔ 영업자 ↔ 시공업체 실시간 6대 상호 동시 연동 필수 매트릭스 (Permanent 6-Way Sync Matrix)
 

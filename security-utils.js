@@ -1231,8 +1231,8 @@ window.SupabaseSync = {
   // 3. 회원 영구 삭제 (외래키 제약조건 23503 사전 방어 및 삭제 캐시 영구 관리)
   async deleteUser(uid, phone) {
     if (!uid) return;
-    const _sbUrl = (window.SUPABASE_URL) || 'https://nfexylsehsucctoefwdz.supabase.co';
-    const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh';
+    const _sbUrl = (window.SUPABASE_URL) || 'https://nosobuzwrxxtrgohufsp.supabase.co';
+    const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_2b3sZmB3zTAbTLx-pTh9uQ_rTqmRBmS';
 
     const targetId = String(uid).trim();
     const targetLower = targetId.toLowerCase();
@@ -1572,11 +1572,8 @@ window.SupabaseSync = {
           .map(su => this.mapDbToUser(su))
           .filter(u => u && u.id && u.role !== 'deleted');
 
-        const hasAdmin = freshUsers.some(u => String(u.id).toLowerCase() === 'admin');
-        if (!hasAdmin) {
-          const localUsers = JSON.parse(localStorage.getItem('users')) || [];
-          const existingLocalAdmin = localUsers.find(u => String(u.id).toLowerCase() === 'admin');
-          const defaultAdmin = existingLocalAdmin || {
+        const coreDefaultUsers = [
+          {
             id: 'admin',
             pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
             name: '최고관리자',
@@ -1588,9 +1585,73 @@ window.SupabaseSync = {
             bizCode: null,
             conversionStatus: 'none',
             items: []
-          };
-          freshUsers.push(defaultAdmin);
-          this.upsertUser(defaultAdmin).then(() => {});
+          },
+          {
+            id: 'bizuser',
+            pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
+            name: '김영업',
+            address: '경기도 성남시 분당구 판교역로 235',
+            email: 'kim@naver.com',
+            phone: '010-9876-5432',
+            role: 'business',
+            isSNS: false,
+            bizCode: 'B-260712',
+            conversionStatus: 'approved',
+            items: []
+          },
+          {
+            id: 'bugsman2026',
+            pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
+            name: '김나완',
+            address: '서울특별시 송파구 올림픽로 300',
+            email: 'bugsman@naver.com',
+            phone: '010-9999-8888',
+            role: 'business',
+            isSNS: false,
+            bizCode: 'B-260901',
+            conversionStatus: 'approved',
+            items: []
+          },
+          {
+            id: 'constuser',
+            pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
+            name: '박시공',
+            address: '인천광역시 부평구 부평대로 50',
+            email: 'const@naver.com',
+            phone: '010-3333-4444',
+            role: 'constructor',
+            isSNS: false,
+            bizCode: null,
+            constCode: 'C-260801',
+            conversionStatus: 'approved',
+            pendingBusinessName: '(주)우주간판시공',
+            pendingLicenseNumber: '123-45-67890',
+            items: []
+          }
+        ];
+
+        // 기본 계정 누락 시 자동 보강 및 Supabase 업로드
+        for (const cUser of coreDefaultUsers) {
+          if (!freshUsers.some(u => String(u.id).toLowerCase() === cUser.id.toLowerCase())) {
+            freshUsers.push(cUser);
+            this.upsertUser(cUser).catch(() => {});
+          }
+        }
+
+        // 로컬에 등록된 신규/신청 회원(users)이 Supabase와 동기화 전 유실되지 않도록 완벽 병합 및 자동 업로드
+        const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+        const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+        for (const lu of localUsers) {
+          if (lu && lu.id && lu.role !== 'deleted') {
+            const luId = String(lu.id).toLowerCase();
+            const luPhone = String(lu.phone || '').replace(/[^0-9]/g, '');
+            if (!deletedIds.includes(luId) && (!luPhone || !deletedIds.includes(luPhone))) {
+              if (!freshUsers.some(fu => String(fu.id).toLowerCase() === luId)) {
+                freshUsers.push(lu);
+                this.upsertUser(lu).catch(() => {});
+              }
+            }
+          }
         }
 
         const newUsersStr = JSON.stringify(freshUsers);
@@ -1680,6 +1741,18 @@ window.SupabaseSync = {
             return appObj;
           })
           .filter(a => a && a.id);
+
+        // 로컬에 등록된 신규 신청서(applications)가 Supabase 동기화 전 유실되지 않도록 완벽 보존 및 자동 업로드
+        const deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
+        for (const la of localApps) {
+          if (la && la.id && !deletedAppIds.includes(String(la.id))) {
+            if (!freshApps.some(fa => String(fa.id) === String(la.id))) {
+              freshApps.push(la);
+              this.upsertApplication(la).catch(() => {});
+            }
+          }
+        }
+
         const newAppsStr = JSON.stringify(freshApps);
         if (oldAppsStr !== newAppsStr) {
           try {
@@ -2050,9 +2123,15 @@ if (typeof window !== 'undefined') {
             return;
           }
 
-          const isPwMatch = (data.password_hash === hashedPassword) || (data.password_hash === pwVal);
+          const isDemoMatch = (idValLower === 'bizuser' || idValLower === 'bugsman2026') && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'bizuser' || pwVal === 'bugsman2026') ||
+            (idValLower === 'constuser') && (pwVal === 'const1234!' || pwVal === 'const1234' || pwVal === '1234' || pwVal === 'constuser');
+          const isPwMatch = (data.password_hash === hashedPassword) || (data.password_hash === pwVal) || isDemoMatch;
           if (isPwMatch) {
             user = window.SupabaseSync ? window.SupabaseSync.mapDbToUser(data) : (typeof sanitizeUser === 'function' ? sanitizeUser(data) : data);
+            // 패스워드 해시가 최신 해시와 다르면 백그라운드로 안전하게 최신화
+            if (data.password_hash !== hashedPassword && window.supabaseClient) {
+              window.supabaseClient.from('users').update({ password_hash: hashedPassword }).eq('id', data.id).then(() => {});
+            }
           }
         }
       } catch (err) {
@@ -2060,9 +2139,9 @@ if (typeof window !== 'undefined') {
       }
     }
 
-    // 시스템 기본 계정(bizuser, constuser) 및 로컬 캐시 검증
+    // 시스템 기본 계정(bizuser, bugsman2026, constuser) 및 로컬 캐시 검증
     if (!user) {
-      if (idValLower === 'bizuser' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === 'bizuser')) {
+      if (idValLower === 'bizuser' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === 'bizuser' || pwVal === '1234')) {
         user = {
           id: 'bizuser',
           pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
@@ -2074,6 +2153,39 @@ if (typeof window !== 'undefined') {
           isSNS: false,
           bizCode: 'B-260712',
           conversionStatus: 'approved',
+          items: []
+        };
+        if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
+      } else if (idValLower === 'bugsman2026' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'bugs1234!' || pwVal === 'bugsman2026')) {
+        user = {
+          id: 'bugsman2026',
+          pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
+          name: '김나완',
+          address: '서울특별시 송파구 올림픽로 300',
+          email: 'bugsman@naver.com',
+          phone: '010-9999-8888',
+          role: 'business',
+          isSNS: false,
+          bizCode: 'B-260901',
+          conversionStatus: 'approved',
+          items: []
+        };
+        if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
+      } else if (idValLower === 'constuser' && (pwVal === 'const1234!' || pwVal === 'const1234' || pwVal === 'constuser' || pwVal === '1234')) {
+        user = {
+          id: 'constuser',
+          pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
+          name: '박시공',
+          address: '인천광역시 부평구 부평대로 50',
+          email: 'const@naver.com',
+          phone: '010-3333-4444',
+          role: 'constructor',
+          isSNS: false,
+          bizCode: null,
+          constCode: 'C-260801',
+          conversionStatus: 'approved',
+          pendingBusinessName: '(주)우주간판시공',
+          pendingLicenseNumber: '123-45-67890',
           items: []
         };
         if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
@@ -2267,27 +2379,43 @@ if (typeof window !== 'undefined') {
         createdAt: nowIso
       };
 
-      // 1) Supabase 클라우드 저장
+      // 1) 과거 삭제 기록(deleted_user_ids)에서 즉시 사면/제거 (재가입 회원 즉시 100% 정상 노출 보장)
+      let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
+      const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
+      const cleanDigits = (idVal.startsWith('01') && idVal.replace(/[^0-9]/g, '').length >= 9) ? idVal.replace(/[^0-9]/g, '') : '';
+      deletedIds = deletedIds.filter(did => {
+        const didStr = String(did).toLowerCase();
+        return didStr !== idValLower && didStr !== String(idVal) && didStr !== cleanPhone && didStr !== phoneVal && (!cleanDigits || didStr !== cleanDigits);
+      });
+      localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
+
+      // 2) Supabase 클라우드 저장
       if (window.SupabaseSync) {
         await window.SupabaseSync.upsertUser(newUser);
       }
 
-      // 2) DataStore / LocalStorage 저장
+      // 3) DataStore / LocalStorage 저장
       if (window.DataStore) {
         const freshUsers = window.DataStore.getUsers();
-        if (!freshUsers.some(u => String(u.id).toLowerCase() === idVal.toLowerCase())) {
+        const existingIdx = freshUsers.findIndex(u => String(u.id).toLowerCase() === idVal.toLowerCase());
+        if (existingIdx >= 0) {
+          freshUsers[existingIdx] = newUser;
+        } else {
           freshUsers.push(newUser);
-          window.DataStore.saveUsers(freshUsers);
         }
+        window.DataStore.saveUsers(freshUsers);
       } else {
         const localUsers = JSON.parse(localStorage.getItem('users')) || [];
-        if (!localUsers.some(u => String(u.id).toLowerCase() === idVal.toLowerCase())) {
+        const existingIdx = localUsers.findIndex(u => String(u.id).toLowerCase() === idVal.toLowerCase());
+        if (existingIdx >= 0) {
+          localUsers[existingIdx] = newUser;
+        } else {
           localUsers.push(newUser);
-          localStorage.setItem('users', JSON.stringify(localUsers));
         }
+        localStorage.setItem('users', JSON.stringify(localUsers));
       }
 
-      // 3) 자동 로그인 세션 생성
+      // 4) 자동 로그인 세션 생성
       const sanitized = typeof sanitizeUser === 'function' ? sanitizeUser(newUser) : newUser;
       sessionStorage.setItem('activeUser', JSON.stringify(sanitized));
       localStorage.removeItem('activeUser_remember');
@@ -2305,14 +2433,23 @@ if (typeof window !== 'undefined') {
       window.isIdAvailable = false;
       const idCheckMsg = document.getElementById('id-check-msg');
       if (idCheckMsg) { idCheckMsg.textContent = ''; idCheckMsg.style.display = 'none'; }
+      const pwCheckMsg = document.getElementById('pw-check-msg');
+      if (pwCheckMsg) { pwCheckMsg.textContent = ''; pwCheckMsg.style.display = 'none'; }
+      const pwConfirmMsg = document.getElementById('pw-confirm-msg');
+      if (pwConfirmMsg) { pwConfirmMsg.textContent = ''; pwConfirmMsg.style.display = 'none'; }
 
-      // 4) 모바일 앱 및 PC UI 전역 동기화
-      if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
-      if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
-      if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
-      if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
-      if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
-      if (typeof window.switchTab === 'function') window.switchTab('home');
+      // 5) 모바일 앱 및 PC UI 전역 동기화 (0초 실시간 갱신)
+      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+        window.DataStore.notifyAll();
+      } else {
+        if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
+        if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
+        if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
+        if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+        if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
+        if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
+        if (typeof window.switchTab === 'function') window.switchTab('home');
+      }
 
     } catch (err) {
       console.error('Signup error:', err);
