@@ -1517,8 +1517,11 @@
                     </div>
 
                     <div id="admin-panel-apps-mob" class="admin-panel-view-mob" style="display: none;">
-                        <div style="margin-bottom: 12px;">
-                            <input type="text" id="search-apps-input-mob" placeholder="아이디 / 이름 / 코드 / 상호명 검색" maxlength="30" style="padding: 10px 14px; font-size: 0.95rem; border-radius: 8px; border: 1.5px solid #bbf7d0; width: 100%; box-sizing: border-box; background: #ffffff; font-weight: 500;">
+                        <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="search-apps-input-mob" placeholder="아이디 / 이름 / 코드 / 상호명 검색" maxlength="30" style="padding: 10px 14px; font-size: 0.95rem; border-radius: 8px; border: 1.5px solid #bbf7d0; flex: 1; box-sizing: border-box; background: #ffffff; font-weight: 500;">
+                            <button type="button" id="btn-export-all-apps-excel-mob" onclick="window.exportAllApplicationsToExcel && window.exportAllApplicationsToExcel(); return false;" style="background: #15803d; color: #ffffff; border: 1px solid #166534; padding: 0 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; height: 42px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); flex-shrink: 0;" title="전체 간편 지원 신청 내역 엑셀(CSV) 다운로드">
+                                <i class="fa-solid fa-file-excel"></i> 엑셀
+                            </button>
                         </div>
                         <div id="admin-apps-list-mob" style="display: flex; flex-direction: column; gap: 12px;">
                             <!-- Applications populate dynamically -->
@@ -2413,14 +2416,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js?v=20260903_v25_individual_photo_clean"></script>
-    <script src="security-utils.js?v=20260903_v25_individual_photo_clean"></script>
-    <script src="data-store.js?v=20260903_v25_individual_photo_clean"></script>
-    <script src="kakao-notify.js?v=20260903_v25_individual_photo_clean"></script>
+    <script src="supabase-config.js?v=20260903_v26_admin_apps_excel_clean"></script>
+    <script src="security-utils.js?v=20260903_v26_admin_apps_excel_clean"></script>
+    <script src="data-store.js?v=20260903_v26_admin_apps_excel_clean"></script>
+    <script src="kakao-notify.js?v=20260903_v26_admin_apps_excel_clean"></script>
     <!-- Load PC JavaScript first to run interactive components -->
-    <script src="script.js?v=20260903_v25_individual_photo_clean"></script>
+    <script src="script.js?v=20260903_v26_admin_apps_excel_clean"></script>
     <!-- Load mobile drawer, tab, dashboard scripts -->
-    <script src="app.js?v=20260903_v25_individual_photo_clean"></script>
+    <script src="app.js?v=20260903_v26_admin_apps_excel_clean"></script>
 </body>
 
 </html>

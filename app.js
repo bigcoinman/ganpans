@@ -2289,6 +2289,107 @@ document.addEventListener('DOMContentLoaded', () => {
         URL.revokeObjectURL(url);
     }
 
+    // 모바일 최고관리자 전용: 전체 신청서 목록 엑셀(CSV) 다운로드
+    const btnExportAllAppsExcelMob = document.getElementById('btn-export-all-apps-excel-mob');
+    if (btnExportAllAppsExcelMob) {
+        btnExportAllAppsExcelMob.addEventListener('click', (e) => {
+            e.stopPropagation();
+            exportAllApplicationsToExcel();
+        });
+    }
+
+    function exportAllApplicationsToExcel() {
+        const curAct = (typeof getActiveUser === 'function' ? getActiveUser() : null) || activeUser;
+        if (!curAct || curAct.role !== 'admin') {
+            alert('최고관리자만 신청서 목록을 다운로드할 수 있습니다.');
+            return;
+        }
+
+        const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+            ? window.DataStore.getApplications()
+            : (JSON.parse(localStorage.getItem('applications')) || []);
+
+        if (!apps || apps.length === 0) {
+            alert('다운로드할 지원 신청서 데이터가 없습니다.');
+            return;
+        }
+
+        const headers = [
+            '번호',
+            '접수번호(ID)',
+            '신청일시',
+            '신청자(점주)',
+            '연락처',
+            '상호명',
+            '설치주소',
+            '간판종류',
+            '추천인/영업코드',
+            '심사상태',
+            '영업물건여부',
+            '현장사진유무',
+            '배정시공사'
+        ];
+
+        const escapeCsv = (str) => {
+            if (str === null || str === undefined) return '""';
+            const s = String(str).replace(/"/g, '""');
+            return `"${s}"`;
+        };
+
+        const sortedApps = [...apps].sort((a, b) => {
+            const timeA = new Date(a.appliedAt || a.createdAt || a.created_at || 0).getTime();
+            const timeB = new Date(b.appliedAt || b.createdAt || b.created_at || 0).getTime();
+            if (timeB !== timeA && !isNaN(timeA) && !isNaN(timeB)) {
+                return timeB - timeA;
+            }
+            return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true, sensitivity: 'base' });
+        });
+
+        const rows = sortedApps.map((a, idx) => {
+            let statusText = '심사 대기';
+            if (a.status === 'approved' || a.status === '서류제출 & 접수예정') statusText = '서류제출 & 접수예정';
+            else if (a.status === 'rejected' || a.status === '지원사업 탈락') statusText = '지원사업 탈락';
+            else if (a.status === 'giveup' || a.status === '지원사업 포기') statusText = '지원사업 포기';
+
+            const isBizText = a.isBizItem ? '공단접수물건' : '일반신청';
+            const hasPhotoText = (a.photos && a.photos.length > 0) || a.fileData || a.fileName ? '등록됨' : '미등록';
+            const constText = a.assignedConstructorName || (a.assignedConstructorId ? a.assignedConstructorId : '-');
+
+            return [
+                escapeCsv(idx + 1),
+                escapeCsv(a.id || '-'),
+                escapeCsv(a.appliedAt || a.created_at || '-'),
+                escapeCsv(a.ownerName || '-'),
+                escapeCsv(a.ownerPhone || a.phone || '-'),
+                escapeCsv(a.storeName || a.shopName || '-'),
+                escapeCsv(a.storeAddress || '-'),
+                escapeCsv(a.signType || '-'),
+                escapeCsv(a.referrerCode || '본사직접'),
+                escapeCsv(statusText),
+                escapeCsv(isBizText),
+                escapeCsv(hasPhotoText),
+                escapeCsv(constText)
+            ].join(',');
+        });
+
+        const csvContent = '\uFEFF' + [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const ymd = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `간판지원단_전체신청서목록_${ymd}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+    window.exportAllApplicationsToExcel = exportAllApplicationsToExcel;
+
     // --- Admin Dashboard ---
     let adminActiveTab = 'requests';
     window.switchAdminTab = function (tabName) {
