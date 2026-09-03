@@ -1229,56 +1229,20 @@
       if (window.SupabaseSync && typeof window.SupabaseSync.clearAllInquiries === 'function') {
         window.SupabaseSync.clearAllInquiries();
       }
-      this.notifyAll();
+      this.notifyAll(true);
       return { success: true };
     },
 
-    deleteUser: function (userId, btnEl) {
-      if (!userId) return { success: false };
-      const targetId = String(userId).trim();
-      if (!confirm(`정말로 회원 [${targetId}]을(를) 영구 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) {
-        return { success: false };
-      }
-
-      let users = this.getUsers();
-      const targetUser = users.find(u => String(u.id).toLowerCase() === targetId.toLowerCase());
-      const targetPhone = targetUser ? String(targetUser.phone || '').replace(/[^0-9]/g, '') : '';
-
-      // deleted_user_ids에 등록
-      let deletedIds = this.getDeletedUserIds();
-      if (!deletedIds.includes(targetId)) deletedIds.push(targetId);
-      if (!deletedIds.includes(targetId.toLowerCase())) deletedIds.push(targetId.toLowerCase());
-      if (targetPhone && !deletedIds.includes(targetPhone)) deletedIds.push(targetPhone);
-      localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
-
-      // users 목록에서 영구 제거
-      users = users.filter(u => String(u.id).toLowerCase() !== targetId.toLowerCase());
-      this.saveUsers(users);
-
-      // Supabase 클라우드에서 영구 삭제
-      if (window.SupabaseSync && typeof window.SupabaseSync.deleteUser === 'function') {
-        window.SupabaseSync.deleteUser(targetId);
-      }
-
-      // 현재 로그인 세션이 삭제 대상인 경우 로그아웃 처리
-      const active = this.getActiveUser();
-      if (active && String(active.id).toLowerCase() === targetId.toLowerCase()) {
-        this.setActiveUser(null);
-      }
-
-      this.notifyAll();
-      alert(`회원 [${targetId}]이(가) 성공적으로 삭제되었습니다.`);
-      return { success: true, deletedId: targetId };
-    },
-
     // --- 8. 전체 대시보드 화면 동기화 브로드캐스트 (0초 반응) ---
-    notifyAll: function () {
+    notifyAll: function (force = false) {
       try {
-        // 사용자가 드롭다운(SELECT)이나 텍스트입력(INPUT)을 조작 중일 때는 전체 DOM 재생성을 스킵하여 드롭다운 닫힘 완벽 방지
-        const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
-        const isFormActive = window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA'));
-        if (isFormActive) {
-          return;
+        // 사용자가 드롭다운(SELECT)이나 텍스트입력(INPUT)을 조작 중일 때는 전체 DOM 재생성을 스킵하여 드롭다운 닫힘 방지 (force인 경우 강제 실행)
+        if (!force) {
+          const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+          const isFormActive = window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'submit') || activeEl.tagName === 'TEXTAREA'));
+          if (isFormActive) {
+            return;
+          }
         }
 
         if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();

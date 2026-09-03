@@ -1566,11 +1566,19 @@ window.SupabaseSync = {
 
       // --- A. 회원(Users) Supabase 클라우드 원천 직접 수집 ---
       const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
-      let usersChanged = false;
       if (!usersErr && Array.isArray(supaUsers)) {
+        const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
         const freshUsers = supaUsers
           .map(su => this.mapDbToUser(su))
-          .filter(u => u && u.id && u.role !== 'deleted');
+          .filter(u => {
+            if (!u || !u.id || u.role === 'deleted') return false;
+            const uId = String(u.id);
+            const uIdLower = uId.toLowerCase();
+            const uPhoneDigits = String(u.phone || '').replace(/[^0-9]/g, '');
+            if (deletedIds.includes(uId) || deletedIds.includes(uIdLower)) return false;
+            if (uPhoneDigits && deletedIds.includes(uPhoneDigits)) return false;
+            return true;
+          });
 
         const coreDefaultUsers = [
           {
@@ -1640,7 +1648,6 @@ window.SupabaseSync = {
 
         // 로컬에 등록된 신규/신청 회원(users)이 Supabase와 동기화 전 유실되지 않도록 완벽 병합 및 자동 업로드
         const localUsers = JSON.parse(localStorage.getItem('users')) || [];
-        const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
         for (const lu of localUsers) {
           if (lu && lu.id && lu.role !== 'deleted') {
             const luId = String(lu.id).toLowerCase();
@@ -2439,17 +2446,19 @@ if (typeof window !== 'undefined') {
       if (pwConfirmMsg) { pwConfirmMsg.textContent = ''; pwConfirmMsg.style.display = 'none'; }
 
       // 5) 모바일 앱 및 PC UI 전역 동기화 (0초 실시간 갱신)
-      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-        window.DataStore.notifyAll();
-      } else {
-        if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
-        if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
-        if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
-        if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
-        if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
-        if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
-        if (typeof window.switchTab === 'function') window.switchTab('home');
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
       }
+      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+        window.DataStore.notifyAll(true);
+      }
+      if (typeof window.updateDrawerProfile === 'function') window.updateDrawerProfile();
+      if (typeof window.updateHeaderAuthButton === 'function') window.updateHeaderAuthButton();
+      if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
+      if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+      if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
+      if (typeof window.updateSessionUI === 'function') window.updateSessionUI();
+      if (typeof window.switchTab === 'function') window.switchTab('home');
 
     } catch (err) {
       console.error('Signup error:', err);
