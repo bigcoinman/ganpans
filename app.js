@@ -2528,10 +2528,45 @@ document.addEventListener('DOMContentLoaded', () => {
             syncAdminDataFromSupabaseMob();
         }
 
-        // SSOT 유저 목록을 최상단에서 일괄 로드
-        const allStoreUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+        // SSOT 유저 목록을 최상단에서 일괄 로드 + applications(신청서) 점주 대표 포괄 연동
+        let allStoreUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
             ? window.DataStore.getUsers()
             : (JSON.parse(localStorage.getItem('users')) || []);
+
+        const allAppsForUsers = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+            ? window.DataStore.getApplications()
+            : (JSON.parse(localStorage.getItem('applications')) || []);
+
+        allAppsForUsers.forEach(app => {
+            const ownerPhone = String(app.ownerPhone || app.phone || '').trim();
+            const ownerName = String(app.ownerName || app.shopName || app.storeName || '').trim();
+            if (ownerPhone || ownerName) {
+                const cleanDigits = ownerPhone.replace(/[^0-9]/g, '');
+                const exists = allStoreUsers.some(u => {
+                    const uPhone = String(u.phone || '').replace(/[^0-9]/g, '');
+                    const uId = String(u.id || '').toLowerCase();
+                    const uName = String(u.name || '').toLowerCase();
+                    return (cleanDigits && uPhone && uPhone === cleanDigits) ||
+                           (cleanDigits && uId === cleanDigits) ||
+                           (uId === String(app.id).toLowerCase()) ||
+                           (uName && ownerName && uName === ownerName.toLowerCase() && (!cleanDigits || uPhone === cleanDigits));
+                });
+
+                if (!exists) {
+                    allStoreUsers.push({
+                        id: ownerPhone || app.id,
+                        name: ownerName || '점주(대표)',
+                        phone: ownerPhone || '-',
+                        email: app.ownerEmail || app.email || '-',
+                        address: app.storeAddress || app.address || '-',
+                        role: 'user',
+                        isApplicantOwner: true,
+                        applicantStore: app.storeName || app.shopName || '',
+                        createdAt: app.createdAt || app.created_at || new Date().toISOString()
+                    });
+                }
+            }
+        });
 
         // 0) Render All Users list (회원정보관리)
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');
@@ -2568,6 +2603,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (u.role === 'admin') roleBadge = '<span style="background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">최고관리자</span>';
                     else if (u.role === 'business') roleBadge = `<span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">영업자 (${u.bizCode || '-'})</span>`;
                     else if (u.role === 'constructor') roleBadge = `<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">시공사 (${u.constCode || '-'})</span>`;
+                    else if (u.isApplicantOwner) roleBadge = `<span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">점주(신청)</span>`;
 
                     const deleteBtn = u.role === 'admin' ? '' : `
                         <button type="button" class="btn btn-secondary btn-sm btn-delete-user-mob" onclick="window.deleteUserAdminMob('${escapeHtml(u.id)}', this, event)" style="padding: 6px 14px; font-size: 0.85rem; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2; border-radius: 6px; cursor: pointer; touch-action: manipulation; font-weight: 600;">
