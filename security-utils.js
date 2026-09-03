@@ -1909,6 +1909,9 @@ if (typeof window !== 'undefined') {
     }
 
     const idValLower = idVal.toLowerCase();
+    const deletedIds = (window.DataStore && typeof window.DataStore.getDeletedUserIds === 'function')
+      ? window.DataStore.getDeletedUserIds()
+      : (JSON.parse(localStorage.getItem('deleted_user_ids')) || []);
 
     // 1) 최고관리자 (admin) 직통 즉각 로그인 (기존 변경 개인정보 100% 보존)
     if (idValLower === 'admin' || idValLower === 'administrator' || idValLower === 'superadmin') {
@@ -1981,22 +1984,29 @@ if (typeof window !== 'undefined') {
 
     if (window.supabaseClient) {
       try {
-        let { data, error } = await window.supabaseClient
-          .from('users')
-          .select('*')
-          .ilike('id', idVal)
-          .maybeSingle();
-
-        if (!data && cleanDigits) {
-          const { data: phoneData } = await window.supabaseClient
+        const fetchUserWithTimeout = async () => {
+          let { data, error } = await window.supabaseClient
             .from('users')
             .select('*')
-            .or(`phone.eq.${idVal},phone.eq.${cleanDigits}`)
+            .ilike('id', idVal)
             .maybeSingle();
-          if (phoneData) data = phoneData;
-        }
 
-        if (!error && data) {
+          if (!data && cleanDigits) {
+            const { data: phoneData } = await window.supabaseClient
+              .from('users')
+              .select('*')
+              .or(`phone.eq.${idVal},phone.eq.${cleanDigits}`)
+              .maybeSingle();
+            if (phoneData) data = phoneData;
+          }
+          return { data, error };
+        };
+
+        const timeoutPromise = new Promise(res => setTimeout(() => res({ data: null, error: 'timeout' }), 2000));
+        const res = await Promise.race([fetchUserWithTimeout(), timeoutPromise]);
+
+        if (!res.error && res.data) {
+          const data = res.data;
           const dataId = String(data.id || '');
           const dataIdLower = dataId.toLowerCase();
           const dataPhone = String(data.phone || '');
