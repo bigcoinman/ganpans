@@ -745,8 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     window.clearBizUploadFormMob = clearBizUploadFormMob;
 
-    if (loginForm) loginForm.addEventListener('submit', handleSessionRefresh);
-    if (signupForm) signupForm.addEventListener('submit', handleSessionRefresh);
+    // Handled directly via window.executeAppLogin and window.executeAppSignup
 
     // --- Intercept Drawer Logout Click ---
     const drawerLogoutBtn = document.getElementById('drawer-logout-btn');
