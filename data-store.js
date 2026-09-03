@@ -45,24 +45,7 @@
 
     saveUsers: function (users) {
       try {
-        if (Array.isArray(users) && users.length > 0) {
-          let deletedUserIds = this.getDeletedUserIds();
-          if (deletedUserIds.length > 0) {
-            const activeIds = users.map(u => String(u.id || '').toLowerCase()).filter(Boolean);
-            const activePhones = users.map(u => String(u.phone || '').replace(/[^0-9]/g, '')).filter(Boolean);
-            const cleaned = deletedUserIds.filter(id => {
-              const sid = String(id).toLowerCase();
-              const sDigits = sid.replace(/[^0-9]/g, '');
-              if (activeIds.includes(sid)) return false;
-              if (sDigits && activePhones.includes(sDigits)) return false;
-              return true;
-            });
-            if (cleaned.length !== deletedUserIds.length) {
-              localStorage.setItem('deleted_user_ids', JSON.stringify(cleaned));
-            }
-          }
-        }
-        localStorage.setItem('users', JSON.stringify(users));
+        localStorage.setItem('users', JSON.stringify(users || []));
         return true;
       } catch (e) {
         console.error('[DataStore] saveUsers error:', e);
@@ -110,27 +93,15 @@
     },
 
     getDeletedAppIds: function () {
-      try {
-        return JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
-      } catch (e) {
-        return [];
-      }
+      return [];
     },
 
     getDeletedUserIds: function () {
-      try {
-        return JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-      } catch (e) {
-        return [];
-      }
+      return [];
     },
 
     getDeletedBizItemIds: function () {
-      try {
-        return JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
-      } catch (e) {
-        return [];
-      }
+      return [];
     },
 
     cleanGhostItems: function () {
@@ -953,17 +924,10 @@
       // 1) 0초 즉각 DOM 요소 제거 (낙관적 UI)
       if (btnEl) {
         const card = (btnEl instanceof Element) ? (btnEl.closest('tr') || btnEl.closest('.admin-app-card') || btnEl.closest('div[style*="border"]') || btnEl.closest('.app-card') || btnEl.closest('.card')) : null;
-        if (card) card.remove();
+        if (card && card.parentNode) card.parentNode.removeChild(card);
       }
 
-      // 2) deleted_application_ids 등록 및 로컬/클라우드 영구 동기화
-      let deletedAppIds = this.getDeletedAppIds();
-      if (!deletedAppIds.includes(targetId)) {
-        deletedAppIds.push(targetId);
-        localStorage.setItem('deleted_application_ids', JSON.stringify(deletedAppIds));
-      }
-
-      // 3) applications 배열에서 영구 제거
+      // 2) applications 배열에서 영구 제거
       let apps = this.getApplications();
       apps = apps.filter(a => a && String(a.id).trim() !== targetId && String(a.appRefId || '').trim() !== targetId);
       this.saveApplications(apps);
@@ -1060,18 +1024,13 @@
 
     // --- 7. 3초 간편문의 (Inquiries) 통합 관리 엔진 ---
     getDeletedInquiryIds: function () {
-      try {
-        return JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
-      } catch (e) {
-        return [];
-      }
+      return [];
     },
 
     getInquiries: function () {
       try {
         const inqs = JSON.parse(localStorage.getItem('inquiries')) || [];
-        const deletedIds = this.getDeletedInquiryIds();
-        return inqs.filter(i => i && i.id && !deletedIds.includes(String(i.id)));
+        return inqs.filter(i => i && i.id);
       } catch (e) {
         console.error('[DataStore] getInquiries error:', e);
         return [];
@@ -1156,12 +1115,6 @@
       }
 
       const targetId = target ? target.id : id;
-      let deletedIds = this.getDeletedInquiryIds();
-      if (!deletedIds.includes(String(targetId))) {
-        deletedIds.push(String(targetId));
-        localStorage.setItem('deleted_inquiry_ids', JSON.stringify(deletedIds));
-      }
-
       inqs = inqs.filter(i => String(i.id) !== String(targetId));
       this.saveInquiries(inqs);
 
@@ -1169,7 +1122,7 @@
         window.SupabaseSync.deleteInquiry(targetId);
       }
 
-      this.notifyAll();
+      this.notifyAll(true);
       return { success: true, deletedId: targetId };
     },
 
@@ -1290,12 +1243,10 @@
     }
 
     const allUsers = (window.DataStore ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []));
-    const deletedIds = (window.DataStore ? window.DataStore.getDeletedUserIds() : (JSON.parse(localStorage.getItem('deleted_user_ids')) || []));
     
     // 승인된 영업자 목록 추출 (시공사 전용 회원은 배제하고, 영업자 코드 보유자 및 영업자만 정밀 추출)
     const bizUsers = allUsers.filter(u => {
-      if (!u || !u.id) return false;
-      if (deletedIds.includes(String(u.id))) return false;
+      if (!u || !u.id || u.role === 'deleted') return false;
       if (u.role === 'constructor' && !u.bizCode) return false;
       return (u.role === 'business' || (u.bizCode && String(u.bizCode).trim().length > 0));
     });

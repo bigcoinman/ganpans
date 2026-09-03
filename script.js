@@ -1568,18 +1568,6 @@ function initWizard() {
             }).catch(() => {});
           }
         }
-      } else {
-        // 신규 점주 계정이 과거 삭제 캐시로 차단되지 않도록 deleted_user_ids 전수 자동 정리
-        try {
-          let deletedUserIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-          const rawPhone = String(ownerPhone || '').trim();
-          deletedUserIds = deletedUserIds.filter(id => {
-            const sid = String(id);
-            return sid !== phoneDigits && sid !== rawPhone && sid.replace(/[^0-9]/g, '') !== phoneDigits;
-          });
-          localStorage.setItem('deleted_user_ids', JSON.stringify(deletedUserIds));
-        } catch (eDelU) {}
-
         const newUser = {
           id: phoneDigits,
           name: ownerName,
@@ -2027,17 +2015,11 @@ function initAuthAndDashboard() {
     if (!result) return;
 
     const currentUsers = JSON.parse(localStorage.getItem('users')) || [];
-    const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
 
     const found = currentUsers.find(u => {
-      const uId = String(u.id || '');
-      const uDigits = uId.replace(/[^0-9]/g, '');
       const uPhone = String(u.phone || '');
       const uPhoneDigits = uPhone.replace(/[^0-9]/g, '');
-      if (deletedIds.includes(uId) || (uDigits && deletedIds.includes(uDigits)) || (uPhoneDigits && deletedIds.includes(uPhoneDigits))) {
-        return false;
-      }
-      return u.name === name && (uPhone === phone || (cleanDigits && uPhoneDigits === cleanDigits)) && !u.isSNS;
+      return u && u.id && u.role !== 'deleted' && u.name === name && (uPhone === phone || (cleanDigits && uPhoneDigits === cleanDigits)) && !u.isSNS;
     });
 
     result.style.display = 'block';
@@ -2059,30 +2041,16 @@ function initAuthAndDashboard() {
     const id = document.getElementById('find-pw-id')?.value.trim();
     const phone = document.getElementById('find-pw-phone')?.value.trim();
     const cleanDigits = phone ? phone.replace(/[^0-9]/g, '') : '';
-    const cleanIdDigits = id ? id.replace(/[^0-9]/g, '') : '';
     const result = document.getElementById('find-pw-result');
     const resetGroup = document.getElementById('find-pw-reset-group');
     if (!result || !resetGroup) return;
 
     const currentUsers = JSON.parse(localStorage.getItem('users')) || [];
-    const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-
-    if (deletedIds.includes(id) || (cleanIdDigits && deletedIds.includes(cleanIdDigits))) {
-      foundPwUser = null;
-    } else {
-      foundPwUser = currentUsers.find(u => {
-        const uId = String(u.id || '');
-        const uDigits = uId.replace(/[^0-9]/g, '');
-        const uPhone = String(u.phone || '');
-        const uPhoneDigits = uPhone.replace(/[^0-9]/g, '');
-        if (deletedIds.includes(uId) || (uDigits && deletedIds.includes(uDigits)) || (uPhoneDigits && deletedIds.includes(uPhoneDigits))) {
-          return false;
-        }
-        const isIdMatch = (uId.toLowerCase() === id.toLowerCase()) || (cleanIdDigits && uDigits === cleanIdDigits);
-        const isPhoneMatch = (uPhone === phone) || (cleanDigits && uPhoneDigits === cleanDigits);
-        return isIdMatch && isPhoneMatch && !u.isSNS;
-      });
-    }
+    foundPwUser = currentUsers.find(u => {
+      if (!u || !u.id || u.role === 'deleted') return false;
+      const uPhone = String(u.phone || '').replace(/[^0-9]/g, '');
+      return String(u.id).toLowerCase() === String(id).toLowerCase() && (!cleanDigits || uPhone === cleanDigits) && !u.isSNS;
+    });
     result.style.display = 'block';
     resetGroup.style.display = 'none';
     const findPwNew = document.getElementById('find-pw-new');
@@ -2433,41 +2401,6 @@ function initAuthAndDashboard() {
 
       const hashedPassword = typeof sha256 === 'function' ? sha256(pwVal) : pwVal;
       const cleanDigits = (idVal.startsWith('01') && idVal.replace(/[^0-9]/g, '').length >= 9) ? idVal.replace(/[^0-9]/g, '') : '';
-      let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-
-      // 1) 1차 로컬 deleted_user_ids 사전 차단 (대소문자 무관)
-      if (deletedIds.includes(idVal) || deletedIds.includes(idValLower) || (cleanDigits && deletedIds.includes(cleanDigits))) {
-        alert('존재하지 않는 회원 정보이거나 이미 탈퇴/삭제 처리된 계정입니다.');
-        return;
-      }
-
-      // 2) Supabase site_stats에서 deleted_user_ids 실시간 최신 목록 동기화 (타 기기/브라우저 삭제건 즉각 반영)
-      if (window.supabaseClient) {
-        try {
-          const { data: statsData } = await window.supabaseClient
-            .from('site_stats')
-            .select('today_date')
-            .eq('id', 'deleted_user_ids')
-            .maybeSingle();
-          if (statsData && statsData.today_date) {
-            const remoteDeletedIds = JSON.parse(statsData.today_date) || [];
-            if (Array.isArray(remoteDeletedIds)) {
-              remoteDeletedIds.forEach(rid => {
-                const rStr = String(rid).trim();
-                if (rStr && !deletedIds.includes(rStr)) deletedIds.push(rStr);
-                if (rStr && !deletedIds.includes(rStr.toLowerCase())) deletedIds.push(rStr.toLowerCase());
-              });
-              localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
-            }
-          }
-        } catch (eStats) {}
-      }
-
-      // 2차 원격 동기화 후 차단 검사
-      if (deletedIds.includes(idVal) || deletedIds.includes(idValLower) || (cleanDigits && deletedIds.includes(cleanDigits))) {
-        alert('존재하지 않는 회원 정보이거나 이미 탈퇴/삭제 처리된 계정입니다.');
-        return;
-      }
 
       let user = null;
 

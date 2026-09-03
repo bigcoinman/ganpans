@@ -487,9 +487,8 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'apikey': _sbKey, 'Authorization': 'Bearer ' + _sbKey }
       }).then(res => res.json()).then(rows => {
         if (Array.isArray(rows)) {
-          const deletedIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
           const mapped = rows
-            .filter(r => r && r.id && !deletedIds.includes(String(r.id)))
+            .filter(r => r && r.id)
             .map(r => ({
               id: String(r.id),
               name: r.name || '',
@@ -1892,15 +1891,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const ok = confirm(`정말 [${targetItemName}] 영업 물건을 영구 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 모든 영업자 및 관리자 화면에서 즉시 영구 제거됩니다.`);
     if (!ok) return;
 
-    // 1) deleted_biz_item_ids에 등록하여 syncAllData에서 부활 영구 차단
-    let deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
-    if (!deletedBizItemIds.includes(String(itemId))) deletedBizItemIds.push(String(itemId));
-    if (targetAppRefId && !deletedBizItemIds.includes(String(targetAppRefId))) deletedBizItemIds.push(String(targetAppRefId));
-    if (targetItemName && targetItemName !== '해당 영업 물건' && !deletedBizItemIds.includes(targetItemName.trim())) {
-      deletedBizItemIds.push(targetItemName.trim());
-    }
-    localStorage.setItem('deleted_biz_item_ids', JSON.stringify(deletedBizItemIds));
-
     const isMatchTarget = (it) => {
       if (!it) return false;
       const itId = String(it.id || '').trim();
@@ -2302,23 +2292,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const deletedUid = String(currentActive.id);
 
-      // 1) deleted_user_ids에 영구 등록하여 동기화 부활 완전 차단
-      let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-      if (!deletedIds.includes(deletedUid)) {
-        deletedIds.push(deletedUid);
-        localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
-      }
-
-      // 2) 로컬 users에서 제거
+      // 1) 로컬 users에서 제거
       users = users.filter(u => String(u.id) !== deletedUid);
       localStorage.setItem('users', JSON.stringify(users));
 
-      // 3) Supabase DB에서 영구 삭제
+      // 2) Supabase DB에서 영구 삭제
       if (window.SupabaseSync) {
         window.SupabaseSync.deleteUser(deletedUid);
       }
 
-      // 4) 세션 종료
+      // 3) 세션 종료
       clearActiveUser();
 
       alert('회원탈퇴가 성공적으로 완료되었습니다. 이용해 주셔서 감사합니다.');
@@ -2846,9 +2829,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }).then(res => res.json()).then(rows => {
       let inquiries = [];
       if (Array.isArray(rows)) {
-        const deletedIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
         inquiries = rows
-          .filter(r => r && r.id && !deletedIds.includes(String(r.id)))
+          .filter(r => r && r.id)
           .map(r => ({
             id: String(r.id),
             name: r.name || '',

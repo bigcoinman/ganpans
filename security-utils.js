@@ -631,15 +631,7 @@ function getActiveUser() {
 
   if (user && user.id) {
     try {
-      const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
       const uId = String(user.id || '');
-      const uDigits = uId.replace(/[^0-9]/g, '');
-      const uPhoneDigits = String(user.phone || '').replace(/[^0-9]/g, '');
-      if (deletedIds.includes(uId) || (uDigits && deletedIds.includes(uDigits)) || (uPhoneDigits && deletedIds.includes(uPhoneDigits))) {
-        clearActiveUser();
-        return null;
-      }
-
       // 최신 users 목록과 실시간 100% 동기화 (최고관리자의 승인/권한 변경/영업코드/시공코드 즉시 반영)
       const allUsers = JSON.parse(localStorage.getItem('users')) || [];
       const freshUser = allUsers.find(u => String(u.id).toLowerCase() === uId.toLowerCase());
@@ -1294,21 +1286,7 @@ window.SupabaseSync = {
 
     const targetId = String(uid).trim();
     const targetLower = targetId.toLowerCase();
-    const targetPhone = phone ? String(phone).trim() : '';
-    const cleanPhoneDigits = (targetPhone.length >= 9) ? targetPhone.replace(/[^0-9]/g, '') : '';
-    const cleanTargetDigits = (targetId.startsWith('01') && targetId.replace(/[^0-9]/g, '').length >= 9) ? targetId.replace(/[^0-9]/g, '') : '';
 
-    // 1) 로컬 삭제 목록에 등록하여 syncAllData에서 부활 영구 차단
-    let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-    const idsToAdd = [targetId, targetLower, cleanTargetDigits, targetPhone, cleanPhoneDigits].filter(Boolean);
-    idsToAdd.forEach(id => {
-      if (!deletedIds.includes(String(id))) {
-        deletedIds.push(String(id));
-      }
-    });
-    localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
-
-    // 2) fetch() REST API 직접 삭제 (supabaseClient 초기화 여부 무관, 100% 보장)
     const headers = {
       'apikey': _sbKey,
       'Authorization': 'Bearer ' + _sbKey,
@@ -1317,7 +1295,6 @@ window.SupabaseSync = {
     };
 
     try {
-      // 외래키: applications의 user_id null 해제
       const appIds = [targetId, ...(targetLower !== targetId ? [targetLower] : [])];
       for (const id of appIds) {
         await fetch(_sbUrl + '/rest/v1/applications?user_id=eq.' + encodeURIComponent(id), {
@@ -1325,55 +1302,22 @@ window.SupabaseSync = {
           headers,
           body: JSON.stringify({ user_id: null })
         }).catch(() => {});
-      }
-
-      // 외래키: inquiries의 user_id null 해제
-      for (const id of appIds) {
         await fetch(_sbUrl + '/rest/v1/inquiries?user_id=eq.' + encodeURIComponent(id), {
           method: 'PATCH',
           headers,
           body: JSON.stringify({ user_id: null })
         }).catch(() => {});
-      }
-
-      // users 테이블에서 영구 삭제 (id 기준)
-      const deleteResults = await Promise.all(
-        appIds.map(id =>
-          fetch(_sbUrl + '/rest/v1/users?id=eq.' + encodeURIComponent(id), {
-            method: 'DELETE',
-            headers
-          }).then(r => ({ id, status: r.status })).catch(e => ({ id, error: e.message }))
-        )
-      );
-      console.log('[deleteUser] Supabase DELETE results:', deleteResults);
-
-      // 전화번호 기준 삭제 (중복 계정 방지)
-      if (cleanPhoneDigits) {
-        await fetch(_sbUrl + '/rest/v1/users?phone=eq.' + encodeURIComponent(cleanPhoneDigits), {
-          method: 'DELETE', headers
+        await fetch(_sbUrl + '/rest/v1/users?id=eq.' + encodeURIComponent(id), {
+          method: 'DELETE',
+          headers
         }).catch(() => {});
-        if (targetPhone !== cleanPhoneDigits) {
-          await fetch(_sbUrl + '/rest/v1/users?phone=eq.' + encodeURIComponent(targetPhone), {
-            method: 'DELETE', headers
-          }).catch(() => {});
-        }
       }
 
-      // 3) site_stats에 deleted_user_ids 동기화 (다른 기기/관리자 공유용)
-      await fetch(_sbUrl + '/rest/v1/site_stats?on_conflict=id', {
-        method: 'POST',
-        headers: { ...headers, 'Prefer': 'return=minimal,resolution=merge-duplicates' },
-        body: JSON.stringify({
-          id: 'deleted_user_ids',
-          today_date: JSON.stringify(deletedIds),
-          today_count: deletedIds.length,
-          total_count: deletedIds.length,
-          updated_at: new Date().toISOString()
-        })
-      }).catch(() => {});
-
+      if (window.supabaseClient) {
+        await window.supabaseClient.from('users').delete().eq('id', targetId).catch(() => {});
+      }
     } catch (e) {
-      console.error('[deleteUser] fetch error:', e);
+      console.error('[deleteUser] Supabase DELETE error:', e);
     }
   },
 
@@ -1555,21 +1499,12 @@ window.SupabaseSync = {
   },
 
   // 3초 간편문의 영구 삭제 (삭제 캐시 관리 및 DB 삭제)
+  // 3초 간편문의 영구 삭제
   async deleteInquiry(inqId) {
     if (!inqId) return;
     try {
-      // 1) 로컬 삭제 목록에 등록하여 syncAllData에서 부활 방지
-      let deletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
-      if (!deletedInqIds.includes(String(inqId))) {
-        deletedInqIds.push(String(inqId));
-        localStorage.setItem('deleted_inquiry_ids', JSON.stringify(deletedInqIds));
-      }
-
       if (window.supabaseClient) {
-        const { error } = await window.supabaseClient.from('inquiries').delete().eq('id', String(inqId));
-        if (error) {
-          console.warn('Supabase deleteInquiry warning:', error.message);
-        }
+        await window.supabaseClient.from('inquiries').delete().eq('id', String(inqId));
       }
     } catch (e) {
       console.error('Supabase deleteInquiry error:', e);
@@ -1579,30 +1514,14 @@ window.SupabaseSync = {
   // 3초 간편문의 전체 영구 초기화 (로컬 + DB 완전 삭제)
   async clearAllInquiries() {
     try {
-      let deletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
-      const currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
-      currentInquiries.forEach(i => {
-        if (i.id && !deletedInqIds.includes(String(i.id))) {
-          deletedInqIds.push(String(i.id));
-        }
-      });
-
       if (window.supabaseClient) {
         const { data } = await window.supabaseClient.from('inquiries').select('id');
         if (data && data.length > 0) {
-          data.forEach(d => {
-            if (d.id && !deletedInqIds.includes(String(d.id))) {
-              deletedInqIds.push(String(d.id));
-            }
-          });
           const ids = data.map(d => String(d.id));
           await window.supabaseClient.from('inquiries').delete().in('id', ids);
         }
       }
-
-      localStorage.setItem('deleted_inquiry_ids', JSON.stringify(deletedInqIds));
       localStorage.setItem('inquiries', JSON.stringify([]));
-      localStorage.setItem('inquiries_purged_flag', 'true');
       return true;
     } catch (e) {
       console.error('Supabase clearAllInquiries error:', e);
@@ -1625,18 +1544,9 @@ window.SupabaseSync = {
       // --- A. 회원(Users) Supabase 클라우드 원천 직접 수집 ---
       const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
       if (!usersErr && Array.isArray(supaUsers)) {
-        const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
         const freshUsers = supaUsers
           .map(su => this.mapDbToUser(su))
-          .filter(u => {
-            if (!u || !u.id || u.role === 'deleted') return false;
-            const uId = String(u.id);
-            const uIdLower = uId.toLowerCase();
-            const uPhoneDigits = String(u.phone || '').replace(/[^0-9]/g, '');
-            if (deletedIds.includes(uId) || deletedIds.includes(uIdLower)) return false;
-            if (uPhoneDigits && deletedIds.includes(uPhoneDigits)) return false;
-            return true;
-          });
+          .filter(u => u && u.id && u.role !== 'deleted');
 
         // 최고관리자(admin) 계정만 필수 존재 보장 (다른 데모 계정은 사용자가 삭제 시 절대 강제 부활/재생성 금지)
         const adminUser = {
@@ -1770,24 +1680,9 @@ window.SupabaseSync = {
       const { data: supaInqs, error: inqsErr } = await window.supabaseClient.from('inquiries').select('*');
       let inqsChanged = false;
       if (!inqsErr && Array.isArray(supaInqs)) {
-        let localDeletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids')) || [];
-        try {
-          const { data: inqStatsRow } = await window.supabaseClient.from('site_stats')
-            .select('today_date')
-            .eq('id', 'deleted_inquiry_ids')
-            .maybeSingle();
-          if (inqStatsRow && inqStatsRow.today_date) {
-            const cloudDeleted = JSON.parse(inqStatsRow.today_date) || [];
-            cloudDeleted.forEach(id => {
-              if (!localDeletedInqIds.includes(String(id))) localDeletedInqIds.push(String(id));
-            });
-            localStorage.setItem('deleted_inquiry_ids', JSON.stringify(localDeletedInqIds));
-          }
-        } catch (eInqStats) {}
-
         const freshInqs = supaInqs
           .map(si => this.mapDbToInquiry(si))
-          .filter(i => i && i.id && !localDeletedInqIds.includes(String(i.id)));
+          .filter(i => i && i.id);
         const newInqsStr = JSON.stringify(freshInqs);
         if (oldInqsStr !== newInqsStr) {
           localStorage.setItem('inquiries', newInqsStr);
@@ -2075,13 +1970,6 @@ if (typeof window !== 'undefined') {
     // 2) 일반 회원 및 기타 사용자 로그인
     const hashedPassword = typeof sha256 === 'function' ? sha256(pwVal) : pwVal;
     const cleanDigits = (idVal.startsWith('01') && idVal.replace(/[^0-9]/g, '').length >= 9) ? idVal.replace(/[^0-9]/g, '') : '';
-    let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-
-    if (deletedIds.includes(idVal) || deletedIds.includes(idValLower) || (cleanDigits && deletedIds.includes(cleanDigits))) {
-      alert('존재하지 않는 회원 정보이거나 이미 탈퇴/삭제 처리된 계정입니다.');
-      return;
-    }
-
     let user = null;
 
     if (window.supabaseClient) {
@@ -2371,17 +2259,7 @@ if (typeof window !== 'undefined') {
         createdAt: nowIso
       };
 
-      // 1) 과거 삭제 기록(deleted_user_ids)에서 즉시 사면/제거 (재가입 회원 즉시 100% 정상 노출 보장)
-      let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-      const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
-      const cleanDigits = (idVal.startsWith('01') && idVal.replace(/[^0-9]/g, '').length >= 9) ? idVal.replace(/[^0-9]/g, '') : '';
-      deletedIds = deletedIds.filter(did => {
-        const didStr = String(did).toLowerCase();
-        return didStr !== idValLower && didStr !== String(idVal) && didStr !== cleanPhone && didStr !== phoneVal && (!cleanDigits || didStr !== cleanDigits);
-      });
-      localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
-
-      // 2) Supabase 클라우드 저장
+      // 1) Supabase 클라우드 저장
       if (window.SupabaseSync) {
         await window.SupabaseSync.upsertUser(newUser);
       }

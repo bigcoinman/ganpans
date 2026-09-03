@@ -248,61 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // 영업물건 기존 3건 및 오류 데이터 강력 영구 완전 삭제 및 초기화 (대원감자탕, 우리나라곰탕 등 박멸)
-    if (!localStorage.getItem('biz_items_purged_20260820_03')) {
-        const defaultPurgedBizItemIds = [
-            'B-260802-0001',
-            '대원감자탕',
-            '대원 감자탕',
 
-        ];
-        let deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
-        defaultPurgedBizItemIds.forEach(id => {
-            if (!deletedBizItemIds.includes(id)) deletedBizItemIds.push(id);
-        });
-        localStorage.setItem('deleted_biz_item_ids', JSON.stringify(deletedBizItemIds));
-
-        const isMatchPurge = (it) => {
-            if (!it) return false;
-            const itId = String(it.id || '').trim();
-            const itRef = String(it.appRefId || '').trim();
-            const itName = String(it.name || it.storeName || it.shopName || '').replace(/\s+/g, '').toLowerCase();
-            return deletedBizItemIds.some(del => {
-                const cleanDel = String(del).replace(/\s+/g, '').toLowerCase();
-                return itId === del || itRef === del || (itName && cleanDel && (itName === cleanDel || itName.includes(cleanDel) || cleanDel.includes(itName)));
-            });
-        };
-
-        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
-        curUsers = curUsers.map(u => {
-            if (u.items && Array.isArray(u.items)) {
-                return {
-                    ...u,
-                    items: u.items.filter(it => !isMatchPurge(it))
-                };
-            }
-            return u;
-        });
-        localStorage.setItem('users', JSON.stringify(curUsers));
-
-        let activeU = getActiveUser() || null;
-        if (activeU && activeU.items) {
-            activeU.items = activeU.items.filter(it => !isMatchPurge(it));
-            localStorage.setItem('activeUser', JSON.stringify(activeU));
-        }
-
-        // applications 에서도 isBizItem 해제
-        let curApps = JSON.parse(localStorage.getItem('applications')) || [];
-        curApps = curApps.map(app => {
-            if (isMatchPurge(app)) {
-                return { ...app, isBizItem: false };
-            }
-            return app;
-        });
-        localStorage.setItem('applications', JSON.stringify(curApps));
-
-        localStorage.setItem('biz_items_purged_20260820_03', 'true');
-    }
 
     let users = JSON.parse(localStorage.getItem('users')) || [];
     let activeUser = getActiveUser() || null;
@@ -838,18 +784,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (activeUser) {
                         const deletedUid = String(activeUser.id);
 
-                        // 1) deleted_user_ids 등록
-                        let deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-                        if (!deletedIds.includes(deletedUid)) {
-                            deletedIds.push(deletedUid);
-                            localStorage.setItem('deleted_user_ids', JSON.stringify(deletedIds));
-                        }
-
-                        // 2) 로컬 users 제거
+                        // 1) 로컬 users 제거
                         users = users.filter(u => String(u.id) !== deletedUid);
                         localStorage.setItem('users', JSON.stringify(users));
 
-                        // 3) Supabase DB 영구 삭제
+                        // 2) Supabase DB 영구 삭제
                         if (window.SupabaseSync) {
                             window.SupabaseSync.deleteUser(deletedUid);
                         }
