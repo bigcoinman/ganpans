@@ -1428,7 +1428,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const curAct=(typeof getActiveUser==='function'?getActiveUser():null)||activeUser||JSON.parse(localStorage.getItem('activeUser'))||JSON.parse(sessionStorage.getItem('activeUser')); if(!curAct||curAct.role!=='admin') return;
     const allUsersTableBody = document.getElementById('all-users-table-body');
     const allUsersCountEl = document.getElementById('all-users-count');
-    const paginationContainer = document.getElementById('pagination-manager-all-users');
+    const paginationAllUsersContainer = document.getElementById('pagination-manager-all-users');
     if (!allUsersTableBody) return;
 
     let currentUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') 
@@ -1455,6 +1455,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  (uName && ownerName && uName === ownerName.toLowerCase() && (!cleanDigits || uPhone === cleanDigits));
         });
 
+        const refCode = String(app.referrerCode || app.bizCode || (app.id && app.id.startsWith('B-') ? app.id.split('-').slice(0, 2).join('-') : '')).trim();
         if (!exists) {
           currentUsers.push({
             id: ownerPhone || app.id,
