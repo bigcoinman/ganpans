@@ -33,37 +33,10 @@
 
     getUsers: function () {
       try {
-        const users = JSON.parse(localStorage.getItem('users')) || [];
-        let deletedUserIds = this.getDeletedUserIds();
-        // 실존 users에 존재하는 건은 deletedUserIds에서 자동 정리하여 100% 정상 표시 보장
-        if (deletedUserIds.length > 0 && users.length > 0) {
-          const validIds = users.map(u => String(u.id).toLowerCase());
-          const validPhones = users.map(u => String(u.phone || '').replace(/[^0-9]/g, '')).filter(Boolean);
-          const validDigits = users.map(u => String(u.id).replace(/[^0-9]/g, '')).filter(Boolean);
-          const cleanedDel = deletedUserIds.filter(id => {
-            const sid = String(id).toLowerCase();
-            const sDigits = sid.replace(/[^0-9]/g, '');
-            if (validIds.includes(sid)) return false;
-            if (sDigits && validPhones.includes(sDigits)) return false;
-            if (sDigits && validDigits.includes(sDigits)) return false;
-            return true;
-          });
-          if (cleanedDel.length !== deletedUserIds.length) {
-            localStorage.setItem('deleted_user_ids', JSON.stringify(cleanedDel));
-            deletedUserIds = cleanedDel;
-          }
-        }
-        return users.filter(u => {
-          if (!u || !u.id) return false;
-          if (u.role === 'deleted') return false;
-          const uId = String(u.id);
-          const uDigits = uId.replace(/[^0-9]/g, '');
-          const uPhoneDigits = String(u.phone || '').replace(/[^0-9]/g, '');
-          if (deletedUserIds.includes(uId)) return false;
-          if (uDigits && deletedUserIds.includes(uDigits)) return false;
-          if (uPhoneDigits && deletedUserIds.includes(uPhoneDigits)) return false;
-          return true;
-        });
+        const raw = localStorage.getItem('users');
+        let users = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(users)) users = [];
+        return users.filter(u => u && u.id && u.role !== 'deleted');
       } catch (e) {
         console.error('[DataStore] getUsers error:', e);
         return [];
@@ -1015,7 +988,7 @@
       }
 
       alert('지원 신청 접수 건 [' + targetId + ']이(가) 정상적으로 영구 삭제되었습니다.');
-      this.notifyAll();
+      this.notifyAll(true);
       return { success: true };
     },
 

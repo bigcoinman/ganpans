@@ -2599,14 +2599,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 0) Render All Users list (회원정보관리)
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');
         if (allUsersListMob) {
-            const deletedIds = JSON.parse(localStorage.getItem('deleted_user_ids')) || [];
-            let displayUsers = allStoreUsers.filter(u => {
-                if (!u || !u.id) return false;
-                const uId = String(u.id);
-                const uDigits = uId.replace(/[^0-9]/g, '');
-                const uPhoneDigits = String(u.phone || '').replace(/[^0-9]/g, '');
-                return !deletedIds.includes(uId) && (!uDigits || !deletedIds.includes(uDigits)) && (!uPhoneDigits || !deletedIds.includes(uPhoneDigits));
-            });
+            let displayUsers = allStoreUsers.filter(u => u && u.id && u.role !== 'deleted');
             displayUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(displayUsers) : displayUsers;
             const searchInput = document.getElementById('search-all-users-input-mob');
             const q = searchInput && searchInput.value ? searchInput.value.trim().slice(0, 30).toLowerCase() : '';
