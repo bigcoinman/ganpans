@@ -2325,12 +2325,12 @@ function initAuthAndDashboard() {
   };
 
   if (signupForm) {
-    signupForm.addEventListener('submit', async (e) => {
+    signupForm.onsubmit = (e) => {
       e.preventDefault();
       if (window.executeAppSignup) {
         window.executeAppSignup(e);
       }
-    });
+    };
   }
 
   if (loginForm) {
