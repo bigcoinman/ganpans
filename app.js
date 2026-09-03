@@ -2776,7 +2776,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let actionsHtml = `
                         <div class="admin-action-row-mob" style="display:flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-top: 12px;">
                             <div style="position: relative; display: inline-flex; align-items: center;">
-                                <select class="status-select-mob select-app-status-mob" data-id="${app.id}" onfocus="window.isInteractingWithForm = true;" onblur="setTimeout(() => { window.isInteractingWithForm = false; }, 1000);" onclick="event.stopPropagation(); window.isInteractingWithForm = true;" ontouchstart="event.stopPropagation(); window.isInteractingWithForm = true;" onchange="window.isInteractingWithForm = false; window.updateApplicationStatusMob && window.updateApplicationStatusMob('${app.id}', this.value);" style="padding: 6px 28px 6px 10px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 6px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 36px; line-height: 1.2; position: relative; z-index: 10; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
+                                <select class="status-select-mob select-app-status-mob" data-id="${app.id}" onclick="event.stopPropagation();" ontouchstart="event.stopPropagation();" onchange="window.updateApplicationStatusMob && window.updateApplicationStatusMob('${app.id}', this.value);" style="padding: 6px 28px 6px 10px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 6px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 36px; line-height: 1.2; position: relative; z-index: 10; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
                                     <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사 대기</option>
                                     <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
                                     <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
@@ -3647,28 +3647,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const updateApplicationStatusMob = (id, newStatus) => {
-        const curAct=(typeof getActiveUser==='function'?getActiveUser():null)||activeUser||JSON.parse(localStorage.getItem('activeUser'))||JSON.parse(sessionStorage.getItem('activeUser')); if(!curAct||curAct.role!=='admin') return;
+        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') 
+            ? window.DataStore.getApplications() 
+            : (JSON.parse(localStorage.getItem('applications')) || []);
+
         let targetApp = null;
-        applications = applications.map(app => {
-            if (String(app.id) === String(id)) {
+        apps = apps.map(app => {
+            if (String(app.id).trim().toLowerCase() === String(id).trim().toLowerCase()) {
                 let progStatus = '심사대기';
                 if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') progStatus = '서류제출 & 접수예정';
                 else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') progStatus = '지원사업 탈락';
                 else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') progStatus = '지원사업 포기';
-                targetApp = { ...app, status: newStatus, progressStatus: progStatus, constructionStatus: progStatus };
+                targetApp = { ...app, status: newStatus, progressStatus: progStatus, constructionStatus: progStatus, updatedAt: new Date().toISOString() };
                 return targetApp;
             }
             return app;
         });
-        localStorage.setItem('applications', JSON.stringify(applications));
+
+        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            window.DataStore.saveApplications(apps);
+        } else {
+            localStorage.setItem('applications', JSON.stringify(apps));
+        }
 
         // 1) 영업자 마이페이지 및 PC 대시보드 실시간 동시 연동: users 목록 내 items 상태 동기화
-        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+            ? window.DataStore.getUsers()
+            : (JSON.parse(localStorage.getItem('users')) || []);
         let usersUpdated = false;
         if (targetApp) {
             curUsers = curUsers.map(u => {
                 if (u.items && Array.isArray(u.items)) {
-                    let itemMatched = false;
                     u.items = u.items.map(it => {
                         if (String(it.id) === String(targetApp.id) || String(it.appRefId) === String(targetApp.id)) {
                             let updatedProgress = '지원대기중';
@@ -3679,7 +3688,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             it.progressStatus = updatedProgress;
                             it.constructionStatus = updatedProgress;
-                            itemMatched = true;
                             usersUpdated = true;
                         }
                         return it;
@@ -3689,14 +3697,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (usersUpdated) {
-                users = curUsers;
-                localStorage.setItem('users', JSON.stringify(curUsers));
-                if (activeUser && activeUser.role === 'business') {
-                    const freshMe = curUsers.find(u => u.id === activeUser.id);
-                    if (freshMe) {
-                        activeUser.items = freshMe.items;
-                        localStorage.setItem('activeUser', JSON.stringify(activeUser));
-                    }
+                if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+                    window.DataStore.saveUsers(curUsers);
+                } else {
+                    localStorage.setItem('users', JSON.stringify(curUsers));
                 }
             }
         }
@@ -3706,14 +3710,19 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') statusLabel = '지원사업 탈락';
         else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') statusLabel = '지원사업 포기';
 
-        // 2) 즉각 UI 갱신 및 완료 알림 (0초 지연)
-        alert(`[${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`);
-        renderStatusTab();
+        const msg = `[${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`;
+        if (typeof window.showToast === 'function') {
+            window.showToast(msg);
+        } else {
+            alert(msg);
+        }
 
         // 전역 0초 동시 연동 브로드캐스트 발화 (6대 화면 실시간 동기화)
         if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-            window.DataStore.notifyAll();
+            window.DataStore.notifyAll(true);
         }
+        if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob(true);
+        if (typeof renderStatusTab === 'function') renderStatusTab();
         window.dispatchEvent(new CustomEvent('supabase-data-synced', { detail: { targetApp } }));
 
         // 3) Supabase DB 백그라운드 비동기 영구 저장 (Non-blocking)
