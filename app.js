@@ -3977,18 +3977,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 1) applications 단일 원천 초기화
-        let apps = JSON.parse(localStorage.getItem('applications')) || [];
-        let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
-        if (targetApp) {
-            targetApp.assignedConstructorId = null;
-            targetApp.assignedConstructorName = null;
-            localStorage.setItem('applications', JSON.stringify(apps));
-            if (window.SupabaseSync) {
-                window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
-            }
-        }
-
         // 2) users.items 동기화
         let curUsers = JSON.parse(localStorage.getItem('users')) || [];
         curUsers = curUsers.map(u => {
