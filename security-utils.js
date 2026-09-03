@@ -21,6 +21,11 @@
 
 // 최고관리자 전용: 데이터 찌꺼기 완전 청소 및 DB 순수 동기화 함수
 window.purgeAndResyncData = async function(showAlert = true) {
+  if (showAlert) {
+    if (!confirm('[안내] 브라우저 임시 캐시를 정리하고 클라우드 DB와 최신 상태로 동기화하시겠습니까?\n\n※ 등록된 정상 회원 및 신청서 데이터는 DB에 안전하게 보존되며 절대 삭제되지 않습니다.')) {
+      return false;
+    }
+  }
   try {
     const junkKeys = [
       'deleted_user_ids',

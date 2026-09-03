@@ -592,16 +592,13 @@
                                     </button>
                                 </div>
                                 <div id="sec-container-all-users" style="margin-top: 14px; display: block;">
-                                    <!-- 회원 검색바 및 찌꺼기 정리 버튼 -->
+                                    <!-- 회원 검색바 -->
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; flex-wrap: wrap;">
                                         <div style="font-size: 0.82rem; color: var(--text-secondary);">
                                             총 등록 회원: <strong id="all-users-count" style="color: var(--accent-primary);">0</strong>명
                                         </div>
-                                        <div style="display: flex; gap: 6px; align-items: center;">
-                                            <input type="text" id="search-all-users-input" placeholder="아이디 / 이름 / 연락처 검색" maxlength="30" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; border: 1px solid #cbd5e1; width: 180px;">
-                                            <button type="button" onclick="window.purgeAndResyncData()" style="padding: 6px 12px; font-size: 0.78rem; font-weight: 700; color: #4338ca; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
-                                                <i class="fa-solid fa-broom"></i> 데이터 찌꺼기 정리 & DB 동기화
-                                            </button>
+                                        <div style="display: flex; gap: 6px; max-width: 320px; width: 100%;">
+                                            <input type="text" id="search-all-users-input" placeholder="아이디 / 이름 / 연락처 검색" maxlength="30" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; border: 1px solid #cbd5e1; width: 100%;">
                                         </div>
                                     </div>
                                     <div class="manager-table-container" style="overflow-x: auto; background: rgba(255,255,255,0.75); border-radius: 12px; border: 1px solid var(--border-color);">
@@ -1122,11 +1119,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js?v=20260903_v7_radical_purge_clean"></script>
-    <script src="security-utils.js?v=20260903_v7_radical_purge_clean"></script>
-    <script src="data-store.js?v=20260903_v7_radical_purge_clean"></script>
-    <script src="kakao-notify.js?v=20260903_v7_radical_purge_clean"></script>
-    <script src="dashboard.js?v=20260903_v7_radical_purge_clean"></script>
+    <script src="supabase-config.js?v=20260903_v8_ux_safety_complete"></script>
+    <script src="security-utils.js?v=20260903_v8_ux_safety_complete"></script>
+    <script src="data-store.js?v=20260903_v8_ux_safety_complete"></script>
+    <script src="kakao-notify.js?v=20260903_v8_ux_safety_complete"></script>
+    <script src="dashboard.js?v=20260903_v8_ux_safety_complete"></script>
 </body>
 
 </html>
