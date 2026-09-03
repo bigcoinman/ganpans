@@ -1434,6 +1434,43 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') 
       ? window.DataStore.getUsers() 
       : (JSON.parse(localStorage.getItem('users')) || []);
+
+    // applications(간편 지원 신청서)에 등록된 점주(업체 대표)도 회원 명부에 100% 자동 포괄 연동
+    const allApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
+
+    allApps.forEach(app => {
+      const ownerPhone = String(app.ownerPhone || app.phone || '').trim();
+      const ownerName = String(app.ownerName || app.shopName || app.storeName || '').trim();
+      if (ownerPhone || ownerName) {
+        const cleanDigits = ownerPhone.replace(/[^0-9]/g, '');
+        const exists = currentUsers.some(u => {
+          const uPhone = String(u.phone || '').replace(/[^0-9]/g, '');
+          const uId = String(u.id || '').toLowerCase();
+          const uName = String(u.name || '').toLowerCase();
+          return (cleanDigits && uPhone && uPhone === cleanDigits) ||
+                 (cleanDigits && uId === cleanDigits) ||
+                 (uId === String(app.id).toLowerCase()) ||
+                 (uName && ownerName && uName === ownerName.toLowerCase() && (!cleanDigits || uPhone === cleanDigits));
+        });
+
+        if (!exists) {
+          currentUsers.push({
+            id: ownerPhone || app.id,
+            name: ownerName || '점주(대표)',
+            phone: ownerPhone || '-',
+            email: app.ownerEmail || app.email || '-',
+            address: app.storeAddress || app.address || '-',
+            role: 'user',
+            isApplicantOwner: true,
+            applicantStore: app.storeName || app.shopName || '',
+            createdAt: app.createdAt || app.created_at || new Date().toISOString()
+          });
+        }
+      }
+    });
+
     currentUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(currentUsers) : currentUsers;
 
     // 검색 필터링
@@ -1483,6 +1520,8 @@ document.addEventListener('DOMContentLoaded', () => {
         roleBadge = '<span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">영업자</span>';
       } else if (u.role === 'constructor') {
         roleBadge = '<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">시공사</span>';
+      } else if (u.isApplicantOwner) {
+        roleBadge = '<span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;" title="' + escapeHtml(u.applicantStore || '신청업체') + '">점주(신청)</span>';
       }
 
       let codeText = '-';
@@ -3066,10 +3105,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // Actions buttons: 상태 변경 캐럿 드롭다운, 영업물건으로 변경(토글), 삭제
       let actionButtons = '<div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap;">';
 
-      // 1. 상태 변경 셀렉트 (캐럿 아이콘 포함)
+      // 1. 상태 변경 셀렉트
       actionButtons += `
         <div style="position: relative; display: inline-flex; align-items: center;">
-          <select class="status-select select-app-status-pc" data-id="${app.id}" onclick="event.stopPropagation();" ontouchstart="event.stopPropagation();" onchange="window.updateApplicationStatus('${app.id}', this.value)" style="padding: 5px 26px 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: url('data:image/svg+xml;utf8,<svg fill=&quot;%2364748b&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><path d=&quot;M7 10l5 5 5-5z&quot;/></svg>') no-repeat right 4px center / 16px 16px ${statusBg}; appearance: none; -webkit-appearance: none; cursor: pointer; height: 30px; line-height: 1.2; position: relative; z-index: 5; touch-action: manipulation;">
+          <select class="status-select select-app-status-pc" data-id="${app.id}" onchange="window.updateApplicationStatus('${app.id}', this.value)" style="padding: 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background-color: ${statusBg}; cursor: pointer; height: 30px; line-height: 1.2;">
             <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사 대기</option>
             <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
             <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
@@ -3084,17 +3123,17 @@ document.addEventListener('DOMContentLoaded', () => {
       // 2. [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
       if (isAlreadyInBizItems) {
         actionButtons += `
-          <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="event.stopPropagation(); event.preventDefault(); window.toggleBizItem('${app.id}', this); return false;" ontouchstart="event.stopPropagation();" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; height: 30px; touch-action: manipulation;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
+          <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="window.toggleBizItem('${app.id}', this)" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; height: 30px;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
         `;
       } else {
         actionButtons += `
-          <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="event.stopPropagation(); event.preventDefault(); window.toggleBizItem('${app.id}', this); return false;" ontouchstart="event.stopPropagation();" style="padding: 5px 10px; font-size: 0.75rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px; touch-action: manipulation;" title="클릭 시 영업물건(진흥원 접수)으로 이동/등록"><i class="fa-solid fa-toggle-off"></i> 영업물건으로 변경</button>
+          <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="window.toggleBizItem('${app.id}', this)" style="padding: 5px 10px; font-size: 0.75rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="클릭 시 영업물건(진흥원 접수)으로 이동/등록"><i class="fa-solid fa-toggle-off"></i> 영업물건으로 변경</button>
         `;
       }
       
       // 3. 삭제 버튼 (항상 노출 - 최고관리자 영구 삭제)
       actionButtons += `
-        <button type="button" class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" onclick="event.stopPropagation(); event.preventDefault(); window.deleteApplicationAdmin('${app.id}', this, event); return false;" ontouchstart="event.stopPropagation();" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px; touch-action: manipulation;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+        <button type="button" class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" onclick="window.deleteApplicationAdmin('${app.id}', this, event)" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
       </div>`;
 
       // 영업담당자 이름 매칭 (예: 김만석영업자)
