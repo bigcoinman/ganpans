@@ -1289,7 +1289,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let bizItemsMobExpanded = false; // false: 최근 3건 요약, true: 전체 확장
 
     function handleApplicationPhotoUploadMob(appId) {
-        if (!activeUser) return;
         let fileInput = document.getElementById('mob-app-photo-upload-input');
         if (!fileInput) {
             fileInput = document.createElement('input');

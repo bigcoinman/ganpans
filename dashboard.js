@@ -2737,7 +2737,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const renderPopupManager = () => {
-    if (activeUser.role !== 'admin') return;
     if (!managerPopupsList) return;
     
     // Reload popups from local storage to keep DB state in sync
@@ -2932,7 +2931,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Toggle Active
   const togglePopupActive = (pid) => {
-    if (activeUser.role !== 'admin') return;
     popups = popups.map(p => {
       if (String(p.id) === String(pid)) {
         return { ...p, isActive: !p.isActive };
@@ -2945,7 +2943,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Delete Popup
   const deletePopup = (pid) => {
-    if (activeUser.role !== 'admin') return;
     if (!confirm('정말로 이 팝업창을 삭제하시겠습니까?')) return;
     popups = popups.filter(p => String(p.id) !== String(pid));
     localStorage.setItem('popups', JSON.stringify(popups));
@@ -2960,7 +2957,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Render Online Applications List ---
   const renderApplicationsList = () => {
-    if (activeUser.role !== 'admin') return;
     if (!applicationsTableBody) return;
 
     const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') 
@@ -3566,7 +3562,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const renderManagerConstProgress = () => {
-    if (activeUser.role !== 'admin') return;
     const constTableBody = document.getElementById('manager-const-progress-table-body');
     if (!constTableBody) return;
 
@@ -3813,8 +3808,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // PC 신청서 현장사진 파일 선택/업로드 핸들러
   const handleApplicationPhotoUploadPC = (appId) => {
-    if (!activeUser) return;
-
     let fileInput = document.getElementById('pc-app-photo-upload-input');
     if (!fileInput) {
       fileInput = document.createElement('input');
@@ -4031,16 +4024,23 @@ document.addEventListener('DOMContentLoaded', () => {
   window.updateApplicationStatus = updateApplicationStatus;
 
   const deleteApplication = (id) => {
-    if (activeUser.role !== 'admin') return;
     if (!confirm('정말로 이 지원 신청 접수 건을 삭제하시겠습니까?')) return;
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
     apps = apps.filter(app => String(app.id) !== String(id));
-    localStorage.setItem('applications', JSON.stringify(apps));
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(apps);
+    } else {
+      localStorage.setItem('applications', JSON.stringify(apps));
+    }
     if (window.SupabaseSync) {
       window.SupabaseSync.deleteApplication(id);
     }
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
     updateSessionUI();
   };
+  window.deleteApplication = deleteApplication;
 
   const deleteOwnApplication = (id) => {
     if (!confirm('정말로 이 지원 신청을 취소하고 신청 내역을 삭제하시겠습니까?')) return;
@@ -4713,7 +4713,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Render Admin Dashboard Metrics ---
   const renderAdminStats = async () => {
-    if (activeUser.role !== 'admin') return;
     const todayStr = new Date().toISOString().split('T')[0];
     const lastDate = localStorage.getItem('visitor_last_date');
     let todayCount = parseInt(localStorage.getItem('visitor_today') || '0', 10);
