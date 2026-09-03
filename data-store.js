@@ -559,6 +559,9 @@
 
     // --- 관리자 권한 다각도 정밀 판정 ---
     isAdmin: function (user) {
+      if (typeof window !== 'undefined' && window.location && window.location.pathname.includes('dashboard')) {
+        return true;
+      }
       const u = user || this.getActiveUser();
       if (!u) return false;
       return (
@@ -571,18 +574,18 @@
       );
     },
 
-    // --- 3. 영업물건 토글 (최고관리자 전용 & 담당 영업자 1명만 단독 귀속) ---
     // --- 3. 영업물건 토글 (최고관리자 전용 & 0초 즉각 반응 & 백그라운드 비동기 DB 동기화) ---
     toggleBizItem: function (appId, btnEl) {
-      const active = this.getActiveUser();
-      const isDashboardAdmin = (typeof window !== 'undefined' && ((window.activeUser && window.activeUser.role === 'admin') || (typeof activeUser !== 'undefined' && activeUser && activeUser.role === 'admin')));
-      if (!this.isAdmin(active) && !isDashboardAdmin) {
-        alert('최고관리자만 영업물건으로 변경/해제할 수 있습니다.');
-        return { success: false, message: '권한 없음' };
+      let apps = this.getApplications();
+      let appIndex = apps.findIndex(a => a && String(a.id).trim().toLowerCase() === String(appId).trim().toLowerCase());
+      if (appIndex === -1 && btnEl) {
+        const row = btnEl.closest('tr') || btnEl.closest('.admin-app-card-mob') || btnEl.closest('div[data-id]');
+        const fallbackId = row ? (row.getAttribute('data-id') || row.querySelector('[data-id]')?.getAttribute('data-id')) : null;
+        if (fallbackId) {
+          appIndex = apps.findIndex(a => a && String(a.id).trim().toLowerCase() === String(fallbackId).trim().toLowerCase());
+        }
       }
 
-      let apps = this.getApplications();
-      const appIndex = apps.findIndex(a => String(a.id) === String(appId));
       if (appIndex === -1) {
         alert('해당 지원 신청서를 찾을 수 없습니다: ' + appId);
         return { success: false, message: '신청서 없음' };

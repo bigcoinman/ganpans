@@ -131,7 +131,11 @@ window.deleteUserAdmin = function(uid, btnEl, event) {
 
 window.toggleBizItem = function(appId, btnEl) {
   if (window.DataStore && typeof window.DataStore.toggleBizItem === 'function') {
-    return window.DataStore.toggleBizItem(appId, btnEl);
+    const res = window.DataStore.toggleBizItem(appId, btnEl);
+    if (typeof renderApplicationsList === 'function') renderApplicationsList();
+    if (typeof renderManagerPanel === 'function') renderManagerPanel();
+    if (typeof renderBizRegisteredTable === 'function') renderBizRegisteredTable();
+    return res;
   }
 };
 
