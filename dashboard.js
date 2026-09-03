@@ -119,8 +119,14 @@ window.clearAllInquiriesAdmin = function() {
 };
 
 // --- 통합 DataStore 브릿지 핸들러 ---
-window.deleteUserAdmin = function(uid, btnEl) {
-  if (window.DataStore) return window.DataStore.deleteUser(uid, btnEl);
+window.deleteUserAdmin = function(uid, btnEl, event) {
+  if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+  if (event && typeof event.preventDefault === 'function') event.preventDefault();
+  if (window.DataStore && typeof window.DataStore.deleteUser === 'function') {
+    const res = window.DataStore.deleteUser(uid, btnEl);
+    if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
+    return res;
+  }
 };
 
 window.toggleBizItem = function(appId, btnEl) {

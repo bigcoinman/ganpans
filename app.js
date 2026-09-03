@@ -68,8 +68,16 @@ window.deleteInquiryAdminMob = function (id, e) {
 };
 
 // --- 모바일 통합 DataStore 브릿지 핸들러 ---
-window.deleteUserAdminMob = function (uid, btnEl) {
-    if (window.DataStore) return window.DataStore.deleteUser(uid, btnEl);
+window.deleteUserAdminMob = function (uid, btnEl, event) {
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    if (window.DataStore && typeof window.DataStore.deleteUser === 'function') {
+        const res = window.DataStore.deleteUser(uid, btnEl);
+        if (typeof window.renderAdminDashboardMob === 'function') {
+            window.renderAdminDashboardMob(true);
+        }
+        return res;
+    }
 };
 
 window.toggleBizItemMob = function (appId, btnEl) {
@@ -2632,7 +2640,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     else if (u.role === 'constructor') roleBadge = `<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">시공사 (${u.constCode || '-'})</span>`;
 
                     const deleteBtn = u.role === 'admin' ? '' : `
-                        <button class="btn btn-secondary btn-sm btn-delete-user-mob" data-uid="${u.id}" style="padding: 5px 12px; font-size: 0.85rem; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2; border-radius: 6px;">
+                        <button type="button" class="btn btn-secondary btn-sm btn-delete-user-mob" onclick="window.deleteUserAdminMob('${escapeHtml(u.id)}', this, event)" style="padding: 6px 14px; font-size: 0.85rem; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2; border-radius: 6px; cursor: pointer; touch-action: manipulation; font-weight: 600;">
                             <i class="fa-solid fa-trash-can"></i> 삭제
                         </button>
                     `;
@@ -2656,22 +2664,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${deleteBtn ? `<div style="display:flex; justify-content:flex-end; margin-top: 10px;">${deleteBtn}</div>` : ''}
                     `;
                     allUsersListMob.appendChild(card);
-                });
-
-                allUsersListMob.querySelectorAll('.btn-delete-user-mob').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const targetBtn = e.target.closest('button');
-                        const uid = targetBtn ? targetBtn.dataset.uid : null;
-                        if (!uid) return;
-                        if (window.deleteUserAdminMob) {
-                            window.deleteUserAdminMob(uid, targetBtn);
-                        } else if (window.DataStore) {
-                            window.DataStore.deleteUser(uid, targetBtn);
-                        }
-                        if (typeof renderAdminDashboardMob === 'function') {
-                            renderAdminDashboardMob(true);
-                        }
-                    });
                 });
             }
         }
