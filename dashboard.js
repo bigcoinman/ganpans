@@ -130,7 +130,9 @@ window.deleteUserAdmin = function(uid, btnEl, event) {
 };
 
 window.toggleBizItem = function(appId, btnEl) {
-  if (window.DataStore) return window.DataStore.toggleBizItem(appId);
+  if (window.DataStore && typeof window.DataStore.toggleBizItem === 'function') {
+    return window.DataStore.toggleBizItem(appId, btnEl);
+  }
 };
 
 window.deleteApplicationAdmin = function(appId, btnEl) {

@@ -575,7 +575,8 @@
     // --- 3. 영업물건 토글 (최고관리자 전용 & 0초 즉각 반응 & 백그라운드 비동기 DB 동기화) ---
     toggleBizItem: function (appId, btnEl) {
       const active = this.getActiveUser();
-      if (!this.isAdmin(active)) {
+      const isDashboardAdmin = (typeof window !== 'undefined' && ((window.activeUser && window.activeUser.role === 'admin') || (typeof activeUser !== 'undefined' && activeUser && activeUser.role === 'admin')));
+      if (!this.isAdmin(active) && !isDashboardAdmin) {
         alert('최고관리자만 영업물건으로 변경/해제할 수 있습니다.');
         return { success: false, message: '권한 없음' };
       }
@@ -613,30 +614,31 @@
       let usersToSync = [];
 
       if (isNowBizItem) {
-        // 영업물건 등록: 담당 영업자 1명 특정
+        // 영업물건 등록: 담당 영업자 1명 특정 (다각도 정밀 매칭)
         let targetUser = null;
         const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
         const appUser = String(app.userId || '').trim().toLowerCase();
-        const appId = String(app.id || '').trim().toLowerCase();
+        const appIdStr = String(app.id || '').trim().toLowerCase();
 
         if (refCode) {
           targetUser = curUsers.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
             ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
               (u.id && String(u.id).trim().toLowerCase() === refCode) ||
-              (u.name && String(u.name).trim().toLowerCase() === refCode))
+              (u.name && String(u.name).trim().toLowerCase() === refCode) ||
+              (u.phone && String(u.phone).replace(/[^0-9]/g, '') === refCode.replace(/[^0-9]/g, '')))
           );
         }
-        if (!targetUser && appId) {
+        if (!targetUser && appIdStr) {
           targetUser = curUsers.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
-            u.bizCode && appId.startsWith(String(u.bizCode).trim().toLowerCase() + '-')
+            u.bizCode && appIdStr.startsWith(String(u.bizCode).trim().toLowerCase() + '-')
           );
         }
         if (!targetUser && appUser) {
           targetUser = curUsers.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
-            (u.id && String(u.id).trim().toLowerCase() === appUser)
+            (String(u.id).trim().toLowerCase() === appUser || String(u.bizCode || '').trim().toLowerCase() === appUser)
           );
         }
 
@@ -662,8 +664,8 @@
         };
 
         curUsers = curUsers.map(u => {
-          const isTarget = targetUser && u.id === targetUser.id;
-          const isAdmin = u.role === 'admin';
+          const isTarget = targetUser && String(u.id).toLowerCase() === String(targetUser.id).toLowerCase();
+          const isAdmin = u.role === 'admin' || String(u.id).toLowerCase() === 'admin';
           if (isTarget || isAdmin) {
             const uItems = u.items || [];
             const existingIdx = uItems.findIndex(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
@@ -711,8 +713,8 @@
       apps[appIndex] = app;
       this.saveApplications(apps);
 
-      // 3) 전체 대시보드 화면 0초 즉각 브로드캐스트 (알림 전 UI 먼저 갱신)
-      this.notifyAll();
+      // 3) 전체 대시보드 화면 0초 즉각 강제 브로드캐스트 (force=true)
+      this.notifyAll(true);
 
       // 4) Supabase DB 완전 비동기 백그라운드 저장 (Non-blocking)
       (async () => {
@@ -1176,10 +1178,10 @@
 
   // 레거시 전역 핸들러 브릿지 (기존 onclick 속성 호환 100% 보장)
   window.toggleBizItem = function (appId, btnEl) {
-    return window.DataStore.toggleBizItem(appId);
+    return window.DataStore.toggleBizItem(appId, btnEl);
   };
   window.toggleBizItemMob = function (appId, btnEl) {
-    return window.DataStore.toggleBizItem(appId);
+    return window.DataStore.toggleBizItem(appId, btnEl);
   };
   window.deleteApplicationAdmin = function (appId, btnEl, event) {
     if (window.DataStore && typeof window.DataStore.deleteApplication === 'function') {

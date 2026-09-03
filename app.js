@@ -81,8 +81,8 @@ window.deleteUserAdminMob = function (uid, btnEl, event) {
 };
 
 window.toggleBizItemMob = function (appId, btnEl) {
-    if (window.DataStore) {
-        const res = window.DataStore.toggleBizItem(appId);
+    if (window.DataStore && typeof window.DataStore.toggleBizItem === 'function') {
+        const res = window.DataStore.toggleBizItem(appId, btnEl);
         if (typeof window.renderAdminDashboardMob === 'function') {
             window.renderAdminDashboardMob(true);
         }
