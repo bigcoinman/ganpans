@@ -1599,21 +1599,6 @@ window.SupabaseSync = {
           this.upsertUser(adminUser).catch(() => {});
         }
 
-        // 로컬에 등록된 신규/신청 회원(users)이 Supabase와 동기화 전 유실되지 않도록 완벽 병합 및 자동 업로드
-        const localUsers = JSON.parse(localStorage.getItem('users')) || [];
-        for (const lu of localUsers) {
-          if (lu && lu.id && lu.role !== 'deleted') {
-            const luId = String(lu.id).toLowerCase();
-            const luPhone = String(lu.phone || '').replace(/[^0-9]/g, '');
-            if (!deletedIds.includes(luId) && (!luPhone || !deletedIds.includes(luPhone))) {
-              if (!freshUsers.some(fu => String(fu.id).toLowerCase() === luId)) {
-                freshUsers.push(lu);
-                this.upsertUser(lu).catch(() => {});
-              }
-            }
-          }
-        }
-
         const newUsersStr = JSON.stringify(freshUsers);
         if (oldUsersStr !== newUsersStr) {
           localStorage.setItem('users', newUsersStr);
@@ -1670,7 +1655,7 @@ window.SupabaseSync = {
             const appObj = this.mapDbToApp(sa);
             const localApp = localApps.find(la => String(la.id) === String(appObj.id));
             if (localApp) {
-              // 로컬 캐시된 고용량 사진이 있으면 유실되지 않도록 완벽 보존
+              // 로컬 캐시된 고용량 사진이 있으면 유실되지 않도록 보존
               if (localApp.photos && localApp.photos.length > 0 && (!appObj.photos || appObj.photos.length === 0)) {
                 appObj.photos = localApp.photos;
                 appObj.fileData = localApp.fileData || localApp.photos[0];
@@ -1701,17 +1686,6 @@ window.SupabaseSync = {
             return appObj;
           })
           .filter(a => a && a.id);
-
-        // 로컬에 등록된 신규 신청서(applications)가 Supabase 동기화 전 유실되지 않도록 완벽 보존 및 자동 업로드
-        const deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
-        for (const la of localApps) {
-          if (la && la.id && !deletedAppIds.includes(String(la.id))) {
-            if (!freshApps.some(fa => String(fa.id) === String(la.id))) {
-              freshApps.push(la);
-              this.upsertApplication(la).catch(() => {});
-            }
-          }
-        }
 
         const newAppsStr = JSON.stringify(freshApps);
         if (oldAppsStr !== newAppsStr) {
