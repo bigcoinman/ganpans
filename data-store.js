@@ -617,11 +617,20 @@
       let usersToSync = [];
 
       if (isNowBizItem) {
-        // 영업물건 등록: 담당 영업자 1명 특정 (다각도 정밀 매칭)
+        // 영업물건 등록: 담당 영업자 1명 특정 (3+1 원칙 적용)
         let targetUser = null;
         const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
         const appUser = String(app.userId || '').trim().toLowerCase();
         const appIdStr = String(app.id || '').trim().toLowerCase();
+
+        // 1. 신청번호 앞자리 접두사 (예: B-260903-001 -> B-260903)
+        let prefixCode = '';
+        if (appIdStr.includes('-')) {
+          const parts = appIdStr.split('-');
+          if (parts.length >= 2) {
+            prefixCode = parts.slice(0, -1).join('-').toLowerCase();
+          }
+        }
 
         if (refCode) {
           targetUser = curUsers.find(u =>
@@ -632,10 +641,10 @@
               (u.phone && String(u.phone).replace(/[^0-9]/g, '') === refCode.replace(/[^0-9]/g, '')))
           );
         }
-        if (!targetUser && appIdStr) {
+        if (!targetUser && prefixCode) {
           targetUser = curUsers.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
-            u.bizCode && appIdStr.startsWith(String(u.bizCode).trim().toLowerCase() + '-')
+            u.bizCode && String(u.bizCode).trim().toLowerCase() === prefixCode
           );
         }
         if (!targetUser && appUser) {
@@ -683,24 +692,13 @@
           return u;
         });
       } else {
-        // 영업물건 해제
-        const targetStore = (app.storeName || app.shopName || app.name || '').trim().toLowerCase();
-        const targetOwner = (app.ownerName || '').trim().toLowerCase();
-        const targetPhone = (app.ownerPhone || app.phone || '').replace(/[^0-9]/g, '');
-
+        // 영업물건 해제: users.items에서 해당 appId 및 appRefId 완전 제거
         curUsers = curUsers.map(u => {
           if (u.items && u.items.length > 0) {
             const filteredItems = u.items.filter(it => {
-              const matchId = String(it.id) === String(app.id);
-              const matchAppRef = String(it.appRefId) === String(app.id);
-              const itName = (it.name || it.storeName || '').trim().toLowerCase();
-              const matchStore = targetStore && itName && (itName === targetStore || itName.includes(targetStore) || targetStore.includes(itName));
-              const matchOwner = targetOwner && it.ownerName && it.ownerName.trim().toLowerCase() === targetOwner;
-              const itPhone = (it.phone || it.ownerPhone || '').replace(/[^0-9]/g, '');
-              const matchPhone = targetPhone && itPhone && (itPhone === targetPhone || targetPhone.includes(itPhone) || itPhone.includes(targetPhone));
-
-              const isMatch = matchId || matchAppRef || (matchStore && (matchOwner || matchPhone));
-              return !isMatch;
+              const matchId = String(it.id).trim().toLowerCase() === String(app.id).trim().toLowerCase();
+              const matchAppRef = String(it.appRefId || '').trim().toLowerCase() === String(app.id).trim().toLowerCase();
+              return !matchId && !matchAppRef;
             });
             if (filteredItems.length !== u.items.length) {
               usersToSync.push({ id: u.id, items: filteredItems });
@@ -741,10 +739,14 @@
 
       // 5) 즉시 알림 표시 (0초 반응)
       const storeLabel = app.storeName || app.ownerName || '해당';
-      if (isNowBizItem) {
-        alert('[' + storeLabel + '] 건이 영업물건으로 변경되었습니다.\n공단/진흥원 접수 및 담당 영업자 대시보드로 실시간 연동됩니다.');
+      const msg = isNowBizItem 
+        ? `[${storeLabel}] 건이 영업물건으로 변경되었습니다.\n공단/진흥원 접수 및 담당 영업자 대시보드로 실시간 연동됩니다.`
+        : `[${storeLabel}] 건의 영업물건 등록이 해제되었습니다.\n영업물건 진행상황 및 영업자 대시보드에서 즉시 제외됩니다.`;
+
+      if (typeof window.showToast === 'function') {
+        window.showToast(msg);
       } else {
-        alert('[' + storeLabel + '] 건의 영업물건 등록이 해제되었습니다.\n영업물건 진행상황 및 영업자 대시보드에서 즉시 제외됩니다.');
+        alert(msg);
       }
 
       return { success: true, isBizItem: isNowBizItem };

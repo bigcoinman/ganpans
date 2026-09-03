@@ -3078,11 +3078,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // 2. [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
       if (isAlreadyInBizItems) {
         actionButtons += `
-          <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="window.toggleBizItem('${app.id}', this); return false;" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; height: 30px;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
+          <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="event.stopPropagation(); event.preventDefault(); window.toggleBizItem('${app.id}', this); return false;" ontouchstart="event.stopPropagation();" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; height: 30px; touch-action: manipulation;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
         `;
       } else {
         actionButtons += `
-          <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="window.toggleBizItem('${app.id}', this); return false;" style="padding: 5px 10px; font-size: 0.75rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="클릭 시 영업물건(진흥원 접수)으로 이동/등록"><i class="fa-solid fa-toggle-off"></i> 영업물건으로 변경</button>
+          <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="event.stopPropagation(); event.preventDefault(); window.toggleBizItem('${app.id}', this); return false;" ontouchstart="event.stopPropagation();" style="padding: 5px 10px; font-size: 0.75rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px; touch-action: manipulation;" title="클릭 시 영업물건(진흥원 접수)으로 이동/등록"><i class="fa-solid fa-toggle-off"></i> 영업물건으로 변경</button>
         `;
       }
       
