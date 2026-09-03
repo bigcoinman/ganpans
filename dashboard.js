@@ -2417,45 +2417,57 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   window.exportAllInquiriesToExcel = exportAllInquiriesToExcel;
 
-  const approveUserConversion = (uid) => {
-    if (activeUser.role !== 'admin') return;
+  const approveUserConversion = async (uid) => {
+    const curAdmin = (typeof getActiveUser === 'function' ? getActiveUser() : null) || activeUser;
+    if (!curAdmin || curAdmin.role !== 'admin') {
+      alert('최고관리자만 전환 승인을 처리할 수 있습니다.');
+      return;
+    }
     
-    const targetUser = users.find(u => u.id === uid);
-    if (!targetUser) return;
+    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || []);
+
+    const targetUser = curUsers.find(u => u && String(u.id).toLowerCase() === String(uid).toLowerCase());
+    if (!targetUser) {
+      alert('승인 대상 회원을 찾을 수 없습니다.');
+      return;
+    }
     
-    if (targetUser.conversionStatus === 'pending_constructor') {
-      const code = generateConstCode(users);
-      users = users.map(u => {
-        if (u.id === uid) {
+    if (targetUser.conversionStatus === 'pending_constructor' || targetUser.pendingRole === 'constructor') {
+      const code = (typeof generateConstCode === 'function') ? generateConstCode(curUsers) : ('C-' + Math.floor(1000 + Math.random() * 9000));
+      curUsers = curUsers.map(u => {
+        if (String(u.id).toLowerCase() === String(uid).toLowerCase()) {
           return {
             ...u,
             role: 'constructor',
             constCode: code,
-            businessName: u.pendingBusinessName || '(주)새로운시공',
-            licenseNumber: u.pendingLicenseNumber || '000-00-00000',
+            businessName: u.pendingBusinessName || u.bizName || '(주)새로운시공',
+            licenseNumber: u.pendingLicenseNumber || u.bizNumber || '000-00-00000',
             conversionStatus: 'approved'
           };
         }
         return u;
       });
-      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('users', JSON.stringify(curUsers));
+      users = curUsers;
 
       // Supabase Sync
       if (window.SupabaseSync) {
-        window.SupabaseSync.updateUser(uid, {
+        window.SupabaseSync.updateUser(targetUser.id, {
           role: 'constructor',
           const_code: code,
-          pending_business_name: targetUser.pendingBusinessName || '(주)새로운시공',
-          pending_license_number: targetUser.pendingLicenseNumber || '000-00-00000',
+          pending_business_name: targetUser.pendingBusinessName || targetUser.bizName || '(주)새로운시공',
+          pending_license_number: targetUser.pendingLicenseNumber || targetUser.bizNumber || '000-00-00000',
           conversion_status: 'approved'
         });
       }
 
-      alert(`시공업체 전환 신청이 승인되었습니다.\n\n발급된 시공업체 코드: [${code}]`);
+      alert(`시공업체 전환 신청이 승인되었습니다!\n\n발급된 시공업체 코드: [${code}]`);
     } else {
-      const code = generateBizCode(users);
-      users = users.map(u => {
-        if (u.id === uid) {
+      const code = (typeof generateBizCode === 'function') ? generateBizCode(curUsers) : ('B-' + Math.floor(1000 + Math.random() * 9000));
+      curUsers = curUsers.map(u => {
+        if (String(u.id).toLowerCase() === String(uid).toLowerCase()) {
           return {
             ...u,
             role: 'business',
@@ -2465,28 +2477,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return u;
       });
-      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('users', JSON.stringify(curUsers));
+      users = curUsers;
 
       // Supabase Sync
       if (window.SupabaseSync) {
-        window.SupabaseSync.updateUser(uid, {
+        window.SupabaseSync.updateUser(targetUser.id, {
           role: 'business',
           biz_code: code,
           conversion_status: 'approved'
         });
       }
 
-      alert(`영업자 전환 신청이 승인되었습니다.\n\n발급된 영업자 코드: [${code}]`);
+      alert(`영업자 전환 신청이 승인되었습니다!\n\n발급된 영업자 코드: [${code}]`);
     }
-    updateSessionUI();
+
+    if (typeof updateSessionUI === 'function') updateSessionUI();
+    if (typeof renderManagerPanel === 'function') renderManagerPanel();
+    if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob();
+    window.dispatchEvent(new CustomEvent('supabase-data-synced'));
   };
   window.approveUserConversion = approveUserConversion;
 
-  const rejectUserConversion = (uid) => {
-    if (activeUser.role !== 'admin') return;
-    users = users.map(u => {
-      if (u.id === uid) {
-        const cleanUser = { ...u, conversionStatus: 'none' };
+  const rejectUserConversion = async (uid) => {
+    const curAdmin = (typeof getActiveUser === 'function' ? getActiveUser() : null) || activeUser;
+    if (!curAdmin || curAdmin.role !== 'admin') {
+      alert('최고관리자만 처리가 가능합니다.');
+      return;
+    }
+    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || []);
+
+    const targetUser = curUsers.find(u => u && String(u.id).toLowerCase() === String(uid).toLowerCase());
+    if (!targetUser) return;
+
+    curUsers = curUsers.map(u => {
+      if (String(u.id).toLowerCase() === String(uid).toLowerCase()) {
+        const cleanUser = { ...u, conversionStatus: 'rejected' };
         if ('pendingBusinessName' in cleanUser) delete cleanUser.pendingBusinessName;
         if ('pendingLicenseNumber' in cleanUser) delete cleanUser.pendingLicenseNumber;
         return cleanUser;
@@ -2494,16 +2522,20 @@ document.addEventListener('DOMContentLoaded', () => {
       return u;
     });
 
-    localStorage.setItem('users', JSON.stringify(users));
+    localStorage.setItem('users', JSON.stringify(curUsers));
+    users = curUsers;
 
     if (window.SupabaseSync) {
-      window.SupabaseSync.updateUser(uid, {
-        conversion_status: 'none'
+      window.SupabaseSync.updateUser(targetUser.id, {
+        conversion_status: 'rejected'
       });
     }
 
     alert('전환 신청이 반려되었습니다.');
-    updateSessionUI();
+    if (typeof updateSessionUI === 'function') updateSessionUI();
+    if (typeof renderManagerPanel === 'function') renderManagerPanel();
+    if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob();
+    window.dispatchEvent(new CustomEvent('supabase-data-synced'));
   };
   window.rejectUserConversion = rejectUserConversion;
 
