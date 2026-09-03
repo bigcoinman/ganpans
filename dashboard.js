@@ -1535,12 +1535,57 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 영업 물건 엑셀 다운로드 이벤트 바인딩
+  // 0. 전체 회원 명부 엑셀 다운로드 이벤트 바인딩
+  const btnExportAllUsersExcel = document.getElementById('btn-export-all-users-excel');
+  if (btnExportAllUsersExcel) {
+    btnExportAllUsersExcel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportAllUsersToExcel();
+    });
+  }
+
+  // 1. 영업자/시공사 등급 전환 신청 엑셀 다운로드 이벤트 바인딩
+  const btnExportConversionsExcel = document.getElementById('btn-export-conversions-excel');
+  if (btnExportConversionsExcel) {
+    btnExportConversionsExcel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportConversionsToExcel();
+    });
+  }
+
+  // 2. 영업 물건 엑셀 다운로드 이벤트 바인딩
   const btnExportManagerItemsExcel = document.getElementById('btn-export-manager-items-excel');
   if (btnExportManagerItemsExcel) {
     btnExportManagerItemsExcel.addEventListener('click', (e) => {
       e.stopPropagation();
       exportManagerItemsToExcel();
+    });
+  }
+
+  // 3. 전체 신청서 목록 엑셀 다운로드 이벤트 바인딩
+  const btnExportAllAppsExcel = document.getElementById('btn-export-all-apps-excel');
+  if (btnExportAllAppsExcel) {
+    btnExportAllAppsExcel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportAllApplicationsToExcel();
+    });
+  }
+
+  // 4. 시공업체 진행현황 엑셀 다운로드 이벤트 바인딩
+  const btnExportConstructorPanelExcel = document.getElementById('btn-export-constructor-panel-excel');
+  if (btnExportConstructorPanelExcel) {
+    btnExportConstructorPanelExcel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportConstructorPanelToExcel();
+    });
+  }
+
+  // 5. 3초 간편 문의 목록 엑셀 다운로드 이벤트 바인딩
+  const btnExportAllInquiriesExcel = document.getElementById('btn-export-all-inquiries-excel');
+  if (btnExportAllInquiriesExcel) {
+    btnExportAllInquiriesExcel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportAllInquiriesToExcel();
     });
   }
 
@@ -1956,10 +2001,161 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   window.deleteManagerItem = deleteManagerItem;
 
-  // --- 영업 물건 목록 엑셀(CSV) 다운로드 기능 ---
+  // --- 공통 엑셀(CSV with UTF-8 BOM) 다운로드 유틸리티 ---
+  const downloadCsvFile = (filename, headers, rowsData) => {
+    const escapeCsv = (str) => {
+      if (str === null || str === undefined) return '""';
+      const s = String(str).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+    const rows = rowsData.map(r => r.map(escapeCsv).join(','));
+    const csvContent = '\uFEFF' + [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+  window.downloadCsvFile = downloadCsvFile;
+
+  // 0. 전체 회원 명부 엑셀(CSV) 다운로드
+  const exportAllUsersToExcel = () => {
+    const curAct = (typeof getActiveUser === 'function' ? getActiveUser() : null) || activeUser;
+    if (!curAct || curAct.role !== 'admin') {
+      alert('최고관리자만 전체 회원 명부를 다운로드할 수 있습니다.');
+      return;
+    }
+    const allUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || []);
+
+    if (!allUsers || allUsers.length === 0) {
+      alert('다운로드할 회원 데이터가 없습니다.');
+      return;
+    }
+
+    const headers = [
+      '번호',
+      '아이디(ID)',
+      '성명/대표자',
+      '연락처',
+      '이메일',
+      '등록주소',
+      '회원구분',
+      '영업자코드',
+      '시공사코드',
+      '전환상태',
+      '가입일시'
+    ];
+
+    const sortedUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(allUsers) : allUsers;
+    const rows = sortedUsers.map((u, idx) => {
+      let roleLabel = '일반회원';
+      if (u.role === 'admin') roleLabel = '최고관리자';
+      else if (u.role === 'business') roleLabel = '영업자';
+      else if (u.role === 'constructor') roleLabel = '시공사';
+
+      let convLabel = '해당없음';
+      if (u.conversionStatus === 'pending_business') convLabel = '영업자 승인대기';
+      else if (u.conversionStatus === 'pending_constructor') convLabel = '시공사 승인대기';
+      else if (u.conversionStatus === 'approved') convLabel = '승인완료';
+      else if (u.conversionStatus === 'rejected') convLabel = '승인반려';
+
+      const joinDate = u.createdAt || u.created_at || '-';
+
+      return [
+        String(idx + 1),
+        u.id || '-',
+        u.name || '-',
+        u.phone || '-',
+        u.email || '-',
+        u.address || '-',
+        roleLabel,
+        u.bizCode || '-',
+        u.constCode || '-',
+        convLabel,
+        joinDate
+      ];
+    });
+
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const ymd = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+    downloadCsvFile(`간판지원단_전체회원명부_${ymd}.csv`, headers, rows);
+  };
+  window.exportAllUsersToExcel = exportAllUsersToExcel;
+
+  // 1. 영업자/시공사 등급 전환 신청 엑셀(CSV) 다운로드
+  const exportConversionsToExcel = () => {
+    const curAct = (typeof getActiveUser === 'function' ? getActiveUser() : null) || activeUser;
+    if (!curAct || curAct.role !== 'admin') {
+      alert('최고관리자만 전환 신청 대장을 다운로드할 수 있습니다.');
+      return;
+    }
+    const allUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || []);
+
+    const convUsers = allUsers.filter(u => u && u.conversionStatus && u.conversionStatus !== 'none');
+
+    if (!convUsers || convUsers.length === 0) {
+      alert('다운로드할 등급 전환 신청 내역이 없습니다.');
+      return;
+    }
+
+    const headers = [
+      '번호',
+      '아이디(ID)',
+      '성명/대표자',
+      '연락처',
+      '신청구분',
+      '상호명/법인명',
+      '사업자등록번호',
+      '가입일시',
+      '승인상태'
+    ];
+
+    const sorted = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(convUsers) : convUsers;
+    const rows = sorted.map((u, idx) => {
+      let reqRole = '영업자 전환';
+      if (u.conversionStatus.includes('constructor') || u.pendingRole === 'constructor') {
+        reqRole = '시공사 전환';
+      }
+
+      let statusLabel = '대기중';
+      if (u.conversionStatus === 'approved') statusLabel = '승인완료';
+      else if (u.conversionStatus === 'rejected') statusLabel = '승인반려';
+      else statusLabel = '심사대기';
+
+      return [
+        String(idx + 1),
+        u.id || '-',
+        u.name || '-',
+        u.phone || '-',
+        reqRole,
+        u.pendingBusinessName || u.bizName || '-',
+        u.pendingLicenseNumber || u.bizNumber || '-',
+        u.createdAt || u.created_at || '-',
+        statusLabel
+      ];
+    });
+
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const ymd = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+    downloadCsvFile(`간판지원단_등급전환신청대장_${ymd}.csv`, headers, rows);
+  };
+  window.exportConversionsToExcel = exportConversionsToExcel;
+
+  // 2. 영업 물건 전체 목록 엑셀(CSV) 다운로드
   const exportManagerItemsToExcel = () => {
-    if (!activeUser || activeUser.role !== 'admin') {
-      alert('최고 관리자만 데이터를 다운로드할 수 있습니다.');
+    const curAct = (typeof getActiveUser === 'function' ? getActiveUser() : null) || activeUser;
+    if (!curAct || curAct.role !== 'admin') {
+      alert('최고관리자만 데이터를 다운로드할 수 있습니다.');
       return;
     }
 
@@ -1972,28 +2168,26 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // CSV Headers
     const headers = [
-      '신청일자',
+      '번호',
       '물건번호(ID)',
+      '접수일자',
       '상호명',
       '설치주소',
       '연락처',
       '담당영업자',
-      '영업자코드/아이디',
+      '영업자코드',
       '접수상태',
       '진행상태',
       '배정시공사',
       '현장사진유무'
     ];
 
-    const escapeCsv = (str) => {
-      if (str === null || str === undefined) return '""';
-      const s = String(str).replace(/"/g, '""');
-      return `"${s}"`;
-    };
+    const curApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
 
-    const rows = allBusinessItems.map(({ user: u, item }) => {
+    const rows = allBusinessItems.map(({ user: u, item }, idx) => {
       const matchingApp = curApps.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
       const rawDate = item.createdAt || item.registeredAt || item.appliedAt || item.date || (matchingApp ? (matchingApp.appliedAt || matchingApp.createdAt) : '') || '';
       let dateText = '-';
@@ -2011,45 +2205,217 @@ document.addEventListener('DOMContentLoaded', () => {
       const itemName = item.name || (matchingApp ? matchingApp.storeName : '') || '-';
       const itemAddr = item.address || (matchingApp ? matchingApp.storeAddress : '') || '-';
       const itemPhone = item.phone || (matchingApp ? (matchingApp.ownerPhone || '') : '') || '-';
-      const userName = u.name || '-';
-      const userCode = u.bizCode || u.id || '-';
+      const userName = u ? (u.name || '-') : '-';
+      const userCode = u ? (u.bizCode || u.id || '-') : '-';
       const receiptStatus = item.receiptStatus || '접수예정';
       const progressStatus = item.progressStatus || '지원대기중';
       const constructorName = item.assignedConstructorName || (item.assignedConstructorId ? item.assignedConstructorId : '-');
       const hasPhoto = (item.photos && item.photos.length > 0) || item.fileData || (matchingApp && (matchingApp.fileData || (matchingApp.photos && matchingApp.photos.length > 0))) ? '등록됨' : '미등록';
 
       return [
-        escapeCsv(dateText),
-        escapeCsv(itemId),
-        escapeCsv(itemName),
-        escapeCsv(itemAddr),
-        escapeCsv(itemPhone),
-        escapeCsv(userName),
-        escapeCsv(userCode),
-        escapeCsv(receiptStatus),
-        escapeCsv(progressStatus),
-        escapeCsv(constructorName),
-        escapeCsv(hasPhoto)
-      ].join(',');
+        String(idx + 1),
+        itemId,
+        dateText,
+        itemName,
+        itemAddr,
+        itemPhone,
+        userName,
+        userCode,
+        receiptStatus,
+        progressStatus,
+        constructorName,
+        hasPhoto
+      ];
     });
-
-    const csvContent = '\uFEFF' + [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
 
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
     const ymd = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
-
-    link.setAttribute('href', url);
-    link.setAttribute('download', `간판지원단_영업물건_진행목록_${ymd}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadCsvFile(`간판지원단_영업물건_진행목록_${ymd}.csv`, headers, rows);
   };
   window.exportManagerItemsToExcel = exportManagerItemsToExcel;
+
+  // 3. 전체 지원 신청서 목록 엑셀(CSV) 다운로드
+  const exportAllApplicationsToExcel = () => {
+    const curAct = (typeof getActiveUser === 'function' ? getActiveUser() : null) || activeUser;
+    if (!curAct || curAct.role !== 'admin') {
+      alert('최고관리자만 신청서 목록을 다운로드할 수 있습니다.');
+      return;
+    }
+
+    const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
+
+    if (!apps || apps.length === 0) {
+      alert('다운로드할 지원 신청서 데이터가 없습니다.');
+      return;
+    }
+
+    const headers = [
+      '번호',
+      '접수번호(ID)',
+      '신청일시',
+      '신청자(점주)',
+      '연락처',
+      '상호명',
+      '설치주소',
+      '간판종류',
+      '추천인/영업코드',
+      '심사상태',
+      '영업물건여부',
+      '현장사진유무',
+      '배정시공사'
+    ];
+
+    const sortedApps = typeof sortApplicationsLatestFirst === 'function' ? sortApplicationsLatestFirst(apps) : apps;
+    const rows = sortedApps.map((a, idx) => {
+      let statusText = '심사 대기';
+      if (a.status === 'approved' || a.status === '서류제출 & 접수예정') statusText = '서류제출 & 접수예정';
+      else if (a.status === 'rejected' || a.status === '지원사업 탈락') statusText = '지원사업 탈락';
+      else if (a.status === 'giveup' || a.status === '지원사업 포기') statusText = '지원사업 포기';
+
+      const isBizText = a.isBizItem ? '공단접수물건' : '일반신청';
+      const hasPhotoText = (a.photos && a.photos.length > 0) || a.fileData || a.fileName ? '등록됨' : '미등록';
+      const constText = a.assignedConstructorName || (a.assignedConstructorId ? a.assignedConstructorId : '-');
+
+      return [
+        String(idx + 1),
+        String(a.id || '-'),
+        a.appliedAt || a.created_at || '-',
+        a.ownerName || '-',
+        a.ownerPhone || a.phone || '-',
+        a.storeName || '-',
+        a.storeAddress || '-',
+        a.signType || '-',
+        a.referrerCode || '본사직접',
+        statusText,
+        isBizText,
+        hasPhotoText,
+        constText
+      ];
+    });
+
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const ymd = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+    downloadCsvFile(`간판지원단_전체신청서목록_${ymd}.csv`, headers, rows);
+  };
+  window.exportAllApplicationsToExcel = exportAllApplicationsToExcel;
+
+  // 4. 시공업체 진행현황 전체 엑셀(CSV) 다운로드
+  const exportConstructorPanelToExcel = () => {
+    const curAct = (typeof getActiveUser === 'function' ? getActiveUser() : null) || activeUser;
+    if (!curAct || curAct.role !== 'admin') {
+      alert('최고관리자만 시공 진행 대장을 다운로드할 수 있습니다.');
+      return;
+    }
+
+    const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
+
+    const assignedApps = apps.filter(a => a && (a.assignedConstructorId || a.assignedConstructorName));
+
+    if (!assignedApps || assignedApps.length === 0) {
+      alert('다운로드할 시공 배정 물건 데이터가 없습니다.');
+      return;
+    }
+
+    const headers = [
+      '번호',
+      '물건번호(ID)',
+      '배정/접수일',
+      '배정시공사',
+      '상호명',
+      '점포주소',
+      '점주연락처',
+      '간판종류',
+      '시공진행상태',
+      '현장사진수',
+      '시공완료사진유무'
+    ];
+
+    const sorted = typeof sortApplicationsLatestFirst === 'function' ? sortApplicationsLatestFirst(assignedApps) : assignedApps;
+    const rows = sorted.map((a, idx) => {
+      const constName = a.assignedConstructorName || a.assignedConstructorId || '-';
+      const pCount = (Array.isArray(a.photos) ? a.photos.length : (a.fileData ? 1 : (a.photosCount || 0)));
+      const hasAfterPhoto = (Array.isArray(a.constructionPhotos) && a.constructionPhotos.length > 0) ? '완료사진등록됨' : '미등록';
+
+      return [
+        String(idx + 1),
+        String(a.id || '-'),
+        a.appliedAt || a.created_at || '-',
+        constName,
+        a.storeName || '-',
+        a.storeAddress || '-',
+        a.ownerPhone || a.phone || '-',
+        a.signType || '-',
+        a.constructionStatus || '시공준비중',
+        `${pCount}장`,
+        hasAfterPhoto
+      ];
+    });
+
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const ymd = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+    downloadCsvFile(`간판지원단_시공업체진행현황대장_${ymd}.csv`, headers, rows);
+  };
+  window.exportConstructorPanelToExcel = exportConstructorPanelToExcel;
+
+  // 5. 3초 간편 문의 목록 전체 엑셀(CSV) 다운로드
+  const exportAllInquiriesToExcel = () => {
+    const curAct = (typeof getActiveUser === 'function' ? getActiveUser() : null) || activeUser;
+    if (!curAct || curAct.role !== 'admin') {
+      alert('최고관리자만 간편 문의 대장을 다운로드할 수 있습니다.');
+      return;
+    }
+
+    const inquiries = (window.DataStore && typeof window.DataStore.getInquiries === 'function')
+      ? window.DataStore.getInquiries()
+      : (JSON.parse(localStorage.getItem('inquiries')) || []);
+
+    if (!inquiries || inquiries.length === 0) {
+      alert('다운로드할 간편 문의 데이터가 없습니다.');
+      return;
+    }
+
+    const headers = [
+      '번호',
+      '문의번호(ID)',
+      '접수일시',
+      '문의자성명',
+      '연락처',
+      '문의유형',
+      '문의내용/지역',
+      '처리상태'
+    ];
+
+    const sorted = [...inquiries].reverse();
+    const rows = sorted.map((inq, idx) => {
+      let statusText = '대기중';
+      if (inq.status === 'completed' || inq.status === '답변완료') statusText = '답변완료';
+      else if (inq.status === 'processing' || inq.status === '처리중') statusText = '처리중';
+
+      return [
+        String(idx + 1),
+        String(inq.id || '-'),
+        inq.submittedAt || inq.created_at || inq.createdAt || '-',
+        inq.name || '-',
+        inq.phone || '-',
+        inq.type || inq.category || '간판지원상담',
+        inq.message || inq.content || inq.region || '-',
+        statusText
+      ];
+    });
+
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const ymd = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+    downloadCsvFile(`간판지원단_3초간편문의대장_${ymd}.csv`, headers, rows);
+  };
+  window.exportAllInquiriesToExcel = exportAllInquiriesToExcel;
 
   const approveUserConversion = (uid) => {
     if (activeUser.role !== 'admin') return;
