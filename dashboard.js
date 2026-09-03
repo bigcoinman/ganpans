@@ -3068,15 +3068,8 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
-      // 영업물건(진흥원 접수 건) 등록 여부 정밀 확인: app.isBizItem 이거나 users.items에 이미 존재하는 경우
-      const isAlreadyInBizItems = Boolean(
-        app.isBizItem ||
-        curUsersList.some(u => (u.items || []).some(it => 
-          String(it.id) === String(app.id) || 
-          String(it.appRefId) === String(app.id) ||
-          (it.name && (String(it.name).trim() === String(app.storeName || '').trim() || String(it.name).trim() === String(app.shopName || '').trim()))
-        ))
-      );
+      // 영업물건(진흥원 접수 건) 등록 여부: app.isBizItem SSOT 기준 단일화
+      const isAlreadyInBizItems = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
 
       // 2. [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
       if (isAlreadyInBizItems) {
