@@ -3656,6 +3656,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.renderAdminDashboardMob = renderAdminDashboardMob;
     window.renderStatusTab = renderStatusTab;
+    window.renderBusinessDashboardMob = renderBusinessDashboardMob;
+    window.renderConstructorDashboardMob = renderConstructorDashboardMob;
+    window.renderUserApplicationsMob = renderUserApplicationsMob;
+    window.renderBizRegisteredItemsMob = renderBizRegisteredItemsMob;
 
 
 
@@ -3680,7 +3684,10 @@ document.addEventListener('DOMContentLoaded', () => {
         renderStatusTab();
     }
 
-    const updateApplicationStatusMob = (id, newStatus) => {
+    const updateApplicationStatusMob = (id, newStatus, selectEl) => {
+        if (selectEl && typeof selectEl.blur === 'function') {
+            selectEl.blur();
+        }
         let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') 
             ? window.DataStore.getApplications() 
             : (JSON.parse(localStorage.getItem('applications')) || []);
@@ -3751,13 +3758,15 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(msg);
         }
 
-        // 전역 0초 동시 연동 브로드캐스트 발화 (6대 화면 실시간 동기화)
+        // 전역 0초 즉각 렌더링
+        if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob(true);
+        if (typeof renderStatusTab === 'function') renderStatusTab();
+        if (typeof renderBusinessDashboardMob === 'function') renderBusinessDashboardMob();
+        if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
+        if (typeof renderBizRegisteredItemsMob === 'function') renderBizRegisteredItemsMob();
         if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
             window.DataStore.notifyAll(true);
         }
-        if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob(true);
-        if (typeof renderStatusTab === 'function') renderStatusTab();
-        window.dispatchEvent(new CustomEvent('supabase-data-synced', { detail: { targetApp } }));
 
         // 3) Supabase DB 백그라운드 비동기 영구 저장 (Non-blocking)
         (async () => {

@@ -3948,7 +3948,10 @@ document.addEventListener('DOMContentLoaded', () => {
     fileInput.click();
   };
 
-  const updateApplicationStatus = (id, newStatus) => {
+  const updateApplicationStatus = (id, newStatus, selectEl) => {
+    if (selectEl && typeof selectEl.blur === 'function') {
+      selectEl.blur();
+    }
     let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') 
       ? window.DataStore.getApplications() 
       : (JSON.parse(localStorage.getItem('applications')) || []);
@@ -4019,13 +4022,14 @@ document.addEventListener('DOMContentLoaded', () => {
       alert(msg);
     }
 
-    // 전역 0초 동시 연동 브로드캐스트 발화 (6대 화면 실시간 동기화)
+    // 전역 0초 즉각 렌더링
+    if (typeof renderApplicationsList === 'function') renderApplicationsList();
+    if (typeof renderManagerPanel === 'function') renderManagerPanel();
+    if (typeof renderBizRegisteredTable === 'function') renderBizRegisteredTable();
+    if (typeof renderAdminStats === 'function') renderAdminStats();
     if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
       window.DataStore.notifyAll(true);
     }
-    if (typeof renderApplicationsList === 'function') renderApplicationsList();
-    if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob(true);
-    window.dispatchEvent(new CustomEvent('supabase-data-synced', { detail: { targetApp } }));
 
     // 3) Supabase DB 백그라운드 비동기 영구 저장 (Non-blocking)
     (async () => {
@@ -4061,6 +4065,15 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
   };
   window.updateApplicationStatus = updateApplicationStatus;
+  window.renderApplicationsList = renderApplicationsList;
+  window.renderManagerPanel = renderManagerPanel;
+  window.renderBizRegisteredTable = renderBizRegisteredTable;
+  window.renderManagerConstProgress = renderManagerConstProgress;
+  window.renderInquiriesList = renderInquiriesList;
+  window.renderAllUsersList = renderAllUsersList;
+  window.renderAdminStats = renderAdminStats;
+  window.renderUserApplicationsList = renderUserApplicationsList;
+  window.updateSessionUI = updateSessionUI;
 
   const deleteApplication = (id) => {
     if (!confirm('정말로 이 지원 신청 접수 건을 삭제하시겠습니까?')) return;
