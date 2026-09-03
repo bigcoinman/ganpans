@@ -3,6 +3,59 @@
  * 보안 강화를 위한 공통 암호화 및 인코딩 유틸리티
  */
 
+// --- 0. 레거시 캐시 및 블랙리스트 찌꺼기 자동 원천 소각 (Auto-Purge Legacy Junk) ---
+(function purgeLegacyJunk() {
+  try {
+    const junkKeys = [
+      'deleted_user_ids',
+      'deleted_application_ids',
+      'deleted_biz_item_ids',
+      'deleted_inquiry_ids',
+      'inquiries_purged_flag'
+    ];
+    junkKeys.forEach(k => {
+      try { localStorage.removeItem(k); } catch(e) {}
+    });
+  } catch(e) {}
+})();
+
+// 최고관리자 전용: 데이터 찌꺼기 완전 청소 및 DB 순수 동기화 함수
+window.purgeAndResyncData = async function(showAlert = true) {
+  try {
+    const junkKeys = [
+      'deleted_user_ids',
+      'deleted_application_ids',
+      'deleted_biz_item_ids',
+      'deleted_inquiry_ids',
+      'inquiries_purged_flag'
+    ];
+    junkKeys.forEach(k => {
+      try { localStorage.removeItem(k); } catch(e) {}
+    });
+
+    if (window.SupabaseSync && typeof window.SupabaseSync.syncAllData === 'function') {
+      await window.SupabaseSync.syncAllData();
+    }
+
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
+    if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+    if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
+    if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
+    if (typeof window.renderInquiriesList === 'function') window.renderInquiriesList();
+
+    if (showAlert) {
+      alert('✅ 불필요한 데이터 찌꺼기가 완전히 청소되었으며,\nSupabase 클라우드 DB와 100% 일치하도록 최신화되었습니다.');
+    }
+    return true;
+  } catch(err) {
+    console.error('purgeAndResyncData error:', err);
+    if (showAlert) alert('데이터 정리 중 오류 발생: ' + (err.message || err));
+    return false;
+  }
+};
+
 // 1. 단방향 암호화 SHA-256 해시 함수 (순수 자바스크립트 구현)
 function sha256(ascii) {
   function rightRotate(value, amount) {

@@ -1019,7 +1019,7 @@
       return { success: true };
     },
 
-    // --- 5. 회원 영구 탈퇴/삭제 ---
+    // --- 5. 회원 영구 탈퇴/삭제 (DB 직통 영구 삭제) ---
     deleteUser: function (userId, btnEl) {
       if (!userId) return { success: false };
       const targetId = String(userId).trim();
@@ -1033,60 +1033,37 @@
       // 1) 0초 즉각 DOM 제거
       if (btnEl) {
         const row = btnEl.closest('tr') || btnEl.closest('.user-card-mob') || btnEl.closest('.admin-user-card-mob');
-        if (row) row.remove();
+        if (row && row.parentNode) row.parentNode.removeChild(row);
       }
 
-      // 대상 회원의 전화번호 등 추가 식별자 확보
+      // 2) users 배열에서 직접 제거
       let rawUsers = JSON.parse(localStorage.getItem('users')) || [];
-      const targetUser = rawUsers.find(u => 
-        String(u.id).toLowerCase() === targetLower
-      );
+      const targetUser = rawUsers.find(u => String(u.id).toLowerCase() === targetLower);
       const targetPhone = targetUser ? String(targetUser.phone || '').trim() : '';
-      const cleanPhoneDigits = (targetPhone.length >= 9) ? targetPhone.replace(/[^0-9]/g, '') : '';
-      const cleanTargetDigits = (targetId.startsWith('01') && targetId.replace(/[^0-9]/g, '').length >= 9) ? targetId.replace(/[^0-9]/g, '') : '';
 
-      // 2) deleted_user_ids 등록 (대소문자 모두 등록)
-      let deletedUserIds = this.getDeletedUserIds();
-      [targetId, targetLower, cleanTargetDigits, targetPhone, cleanPhoneDigits].filter(Boolean).forEach(id => {
-        if (!deletedUserIds.includes(String(id))) {
-          deletedUserIds.push(String(id));
-        }
-      });
-      localStorage.setItem('deleted_user_ids', JSON.stringify(deletedUserIds));
-
-      // 3) users 배열에서 완전 제거
-      rawUsers = rawUsers.filter(u => {
-        if (!u || !u.id) return false;
-        const uId = String(u.id);
-        const uIdLower = uId.toLowerCase();
-        const uPhone = String(u.phone || '');
-        const uPhoneDigits = (uPhone.length >= 9) ? uPhone.replace(/[^0-9]/g, '') : '';
-        if (uIdLower === targetLower) return false;
-        if (cleanTargetDigits && uId === cleanTargetDigits) return false;
-        if (cleanPhoneDigits && uPhoneDigits === cleanPhoneDigits) return false;
-        if (deletedUserIds.includes(uId) || deletedUserIds.includes(uIdLower)) return false;
-        return true;
-      });
+      rawUsers = rawUsers.filter(u => u && u.id && String(u.id).toLowerCase() !== targetLower);
       this.saveUsers(rawUsers);
 
-      // 3.5) 현재 로그인 세션이 삭제된 회원이면 즉시 세션 파기
+      // 3) 현재 로그인 세션이 삭제된 회원이면 즉시 세션 파기
       const active = this.getActiveUser();
       if (active) {
         const actId = String(active.id || '').toLowerCase();
-        if (actId === targetLower || deletedUserIds.includes(actId)) {
+        if (actId === targetLower) {
           this.setActiveUser(null);
           if (typeof clearActiveUser === 'function') clearActiveUser();
         }
       }
 
-      // 4) Supabase DB 영구 삭제 (비밀번호 파기 및 DB 삭제)
-      if (window.SupabaseSync) {
+      // 4) Supabase DB 영구 삭제
+      if (window.SupabaseSync && typeof window.SupabaseSync.deleteUser === 'function') {
         window.SupabaseSync.deleteUser(targetId, targetPhone);
       }
 
       alert('회원 [' + targetId + ']이(가) 정상적으로 탈퇴/삭제되었습니다.');
-      this.notifyAll();
-      return { success: true };
+      this.notifyAll(true);
+      if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+      if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
+      return { success: true, deletedId: targetId };
     },
 
     // --- 6. 신청서 상태 변경 ---
