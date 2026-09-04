@@ -4088,14 +4088,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!id) return;
         if (!confirm(`[주의] 지원 신청 접수 건 [${id}]을(를) 정말로 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
 
-        let deletedAppIds = JSON.parse(localStorage.getItem('deleted_application_ids')) || [];
-        if (!deletedAppIds.includes(String(id))) {
-            deletedAppIds.push(String(id));
-            localStorage.setItem('deleted_application_ids', JSON.stringify(deletedAppIds));
-        }
-
         applications = applications.filter(app => String(app.id) !== String(id));
-        localStorage.setItem('applications', JSON.stringify(applications));
+        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            window.DataStore.saveApplications(applications);
+        } else {
+            localStorage.setItem('applications', JSON.stringify(applications));
+        }
 
         if (window.SupabaseSync) {
             window.SupabaseSync.deleteApplication(id);
@@ -4341,15 +4339,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const ok = confirm(`정말 [${targetItemName}] 영업 물건을 영구 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 모든 영업자 및 관리자 화면에서 즉시 영구 제거됩니다.`);
         if (!ok) return;
-
-        // 1) deleted_biz_item_ids 등록
-        let deletedBizItemIds = JSON.parse(localStorage.getItem('deleted_biz_item_ids')) || [];
-        if (!deletedBizItemIds.includes(String(itemId))) deletedBizItemIds.push(String(itemId));
-        if (targetAppRefId && !deletedBizItemIds.includes(String(targetAppRefId))) deletedBizItemIds.push(String(targetAppRefId));
-        if (targetItemName && targetItemName !== '해당 영업 물건' && !deletedBizItemIds.includes(targetItemName.trim())) {
-            deletedBizItemIds.push(targetItemName.trim());
-        }
-        localStorage.setItem('deleted_biz_item_ids', JSON.stringify(deletedBizItemIds));
 
         const isMatchTarget = (it) => {
             if (!it) return false;
