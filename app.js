@@ -1437,7 +1437,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let pStatus = String(app.progressStatus || '').trim();
         const constName = String(app.assignedConstructorName || app.assignedConstructorId || '').trim();
 
-        // 1단계: 사전 등록 심사 상태 뱃지
+        // 1단계: 사전 등록 심사 상태 뱃지 (공통)
         let preBadgeHtml = '';
         if (s === 'approved' || s === '서류준비 & 접수대기' || s === '서류제출 & 접수예정' || s === '서류제출&접수예정' || s === '승인 완료' || s === '승인완료') {
             preBadgeHtml = '<span style="background: #ecfdf5; color: #059669; border: 1.5px solid #86efac; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>';
@@ -1451,7 +1451,18 @@ document.addEventListener('DOMContentLoaded', () => {
             preBadgeHtml = '<span style="background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 사업시행 전 사전등록업체</span>';
         }
 
-        // 2단계: 공단 접수 이후 실시간 진행상황
+        // 현재 사용자 역할 확인 (영업자/관리자/시공사는 전용 메뉴가 있으므로 단일 심사 상태 유지)
+        let currentRole = 'user';
+        try {
+            const au = (typeof activeUser === 'object' && activeUser && activeUser.role) ? activeUser : JSON.parse(localStorage.getItem('activeUser') || '{}');
+            if (au && au.role) currentRole = au.role;
+        } catch (e) {}
+
+        if (currentRole === 'business' || currentRole === 'admin' || currentRole === 'constructor') {
+            return preBadgeHtml;
+        }
+
+        // 일반회원(점주) 또는 비회원 점주 전용: 공단 접수 이후 실시간 진행상황 듀얼 뱃지 연동
         if (isBizItem || (rStatus && rStatus !== 'none') || (pStatus && pStatus !== 'none')) {
             let receiptBadge = '';
             if (rStatus === '접수완료') {

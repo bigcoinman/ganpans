@@ -173,7 +173,7 @@ window.submitEditApplicationModal = function(appId, event) {
   }
 };
 
-// --- 신청 상태 뱃지 헬퍼 (1단계 사전 등록 상태 + 2단계 공단 접수/진행상황 실시간 듀얼 연동) ---
+// --- 신청 상태 뱃지 헬퍼 (영업자/관리자/시공사는 깔끔한 단일 뱃지 원상복구, 일반회원에게만 공단 진행상황 듀얼 뱃지 적용) ---
 window.getAppStatusBadgeHtml = function(app) {
   if (!app) return '';
   const s = String(app.status || '').trim();
@@ -183,7 +183,7 @@ window.getAppStatusBadgeHtml = function(app) {
   const constName = String(app.assignedConstructorName || app.assignedConstructorId || '').trim();
   const safe = typeof window.safeHtmlForEditApp === 'function' ? window.safeHtmlForEditApp : (t => String(t || ''));
 
-  // 1단계: 사전 등록 심사 상태 뱃지
+  // 1단계: 사전 등록 심사 상태 뱃지 (공통)
   let preBadgeHtml = '';
   if (s === 'approved' || s === '서류준비 & 접수대기' || s === '서류제출 & 접수예정' || s === '서류제출&접수예정' || s === '승인 완료' || s === '승인완료') {
     preBadgeHtml = `<span style="background: #dcfce7; color: #166534; border: 1.5px solid #86efac; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>`;
@@ -197,7 +197,18 @@ window.getAppStatusBadgeHtml = function(app) {
     preBadgeHtml = `<span style="background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 사업시행 전 사전등록업체</span>`;
   }
 
-  // 2단계: 공단 접수 이후 실시간 진행상황 (영업물건 전환 또는 공단 상태 등록 시)
+  // 현재 사용자 역할 확인 (영업자, 최고관리자, 시공사는 영업물건 전용 테이블이 따로 있으므로 신청서 목록은 기존대로 깔끔한 단일 뱃지 유지)
+  let currentRole = 'user';
+  try {
+    const au = JSON.parse(localStorage.getItem('activeUser') || '{}');
+    if (au && au.role) currentRole = au.role;
+  } catch (e) {}
+
+  if (currentRole === 'business' || currentRole === 'admin' || currentRole === 'constructor') {
+    return preBadgeHtml;
+  }
+
+  // 일반회원(점주) 또는 비회원 점주 전용: 공단 접수 이후 실시간 진행상황 듀얼 뱃지 연동
   if (isBizItem || (rStatus && rStatus !== 'none') || (pStatus && pStatus !== 'none')) {
     let receiptBadge = '';
     if (rStatus === '접수완료') {
@@ -4456,88 +4467,25 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${year}.${month}.${day}`;
   };
 
-  // 신청 상태 뱃지 헬퍼 (표준 5대 상태 한글/영문 100% 완전 포괄 매핑)
-  // 신청 상태 뱃지 헬퍼 (1단계 사전 등록 상태 + 2단계 공단 접수/진행상황 실시간 듀얼 연동)
+  // 신청 상태 뱃지 헬퍼 (최상단 window.getAppStatusBadgeHtml 단일 원천 위임)
   const getAppStatusBadgeHtml = (app) => {
-    const s = String(app.status || '').trim();
-    const isBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
-    const rStatus = String(app.receiptStatus || '').trim();
-    let pStatus = String(app.progressStatus || '').trim();
-    const constName = String(app.assignedConstructorName || app.assignedConstructorId || '').trim();
-
-    // 1단계: 사전 등록 심사 상태 뱃지
-    let preBadgeHtml = '';
+    if (typeof window.getAppStatusBadgeHtml === 'function') {
+      return window.getAppStatusBadgeHtml(app);
+    }
+    const s = String((app && app.status) || '').trim();
     if (s === 'approved' || s === '서류준비 & 접수대기' || s === '서류제출 & 접수예정' || s === '서류제출&접수예정' || s === '승인 완료' || s === '승인완료') {
-      preBadgeHtml = `<span style="background: #dcfce7; color: #166534; border: 1.5px solid #86efac; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>`;
+      return `<span style="background: #dcfce7; color: #166534; border: 1.5px solid #86efac; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>`;
     } else if (s === 'unqualified' || s === '신청요건 미달업체' || s === '신청요건미달' || s === '미달') {
-      preBadgeHtml = `<span style="background: #ffedd5; color: #c2410c; border: 1.5px solid #fed7aa; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-triangle-exclamation"></i> 신청요건 미달업체</span>`;
+      return `<span style="background: #ffedd5; color: #c2410c; border: 1.5px solid #fed7aa; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-triangle-exclamation"></i> 신청요건 미달업체</span>`;
     } else if (s === 'rejected' || s === '지원사업 탈락' || s === '지원사업탈락' || s === '반려됨') {
-      preBadgeHtml = `<span style="background: #fee2e2; color: #991b1b; border: 1.5px solid #fca5a5; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>`;
+      return `<span style="background: #fee2e2; color: #991b1b; border: 1.5px solid #fca5a5; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>`;
     } else if (s === 'giveup' || s === '지원사업 포기' || s === '지원사업포기') {
-      preBadgeHtml = `<span style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-ban"></i> 지원사업 포기</span>`;
+      return `<span style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-ban"></i> 지원사업 포기</span>`;
     } else {
-      preBadgeHtml = `<span style="background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 사업시행 전 사전등록업체</span>`;
+      return `<span style="background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 사업시행 전 사전등록업체</span>`;
     }
-
-    // 2단계: 공단 접수 이후 실시간 진행상황 (영업물건 전환 또는 공단 상태 등록 시)
-    if (isBizItem || (rStatus && rStatus !== 'none') || (pStatus && pStatus !== 'none')) {
-      // 2-1. 공단 접수 상태
-      let receiptBadge = '';
-      if (rStatus === '접수완료') {
-        receiptBadge = `<span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-building-columns"></i> 공단 접수완료</span>`;
-      } else if (rStatus === '접수예정') {
-        receiptBadge = `<span style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-clock"></i> 공단 접수예정</span>`;
-      } else {
-        receiptBadge = `<span style="background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-file-lines"></i> 업체신청</span>`;
-      }
-
-      // 2-2. 공단 진행상황 5단계
-      let progressBadge = '';
-      if (pStatus === '간판시공완료' || pStatus === 'completed' || pStatus === '시공완료' || pStatus === '정산 완료') {
-        progressBadge = `<span style="background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-award"></i> 간판시공완료</span>`;
-      } else if (pStatus === '간판시공 준비중' || pStatus === 'in_construction' || pStatus === '시공준비') {
-        progressBadge = `<span style="background: #fef9c3; color: #a16207; border: 1px solid #fef08a; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-screwdriver-wrench"></i> 간판시공 준비중</span>`;
-      } else if (pStatus === '대상자선정' || pStatus === '선정' || pStatus === 'before_construction') {
-        progressBadge = `<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>`;
-      } else if (pStatus === '심사대기중' || pStatus === '심사대기') {
-        progressBadge = `<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-magnifying-glass"></i> 심사대기중</span>`;
-      } else {
-        progressBadge = `<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-hourglass-start"></i> 지원대기중</span>`;
-      }
-
-      // 2-3. 배정 시공사
-      let constBadge = '';
-      if (constName && constName !== 'none' && constName !== '미배정') {
-        constBadge = `<div style="font-size: 0.71rem; color: #1d4ed8; font-weight: 700; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;"><i class="fa-solid fa-hard-hat" style="color: #2563eb;"></i> 배정: ${escapeHtml(constName)}</div>`;
-      }
-
-      return `
-        <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start;">
-          <div>${preBadgeHtml}</div>
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 8px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 3px;">
-            <div style="font-size: 0.68rem; font-weight: 800; color: #0284c7; display: flex; align-items: center; gap: 4px;">
-              <i class="fa-solid fa-circle-dot" style="font-size: 0.55rem;"></i> 공단 접수 & 진행상황
-            </div>
-            <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
-              ${receiptBadge}
-              ${progressBadge}
-            </div>
-            ${constBadge}
-          </div>
-        </div>
-      `;
-    }
-
-    return `
-      <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
-        <div>${preBadgeHtml}</div>
-        <div style="font-size: 0.7rem; color: #94a3b8; padding-left: 2px; display: inline-flex; align-items: center; gap: 4px;">
-          <i class="fa-solid fa-circle-info"></i> 공단 사업공고 대기중
-        </div>
-      </div>
-    `;
   };
-  window.getAppStatusBadgeHtml = getAppStatusBadgeHtml;
+
 
   // --- 1. 내 온라인 간편 지원 신청 내역 테이블 렌더링 ---
   const renderUserApplicationsList = () => {
