@@ -1,5 +1,178 @@
 // app.js - Mobile App Shell & Interactive State Synchronizer
 
+// --- 신청서 세부 정보 직접 수정 모달 (모바일/공통 최상단 즉시 정의) ---
+window.safeHtmlForEditAppMob = function(s) {
+    return (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+};
+
+window.openEditApplicationModal = function(appId) {
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+        ? window.DataStore.getApplications()
+        : (JSON.parse(localStorage.getItem('applications')) || []);
+    
+    const cleanAppId = String(appId || '').trim().toLowerCase();
+    const app = apps.find(a => {
+        const aId = String(a.id || a.appId || a.application_id || '').trim().toLowerCase();
+        if (aId && cleanAppId && aId === cleanAppId) return true;
+        if (a.storeName && cleanAppId && String(a.storeName).trim().toLowerCase() === cleanAppId) return true;
+        if (a.ownerPhone && cleanAppId && String(a.ownerPhone).replace(/[^0-9]/g, '') === cleanAppId.replace(/[^0-9]/g, '')) return true;
+        return false;
+    });
+
+    if (!app) {
+        alert('해당 신청서를 찾을 수 없습니다.');
+        return;
+    }
+
+    let modal = document.getElementById('modal-edit-application');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-edit-application';
+        document.body.appendChild(modal);
+    }
+
+    modal.className = 'inquiry-modal-overlay active modal-edit-app-overlay';
+    modal.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: rgba(15, 23, 42, 0.75) !important; z-index: 9999999 !important; display: flex !important; opacity: 1 !important; pointer-events: auto !important; align-items: center !important; justify-content: center !important; backdrop-filter: blur(4px) !important; padding: 16px !important; box-sizing: border-box !important;';
+
+    const curStatus = app.status || 'pending';
+    const isApproved = (curStatus === 'approved' || curStatus === '서류준비 & 접수대기' || curStatus === '서류제출 & 접수예정' || curStatus === '승인 완료');
+    const isUnqualified = (curStatus === 'unqualified' || curStatus === '신청요건 미달업체' || curStatus === '미달');
+    const isRejected = (curStatus === 'rejected' || curStatus === '지원사업 탈락' || curStatus === '반려됨');
+    const isGiveup = (curStatus === 'giveup' || curStatus === '지원사업 포기');
+    const isPending = !isApproved && !isUnqualified && !isRejected && !isGiveup;
+
+    modal.innerHTML = `
+        <div style="background: #ffffff; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); border: 1px solid #cbd5e1; padding: 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position: relative; z-index: 10000000;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-pen-to-square" style="color: #2563eb;"></i> 신청서 상세 정보 수정
+                </h3>
+                <button type="button" onclick="window.closeEditApplicationModal()" style="background: none; border: none; font-size: 1.6rem; color: #64748b; cursor: pointer; line-height: 1; padding: 4px;">&times;</button>
+            </div>
+
+            <form id="form-edit-application" onsubmit="window.submitEditApplicationModal('${app.id}', event)" style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px;">신청번호</label>
+                        <input type="text" value="${window.safeHtmlForEditAppMob(app.id)}" disabled style="width: 100%; padding: 8px 10px; font-size: 0.85rem; font-family: monospace; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; color: #64748b; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px;">진행 상태</label>
+                        <select id="edit-app-status" style="width: 100%; padding: 8px 10px; font-size: 0.85rem; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: #ffffff; cursor: pointer;">
+                            <option value="pending" ${isPending ? 'selected' : ''}>⏳ 사업시행 전 사전등록업체</option>
+                            <option value="approved" ${isApproved ? 'selected' : ''}>📑 서류준비 & 접수대기</option>
+                            <option value="unqualified" ${isUnqualified ? 'selected' : ''}>⚠️ 신청요건 미달업체</option>
+                            <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
+                            <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">상호명 (업체명) <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="edit-app-store-name" value="${window.safeHtmlForEditAppMob(app.storeName || app.shopName || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-weight: 600;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">대표자 성명 <span style="color: #ef4444;">*</span></label>
+                        <input type="text" id="edit-app-owner-name" value="${window.safeHtmlForEditAppMob(app.ownerName || app.name || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">대표자 연락처 <span style="color: #ef4444;">*</span></label>
+                        <input type="text" id="edit-app-owner-phone" value="${window.safeHtmlForEditAppMob(app.ownerPhone || app.phone || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">설치 매장 주소 <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="edit-app-store-address" value="${window.safeHtmlForEditAppMob(app.storeAddress || app.address || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">희망 간판 종류</label>
+                        <input type="text" id="edit-app-sign-type" value="${window.safeHtmlForEditAppMob(app.signType || '')}" placeholder="예: LED 채널 간판" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">담당 영업자 코드</label>
+                        <input type="text" id="edit-app-referrer-code" value="${window.safeHtmlForEditAppMob(app.referrerCode || '')}" placeholder="예: B-260903" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-family: monospace;">
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">관리자 메모 / 비고</label>
+                    <textarea id="edit-app-memo" rows="2" placeholder="관리자 메모 입력" style="width: 100%; padding: 9px 12px; font-size: 0.9rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; resize: vertical;">${window.safeHtmlForEditAppMob(app.memo || app.notes || '')}</textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; border-top: 1.5px solid #f1f5f9; padding-top: 14px;">
+                    <button type="button" onclick="window.closeEditApplicationModal()" style="padding: 9px 16px; font-size: 0.9rem; font-weight: 600; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer;">취소</button>
+                    <button type="submit" style="padding: 9px 20px; font-size: 0.9rem; font-weight: 700; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-check"></i> 수정사항 저장</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    modal.onclick = function(e) {
+        if (e.target === modal) window.closeEditApplicationModal();
+    };
+};
+
+window.closeEditApplicationModal = function() {
+    const modal = document.getElementById('modal-edit-application');
+    if (modal) {
+        modal.className = 'inquiry-modal-overlay modal-edit-app-overlay';
+        modal.style.setProperty('display', 'none', 'important');
+        modal.classList.remove('active');
+    }
+};
+
+window.submitEditApplicationModal = function(appId, event) {
+    if (event) event.preventDefault();
+    const storeName = document.getElementById('edit-app-store-name').value.trim();
+    const ownerName = document.getElementById('edit-app-owner-name').value.trim();
+    const ownerPhone = document.getElementById('edit-app-owner-phone').value.trim();
+    const storeAddress = document.getElementById('edit-app-store-address').value.trim();
+    const signType = document.getElementById('edit-app-sign-type').value.trim();
+    const referrerCode = document.getElementById('edit-app-referrer-code').value.trim();
+    const status = document.getElementById('edit-app-status').value;
+    const memo = document.getElementById('edit-app-memo').value.trim();
+
+    if (!storeName || !ownerName || !ownerPhone || !storeAddress) {
+        alert('상호명, 대표자명, 연락처, 주소는 필수 입력 항목입니다.');
+        return;
+    }
+
+    if (window.DataStore && typeof window.DataStore.updateApplication === 'function') {
+        const res = window.DataStore.updateApplication(appId, {
+            storeName: storeName,
+            shopName: storeName,
+            ownerName: ownerName,
+            name: ownerName,
+            ownerPhone: ownerPhone,
+            phone: ownerPhone,
+            storeAddress: storeAddress,
+            address: storeAddress,
+            signType: signType,
+            referrerCode: referrerCode,
+            status: status,
+            memo: memo,
+            notes: memo
+        });
+
+        if (res && res.success) {
+            if (typeof window.showToast === 'function') {
+                window.showToast(`[${storeName}] 신청서 정보가 성공적으로 수정되었습니다.`);
+            } else {
+                alert(`[${storeName}] 신청서 정보가 성공적으로 수정되었습니다.`);
+            }
+            window.closeEditApplicationModal();
+        } else {
+            alert('수정 중 오류가 발생했습니다: ' + (res ? res.message : ''));
+        }
+    }
+};
+
 // --- 모바일 전역 3초 간편문의 상태 변경 및 삭제 핸들러 (최상단 즉시 정의) ---
 window.toggleInquiryStatusMob = function (id, e) {
     if (e) {
@@ -3857,11 +4030,22 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateApplicationStatusMob = updateApplicationStatusMob;
 
     // --- 신청서 세부 정보 직접 수정 모달 (최고관리자 모바일 & PC 공통) ---
+    const safeHtml = (s) => (s === null || s === undefined ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'));
+
     const openEditApplicationModal = (appId) => {
         let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
             ? window.DataStore.getApplications()
             : (JSON.parse(localStorage.getItem('applications')) || []);
-        const app = apps.find(a => String(a.id).trim().toLowerCase() === String(appId).trim().toLowerCase());
+        
+        const cleanAppId = String(appId || '').trim().toLowerCase();
+        const app = apps.find(a => {
+            const aId = String(a.id || a.appId || a.application_id || '').trim().toLowerCase();
+            if (aId && cleanAppId && aId === cleanAppId) return true;
+            if (a.storeName && cleanAppId && String(a.storeName).trim().toLowerCase() === cleanAppId) return true;
+            if (a.ownerPhone && cleanAppId && String(a.ownerPhone).replace(/[^0-9]/g, '') === cleanAppId.replace(/[^0-9]/g, '')) return true;
+            return false;
+        });
+
         if (!app) {
             alert('해당 신청서를 찾을 수 없습니다.');
             return;
@@ -3871,10 +4055,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'modal-edit-application';
-            modal.className = 'inquiry-modal-overlay';
-            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); z-index: 999999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 16px; box-sizing: border-box;';
             document.body.appendChild(modal);
         }
+
+        modal.className = 'inquiry-modal-overlay active modal-edit-app-overlay';
+        modal.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: rgba(15, 23, 42, 0.75) !important; z-index: 9999999 !important; display: flex !important; opacity: 1 !important; pointer-events: auto !important; align-items: center !important; justify-content: center !important; backdrop-filter: blur(4px) !important; padding: 16px !important; box-sizing: border-box !important;';
 
         const curStatus = app.status || 'pending';
         const isApproved = (curStatus === 'approved' || curStatus === '서류준비 & 접수대기' || curStatus === '서류제출 & 접수예정' || curStatus === '승인 완료');
@@ -3884,19 +4069,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const isPending = !isApproved && !isUnqualified && !isRejected && !isGiveup;
 
         modal.innerHTML = `
-            <div style="background: #ffffff; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; padding: 20px; box-sizing: border-box; font-family: inherit;">
+            <div style="background: #ffffff; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); border: 1px solid #cbd5e1; padding: 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position: relative; z-index: 10000000;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
-                    <h3 style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
                         <i class="fa-solid fa-pen-to-square" style="color: #2563eb;"></i> 신청서 상세 정보 수정
                     </h3>
-                    <button type="button" onclick="window.closeEditApplicationModal()" style="background: none; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer; line-height: 1; padding: 4px;">&times;</button>
+                    <button type="button" onclick="window.closeEditApplicationModal()" style="background: none; border: none; font-size: 1.6rem; color: #64748b; cursor: pointer; line-height: 1; padding: 4px;">&times;</button>
                 </div>
 
                 <form id="form-edit-application" onsubmit="window.submitEditApplicationModal('${app.id}', event)" style="display: flex; flex-direction: column; gap: 12px;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
                             <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px;">신청번호</label>
-                            <input type="text" value="${escapeHtml(app.id)}" disabled style="width: 100%; padding: 8px 10px; font-size: 0.85rem; font-family: monospace; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; color: #64748b; box-sizing: border-box;">
+                            <input type="text" value="${safeHtml(app.id)}" disabled style="width: 100%; padding: 8px 10px; font-size: 0.85rem; font-family: monospace; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; color: #64748b; box-sizing: border-box;">
                         </div>
                         <div>
                             <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px;">진행 상태</label>
@@ -3912,39 +4097,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     <div>
                         <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">상호명 (업체명) <span style="color: #ef4444;">*</span></label>
-                        <input type="text" id="edit-app-store-name" value="${escapeHtml(app.storeName || app.shopName || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-weight: 600;">
+                        <input type="text" id="edit-app-store-name" value="${safeHtml(app.storeName || app.shopName || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-weight: 600;">
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
                             <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">대표자 성명 <span style="color: #ef4444;">*</span></label>
-                            <input type="text" id="edit-app-owner-name" value="${escapeHtml(app.ownerName || app.name || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                            <input type="text" id="edit-app-owner-name" value="${safeHtml(app.ownerName || app.name || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
                         </div>
                         <div>
                             <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">대표자 연락처 <span style="color: #ef4444;">*</span></label>
-                            <input type="text" id="edit-app-owner-phone" value="${escapeHtml(app.ownerPhone || app.phone || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                            <input type="text" id="edit-app-owner-phone" value="${safeHtml(app.ownerPhone || app.phone || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
                         </div>
                     </div>
 
                     <div>
                         <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">설치 매장 주소 <span style="color: #ef4444;">*</span></label>
-                        <input type="text" id="edit-app-store-address" value="${escapeHtml(app.storeAddress || app.address || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                        <input type="text" id="edit-app-store-address" value="${safeHtml(app.storeAddress || app.address || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
                             <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">희망 간판 종류</label>
-                            <input type="text" id="edit-app-sign-type" value="${escapeHtml(app.signType || '')}" placeholder="예: LED 채널 간판" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                            <input type="text" id="edit-app-sign-type" value="${safeHtml(app.signType || '')}" placeholder="예: LED 채널 간판" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
                         </div>
                         <div>
                             <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">담당 영업자 코드</label>
-                            <input type="text" id="edit-app-referrer-code" value="${escapeHtml(app.referrerCode || '')}" placeholder="예: B-260903" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-family: monospace;">
+                            <input type="text" id="edit-app-referrer-code" value="${safeHtml(app.referrerCode || '')}" placeholder="예: B-260903" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-family: monospace;">
                         </div>
                     </div>
 
                     <div>
                         <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">관리자 메모 / 비고</label>
-                        <textarea id="edit-app-memo" rows="2" placeholder="관리자 메모 입력" style="width: 100%; padding: 9px 12px; font-size: 0.9rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; resize: vertical;">${escapeHtml(app.memo || app.notes || '')}</textarea>
+                        <textarea id="edit-app-memo" rows="2" placeholder="관리자 메모 입력" style="width: 100%; padding: 9px 12px; font-size: 0.9rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; resize: vertical;">${safeHtml(app.memo || app.notes || '')}</textarea>
                     </div>
 
                     <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; border-top: 1.5px solid #f1f5f9; padding-top: 14px;">
@@ -3955,12 +4140,18 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        modal.style.display = 'flex';
+        modal.onclick = (e) => {
+            if (e.target === modal) window.closeEditApplicationModal();
+        };
     };
 
     const closeEditApplicationModal = () => {
         const modal = document.getElementById('modal-edit-application');
-        if (modal) modal.style.display = 'none';
+        if (modal) {
+            modal.className = 'inquiry-modal-overlay modal-edit-app-overlay';
+            modal.style.setProperty('display', 'none', 'important');
+            modal.classList.remove('active');
+        }
     };
 
     const submitEditApplicationModal = (appId, event) => {
@@ -4012,6 +4203,18 @@ document.addEventListener('DOMContentLoaded', () => {
     window.openEditApplicationModal = openEditApplicationModal;
     window.closeEditApplicationModal = closeEditApplicationModal;
     window.submitEditApplicationModal = submitEditApplicationModal;
+
+    // 모바일 클릭 위임 리스너
+    document.addEventListener('click', (e) => {
+        const editBtn = e.target && e.target.closest ? e.target.closest('.btn-edit-app, .btn-edit-app-mob') : null;
+        if (editBtn) {
+            const appId = editBtn.getAttribute('data-id');
+            if (appId) {
+                e.preventDefault();
+                window.openEditApplicationModal(appId);
+            }
+        }
+    });
 
     
 
