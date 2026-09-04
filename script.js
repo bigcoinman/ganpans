@@ -2169,7 +2169,7 @@ function initAuthAndDashboard() {
   if (authBtn && authModal) {
     authBtn.addEventListener('click', () => {
       authModal.classList.add('active');
-      switchTab('login');
+      switchAuthTab('login');
     });
   }
 
@@ -2180,7 +2180,7 @@ function initAuthAndDashboard() {
     });
   }
 
-  const switchTab = (tab) => {
+  const switchAuthTab = (tab) => {
     if (tab === 'login') {
       if (tabLoginBtn) tabLoginBtn.classList.add('active');
       if (tabSignupBtn) tabSignupBtn.classList.remove('active');
@@ -2193,9 +2193,10 @@ function initAuthAndDashboard() {
       if (signupPane) signupPane.classList.add('active');
     }
   };
+  window.switchAuthTab = switchAuthTab;
 
-  if (tabLoginBtn) tabLoginBtn.addEventListener('click', () => switchTab('login'));
-  if (tabSignupBtn) tabSignupBtn.addEventListener('click', () => switchTab('signup'));
+  if (tabLoginBtn) tabLoginBtn.addEventListener('click', () => switchAuthTab('login'));
+  if (tabSignupBtn) tabSignupBtn.addEventListener('click', () => switchAuthTab('signup'));
 
   if (signupIdInput) {
     signupIdInput.addEventListener('input', () => {

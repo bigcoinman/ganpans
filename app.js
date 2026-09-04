@@ -93,7 +93,10 @@ window.toggleBizItemMob = function (appId, btnEl) {
 // --- 모바일 전역 네비게이션 및 모달 핸들러 (최상단 즉시 선언 - Fail-Safe Early Definition) ---
 window.switchTab = function (tabId) {
     try {
-        if (tabId === 'dashboard' || tabId === 'tab-dashboard') {
+        if (!tabId || typeof tabId !== 'string') {
+            tabId = 'home';
+        }
+        if (tabId === 'dashboard' || tabId === 'tab-dashboard' || tabId === 'mypage') {
             tabId = 'status';
         }
         const tabs = document.querySelectorAll('.app-view');
@@ -101,66 +104,113 @@ window.switchTab = function (tabId) {
 
         if (tabId === 'apply') {
             navItems.forEach(btn => {
-                if (btn.id === 'tab-btn-home' || btn.id === 'tab-btn-apply') {
+                if (btn && (btn.id === 'tab-btn-home' || btn.id === 'tab-btn-apply')) {
                     btn.classList.add('active');
-                } else {
+                } else if (btn) {
                     btn.classList.remove('active');
                 }
             });
             tabs.forEach(tab => {
-                if (tab.id === 'view-home') {
+                if (tab && tab.id === 'view-home') {
                     tab.classList.add('active');
-                } else {
+                } else if (tab) {
                     tab.classList.remove('active');
                 }
             });
+            if (typeof window.updateReferrerField === 'function') {
+                try { window.updateReferrerField(); } catch(e) {}
+            }
             setTimeout(() => {
-                const appSection = document.getElementById('apply-section');
-                const homeView = document.getElementById('view-home');
-                if (appSection && homeView) {
-                    homeView.scrollTo({
-                        top: appSection.offsetTop - 10,
-                        behavior: 'smooth'
-                    });
-                }
+                try {
+                    const appSection = document.getElementById('apply-section');
+                    const homeView = document.getElementById('view-home');
+                    if (appSection && homeView && typeof homeView.scrollTo === 'function') {
+                        homeView.scrollTo({
+                            top: appSection.offsetTop - 10,
+                            behavior: 'smooth'
+                        });
+                    }
+                } catch(e) {}
             }, 50);
             return;
         }
 
+        let targetFound = false;
         tabs.forEach(tab => {
-            if (tab.id === `view-${tabId}`) {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
+            if (tab) {
+                if (tab.id === `view-${tabId}`) {
+                    tab.classList.add('active');
+                    targetFound = true;
+                } else {
+                    tab.classList.remove('active');
+                }
             }
         });
+
+        // 만약 대상 탭이 없으면 기본 home 탭 활성화
+        if (!targetFound) {
+            const homeTab = document.getElementById('view-home');
+            if (homeTab) homeTab.classList.add('active');
+            tabId = 'home';
+        }
 
         navItems.forEach(btn => {
-            if (btn.id === `tab-btn-${tabId}`) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
+            if (btn) {
+                if (btn.id === `tab-btn-${tabId}`) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
             }
         });
 
-        if (tabId === 'status' && typeof window.renderStatusTab === 'function') {
-            window.renderStatusTab();
+        if (tabId === 'status') {
+            if (typeof window.renderStatusTab === 'function') {
+                try { window.renderStatusTab(); } catch(e) { console.warn('[renderStatusTab Error]', e); }
+            }
         }
 
-        window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-        const activeTab = document.getElementById(`view-${tabId}`);
-        if (activeTab) {
-            activeTab.scrollTop = 0;
-        }
+        try {
+            if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
+            if (document.documentElement) document.documentElement.scrollTop = 0;
+            if (document.body) document.body.scrollTop = 0;
+            const activeTab = document.getElementById(`view-${tabId}`);
+            if (activeTab) activeTab.scrollTop = 0;
+        } catch(e) {}
+
         if (typeof window.updateHeaderAuthButton === 'function') {
-            window.updateHeaderAuthButton();
+            try { window.updateHeaderAuthButton(); } catch(e) {}
+        }
+        if (typeof window.updateReferrerField === 'function') {
+            try { window.updateReferrerField(); } catch(e) {}
         }
     } catch (err) {
         console.error('[switchTab Error]', err);
     }
 };
+
+// URL 해시 기반 자동 라우팅 (#dashboard, #status, #mypage, #apply 등 0초 즉각 전환)
+window.handleAppHashRouting = function () {
+    try {
+        const hash = (window.location.hash || '').toLowerCase();
+        if (hash.includes('dashboard') || hash.includes('status') || hash.includes('mypage')) {
+            window.switchTab('status');
+        } else if (hash.includes('apply')) {
+            window.switchTab('apply');
+        } else if (hash.includes('home')) {
+            window.switchTab('home');
+        }
+    } catch (e) {
+        console.warn('[handleAppHashRouting Error]', e);
+    }
+};
+
+window.addEventListener('hashchange', window.handleAppHashRouting);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.handleAppHashRouting);
+} else {
+    setTimeout(window.handleAppHashRouting, 0);
+}
 
 window.openInstallModalMob = function (e) {
     if (e) {
@@ -568,6 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
             appHeaderAuthText.textContent = '로그인';
         }
     }
+    window.updateHeaderAuthButton = updateHeaderAuthButton;
 
     // Initialize Header Auth Button
     updateHeaderAuthButton();
@@ -585,81 +636,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    // --- Tab Switching Logic ---
-    function switchTab(tabId) {
-        if (tabId === 'dashboard' || tabId === 'tab-dashboard') {
-            tabId = 'status';
-        }
-        if (tabId === 'apply') {
-            // Highlight the home navigation button
-            navItems.forEach(btn => {
-                if (btn.id === 'tab-btn-home') {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
-            // Switch view class to home view
-            tabs.forEach(tab => {
-                if (tab.id === 'view-home') {
-                    tab.classList.add('active');
-                } else {
-                    tab.classList.remove('active');
-                }
-            });
-            if (typeof window.updateReferrerField === 'function') {
-                window.updateReferrerField();
-            }
-            // Scroll to the apply section inside home view
-            setTimeout(() => {
-                const appSection = document.getElementById('apply-section');
-                const homeView = document.getElementById('view-home');
-                if (appSection && homeView) {
-                    homeView.scrollTo({
-                        top: appSection.offsetTop - 10,
-                        behavior: 'smooth'
-                    });
-                }
-            }, 50);
-            return;
-        }
-
-        tabs.forEach(tab => {
-            if (tab.id === `view-${tabId}`) {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
-            }
-        });
-
-        navItems.forEach(btn => {
-            if (btn.id === `tab-btn-${tabId}`) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-
-        // Trigger Tab-Specific Renderings
-        if (tabId === 'status') {
-            renderStatusTab();
-        }
-
-        // Auto scroll to top on tab switch
-        window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-        const activeTab = document.getElementById(`view-${tabId}`);
-        if (activeTab) {
-            activeTab.scrollTop = 0;
-        }
-        updateHeaderAuthButton();
-        if (typeof window.updateReferrerField === 'function') {
-            window.updateReferrerField();
-        }
-    }
-    window.switchTab = switchTab;
 
     // Link "로그인 / 회원가입" links in drawer and status tab to PC Auth Modal
     const loginLink = document.getElementById('drawer-login-link');
@@ -962,12 +938,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (adminContainer) adminContainer.style.display = 'block';
             renderAdminDashboardMob();
         } else if (activeUser.role === 'business') {
-            roleBadge.textContent = `영업자 코드: ${activeUser.bizCode}`;
+            roleBadge.textContent = `영업자 코드: ${activeUser.bizCode || ''}`;
             roleBadge.style.background = 'var(--accent-secondary)';
             if (businessContainer) businessContainer.style.display = 'block';
             renderBusinessDashboardMob();
         } else if (activeUser.role === 'constructor') {
-            roleBadge.textContent = `시공사 코드: ${activeUser.constCode}`;
+            roleBadge.textContent = `시공사 코드: ${activeUser.constCode || ''}`;
             roleBadge.style.background = 'var(--accent-success)';
             if (constructorContainer) constructorContainer.style.display = 'block';
             renderConstructorDashboardMob();
@@ -986,6 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderNormalDashboardMob();
         }
     }
+    window.renderStatusTab = renderStatusTab;
 
     // --- Client Dashboard ---
     function renderNormalDashboardMob() {
@@ -1066,6 +1043,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+    window.renderNormalDashboardMob = renderNormalDashboardMob;
 
     // Normal client conversion request (1회 클릭 즉각 실행)
     function requestBusinessConversionMob() {
