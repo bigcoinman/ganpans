@@ -3389,7 +3389,7 @@ function initModalsAndSearch() {
                 ownerPhone: item.phone || u.phone || '',
                 storeAddress: item.address || '주소 미등록',
                 signType: '현장 실측 간판',
-                status: item.progressStatus || '심사 대기',
+                status: item.progressStatus || '심사대기중',
                 constructionStatus: '',
                 appliedAt: '',
                 type: '영업물건'
@@ -3422,7 +3422,7 @@ function initModalsAndSearch() {
       }
 
       matched.forEach(item => {
-        let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">심사 대기</span>';
+        let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">심사대기중</span>';
         if (item.status === 'approved' || item.status === '승인 완료') {
           statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-check"></i> 승인 완료</span>';
         } else if (item.status === 'rejected' || item.status === '반려됨') {

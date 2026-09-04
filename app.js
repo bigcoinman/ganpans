@@ -1247,7 +1247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (s === 'giveup' || s === '지원사업 포기' || s === '지원사업포기') {
             return '<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-ban"></i> 포기</span>';
         }
-        return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 심사 대기</span>';
+        return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 심사대기중</span>';
     }
 
     function getReceiptStatusBadgeHtmlMob(status) {
@@ -1724,7 +1724,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 address: targetApp.storeAddress,
                 photosCount: targetApp.fileData ? 1 : 0,
                 receiptStatus: '접수 완료 (간판지원단)',
-                progressStatus: (targetApp.status === 'approved' || targetApp.status === '서류제출 & 접수예정') ? '승인 완료' : ((targetApp.status === 'rejected' || targetApp.status === '지원사업 탈락' || targetApp.status === '지원사업탈락') ? '반려됨' : ((targetApp.status === 'giveup' || targetApp.status === '지원사업 포기' || targetApp.status === '지원사업포기') ? '지원사업 포기' : '심사 대기')),
+                progressStatus: (targetApp.status === 'approved' || targetApp.status === '서류제출 & 접수예정') ? '승인 완료' : ((targetApp.status === 'rejected' || targetApp.status === '지원사업 탈락' || targetApp.status === '지원사업탈락') ? '반려됨' : ((targetApp.status === 'giveup' || targetApp.status === '지원사업 포기' || targetApp.status === '지원사업포기') ? '지원사업 포기' : '심사대기중')),
                 photos: targetApp.fileData ? [targetApp.fileData] : []
             };
 
@@ -2237,7 +2237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const getProgressStatusLabel = (statusObj) => {
-            if (!statusObj) return '심사 대기';
+            if (!statusObj) return '심사대기중';
             const status = statusObj.status || statusObj.receiptStatus || '';
             const constStatus = statusObj.constructionStatus || statusObj.progressStatus || '';
             if (constStatus === '간판시공완료' || constStatus === '시공 완료' || constStatus === '정산 완료' || constStatus === 'completed') return '정산 종결 (최종 완료)';
@@ -2246,7 +2246,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (status === 'approved' || status === '서류제출 & 접수예정' || status === '승인 완료') return '승인 완료';
             if (status === 'rejected' || status === '지원사업 탈락' || status === '반려됨' || status === '지원사업탈락') return '지원사업 탈락';
             if (status === 'giveup' || status === '지원사업 포기' || status === '지원사업포기') return '지원사업 포기';
-            return '심사 대기';
+            return '심사대기중';
         };
 
         const rows = bizList.map(item => {
@@ -2343,7 +2343,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const rows = sortedApps.map((a, idx) => {
-            let statusText = '심사 대기';
+            let statusText = '심사대기중';
             if (a.status === 'approved' || a.status === '서류제출 & 접수예정') statusText = '서류제출 & 접수예정';
             else if (a.status === 'rejected' || a.status === '지원사업 탈락') statusText = '지원사업 탈락';
             else if (a.status === 'giveup' || a.status === '지원사업 포기') statusText = '지원사업 포기';
@@ -2887,7 +2887,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const isGiveup = (app.status === 'giveup' || app.status === '지원사업 포기' || app.status === '지원사업포기');
                     const isPending = !isApproved && !isRejected && !isGiveup;
 
-                    let statusBadge = '<span class="badge-status pending" style="font-size: 0.85rem; padding: 3px 8px;">심사 대기</span>';
+                    let statusBadge = '<span class="badge-status pending" style="font-size: 0.85rem; padding: 3px 8px;">심사대기중</span>';
                     if (isApproved) statusBadge = '<span class="badge-status approved" style="font-size: 0.85rem; padding: 3px 8px; background: #dcfce7; color: #166534; font-weight: 700;">서류제출 & 접수예정</span>';
                     else if (isRejected) statusBadge = '<span class="badge-status rejected" style="font-size: 0.85rem; padding: 3px 8px; background: #fee2e2; color: #991b1b; font-weight: 700;">지원사업 탈락</span>';
                     else if (isGiveup) statusBadge = '<span class="badge-status giveup" style="font-size: 0.85rem; padding: 3px 8px; background: #fffbeb; color: #b45309; font-weight: 700;">지원사업 포기</span>';
@@ -2914,7 +2914,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="admin-action-row-mob" style="display:flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-top: 12px;">
                             <div style="position: relative; display: inline-flex; align-items: center;">
                                 <select class="status-select-mob select-app-status-mob" data-id="${app.id}" onchange="window.updateApplicationStatusMob && window.updateApplicationStatusMob('${app.id}', this.value, this);" style="padding: 6px 10px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background-color: ${statusBg}; cursor: pointer; height: 36px; line-height: 1.2;">
-                                    <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사 대기</option>
+                                    <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사대기중</option>
                                     <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
                                     <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
                                     <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
@@ -3794,7 +3794,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
             const res = window.DataStore.updateApplicationStatus(id, newStatus);
             const targetApp = res && res.app;
-            let statusLabel = '심사 대기';
+            let statusLabel = '심사대기중';
             if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') statusLabel = '서류제출 & 접수예정';
             else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') statusLabel = '지원사업 탈락';
             else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') statusLabel = '지원사업 포기';
@@ -5469,7 +5469,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ownerPhone: item.phone || u.phone || '',
                                 storeAddress: item.address || '주소 미등록',
                                 signType: '현장 실측 간판',
-                                status: item.progressStatus || '심사 대기',
+                                status: item.progressStatus || '심사대기중',
                                 type: '영업물건'
                             });
                         }
@@ -5500,7 +5500,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             matched.forEach(item => {
-                let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">심사 대기</span>';
+                let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">심사대기중</span>';
                 if (item.status === 'approved' || item.status === '승인 완료') {
                     statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-check"></i> 승인 완료</span>';
                 } else if (item.status === 'rejected' || item.status === '반려됨') {
