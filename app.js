@@ -1432,10 +1432,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const s = String(status).trim();
-        const isBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
-        const rStatus = String(app.receiptStatus || '').trim();
+        let isBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
+        let rStatus = String(app.receiptStatus || '').trim();
         let pStatus = String(app.progressStatus || '').trim();
-        const constName = String(app.assignedConstructorName || app.assignedConstructorId || '').trim();
+        let constName = String(app.assignedConstructorName || app.assignedConstructorId || '').trim();
 
         // 1단계: 사전 등록 심사 상태 뱃지 (공통)
         let preBadgeHtml = '';
@@ -1454,7 +1454,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 현재 사용자 역할 확인 (영업자/관리자/시공사는 전용 메뉴가 있으므로 단일 심사 상태 유지)
         let currentRole = 'user';
         try {
-            const au = (typeof activeUser === 'object' && activeUser && activeUser.role) ? activeUser : JSON.parse(localStorage.getItem('activeUser') || '{}');
+            const au = (typeof activeUser === 'object' && activeUser && activeUser.role) ? activeUser : JSON.parse(localStorage.getItem('activeUser') || sessionStorage.getItem('activeUser') || '{}');
             if (au && au.role) currentRole = au.role;
         } catch (e) {}
 
@@ -1462,57 +1462,87 @@ document.addEventListener('DOMContentLoaded', () => {
             return preBadgeHtml;
         }
 
-        // 일반회원(점주) 또는 비회원 점주 전용: 공단 접수 이후 실시간 진행상황 듀얼 뱃지 연동
-        if (isBizItem || (rStatus && rStatus !== 'none') || (pStatus && pStatus !== 'none')) {
-            let receiptBadge = '';
-            if (rStatus === '접수완료') {
-                receiptBadge = '<span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-building-columns"></i> 공단 접수완료</span>';
-            } else if (rStatus === '접수예정') {
-                receiptBadge = '<span style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-clock"></i> 공단 접수예정</span>';
-            } else {
-                receiptBadge = '<span style="background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-file-lines"></i> 업체신청</span>';
-            }
+        // 일반회원(점주) 또는 비회원 점주 전용: users.items에서 최신 공단 접수/진행상황 실시간 다각도 매칭 폴백
+        if (!rStatus || !pStatus || !isBizItem || !constName) {
+            try {
+                const allUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
+                const appIdStr = String(app.id || '').trim().toLowerCase();
+                const appName = String(app.storeName || app.shopName || app.name || '').trim().toLowerCase();
+                const appPhone = String(app.ownerPhone || app.phone || '').replace(/[^0-9]/g, '');
 
-            let progressBadge = '';
-            if (pStatus === '간판시공완료' || pStatus === 'completed' || pStatus === '시공완료' || pStatus === '정산 완료') {
-                progressBadge = '<span style="background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-award"></i> 간판시공완료</span>';
-            } else if (pStatus === '간판시공 준비중' || pStatus === 'in_construction' || pStatus === '시공준비') {
-                progressBadge = '<span style="background: #fef9c3; color: #a16207; border: 1px solid #fef08a; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-screwdriver-wrench"></i> 간판시공 준비중</span>';
-            } else if (pStatus === '대상자선정' || pStatus === '선정' || pStatus === 'before_construction') {
-                progressBadge = '<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
-            } else if (pStatus === '심사대기중' || pStatus === '심사대기') {
-                progressBadge = '<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-magnifying-glass"></i> 심사대기중</span>';
-            } else {
-                progressBadge = '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-hourglass-start"></i> 지원대기중</span>';
-            }
+                for (let u of allUsers) {
+                    if (u.items && Array.isArray(u.items)) {
+                        for (let it of u.items) {
+                            const itId = String(it.id || '').trim().toLowerCase();
+                            const itRef = String(it.appRefId || '').trim().toLowerCase();
+                            const itName = String(it.name || '').trim().toLowerCase();
+                            const itPhone = String(it.phone || '').replace(/[^0-9]/g, '');
 
-            let constBadge = '';
-            if (constName && constName !== 'none' && constName !== '미배정') {
-                constBadge = `<div style="font-size: 0.75rem; color: #1d4ed8; font-weight: 700; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 3px 8px; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;"><i class="fa-solid fa-hard-hat" style="color: #2563eb;"></i> 배정: ${escapeHtml(constName)}</div>`;
-            }
+                            const matchId = (appIdStr && (itId === appIdStr || itRef === appIdStr));
+                            const matchName = (appName && itName && (appName.includes(itName) || itName.includes(appName)));
+                            const matchPhone = (appPhone && itPhone && appPhone === itPhone);
 
-            return `
-                <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start; width: 100%;">
-                    <div>${preBadgeHtml}</div>
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px;">
-                        <div style="font-size: 0.72rem; font-weight: 800; color: #0284c7; display: flex; align-items: center; gap: 4px;">
-                            <i class="fa-solid fa-circle-dot" style="font-size: 0.6rem;"></i> 공단 접수 & 진행상황
-                        </div>
-                        <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
-                            ${receiptBadge}
-                            ${progressBadge}
-                        </div>
-                        ${constBadge}
-                    </div>
-                </div>
-            `;
+                            if (matchId || (matchName && matchPhone) || (matchName && app.ownerName && it.ownerName === app.ownerName)) {
+                                isBizItem = true;
+                                if (!rStatus && it.receiptStatus) rStatus = it.receiptStatus;
+                                if (!pStatus && it.progressStatus) pStatus = it.progressStatus;
+                                if (!constName && (it.assignedConstructorName || it.assignedConstructorId)) {
+                                    constName = it.assignedConstructorName || it.assignedConstructorId;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+
+        // 일반회원: 공단 접수 상태 뱃지 생성
+        let receiptBadge = '';
+        if (rStatus === '접수완료' || rStatus.includes('접수완료') || rStatus === '접수 완료') {
+            receiptBadge = '<span style="background: #e0f2fe; color: #0369a1; border: 1.5px solid #7dd3fc; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-building-columns"></i> 공단 접수완료</span>';
+        } else if (rStatus === '접수예정' || rStatus.includes('접수예정')) {
+            receiptBadge = '<span style="background: #fef3c7; color: #92400e; border: 1.5px solid #fde68a; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-clock"></i> 공단 접수예정</span>';
+        } else if (isBizItem || rStatus === '업체신청') {
+            receiptBadge = '<span style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-file-lines"></i> 업체신청</span>';
+        } else {
+            receiptBadge = '<span style="background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-regular fa-clock"></i> 공단 공고 대기</span>';
+        }
+
+        // 일반회원: 공단 진행상황 5단계 뱃지 생성
+        let progressBadge = '';
+        if (pStatus === '간판시공완료' || pStatus === 'completed' || pStatus === '시공완료' || pStatus === '정산 완료') {
+            progressBadge = '<span style="background: #ede9fe; color: #6d28d9; border: 1.5px solid #c4b5fd; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-award"></i> 간판시공완료</span>';
+        } else if (pStatus === '간판시공 준비중' || pStatus === 'in_construction' || pStatus === '시공준비') {
+            progressBadge = '<span style="background: #fef9c3; color: #a16207; border: 1.5px solid #fef08a; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-screwdriver-wrench"></i> 간판시공 준비중</span>';
+        } else if (pStatus === '대상자선정' || pStatus === '선정' || pStatus === 'before_construction') {
+            progressBadge = '<span style="background: #dcfce7; color: #15803d; border: 1.5px solid #86efac; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
+        } else if (pStatus === '심사대기중' || pStatus === '심사대기') {
+            progressBadge = '<span style="background: #fef3c7; color: #b45309; border: 1.5px solid #fde68a; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-magnifying-glass"></i> 심사대기중</span>';
+        } else if (isBizItem || (pStatus && pStatus !== 'none')) {
+            progressBadge = '<span style="background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-hourglass-start"></i> 지원대기중</span>';
+        } else {
+            progressBadge = '<span style="background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 500; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-info-circle"></i> 접수 대기중</span>';
+        }
+
+        // 일반회원: 배정 시공사 뱃지
+        let constBadge = '';
+        if (constName && constName !== 'none' && constName !== '미배정') {
+            constBadge = `<div style="font-size: 0.78rem; color: #1d4ed8; font-weight: 700; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 6px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 5px; margin-top: 4px;"><i class="fa-solid fa-hard-hat" style="color: #2563eb;"></i> 배정 시공업체: <strong>${escapeHtml(constName)}</strong></div>`;
         }
 
         return `
-            <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+            <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start; width: 100%;">
                 <div>${preBadgeHtml}</div>
-                <div style="font-size: 0.75rem; color: #94a3b8; padding-left: 2px; display: inline-flex; align-items: center; gap: 4px;">
-                    <i class="fa-solid fa-circle-info"></i> 공단 사업공고 대기중
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                    <div style="font-size: 0.75rem; font-weight: 800; color: #0284c7; display: flex; align-items: center; gap: 4px;">
+                        <i class="fa-solid fa-circle-dot" style="font-size: 0.6rem; color: #0284c7;"></i> 공단 실시간 진행상황
+                    </div>
+                    <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
+                        ${receiptBadge}
+                        ${progressBadge}
+                    </div>
+                    ${constBadge}
                 </div>
             </div>
         `;

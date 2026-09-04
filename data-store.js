@@ -781,13 +781,32 @@
       let updatedUserIds = [];
 
       const cleanVal = String(value || '').trim();
-      const targetIdStr = String(itemId || '').trim();
+      // 0) itemId로 users.items 내 해당 물건의 메타데이터(상호명, 연락처 등) 사전 탐색
+      let sourceItem = null;
+      for (let u of users) {
+        if (u.items && Array.isArray(u.items)) {
+          const found = u.items.find(it => String(it.id) === targetIdStr || (it.appRefId && String(it.appRefId) === targetIdStr));
+          if (found) {
+            sourceItem = found;
+            break;
+          }
+        }
+      }
 
-      // 1) applications 내 매칭 항목 갱신 (SSOT 원천 최우선 갱신)
+      // 1) applications 내 매칭 항목 갱신 (ID 매칭 + 상호명/연락처 다각도 매칭)
       apps = apps.map(app => {
-        const isMatch = String(app.id) === targetIdStr || 
-                        (app.appRefId && String(app.appRefId) === targetIdStr);
-        if (isMatch) {
+        const isIdMatch = String(app.id) === targetIdStr || (app.appRefId && String(app.appRefId) === targetIdStr);
+        let isMetaMatch = false;
+        if (sourceItem) {
+          const sPhone = String(sourceItem.phone || '').replace(/[^0-9]/g, '');
+          const aPhone = String(app.ownerPhone || app.phone || '').replace(/[^0-9]/g, '');
+          const sName = String(sourceItem.name || '').trim().toLowerCase();
+          const aName = String(app.storeName || app.shopName || app.name || '').trim().toLowerCase();
+          isMetaMatch = (sPhone && aPhone && sPhone === aPhone) || (sName && aName && sName === aName);
+        }
+
+        if (isIdMatch || isMetaMatch) {
+          app.isBizItem = true;
           if (type === 'receipt') {
             app.receiptStatus = cleanVal;
           } else {
@@ -811,16 +830,25 @@
         return app;
       });
 
-      // 2) users.items 내 모든 매칭 항목 갱신 (uid 불일치 시에도 itemId/appRefId/targetApp.id로 전수 탐색)
+      // 2) users.items 내 모든 매칭 항목 갱신 (uid 불일치 시에도 itemId/appRefId/targetApp.id/메타데이터로 전수 탐색)
       users = users.map(u => {
         if (u.items && Array.isArray(u.items)) {
           let userItemModified = false;
           const updatedItems = u.items.map(item => {
-            const isMatch = String(item.id) === targetIdStr || 
-                            (item.appRefId && String(item.appRefId) === targetIdStr) || 
-                            (targetApp && (String(item.id) === String(targetApp.id) || String(item.appRefId) === String(targetApp.id))) ||
-                            (uid && String(u.id) === String(uid) && String(item.id) === targetIdStr);
-            if (isMatch) {
+            const isIdMatch = String(item.id) === targetIdStr || 
+                              (item.appRefId && String(item.appRefId) === targetIdStr) || 
+                              (targetApp && (String(item.id) === String(targetApp.id) || String(item.appRefId) === String(targetApp.id))) ||
+                              (uid && String(u.id) === String(uid) && String(item.id) === targetIdStr);
+            let isMetaMatch = false;
+            if (targetApp) {
+              const itPhone = String(item.phone || '').replace(/[^0-9]/g, '');
+              const aPhone = String(targetApp.ownerPhone || targetApp.phone || '').replace(/[^0-9]/g, '');
+              const itName = String(item.name || '').trim().toLowerCase();
+              const aName = String(targetApp.storeName || targetApp.shopName || targetApp.name || '').trim().toLowerCase();
+              isMetaMatch = (itPhone && aPhone && itPhone === aPhone) || (itName && aName && itName === aName);
+            }
+
+            if (isIdMatch || isMetaMatch) {
               userItemModified = true;
               if (type === 'receipt') {
                 targetItem = { ...item, receiptStatus: cleanVal };
