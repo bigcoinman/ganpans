@@ -4,7 +4,11 @@
   "rewrites": [
     {
       "source": "/app",
-      "destination": "/app.html"
+      "destination": "/index.html"
+    },
+    {
+      "source": "/app.html",
+      "destination": "/index.html"
     }
   ],
   "headers": [
