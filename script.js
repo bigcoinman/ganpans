@@ -3426,13 +3426,43 @@ function initModalsAndSearch() {
       }
 
       matched.forEach(item => {
-        let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">심사대기중</span>';
-        if (item.status === 'approved' || item.status === '승인 완료') {
-          statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-check"></i> 승인 완료</span>';
-        } else if (item.status === 'rejected' || item.status === '반려됨') {
-          statusBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-xmark"></i> 반려됨</span>';
-        } else if (item.status) {
-          statusBadge = `<span style="background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">${typeof escapeHtml === 'function' ? escapeHtml(item.status) : item.status}</span>`;
+        const s = String(item.status || '').trim();
+        const isBizItem = Boolean(item.isBizItem === true || String(item.isBizItem) === 'true');
+        const rStatus = String(item.receiptStatus || '').trim();
+        let pStatus = String(item.progressStatus || '').trim();
+
+        let statusBadge = '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;"><i class="fa-regular fa-clock"></i> 사업시행 전 사전등록업체</span>';
+        if (s === 'approved' || s === '서류준비 & 접수대기' || s === '서류제출 & 접수예정' || s === '승인 완료') {
+          statusBadge = '<span style="background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>';
+        } else if (s === 'unqualified' || s === '신청요건 미달업체' || s === '미달') {
+          statusBadge = '<span style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> 신청요건 미달업체</span>';
+        } else if (s === 'rejected' || s === '지원사업 탈락' || s === '반려됨') {
+          statusBadge = '<span style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>';
+        } else if (s === 'giveup' || s === '지원사업 포기') {
+          statusBadge = '<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;"><i class="fa-solid fa-ban"></i> 지원사업 포기</span>';
+        }
+
+        let bizBadge = '';
+        if (isBizItem || (rStatus && rStatus !== 'none') || (pStatus && pStatus !== 'none')) {
+          let pText = '지원대기중';
+          let pColor = '#475569';
+          let pBg = '#f1f5f9';
+          if (pStatus === '간판시공완료' || pStatus === 'completed' || pStatus === '시공완료') {
+            pText = '간판시공완료'; pColor = '#6d28d9'; pBg = '#ede9fe';
+          } else if (pStatus === '간판시공 준비중' || pStatus === 'in_construction') {
+            pText = '간판시공 준비중'; pColor = '#a16207'; pBg = '#fef9c3';
+          } else if (pStatus === '대상자선정' || pStatus === '선정') {
+            pText = '대상자선정'; pColor = '#15803d'; pBg = '#dcfce7';
+          } else if (pStatus === '심사대기중' || pStatus === '심사대기') {
+            pText = '심사대기중'; pColor = '#b45309'; pBg = '#fef3c7';
+          }
+
+          bizBadge = `
+            <div style="margin-top: 4px; display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+              <span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 1px 6px; border-radius: 3px; font-size: 0.68rem; font-weight: 700;"><i class="fa-solid fa-building-columns"></i> ${escapeHtml(rStatus || '접수완료')}</span>
+              <span style="background: ${pBg}; color: ${pColor}; border: 1px solid rgba(0,0,0,0.08); padding: 1px 6px; border-radius: 3px; font-size: 0.68rem; font-weight: 700;">${pText}</span>
+            </div>
+          `;
         }
 
         const card = document.createElement('div');
@@ -3451,7 +3481,10 @@ function initModalsAndSearch() {
               ${typeof escapeHtml === 'function' ? escapeHtml(item.storeName) : item.storeName}
               <span style="font-size: 0.7rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 6px; border-radius: 4px; margin-left: 4px;">${typeof escapeHtml === 'function' ? escapeHtml(String(item.id)) : String(item.id)}</span>
             </div>
-            <div>${statusBadge}</div>
+            <div style="text-align: right;">
+              ${statusBadge}
+              ${bizBadge}
+            </div>
           </div>
           <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
             <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> ${typeof escapeHtml === 'function' ? escapeHtml(item.storeAddress) : item.storeAddress}</div>

@@ -1424,36 +1424,87 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getAppStatusBadgeHtmlMob(statusObj) {
         let status = '';
-        let constStatus = '';
+        let app = typeof statusObj === 'object' && statusObj !== null ? statusObj : {};
         if (typeof statusObj === 'string') {
             status = statusObj;
         } else if (statusObj) {
             status = statusObj.status || statusObj.receiptStatus || '';
-            constStatus = statusObj.constructionStatus || statusObj.progressStatus || '';
         }
 
         const s = String(status).trim();
-        const cs = String(constStatus).trim();
+        const isBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
+        const rStatus = String(app.receiptStatus || '').trim();
+        let pStatus = String(app.progressStatus || '').trim();
+        const constName = String(app.assignedConstructorName || app.assignedConstructorId || '').trim();
 
-        if (cs === '간판시공완료' || cs === '시공 완료' || cs === '정산 완료' || cs === 'completed') {
-            return '<span style="background: #fdf4ff; color: #a855f7; border: 1px solid #f0abfc; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-screwdriver-wrench"></i> 시공 완료</span>';
-        }
-        if (cs === '대상자선정' || cs === '간판시공 준비중' || cs === 'in_construction' || cs === 'after_construction') {
-            return '<span style="background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
-        }
+        // 1단계: 사전 등록 심사 상태 뱃지
+        let preBadgeHtml = '';
         if (s === 'approved' || s === '서류준비 & 접수대기' || s === '서류제출 & 접수예정' || s === '서류제출&접수예정' || s === '승인 완료' || s === '승인완료') {
-            return '<span style="background: #ecfdf5; color: #059669; border: 1px solid #86efac; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>';
+            preBadgeHtml = '<span style="background: #ecfdf5; color: #059669; border: 1.5px solid #86efac; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>';
+        } else if (s === 'unqualified' || s === '신청요건 미달업체' || s === '신청요건미달' || s === '미달') {
+            preBadgeHtml = '<span style="background: #fff7ed; color: #c2410c; border: 1.5px solid #fed7aa; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-triangle-exclamation"></i> 신청요건 미달업체</span>';
+        } else if (s === 'rejected' || s === '지원사업 탈락' || s === '지원사업탈락' || s === '반려됨') {
+            preBadgeHtml = '<span style="background: #fef2f2; color: #ef4444; border: 1.5px solid #fecaca; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>';
+        } else if (s === 'giveup' || s === '지원사업 포기' || s === '지원사업포기') {
+            preBadgeHtml = '<span style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-ban"></i> 지원사업 포기</span>';
+        } else {
+            preBadgeHtml = '<span style="background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 사업시행 전 사전등록업체</span>';
         }
-        if (s === 'unqualified' || s === '신청요건 미달업체' || s === '신청요건미달' || s === '미달') {
-            return '<span style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-triangle-exclamation"></i> 신청요건 미달업체</span>';
+
+        // 2단계: 공단 접수 이후 실시간 진행상황
+        if (isBizItem || (rStatus && rStatus !== 'none') || (pStatus && pStatus !== 'none')) {
+            let receiptBadge = '';
+            if (rStatus === '접수완료') {
+                receiptBadge = '<span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-building-columns"></i> 공단 접수완료</span>';
+            } else if (rStatus === '접수예정') {
+                receiptBadge = '<span style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-clock"></i> 공단 접수예정</span>';
+            } else {
+                receiptBadge = '<span style="background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-file-lines"></i> 업체신청</span>';
+            }
+
+            let progressBadge = '';
+            if (pStatus === '간판시공완료' || pStatus === 'completed' || pStatus === '시공완료' || pStatus === '정산 완료') {
+                progressBadge = '<span style="background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-award"></i> 간판시공완료</span>';
+            } else if (pStatus === '간판시공 준비중' || pStatus === 'in_construction' || pStatus === '시공준비') {
+                progressBadge = '<span style="background: #fef9c3; color: #a16207; border: 1px solid #fef08a; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-screwdriver-wrench"></i> 간판시공 준비중</span>';
+            } else if (pStatus === '대상자선정' || pStatus === '선정' || pStatus === 'before_construction') {
+                progressBadge = '<span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
+            } else if (pStatus === '심사대기중' || pStatus === '심사대기') {
+                progressBadge = '<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-magnifying-glass"></i> 심사대기중</span>';
+            } else {
+                progressBadge = '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-hourglass-start"></i> 지원대기중</span>';
+            }
+
+            let constBadge = '';
+            if (constName && constName !== 'none' && constName !== '미배정') {
+                constBadge = `<div style="font-size: 0.75rem; color: #1d4ed8; font-weight: 700; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 3px 8px; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;"><i class="fa-solid fa-hard-hat" style="color: #2563eb;"></i> 배정: ${escapeHtml(constName)}</div>`;
+            }
+
+            return `
+                <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start; width: 100%;">
+                    <div>${preBadgeHtml}</div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px;">
+                        <div style="font-size: 0.72rem; font-weight: 800; color: #0284c7; display: flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-circle-dot" style="font-size: 0.6rem;"></i> 공단 접수 & 진행상황
+                        </div>
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
+                            ${receiptBadge}
+                            ${progressBadge}
+                        </div>
+                        ${constBadge}
+                    </div>
+                </div>
+            `;
         }
-        if (s === 'rejected' || s === '지원사업 탈락' || s === '지원사업탈락' || s === '반려됨') {
-            return '<span style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>';
-        }
-        if (s === 'giveup' || s === '지원사업 포기' || s === '지원사업포기') {
-            return '<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-ban"></i> 지원사업 포기</span>';
-        }
-        return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 사업시행 전 사전등록업체</span>';
+
+        return `
+            <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                <div>${preBadgeHtml}</div>
+                <div style="font-size: 0.75rem; color: #94a3b8; padding-left: 2px; display: inline-flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-circle-info"></i> 공단 사업공고 대기중
+                </div>
+            </div>
+        `;
     }
 
     function getReceiptStatusBadgeHtmlMob(status) {
