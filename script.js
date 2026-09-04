@@ -2126,6 +2126,9 @@ function initAuthAndDashboard() {
   });
 
   const updateSessionUI = () => {
+    if (document.body && document.body.classList.contains('mobile-app-body')) {
+      return; // 모바일 앱에서는 app.js가 전담하므로 PC 세션 UI 조작을 100% 격리
+    }
     users = JSON.parse(localStorage.getItem('users')) || [];
     activeUser = (typeof getActiveUser === 'function') ? getActiveUser() : null;
 
