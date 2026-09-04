@@ -2002,11 +2002,6 @@ if (typeof window !== 'undefined') {
         window.switchTab('status');
       }
 
-      // PC 웹인 경우 대시보드로 이동
-      if (window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/')) {
-        window.location.href = 'dashboard.html';
-      }
-
       window.dispatchEvent(new CustomEvent('supabase-data-synced'));
       return;
     }
@@ -2173,20 +2168,11 @@ if (typeof window !== 'undefined') {
       if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
       
       if (typeof window.switchTab === 'function') {
-        if (user.role === 'business' || user.role === 'constructor' || user.role === 'admin') {
-          window.switchTab('status');
-        } else {
-          window.switchTab('home');
-        }
+        window.switchTab('status');
       }
 
       if (typeof window.renderAdminDashboardMob === 'function' && user.role === 'admin') {
         window.renderAdminDashboardMob(true);
-      }
-
-      // PC 웹에서 영업자/시공사/관리자 로그인 시 대시보드로 이동
-      if ((window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/')) && (user.role === 'business' || user.role === 'constructor' || user.role === 'admin')) {
-        window.location.href = 'dashboard.html';
       }
 
       window.dispatchEvent(new CustomEvent('supabase-data-synced'));

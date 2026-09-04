@@ -14,8 +14,8 @@
                 for (let n of names) caches.delete(n);
             });
         }
-        // 마이페이지/대시보드 접속 시 단일 통합 모바일 웹앱(app.html) 대시보드로 자동 연결
-        window.location.replace('app.html' + window.location.search + '#dashboard');
+        // 마이페이지/대시보드 접속 시 단일 통합 웹앱(index.html#status)으로 즉시 자동 연결
+        window.location.replace('index.html' + window.location.search + '#status');
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
