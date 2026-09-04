@@ -2134,10 +2134,9 @@ if (typeof window !== 'undefined') {
         
         if (!isMatchId) return false;
 
-        // 비밀번호 대조: autoAccount.pw, autoPw ('g-' + 뒷8자리), 또는 뒷자리 숫자
+        // 공식 임시 비밀번호(autoPw: 'g-' + 뒷8자리) 단일 규격 100% 엄격 일치 검증 (방안 A 원칙 준수)
         const autoPw = a.autoAccount?.pw || ('g-' + (aPhoneDigits.length >= 8 ? aPhoneDigits.slice(-8) : aPhoneDigits.padStart(8, '0')));
-        const rawDigitsPw = aPhoneDigits.length >= 8 ? aPhoneDigits.slice(-8) : aPhoneDigits;
-        const isPw = (pwVal === autoPw) || (pwVal === rawDigitsPw) || (hashedPassword === (typeof sha256 === 'function' ? sha256(autoPw) : '')) || (pwVal === '1234');
+        const isPw = (pwVal === autoPw) || (hashedPassword === (typeof sha256 === 'function' ? sha256(autoPw) : ''));
         return isPw;
       });
 

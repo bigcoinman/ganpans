@@ -53,9 +53,9 @@ function simulateLogin(idVal, pwVal) {
       
       if (!isMatchId) return false;
 
+      // 공식 임시 비밀번호(autoPw: 'g-' + 뒷8자리) 단일 규격 100% 엄격 일치 검증 (방안 A 원칙 준수)
       const autoPw = a.autoAccount?.pw || ('g-' + (aPhoneDigits.length >= 8 ? aPhoneDigits.slice(-8) : aPhoneDigits.padStart(8, '0')));
-      const rawDigitsPw = aPhoneDigits.length >= 8 ? aPhoneDigits.slice(-8) : aPhoneDigits;
-      const isPw = (pwVal === autoPw) || (pwVal === rawDigitsPw) || (hashedPassword === sha256(autoPw)) || (pwVal === '1234');
+      const isPw = (pwVal === autoPw) || (hashedPassword === sha256(autoPw));
       return isPw;
     });
 
@@ -154,22 +154,28 @@ localStorage.setItem('applications', JSON.stringify(apps));
 
 console.log('✅ 신청서 및 users 저장 완료.');
 
-// Step 2: Login with 010-1234-5678 and g-12345678
-console.log('\n--- Step 2: 하이픈 전화번호 + g-12345678 로그인 ---');
+// Step 2: Login with 010-1234-5678 and official autoPw g-12345678
+console.log('\n--- Step 2: 하이픈 전화번호 + 공식 임시비밀번호(g-12345678) 로그인 ---');
 const login1 = simulateLogin('010-1234-5678', 'g-12345678');
 console.log('Login 1:', login1 ? `성공 (ID: ${login1.id}, Name: ${login1.name})` : '실패');
 if (!login1) throw new Error('Login 1 failed');
 
-// Step 3: Login with digits 01012345678 and raw digits 12345678
-console.log('\n--- Step 3: 숫자만 전화번호 + g- 없는 비밀번호 12345678 로그인 ---');
-const login2 = simulateLogin('01012345678', '12345678');
+// Step 3: Login with digits 01012345678 and official autoPw g-12345678
+console.log('\n--- Step 3: 숫자만 전화번호 + 공식 임시비밀번호(g-12345678) 로그인 ---');
+const login2 = simulateLogin('01012345678', 'g-12345678');
 console.log('Login 2:', login2 ? `성공 (ID: ${login2.id}, Name: ${login2.name})` : '실패');
 if (!login2) throw new Error('Login 2 failed');
+
+// Step 3-B: Verify that incorrect password is strictly rejected
+console.log('\n--- Step 3-B: 잘못된 비밀번호(12345678 / wrong-pw) 엄격 차단 검증 ---');
+const loginWrong = simulateLogin('01012345678', 'wrong-pw');
+console.log('Login with wrong password rejected:', loginWrong === null ? 'PASS ✅' : 'FAIL ❌');
+if (loginWrong !== null) throw new Error('Security flaw: wrong password accepted');
 
 // Step 4: Auto-healing test (wiping users table and logging in solely from applications)
 console.log('\n--- Step 4: users 저장소 유실 시 applications 기반 Auto-Healing 복구 로그인 ---');
 localStorage.setItem('users', JSON.stringify([])); // wipe users
-const login3 = simulateLogin('010-1234-5678', '12345678');
+const login3 = simulateLogin('010-1234-5678', 'g-12345678');
 console.log('Login 3 (Auto-healing):', login3 ? `성공 (ID: ${login3.id}, Name: ${login3.name})` : '실패');
 const restoredUsers = JSON.parse(localStorage.getItem('users')) || [];
 console.log('Restored users in storage count:', restoredUsers.length);
@@ -192,7 +198,7 @@ const reApp = {
 };
 localStorage.setItem('applications', JSON.stringify([reApp]));
 
-const login4 = simulateLogin('010-9999-8888', '99998888');
+const login4 = simulateLogin('010-9999-8888', 'g-99998888');
 console.log('Login 4 (Post-delete re-registration):', login4 ? `성공 (ID: ${login4.id}, Name: ${login4.name})` : '실패');
 if (!login4) throw new Error('Post-delete re-registration login failed');
 
