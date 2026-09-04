@@ -2008,7 +2008,7 @@ if (typeof window !== 'undefined') {
 
     // 2) 일반 회원 및 기타 사용자 로그인
     const hashedPassword = typeof sha256 === 'function' ? sha256(pwVal) : pwVal;
-    const cleanDigits = (idVal.startsWith('01') && idVal.replace(/[^0-9]/g, '').length >= 9) ? idVal.replace(/[^0-9]/g, '') : '';
+    const cleanDigits = (idVal.replace(/[^0-9]/g, '').length >= 7) ? idVal.replace(/[^0-9]/g, '') : '';
     let user = null;
 
     if (window.supabaseClient) {
@@ -2024,7 +2024,7 @@ if (typeof window !== 'undefined') {
             const { data: phoneData } = await window.supabaseClient
               .from('users')
               .select('*')
-              .or(`phone.eq.${idVal},phone.eq.${cleanDigits}`)
+              .or(`id.ilike.${cleanDigits},id.ilike.${idVal},phone.eq.${idVal},phone.eq.${cleanDigits}`)
               .maybeSingle();
             if (phoneData) data = phoneData;
           }
@@ -2039,7 +2039,7 @@ if (typeof window !== 'undefined') {
           const dataId = String(data.id || '');
           const dataIdLower = dataId.toLowerCase();
           const dataPhone = String(data.phone || '');
-          const dataPhoneDigits = (dataPhone.length >= 9) ? dataPhone.replace(/[^0-9]/g, '') : '';
+          const dataPhoneDigits = (dataPhone.length >= 7) ? dataPhone.replace(/[^0-9]/g, '') : '';
 
           if (data.role === 'deleted' || 
               deletedIds.includes(dataId) || 
@@ -2120,11 +2120,13 @@ if (typeof window !== 'undefined') {
     if (!user) {
       const localUsers = JSON.parse(localStorage.getItem('users')) || [];
       const localUser = localUsers.find(u => {
-        const uId = (u.id || '').toLowerCase();
-        const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
+        const uId = String(u.id || '').toLowerCase();
+        const uPhoneDigits = String(u.phone || '').replace(/[^0-9]/g, '');
+        const uIdDigits = uId.replace(/[^0-9]/g, '');
         const isMatchUser = (uId === idVal.toLowerCase()) ||
-          (cleanDigits && uId === cleanDigits) ||
-          (cleanDigits && uPhoneDigits === cleanDigits);
+          (cleanDigits && uId === cleanDigits.toLowerCase()) ||
+          (cleanDigits && uPhoneDigits === cleanDigits) ||
+          (cleanDigits && uIdDigits === cleanDigits);
         return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
       });
       if (localUser) {

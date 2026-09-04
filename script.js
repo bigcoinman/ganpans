@@ -1558,7 +1558,11 @@ function initWizard() {
             address: storeAddress || existing.address,
             pw: hashedPassword
           };
-          safeSetStorage('users', users);
+          if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(users);
+          } else {
+            safeSetStorage('users', users);
+          }
           if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
             window.SupabaseSync.updateUser(existing.id, { 
               name: ownerName || existing.name,
@@ -1568,6 +1572,12 @@ function initWizard() {
             }).catch(() => {});
           }
         }
+      } else {
+        userId = phoneDigits;
+        loginNoticeId = phoneDigits;
+        loginNoticePw = autoPw;
+        isNewAccount = true;
+
         const newUser = {
           id: phoneDigits,
           name: ownerName,
