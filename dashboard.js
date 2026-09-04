@@ -1491,7 +1491,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td colspan="7" class="text-muted" style="text-align: center; padding: 30px 0;">검색/등록된 가입 회원이 없습니다.</td>
         </tr>
       `;
-      if (paginationContainer) paginationContainer.innerHTML = '';
+      if (paginationAllUsersContainer) paginationAllUsersContainer.innerHTML = '';
       return;
     }
 
@@ -1551,8 +1551,8 @@ document.addEventListener('DOMContentLoaded', () => {
       allUsersTableBody.appendChild(tr);
     });
 
-    if (paginationContainer) {
-      paginationContainer.innerHTML = renderPaginationControls(totalCount, allUsersPerPage, allUsersCurrentPage, 'window.changeAllUsersPage');
+    if (paginationAllUsersContainer) {
+      paginationAllUsersContainer.innerHTML = renderPaginationControls(totalCount, allUsersPerPage, allUsersCurrentPage, 'window.changeAllUsersPage');
     }
   };
   window.renderAllUsersList = renderAllUsersList;
@@ -2311,8 +2311,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const sortedApps = typeof sortApplicationsLatestFirst === 'function' ? sortApplicationsLatestFirst(apps) : apps;
     const rows = sortedApps.map((a, idx) => {
-      let statusText = '심사대기중';
-      if (a.status === 'approved' || a.status === '서류제출 & 접수예정') statusText = '서류제출 & 접수예정';
+      let statusText = '사업시행 전 사전등록업체';
+      if (a.status === 'approved' || a.status === '서류준비 & 접수대기' || a.status === '서류제출 & 접수예정' || a.status === '승인 완료') statusText = '서류준비 & 접수대기';
+      else if (a.status === 'unqualified' || a.status === '신청요건 미달업체') statusText = '신청요건 미달업체';
       else if (a.status === 'rejected' || a.status === '지원사업 탈락') statusText = '지원사업 탈락';
       else if (a.status === 'giveup' || a.status === '지원사업 포기') statusText = '지원사업 포기';
 
@@ -3074,11 +3075,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const d = new Date(app.appliedAt);
       const dateText = !isNaN(d.getTime()) ? `${d.getFullYear()}.${padZero(d.getMonth() + 1)}.${padZero(d.getDate())}` : (String(app.appliedAt).split('T')[0] || '-');
 
-      // Status mapping
-      const isApproved = (app.status === 'approved' || app.status === '서류제출 & 접수예정');
-      const isRejected = (app.status === 'rejected' || app.status === '지원사업 탈락' || app.status === '지원사업탈락');
+      // Status mapping (표준 5대 상태)
+      const isApproved = (app.status === 'approved' || app.status === '서류준비 & 접수대기' || app.status === '서류제출 & 접수예정' || app.status === '서류제출&접수예정' || app.status === '승인 완료');
+      const isUnqualified = (app.status === 'unqualified' || app.status === '신청요건 미달업체' || app.status === '신청요건미달' || app.status === '미달');
+      const isRejected = (app.status === 'rejected' || app.status === '지원사업 탈락' || app.status === '지원사업탈락' || app.status === '반려됨');
       const isGiveup = (app.status === 'giveup' || app.status === '지원사업 포기' || app.status === '지원사업포기');
-      const isPending = !isApproved && !isRejected && !isGiveup;
+      const isPending = !isApproved && !isUnqualified && !isRejected && !isGiveup;
 
       // Status select styling
       let statusColor = '#475569';
@@ -3088,6 +3090,10 @@ document.addEventListener('DOMContentLoaded', () => {
         statusColor = '#15803d';
         statusBg = '#f0fdf4';
         statusBorder = '#86efac';
+      } else if (isUnqualified) {
+        statusColor = '#c2410c';
+        statusBg = '#fff7ed';
+        statusBorder = '#fed7aa';
       } else if (isRejected) {
         statusColor = '#b91c1c';
         statusBg = '#fef2f2';
@@ -3101,22 +3107,28 @@ document.addEventListener('DOMContentLoaded', () => {
       // Actions buttons: 상태 변경 캐럿 드롭다운, 영업물건으로 변경(토글), 삭제
       let actionButtons = '<div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap;">';
 
-      // 1. 상태 변경 셀렉트
+      // 1. 상태 변경 셀렉트 (표준 5대 상태)
       actionButtons += `
         <div style="position: relative; display: inline-flex; align-items: center;">
           <select class="status-select select-app-status-pc" data-id="${app.id}" onchange="window.updateApplicationStatus('${app.id}', this.value)" style="padding: 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background-color: ${statusBg}; cursor: pointer; height: 30px; line-height: 1.2;">
-            <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사대기중</option>
-            <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
+            <option value="pending" ${isPending ? 'selected' : ''}>⏳ 사업시행 전 사전등록업체</option>
+            <option value="approved" ${isApproved ? 'selected' : ''}>📑 서류준비 & 접수대기</option>
+            <option value="unqualified" ${isUnqualified ? 'selected' : ''}>⚠️ 신청요건 미달업체</option>
             <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
             <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
           </select>
         </div>
       `;
 
+      // 2. [수정] 버튼 (업체 상세 정보 직접 수정 모달 열기)
+      actionButtons += `
+        <button type="button" class="btn btn-sm btn-edit-app" data-id="${app.id}" onclick="window.openEditApplicationModal('${app.id}')" style="padding: 5px 8px; font-size: 0.75rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; height: 30px;" title="신청 업체 정보(상호, 대표자, 연락처, 주소 등) 수정"><i class="fa-solid fa-pen-to-square"></i> 수정</button>
+      `;
+
       // 영업물건(진흥원 접수 건) 등록 여부: app.isBizItem SSOT 기준 단일화
       const isAlreadyInBizItems = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
 
-      // 2. [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
+      // 3. [영업물건으로 변경] 토글 버튼 (진흥원 접수 건으로 이동/분리)
       if (isAlreadyInBizItems) {
         actionButtons += `
           <button type="button" class="btn btn-sm btn-toggle-bizitem" data-id="${app.id}" onclick="window.toggleBizItem('${app.id}', this)" style="padding: 5px 10px; font-size: 0.75rem; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; height: 30px;" title="영업물건(진흥원 접수) 등록 상태 - 클릭 시 해제"><i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨</button>
@@ -3127,7 +3139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
       }
       
-      // 3. 삭제 버튼 (항상 노출 - 최고관리자 영구 삭제)
+      // 4. 삭제 버튼 (항상 노출 - 최고관리자 영구 삭제)
       actionButtons += `
         <button type="button" class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" onclick="window.deleteApplicationAdmin('${app.id}', this, event)" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
       </div>`;
@@ -3948,8 +3960,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
       const res = window.DataStore.updateApplicationStatus(id, newStatus);
       const targetApp = res && res.app;
-      let statusLabel = '심사대기중';
-      if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') statusLabel = '서류제출 & 접수예정';
+      let statusLabel = '사업시행 전 사전등록업체';
+      if (newStatus === 'approved' || newStatus === '서류준비 & 접수대기' || newStatus === '서류제출 & 접수예정') statusLabel = '서류준비 & 접수대기';
+      else if (newStatus === 'unqualified' || newStatus === '신청요건 미달업체') statusLabel = '신청요건 미달업체';
       else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') statusLabel = '지원사업 탈락';
       else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') statusLabel = '지원사업 포기';
 
@@ -3963,15 +3976,163 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   window.updateApplicationStatus = updateApplicationStatus;
-  window.renderApplicationsList = renderApplicationsList;
-  window.renderManagerPanel = renderManagerPanel;
-  window.renderBizRegisteredTable = renderBizRegisteredTable;
-  window.renderManagerConstProgress = renderManagerConstProgress;
-  window.renderInquiriesList = renderInquiriesList;
-  window.renderAllUsersList = renderAllUsersList;
-  window.renderAdminStats = renderAdminStats;
-  window.renderUserApplicationsList = renderUserApplicationsList;
-  window.updateSessionUI = updateSessionUI;
+
+  // --- 신청서 세부 정보 직접 수정 모달 (최고관리자 전용) ---
+  const openEditApplicationModal = (appId) => {
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
+    const app = apps.find(a => String(a.id).trim().toLowerCase() === String(appId).trim().toLowerCase());
+    if (!app) {
+      alert('해당 신청서를 찾을 수 없습니다.');
+      return;
+    }
+
+    let modal = document.getElementById('modal-edit-application');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'modal-edit-application';
+      modal.className = 'inquiry-modal-overlay';
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); z-index: 999999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 16px; box-sizing: border-box;';
+      document.body.appendChild(modal);
+    }
+
+    const curStatus = app.status || 'pending';
+    const isApproved = (curStatus === 'approved' || curStatus === '서류준비 & 접수대기' || curStatus === '서류제출 & 접수예정' || curStatus === '승인 완료');
+    const isUnqualified = (curStatus === 'unqualified' || curStatus === '신청요건 미달업체' || curStatus === '미달');
+    const isRejected = (curStatus === 'rejected' || curStatus === '지원사업 탈락' || curStatus === '반려됨');
+    const isGiveup = (curStatus === 'giveup' || curStatus === '지원사업 포기');
+    const isPending = !isApproved && !isUnqualified && !isRejected && !isGiveup;
+
+    modal.innerHTML = `
+      <div style="background: #ffffff; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; padding: 24px; box-sizing: border-box; font-family: inherit;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 14px; margin-bottom: 18px;">
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-pen-to-square" style="color: #2563eb;"></i> 신청서 상세 정보 수정
+          </h3>
+          <button type="button" onclick="window.closeEditApplicationModal()" style="background: none; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer; line-height: 1; padding: 4px;">&times;</button>
+        </div>
+
+        <form id="form-edit-application" onsubmit="window.submitEditApplicationModal('${app.id}', event)" style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px;">신청번호 (고유코드)</label>
+              <input type="text" value="${escapeHtml(app.id)}" disabled style="width: 100%; padding: 8px 10px; font-size: 0.88rem; font-family: monospace; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; color: #64748b; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px;">진행 상태</label>
+              <select id="edit-app-status" style="width: 100%; padding: 8px 10px; font-size: 0.88rem; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: #ffffff; cursor: pointer;">
+                <option value="pending" ${isPending ? 'selected' : ''}>⏳ 사업시행 전 사전등록업체</option>
+                <option value="approved" ${isApproved ? 'selected' : ''}>📑 서류준비 & 접수대기</option>
+                <option value="unqualified" ${isUnqualified ? 'selected' : ''}>⚠️ 신청요건 미달업체</option>
+                <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
+                <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">상호명 (업체명) <span style="color: #ef4444;">*</span></label>
+            <input type="text" id="edit-app-store-name" value="${escapeHtml(app.storeName || app.shopName || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-weight: 600;">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">대표자 성명 <span style="color: #ef4444;">*</span></label>
+              <input type="text" id="edit-app-owner-name" value="${escapeHtml(app.ownerName || app.name || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">대표자 연락처 <span style="color: #ef4444;">*</span></label>
+              <input type="text" id="edit-app-owner-phone" value="${escapeHtml(app.ownerPhone || app.phone || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">설치 매장 주소 <span style="color: #ef4444;">*</span></label>
+            <input type="text" id="edit-app-store-address" value="${escapeHtml(app.storeAddress || app.address || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">희망 간판 종류</label>
+              <input type="text" id="edit-app-sign-type" value="${escapeHtml(app.signType || '')}" placeholder="예: LED 채널 간판" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">담당 영업자 코드</label>
+              <input type="text" id="edit-app-referrer-code" value="${escapeHtml(app.referrerCode || '')}" placeholder="예: B-260903" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-family: monospace;">
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">관리자 메모 / 비고</label>
+            <textarea id="edit-app-memo" rows="2" placeholder="관리자 메모 입력" style="width: 100%; padding: 9px 12px; font-size: 0.9rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; resize: vertical;">${escapeHtml(app.memo || app.notes || '')}</textarea>
+          </div>
+
+          <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; border-top: 1.5px solid #f1f5f9; padding-top: 16px;">
+            <button type="button" onclick="window.closeEditApplicationModal()" style="padding: 10px 18px; font-size: 0.92rem; font-weight: 600; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer;">취소</button>
+            <button type="submit" style="padding: 10px 24px; font-size: 0.92rem; font-weight: 700; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-check"></i> 수정사항 저장</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    modal.style.display = 'flex';
+  };
+
+  const closeEditApplicationModal = () => {
+    const modal = document.getElementById('modal-edit-application');
+    if (modal) modal.style.display = 'none';
+  };
+
+  const submitEditApplicationModal = (appId, event) => {
+    if (event) event.preventDefault();
+    const storeName = document.getElementById('edit-app-store-name').value.trim();
+    const ownerName = document.getElementById('edit-app-owner-name').value.trim();
+    const ownerPhone = document.getElementById('edit-app-owner-phone').value.trim();
+    const storeAddress = document.getElementById('edit-app-store-address').value.trim();
+    const signType = document.getElementById('edit-app-sign-type').value.trim();
+    const referrerCode = document.getElementById('edit-app-referrer-code').value.trim();
+    const status = document.getElementById('edit-app-status').value;
+    const memo = document.getElementById('edit-app-memo').value.trim();
+
+    if (!storeName || !ownerName || !ownerPhone || !storeAddress) {
+      alert('상호명, 대표자명, 연락처, 주소는 필수 입력 항목입니다.');
+      return;
+    }
+
+    if (window.DataStore && typeof window.DataStore.updateApplication === 'function') {
+      const res = window.DataStore.updateApplication(appId, {
+        storeName: storeName,
+        shopName: storeName,
+        ownerName: ownerName,
+        name: ownerName,
+        ownerPhone: ownerPhone,
+        phone: ownerPhone,
+        storeAddress: storeAddress,
+        address: storeAddress,
+        signType: signType,
+        referrerCode: referrerCode,
+        status: status,
+        memo: memo,
+        notes: memo
+      });
+
+      if (res && res.success) {
+        if (typeof window.showToast === 'function') {
+          window.showToast(`[${storeName}] 신청서 정보가 성공적으로 수정되었습니다.`);
+        } else {
+          alert(`[${storeName}] 신청서 정보가 성공적으로 수정되었습니다.`);
+        }
+        closeEditApplicationModal();
+      } else {
+        alert('수정 중 오류가 발생했습니다: ' + (res ? res.message : ''));
+      }
+    }
+  };
+
+  window.openEditApplicationModal = openEditApplicationModal;
+  window.closeEditApplicationModal = closeEditApplicationModal;
+  window.submitEditApplicationModal = submitEditApplicationModal;
 
   const deleteApplication = (id) => {
     if (!confirm('정말로 이 지원 신청 접수 건을 삭제하시겠습니까?')) return;
@@ -4012,12 +4173,12 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${year}.${month}.${day}`;
   };
 
-  // 신청 상태 뱃지 헬퍼 (한글/영문 100% 완전 포괄 매핑)
+  // 신청 상태 뱃지 헬퍼 (표준 5대 상태 한글/영문 100% 완전 포괄 매핑)
   const getAppStatusBadgeHtml = (app) => {
     const s = String(app.status || '').trim();
     const cs = String(app.constructionStatus || app.progressStatus || '').trim();
 
-    if (s === 'approved' || s === '서류제출 & 접수예정' || s === '서류제출&접수예정' || s === '승인 완료' || s === '승인완료') {
+    if (s === 'approved' || s === '서류준비 & 접수대기' || s === '서류제출 & 접수예정' || s === '서류제출&접수예정' || s === '승인 완료' || s === '승인완료') {
       if (cs === 'before_construction' || cs === '시공 전' || cs === '시공사배정') {
         return `<span style="background: #e2e8f0; color: #475569; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-link"></i> 시공사 배정 (시공 전)</span>`;
       } else if (cs === 'in_construction' || cs === '시공 진행 중' || cs === '시공중' || cs === '간판시공 준비중') {
@@ -4027,14 +4188,16 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (cs === 'completed' || cs === '정산 종결 (최종 완료)' || cs === '정산완료' || cs === '간판시공완료') {
         return `<span style="background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-file-invoice-dollar"></i> 정산 종결 (최종 완료)</span>`;
       } else {
-        return `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-check"></i> 서류제출 & 접수예정</span>`;
+        return `<span style="background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>`;
       }
+    } else if (s === 'unqualified' || s === '신청요건 미달업체' || s === '신청요건미달' || s === '미달') {
+      return `<span style="background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-triangle-exclamation"></i> 신청요건 미달업체</span>`;
     } else if (s === 'rejected' || s === '지원사업 탈락' || s === '지원사업탈락' || s === '반려됨') {
-      return `<span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>`;
+      return `<span style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>`;
     } else if (s === 'giveup' || s === '지원사업 포기' || s === '지원사업포기') {
       return `<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-ban"></i> 지원사업 포기</span>`;
     } else {
-      return `<span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-solid fa-clock"></i> 심사대기중</span>`;
+      return `<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem;"><i class="fa-regular fa-clock"></i> 사업시행 전 사전등록업체</span>`;
     }
   };
 
@@ -4567,10 +4730,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const getStatusText = (app) => {
-      if (app.status === 'approved' || app.status === '서류제출 & 접수예정' || app.status === '승인 완료') return '승인 완료';
+      if (app.status === 'approved' || app.status === '서류준비 & 접수대기' || app.status === '서류제출 & 접수예정' || app.status === '승인 완료') return '서류준비 & 접수대기';
+      if (app.status === 'unqualified' || app.status === '신청요건 미달업체') return '신청요건 미달업체';
       if (app.status === 'rejected' || app.status === '지원사업 탈락' || app.status === '반려됨' || app.status === '지원사업탈락') return '지원사업 탈락';
       if (app.status === 'giveup' || app.status === '지원사업 포기' || app.status === '지원사업포기') return '지원사업 포기';
-      return '심사대기중';
+      return '사업시행 전 사전등록업체';
     };
 
     const rows = myApps.map(app => {

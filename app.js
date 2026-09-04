@@ -982,7 +982,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.renderStatusTab = renderStatusTab;
 
-    // --- Client Dashboard ---
+    // --- Client Dashboard (일반회원 마이페이지: 다각도 정밀 매칭 적용) ---
     function renderNormalDashboardMob() {
         const myAppsList = document.getElementById('my-apps-list-mobile');
         const conversionPendingMsg = document.getElementById('conversion-pending-msg-mob');
@@ -1010,39 +1010,64 @@ document.addEventListener('DOMContentLoaded', () => {
             if (conversionConstructorPendingMsg) conversionConstructorPendingMsg.style.display = 'none';
         }
 
-        const myApps = applications.filter(app => app.userId === activeUser.id);
+        const allApps = window.DataStore ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
+        const activeUserId = String(activeUser.id || '').trim().toLowerCase();
+        const activeUserPhone = String(activeUser.phone || activeUser.id || '').replace(/[^0-9]/g, '');
+        const activeUserName = String(activeUser.name || '').trim().toLowerCase();
+
+        // 🎯 다각도 정밀 매칭: 아이디, 휴대폰 번호(아이디/연락처), 대표자명 종합 대조
+        const myApps = allApps.filter(app => {
+            const appUserId = String(app.userId || app.registeredBy || '').trim().toLowerCase();
+            const appPhone = String(app.ownerPhone || app.phone || '').replace(/[^0-9]/g, '');
+            const appOwnerName = String(app.ownerName || '').trim().toLowerCase();
+
+            const isMyId = Boolean(activeUserId && appUserId && appUserId === activeUserId);
+            const isMyPhone = Boolean(activeUserPhone && appPhone && activeUserPhone === appPhone);
+            const isMyName = Boolean(activeUserName && appOwnerName && activeUserName === appOwnerName);
+
+            return isMyId || isMyPhone || (isMyName && isMyPhone);
+        });
+
         if (!myAppsList) return;
 
         if (myApps.length === 0) {
-            myAppsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.8rem;">신청한 간판 교체 지원 이력이 없습니다.</p>';
+            myAppsList.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.88rem; background: #f8fafc; border-radius: 8px;">접수한 온라인 간편 지원 신청 내역이 없습니다.</p>';
             return;
         }
 
+        // 최신 접수순 정렬
+        const sortedApps = [...myApps].sort((a, b) => new Date(b.appliedAt || 0).getTime() - new Date(a.appliedAt || 0).getTime());
+
         myAppsList.innerHTML = '';
-        myApps.forEach(app => {
+        sortedApps.forEach(app => {
             const card = document.createElement('div');
             card.className = 'app-card-mob';
 
-            let statusLabel = '심사 대기';
-            let statusClass = 'pending';
-            if (app.status === 'approved') {
-                statusLabel = '승인 완료';
-                statusClass = 'approved';
-            } else if (app.status === 'rejected') {
-                statusLabel = '반려됨';
-                statusClass = 'rejected';
-            }
+            const statusBadgeHtml = (typeof getAppStatusBadgeHtmlMob === 'function') 
+                ? getAppStatusBadgeHtmlMob(app) 
+                : '<span class="badge-status pending">사업시행 전 사전등록업체</span>';
 
             card.innerHTML = `
-                <div class="app-card-header">
-                    <span class="app-card-title">${escapeHtml(app.shopName || app.storeName)}</span>
-                    <span class="app-card-date">${app.appliedAt ? app.appliedAt.split('T')[0] : ''}</span>
+                <div class="app-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                    <div>
+                        <span class="app-card-title" style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary); display: block;">${escapeHtml(app.shopName || app.storeName || '상호 미정')}</span>
+                        <span style="font-size: 0.78rem; color: var(--text-secondary);">대표자: ${escapeHtml(app.ownerName || '-')} | 연락처: ${escapeHtml(app.ownerPhone || app.phone || '-')}</span>
+                    </div>
+                    <span class="app-card-date" style="font-size: 0.78rem; color: var(--text-muted);">${app.appliedAt ? app.appliedAt.split('T')[0] : ''}</span>
                 </div>
-                <div class="app-card-body-row">주소: ${escapeHtml(app.storeAddress)}</div>
-                <div class="app-card-body-row">접수번호: <strong>${app.id}</strong></div>
-                <div class="app-card-footer">
-                    <span class="badge-status ${statusClass}">${statusLabel}</span>
-                    <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 14px; font-size: 0.90rem; font-weight: 600; border-radius: 8px;">신청취소</button>
+                <div class="app-card-body-row" style="font-size: 0.84rem; margin-bottom: 4px; color: var(--text-secondary);">
+                    <i class="fa-solid fa-location-dot" style="color: #64748b; margin-right: 4px;"></i> 주소: <strong>${escapeHtml(app.storeAddress || '주소 미입력')}</strong>
+                </div>
+                <div class="app-card-body-row" style="font-size: 0.84rem; margin-bottom: 10px; color: var(--text-secondary);">
+                    <i class="fa-solid fa-receipt" style="color: #64748b; margin-right: 4px;"></i> 접수번호: <strong style="color: var(--accent-primary); font-family: monospace;">${app.id}</strong>
+                </div>
+                <div class="app-card-footer" style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.06);">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        ${statusBadgeHtml}
+                    </div>
+                    <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.82rem; font-weight: 600; border-radius: 6px; background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; cursor: pointer;">
+                        <i class="fa-solid fa-trash-can"></i> 신청취소
+                    </button>
                 </div>
             `;
             myAppsList.appendChild(card);
@@ -1050,12 +1075,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add Delete application listener
         myAppsList.querySelectorAll('.btn-delete-app-mob').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const appId = e.target.dataset.id;
+            btn.addEventListener('click', async (e) => {
+                const targetBtn = e.currentTarget;
+                const appId = targetBtn.getAttribute('data-id');
+                if (!appId) return;
                 if (confirm('정말로 이 신청을 취소하고 내역을 삭제하시겠습니까?')) {
-                    let apps = JSON.parse(localStorage.getItem('applications')) || [];
-                    apps = apps.filter(app => app.id !== appId);
-                    localStorage.setItem('applications', JSON.stringify(apps));
+                    if (window.SecurityUtils && typeof window.SecurityUtils.deleteApplication === 'function') {
+                        await window.SecurityUtils.deleteApplication(appId);
+                    }
+                    if (window.DataStore && typeof window.DataStore.deleteApplication === 'function') {
+                        window.DataStore.deleteApplication(appId);
+                    } else {
+                        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+                        apps = apps.filter(app => app.id !== appId);
+                        localStorage.setItem('applications', JSON.stringify(apps));
+                    }
                     renderStatusTab();
                 }
             });
@@ -1234,16 +1268,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cs === '대상자선정' || cs === '간판시공 준비중' || cs === 'in_construction' || cs === 'after_construction') {
             return '<span style="background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
         }
-        if (s === 'approved' || s === '서류제출 & 접수예정' || s === '서류제출&접수예정' || s === '승인 완료' || s === '승인완료') {
-            return '<span style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 서류제출 & 접수예정</span>';
+        if (s === 'approved' || s === '서류준비 & 접수대기' || s === '서류제출 & 접수예정' || s === '서류제출&접수예정' || s === '승인 완료' || s === '승인완료') {
+            return '<span style="background: #ecfdf5; color: #059669; border: 1px solid #86efac; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>';
+        }
+        if (s === 'unqualified' || s === '신청요건 미달업체' || s === '신청요건미달' || s === '미달') {
+            return '<span style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-triangle-exclamation"></i> 신청요건 미달업체</span>';
         }
         if (s === 'rejected' || s === '지원사업 탈락' || s === '지원사업탈락' || s === '반려됨') {
-            return '<span style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 탈락</span>';
+            return '<span style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>';
         }
         if (s === 'giveup' || s === '지원사업 포기' || s === '지원사업포기') {
-            return '<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-ban"></i> 포기</span>';
+            return '<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-ban"></i> 지원사업 포기</span>';
         }
-        return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 심사대기중</span>';
+        return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 사업시행 전 사전등록업체</span>';
     }
 
     function getReceiptStatusBadgeHtmlMob(status) {
@@ -2239,10 +2276,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (constStatus === '간판시공완료' || constStatus === '시공 완료' || constStatus === '정산 완료' || constStatus === 'completed') return '정산 종결 (최종 완료)';
             if (constStatus === '간판시공 준비중' || constStatus === 'in_construction') return '시공 진행 중';
             if (constStatus === '대상자선정' || constStatus === 'before_construction') return '시공사 배정 (시공 전)';
-            if (status === 'approved' || status === '서류제출 & 접수예정' || status === '승인 완료') return '승인 완료';
+            if (status === 'approved' || status === '서류준비 & 접수대기' || status === '서류제출 & 접수예정' || status === '승인 완료') return '서류준비 & 접수대기';
+            if (status === 'unqualified' || status === '신청요건 미달업체') return '신청요건 미달업체';
             if (status === 'rejected' || status === '지원사업 탈락' || status === '반려됨' || status === '지원사업탈락') return '지원사업 탈락';
             if (status === 'giveup' || status === '지원사업 포기' || status === '지원사업포기') return '지원사업 포기';
-            return '심사대기중';
+            return '사업시행 전 사전등록업체';
         };
 
         const rows = bizList.map(item => {
@@ -2339,8 +2377,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const rows = sortedApps.map((a, idx) => {
-            let statusText = '심사대기중';
-            if (a.status === 'approved' || a.status === '서류제출 & 접수예정') statusText = '서류제출 & 접수예정';
+            let statusText = '사업시행 전 사전등록업체';
+            if (a.status === 'approved' || a.status === '서류준비 & 접수대기' || a.status === '서류제출 & 접수예정' || a.status === '승인 완료') statusText = '서류준비 & 접수대기';
+            else if (a.status === 'unqualified' || a.status === '신청요건 미달업체') statusText = '신청요건 미달업체';
             else if (a.status === 'rejected' || a.status === '지원사업 탈락') statusText = '지원사업 탈락';
             else if (a.status === 'giveup' || a.status === '지원사업 포기') statusText = '지원사업 포기';
 
@@ -2877,16 +2916,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.style.border = '1px solid var(--border-color)';
                     card.style.marginBottom = '12px';
 
-                    // Status mapping
-                    const isApproved = (app.status === 'approved' || app.status === '서류제출 & 접수예정');
-                    const isRejected = (app.status === 'rejected' || app.status === '지원사업 탈락' || app.status === '지원사업탈락');
+                    // Status mapping (표준 5대 상태)
+                    const isApproved = (app.status === 'approved' || app.status === '서류준비 & 접수대기' || app.status === '서류제출 & 접수예정' || app.status === '서류제출&접수예정' || app.status === '승인 완료');
+                    const isUnqualified = (app.status === 'unqualified' || app.status === '신청요건 미달업체' || app.status === '신청요건미달' || app.status === '미달');
+                    const isRejected = (app.status === 'rejected' || app.status === '지원사업 탈락' || app.status === '지원사업탈락' || app.status === '반려됨');
                     const isGiveup = (app.status === 'giveup' || app.status === '지원사업 포기' || app.status === '지원사업포기');
-                    const isPending = !isApproved && !isRejected && !isGiveup;
+                    const isPending = !isApproved && !isUnqualified && !isRejected && !isGiveup;
 
-                    let statusBadge = '<span class="badge-status pending" style="font-size: 0.85rem; padding: 3px 8px;">심사대기중</span>';
-                    if (isApproved) statusBadge = '<span class="badge-status approved" style="font-size: 0.85rem; padding: 3px 8px; background: #dcfce7; color: #166534; font-weight: 700;">서류제출 & 접수예정</span>';
-                    else if (isRejected) statusBadge = '<span class="badge-status rejected" style="font-size: 0.85rem; padding: 3px 8px; background: #fee2e2; color: #991b1b; font-weight: 700;">지원사업 탈락</span>';
-                    else if (isGiveup) statusBadge = '<span class="badge-status giveup" style="font-size: 0.85rem; padding: 3px 8px; background: #fffbeb; color: #b45309; font-weight: 700;">지원사업 포기</span>';
+                    let statusBadge = '<span class="badge-status pending" style="font-size: 0.85rem; padding: 3px 8px; border: 1px solid #cbd5e1; background: #f1f5f9; color: #475569; font-weight: 700;">사업시행 전 사전등록업체</span>';
+                    if (isApproved) statusBadge = '<span class="badge-status approved" style="font-size: 0.85rem; padding: 3px 8px; background: #dcfce7; color: #166534; border: 1px solid #86efac; font-weight: 700;">서류준비 & 접수대기</span>';
+                    else if (isUnqualified) statusBadge = '<span class="badge-status unqualified" style="font-size: 0.85rem; padding: 3px 8px; background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; font-weight: 700;">신청요건 미달업체</span>';
+                    else if (isRejected) statusBadge = '<span class="badge-status rejected" style="font-size: 0.85rem; padding: 3px 8px; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-weight: 700;">지원사업 탈락</span>';
+                    else if (isGiveup) statusBadge = '<span class="badge-status giveup" style="font-size: 0.85rem; padding: 3px 8px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-weight: 700;">지원사업 포기</span>';
 
                     // Status select styling for mobile
                     let statusColor = '#475569';
@@ -2896,6 +2937,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         statusColor = '#15803d';
                         statusBg = '#f0fdf4';
                         statusBorder = '#86efac';
+                    } else if (isUnqualified) {
+                        statusColor = '#c2410c';
+                        statusBg = '#fff7ed';
+                        statusBorder = '#fed7aa';
                     } else if (isRejected) {
                         statusColor = '#b91c1c';
                         statusBg = '#fef2f2';
@@ -2910,12 +2955,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="admin-action-row-mob" style="display:flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-top: 12px;">
                             <div style="position: relative; display: inline-flex; align-items: center;">
                                 <select class="status-select-mob select-app-status-mob" data-id="${app.id}" onchange="window.updateApplicationStatusMob && window.updateApplicationStatusMob('${app.id}', this.value, this);" style="padding: 6px 10px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background-color: ${statusBg}; cursor: pointer; height: 36px; line-height: 1.2;">
-                                    <option value="pending" ${isPending ? 'selected' : ''}>⏳ 심사대기중</option>
-                                    <option value="approved" ${isApproved ? 'selected' : ''}>✅ 서류제출 & 접수예정</option>
+                                    <option value="pending" ${isPending ? 'selected' : ''}>⏳ 사업시행 전 사전등록업체</option>
+                                    <option value="approved" ${isApproved ? 'selected' : ''}>📑 서류준비 & 접수대기</option>
+                                    <option value="unqualified" ${isUnqualified ? 'selected' : ''}>⚠️ 신청요건 미달업체</option>
                                     <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
                                     <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
                                 </select>
                             </div>
+                            <button type="button" class="btn btn-sm btn-edit-app-mob" data-id="${app.id}" onclick="window.openEditApplicationModal('${app.id}')" style="padding: 6px 10px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; height: 36px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="신청 업체 정보 수정">
+                                <i class="fa-solid fa-pen-to-square"></i> 수정
+                            </button>
                             <button type="button" class="btn btn-sm btn-toggle-bizitem-mob" data-id="${app.id}" onclick="window.toggleBizItemMob('${app.id}', this)" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; height: 36px; ${(app.isBizItem === true || String(app.isBizItem) === 'true') ? 'background: #0284c7; color: white; border: none;' : 'background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;'}">
                                 <i class="fa-solid ${(app.isBizItem === true || String(app.isBizItem) === 'true') ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> ${(app.isBizItem === true || String(app.isBizItem) === 'true') ? '영업물건 등록됨' : '영업물건으로 변경'}
                             </button>
@@ -3790,8 +3839,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
             const res = window.DataStore.updateApplicationStatus(id, newStatus);
             const targetApp = res && res.app;
-            let statusLabel = '심사대기중';
-            if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') statusLabel = '서류제출 & 접수예정';
+            let statusLabel = '사업시행 전 사전등록업체';
+            if (newStatus === 'approved' || newStatus === '서류준비 & 접수대기' || newStatus === '서류제출 & 접수예정') statusLabel = '서류준비 & 접수대기';
+            else if (newStatus === 'unqualified' || newStatus === '신청요건 미달업체') statusLabel = '신청요건 미달업체';
             else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') statusLabel = '지원사업 탈락';
             else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') statusLabel = '지원사업 포기';
 
@@ -3805,6 +3855,163 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     window.updateApplicationStatusMob = updateApplicationStatusMob;
+
+    // --- 신청서 세부 정보 직접 수정 모달 (최고관리자 모바일 & PC 공통) ---
+    const openEditApplicationModal = (appId) => {
+        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+            ? window.DataStore.getApplications()
+            : (JSON.parse(localStorage.getItem('applications')) || []);
+        const app = apps.find(a => String(a.id).trim().toLowerCase() === String(appId).trim().toLowerCase());
+        if (!app) {
+            alert('해당 신청서를 찾을 수 없습니다.');
+            return;
+        }
+
+        let modal = document.getElementById('modal-edit-application');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modal-edit-application';
+            modal.className = 'inquiry-modal-overlay';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); z-index: 999999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 16px; box-sizing: border-box;';
+            document.body.appendChild(modal);
+        }
+
+        const curStatus = app.status || 'pending';
+        const isApproved = (curStatus === 'approved' || curStatus === '서류준비 & 접수대기' || curStatus === '서류제출 & 접수예정' || curStatus === '승인 완료');
+        const isUnqualified = (curStatus === 'unqualified' || curStatus === '신청요건 미달업체' || curStatus === '미달');
+        const isRejected = (curStatus === 'rejected' || curStatus === '지원사업 탈락' || curStatus === '반려됨');
+        const isGiveup = (curStatus === 'giveup' || curStatus === '지원사업 포기');
+        const isPending = !isApproved && !isUnqualified && !isRejected && !isGiveup;
+
+        modal.innerHTML = `
+            <div style="background: #ffffff; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; padding: 20px; box-sizing: border-box; font-family: inherit;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
+                    <h3 style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-pen-to-square" style="color: #2563eb;"></i> 신청서 상세 정보 수정
+                    </h3>
+                    <button type="button" onclick="window.closeEditApplicationModal()" style="background: none; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer; line-height: 1; padding: 4px;">&times;</button>
+                </div>
+
+                <form id="form-edit-application" onsubmit="window.submitEditApplicationModal('${app.id}', event)" style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px;">신청번호</label>
+                            <input type="text" value="${escapeHtml(app.id)}" disabled style="width: 100%; padding: 8px 10px; font-size: 0.85rem; font-family: monospace; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; color: #64748b; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px;">진행 상태</label>
+                            <select id="edit-app-status" style="width: 100%; padding: 8px 10px; font-size: 0.85rem; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: #ffffff; cursor: pointer;">
+                                <option value="pending" ${isPending ? 'selected' : ''}>⏳ 사업시행 전 사전등록업체</option>
+                                <option value="approved" ${isApproved ? 'selected' : ''}>📑 서류준비 & 접수대기</option>
+                                <option value="unqualified" ${isUnqualified ? 'selected' : ''}>⚠️ 신청요건 미달업체</option>
+                                <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
+                                <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">상호명 (업체명) <span style="color: #ef4444;">*</span></label>
+                        <input type="text" id="edit-app-store-name" value="${escapeHtml(app.storeName || app.shopName || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-weight: 600;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">대표자 성명 <span style="color: #ef4444;">*</span></label>
+                            <input type="text" id="edit-app-owner-name" value="${escapeHtml(app.ownerName || app.name || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">대표자 연락처 <span style="color: #ef4444;">*</span></label>
+                            <input type="text" id="edit-app-owner-phone" value="${escapeHtml(app.ownerPhone || app.phone || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">설치 매장 주소 <span style="color: #ef4444;">*</span></label>
+                        <input type="text" id="edit-app-store-address" value="${escapeHtml(app.storeAddress || app.address || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">희망 간판 종류</label>
+                            <input type="text" id="edit-app-sign-type" value="${escapeHtml(app.signType || '')}" placeholder="예: LED 채널 간판" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">담당 영업자 코드</label>
+                            <input type="text" id="edit-app-referrer-code" value="${escapeHtml(app.referrerCode || '')}" placeholder="예: B-260903" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-family: monospace;">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">관리자 메모 / 비고</label>
+                        <textarea id="edit-app-memo" rows="2" placeholder="관리자 메모 입력" style="width: 100%; padding: 9px 12px; font-size: 0.9rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; resize: vertical;">${escapeHtml(app.memo || app.notes || '')}</textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; border-top: 1.5px solid #f1f5f9; padding-top: 14px;">
+                        <button type="button" onclick="window.closeEditApplicationModal()" style="padding: 9px 16px; font-size: 0.9rem; font-weight: 600; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer;">취소</button>
+                        <button type="submit" style="padding: 9px 20px; font-size: 0.9rem; font-weight: 700; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-check"></i> 수정사항 저장</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        modal.style.display = 'flex';
+    };
+
+    const closeEditApplicationModal = () => {
+        const modal = document.getElementById('modal-edit-application');
+        if (modal) modal.style.display = 'none';
+    };
+
+    const submitEditApplicationModal = (appId, event) => {
+        if (event) event.preventDefault();
+        const storeName = document.getElementById('edit-app-store-name').value.trim();
+        const ownerName = document.getElementById('edit-app-owner-name').value.trim();
+        const ownerPhone = document.getElementById('edit-app-owner-phone').value.trim();
+        const storeAddress = document.getElementById('edit-app-store-address').value.trim();
+        const signType = document.getElementById('edit-app-sign-type').value.trim();
+        const referrerCode = document.getElementById('edit-app-referrer-code').value.trim();
+        const status = document.getElementById('edit-app-status').value;
+        const memo = document.getElementById('edit-app-memo').value.trim();
+
+        if (!storeName || !ownerName || !ownerPhone || !storeAddress) {
+            alert('상호명, 대표자명, 연락처, 주소는 필수 입력 항목입니다.');
+            return;
+        }
+
+        if (window.DataStore && typeof window.DataStore.updateApplication === 'function') {
+            const res = window.DataStore.updateApplication(appId, {
+                storeName: storeName,
+                shopName: storeName,
+                ownerName: ownerName,
+                name: ownerName,
+                ownerPhone: ownerPhone,
+                phone: ownerPhone,
+                storeAddress: storeAddress,
+                address: storeAddress,
+                signType: signType,
+                referrerCode: referrerCode,
+                status: status,
+                memo: memo,
+                notes: memo
+            });
+
+            if (res && res.success) {
+                if (typeof window.showToast === 'function') {
+                    window.showToast(`[${storeName}] 신청서 정보가 성공적으로 수정되었습니다.`);
+                } else {
+                    alert(`[${storeName}] 신청서 정보가 성공적으로 수정되었습니다.`);
+                }
+                closeEditApplicationModal();
+            } else {
+                alert('수정 중 오류가 발생했습니다: ' + (res ? res.message : ''));
+            }
+        }
+    };
+
+    window.openEditApplicationModal = openEditApplicationModal;
+    window.closeEditApplicationModal = closeEditApplicationModal;
+    window.submitEditApplicationModal = submitEditApplicationModal;
 
     
 

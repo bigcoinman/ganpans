@@ -1098,6 +1098,76 @@
       return { success: true, status: newStatus, app: app };
     },
 
+    // --- 6-1. 신청서 세부 정보 전체 수정 (최고관리자 직권 수정 & SSOT 6대 화면 연동) ---
+    updateApplication: function (appId, updatedFields) {
+      let apps = this.getApplications();
+      const appIndex = apps.findIndex(a => String(a.id).trim().toLowerCase() === String(appId).trim().toLowerCase());
+      if (appIndex === -1) return { success: false, message: '신청서를 찾을 수 없습니다.' };
+
+      const currentApp = apps[appIndex];
+      const newApp = {
+        ...currentApp,
+        ...updatedFields,
+        id: currentApp.id, // ID는 불변
+        updatedAt: new Date().toISOString()
+      };
+
+      apps[appIndex] = newApp;
+      this.saveApplications(apps);
+
+      // users.items 내 매칭 항목 동기화
+      let users = this.getUsers();
+      let usersUpdated = false;
+      users = users.map(u => {
+        if (u.items && Array.isArray(u.items)) {
+          let userItemModified = false;
+          const updatedItems = u.items.map(it => {
+            if (String(it.id) === String(newApp.id) || String(it.appRefId) === String(newApp.id)) {
+              userItemModified = true;
+              return {
+                ...it,
+                name: newApp.storeName || newApp.shopName || it.name,
+                phone: newApp.ownerPhone || newApp.phone || it.phone,
+                address: newApp.storeAddress || newApp.address || it.address,
+                status: newApp.status || it.status
+              };
+            }
+            return it;
+          });
+          if (userItemModified) {
+            usersUpdated = true;
+            return { ...u, items: updatedItems };
+          }
+        }
+        return u;
+      });
+
+      if (usersUpdated) {
+        this.saveUsers(users);
+      }
+
+      // 비동기 Supabase 동기화
+      (async () => {
+        try {
+          if (window.SupabaseSync) {
+            await window.SupabaseSync.upsertApplication(newApp);
+            if (usersUpdated) {
+              users.forEach(u => {
+                if (u.role === 'business' || u.role === 'admin') {
+                  window.SupabaseSync.updateUser(u.id, { items: u.items || [] });
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('[DataStore] updateApplication sync warning:', e);
+        }
+      })();
+
+      this.notifyAll(true);
+      return { success: true, app: newApp };
+    },
+
     // --- 7. 3초 간편문의 (Inquiries) 통합 관리 엔진 ---
     getDeletedInquiryIds: function () {
       return [];
