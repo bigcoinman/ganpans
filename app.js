@@ -1,5 +1,17 @@
 // app.js - Mobile App Shell & Interactive State Synchronizer
 
+// --- 영업물건 진행상황 상태 변경 모바일 글로벌 핸들러 (0초 즉시 전역 등록) ---
+window.updateItemStatusMob = function(uid, itemId, type, value) {
+    if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
+        return window.DataStore.updateItemStatus(uid, itemId, type, value);
+    }
+};
+window.updateItemStatus = function(uid, itemId, type, value) {
+    if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
+        return window.DataStore.updateItemStatus(uid, itemId, type, value);
+    }
+};
+
 // --- 신청서 세부 정보 직접 수정 모달 (모바일/공통 최상단 즉시 정의) ---
 window.safeHtmlForEditAppMob = function(s) {
     return (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');

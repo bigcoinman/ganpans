@@ -578,11 +578,11 @@ function checkInactivityTimeout() {
   }
 
   // 세션 사용자가 존재하는 경우 (로그인 상태 유지 체크 안 함)
-  const sessionUser = sessionStorage.getItem('activeUser');
-  const localUser = localStorage.getItem('activeUser');
+  const sessionUser = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('activeUser') : null;
+  const localUser = typeof localStorage !== 'undefined' ? localStorage.getItem('activeUser') : null;
   
-  if (sessionUser || (localUser && localStorage.getItem('activeUser_remember') !== 'true')) {
-    const lastActiveStr = sessionStorage.getItem('last_active_time') || localStorage.getItem('last_active_time_session');
+  if (sessionUser || (localUser && typeof localStorage !== 'undefined' && localStorage.getItem('activeUser_remember') !== 'true')) {
+    const lastActiveStr = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('last_active_time') : null) || (typeof localStorage !== 'undefined' ? localStorage.getItem('last_active_time_session') : null);
     
     if (lastActiveStr) {
       const lastActive = parseInt(lastActiveStr, 10);

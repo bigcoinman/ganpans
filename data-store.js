@@ -953,7 +953,20 @@
 
       // 5) 모든 대시보드 화면 0초 즉시 동기화
       this.notifyAll(true);
-      return { success: true };
+
+      // 6) 사용자 피드백 토스트 알림
+      try {
+        const itemLabel = targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName || targetIdStr) : targetIdStr;
+        const typeLabel = type === 'receipt' ? '접수 상태' : '진행 상황';
+        const msg = `[${itemLabel}]의 ${typeLabel}가 [${cleanVal}]으로 변경되었습니다.`;
+        if (typeof window.showToast === 'function') {
+          window.showToast(msg);
+        } else if (typeof window.showNotification === 'function') {
+          window.showNotification(msg, 'success');
+        }
+      } catch (e) {}
+
+      return { success: true, updatedValue: cleanVal, type: type };
     },
 
     // --- 3-3. 신청서 담당 영업자 지정 / 변경 (최고관리자 권한) ---
@@ -1604,6 +1617,17 @@
   };
 
   // 영업물건 접수/진행상태 변경 전역 브릿지
+  window.updateItemStatus = function (uid, itemId, type, value) {
+    if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
+      return window.DataStore.updateItemStatus(uid, itemId, type, value);
+    }
+  };
+  window.updateItemStatusMob = function (uid, itemId, type, value) {
+    if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
+      return window.DataStore.updateItemStatus(uid, itemId, type, value);
+    }
+  };
+
   // --- 신청서 담당 영업자 수정/변경 모달 전역 브릿지 (PC웹 & 모바일 공용) ---
   window.openAssignBizUserModal = function (appId, event) {
     if (event && typeof event.stopPropagation === 'function') event.stopPropagation();

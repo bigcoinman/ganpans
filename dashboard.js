@@ -1,5 +1,12 @@
 // dashboard.js - My Page & Business Dashboard Logic
 
+// --- 영업물건 진행상황 상태 변경 글로벌 핸들러 (0초 즉시 전역 등록) ---
+window.updateItemStatus = function(uid, itemId, type, value) {
+  if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
+    return window.DataStore.updateItemStatus(uid, itemId, type, value);
+  }
+};
+
 // --- 신청서 세부 정보 직접 수정 모달 (최상단 즉시 정의: DOMContentLoaded 대기 없이 0초 즉시 동작 보장) ---
 window.safeHtmlForEditApp = function(s) {
   return (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
