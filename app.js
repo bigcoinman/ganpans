@@ -1193,12 +1193,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const appUserId = String(app.userId || app.registeredBy || '').trim().toLowerCase();
             const appPhone = String(app.ownerPhone || app.phone || '').replace(/[^0-9]/g, '');
             const appOwnerName = String(app.ownerName || '').trim().toLowerCase();
+            const appIdStr = String(app.id || '').trim().toLowerCase();
 
-            const isMyId = Boolean(activeUserId && appUserId && appUserId === activeUserId);
-            const isMyPhone = Boolean(activeUserPhone && appPhone && activeUserPhone === appPhone);
+            const isMyId = Boolean(activeUserId && (appUserId === activeUserId || appIdStr === activeUserId));
+            const isMyPhone = Boolean(activeUserPhone && (appPhone === activeUserPhone || activeUserId === appPhone));
             const isMyName = Boolean(activeUserName && appOwnerName && activeUserName === appOwnerName);
 
-            return isMyId || isMyPhone || (isMyName && isMyPhone);
+            return isMyId || isMyPhone || (isMyName && (isMyPhone || isMyId));
         });
 
         if (!myAppsList) return;
@@ -1215,30 +1216,35 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedApps.forEach(app => {
             const card = document.createElement('div');
             card.className = 'app-card-mob';
+            card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);';
 
             const statusBadgeHtml = (typeof getAppStatusBadgeHtmlMob === 'function') 
                 ? getAppStatusBadgeHtmlMob(app) 
-                : '<span class="badge-status pending">사업시행 전 사전등록업체</span>';
+                : ((typeof window.getAppStatusBadgeHtml === 'function') ? window.getAppStatusBadgeHtml(app) : '<span class="badge-status pending">사업시행 전 사전등록업체</span>');
 
             card.innerHTML = `
-                <div class="app-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div class="app-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                     <div>
-                        <span class="app-card-title" style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary); display: block;">${escapeHtml(app.shopName || app.storeName || '상호 미정')}</span>
-                        <span style="font-size: 0.78rem; color: var(--text-secondary);">대표자: ${escapeHtml(app.ownerName || '-')} | 연락처: ${escapeHtml(app.ownerPhone || app.phone || '-')}</span>
+                        <span class="app-card-title" style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block; line-height: 1.3;">${escapeHtml(app.shopName || app.storeName || '상호 미정')}</span>
+                        <span style="font-size: 0.8rem; color: #64748b; margin-top: 3px; display: block;">대표자: <strong>${escapeHtml(app.ownerName || '-')}</strong> | 연락처: <strong style="color: var(--accent-primary);">${escapeHtml(app.ownerPhone || app.phone || '-')}</strong></span>
                     </div>
-                    <span class="app-card-date" style="font-size: 0.78rem; color: var(--text-muted);">${app.appliedAt ? app.appliedAt.split('T')[0] : ''}</span>
+                    <span class="app-card-date" style="font-size: 0.78rem; color: #94a3b8; font-family: monospace;">${app.appliedAt ? app.appliedAt.split('T')[0] : ''}</span>
                 </div>
-                <div class="app-card-body-row" style="font-size: 0.84rem; margin-bottom: 4px; color: var(--text-secondary);">
-                    <i class="fa-solid fa-location-dot" style="color: #64748b; margin-right: 4px;"></i> 주소: <strong>${escapeHtml(app.storeAddress || '주소 미입력')}</strong>
+                <div class="app-card-body-row" style="font-size: 0.85rem; margin-bottom: 4px; color: #475569;">
+                    <i class="fa-solid fa-location-dot" style="color: var(--accent-primary); margin-right: 4px; width: 14px;"></i> 주소: <strong>${escapeHtml(app.storeAddress || '주소 미입력')}</strong>
                 </div>
-                <div class="app-card-body-row" style="font-size: 0.84rem; margin-bottom: 10px; color: var(--text-secondary);">
-                    <i class="fa-solid fa-receipt" style="color: #64748b; margin-right: 4px;"></i> 접수번호: <strong style="color: var(--accent-primary); font-family: monospace;">${app.id}</strong>
+                <div class="app-card-body-row" style="font-size: 0.85rem; margin-bottom: 10px; color: #475569;">
+                    <i class="fa-solid fa-receipt" style="color: #64748b; margin-right: 4px; width: 14px;"></i> 접수번호: <strong style="color: var(--accent-primary); font-family: monospace;">${app.id}</strong>
                 </div>
-                <div class="app-card-footer" style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.06);">
-                    <div style="display: flex; align-items: center; gap: 6px;">
+                
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+                    <div style="width: 100%;">
                         ${statusBadgeHtml}
                     </div>
-                    <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.82rem; font-weight: 600; border-radius: 6px; background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; cursor: pointer;">
+                </div>
+
+                <div class="app-card-footer" style="display: flex; justify-content: flex-end; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e2e8f0; gap: 8px;">
+                    <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 700; border-radius: 6px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; cursor: pointer;">
                         <i class="fa-solid fa-trash-can"></i> 신청취소
                     </button>
                 </div>
@@ -1527,8 +1533,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 일반회원: 배정 시공사 뱃지
         let constBadge = '';
+        const safe = typeof escapeHtml === 'function' ? escapeHtml : (typeof window.escapeHtml === 'function' ? window.escapeHtml : (t => String(t || '')));
         if (constName && constName !== 'none' && constName !== '미배정') {
-            constBadge = `<div style="font-size: 0.78rem; color: #1d4ed8; font-weight: 700; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 6px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 5px; margin-top: 4px;"><i class="fa-solid fa-hard-hat" style="color: #2563eb;"></i> 배정 시공업체: <strong>${escapeHtml(constName)}</strong></div>`;
+            constBadge = `<div style="font-size: 0.78rem; color: #1d4ed8; font-weight: 700; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 6px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 5px; margin-top: 4px;"><i class="fa-solid fa-hard-hat" style="color: #2563eb;"></i> 배정 시공업체: <strong>${safe(constName)}</strong></div>`;
         }
 
         return `
@@ -1547,6 +1554,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
     }
+    window.getAppStatusBadgeHtmlMob = getAppStatusBadgeHtmlMob;
 
     function getReceiptStatusBadgeHtmlMob(status) {
         const s = String(status || '').trim();
