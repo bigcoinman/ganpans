@@ -781,6 +781,8 @@
       let updatedUserIds = [];
 
       const cleanVal = String(value || '').trim();
+      const targetIdStr = String(itemId || '').trim();
+
       // 0) itemId로 users.items 내 해당 물건의 메타데이터(상호명, 연락처 등) 사전 탐색
       let sourceItem = null;
       for (let u of users) {
@@ -829,6 +831,25 @@
         }
         return app;
       });
+
+      if (!targetApp && sourceItem) {
+        targetApp = {
+          id: sourceItem.id || targetIdStr,
+          appRefId: sourceItem.appRefId || targetIdStr,
+          userId: uid || 'guest',
+          ownerName: sourceItem.name || '점주',
+          ownerPhone: sourceItem.phone || '',
+          storeName: sourceItem.name || '영업물건',
+          storeAddress: sourceItem.address || '',
+          isBizItem: true,
+          receiptStatus: type === 'receipt' ? cleanVal : (sourceItem.receiptStatus || '접수예정'),
+          progressStatus: type === 'progress' ? cleanVal : (sourceItem.progressStatus || '지원대기중'),
+          status: (cleanVal === '대상자선정' || cleanVal === '간판시공 준비중' || cleanVal === '간판시공완료') ? 'approved' : 'pending',
+          constructionStatus: (cleanVal === '간판시공완료' ? 'completed' : (cleanVal === '간판시공 준비중' ? 'in_construction' : 'before_construction')),
+          appliedAt: sourceItem.registeredAt || new Date().toISOString()
+        };
+        apps.push(targetApp);
+      }
 
       // 2) users.items 내 모든 매칭 항목 갱신 (uid 불일치 시에도 itemId/appRefId/targetApp.id/메타데이터로 전수 탐색)
       users = users.map(u => {
@@ -972,6 +993,110 @@
       // 3) 6개 화면 실시간 동기화
       this.notifyAll();
       return { success: true, app: targetApp };
+    },
+
+    // --- 3-4. 영업물건 시공사 배정 (최고관리자 권한) ---
+    assignConstructorToBizItem: function (uid, itemId, constId) {
+      if (!itemId || !constId) return { success: false, error: '유효하지 않은 요청입니다.' };
+      const curUsers = this.getUsers();
+      const constUser = curUsers.find(u => String(u.id) === String(constId));
+      if (!constUser) return { success: false, error: '시공사 정보를 찾을 수 없습니다.' };
+
+      const constName = constUser.businessName || constUser.pendingBusinessName || constUser.name || constUser.id;
+
+      // 1) applications 단일 원천 갱신
+      let apps = this.getApplications();
+      let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
+      if (targetApp) {
+        targetApp.assignedConstructorId = String(constId);
+        targetApp.assignedConstructorName = constName;
+        targetApp.constructionStatus = targetApp.constructionStatus && targetApp.constructionStatus !== 'none' ? targetApp.constructionStatus : 'before_construction';
+        targetApp.assignedAt = new Date().toISOString();
+        this.saveApplications(apps);
+
+        if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
+          window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
+        }
+      }
+
+      // 2) users.items 동기화
+      let usersList = curUsers.map(u => {
+        if (String(u.id) === String(uid) || (u.items && u.items.some(it => String(it.id) === String(itemId) || String(it.appRefId) === String(itemId)))) {
+          const updatedItems = (u.items || []).map(item => {
+            if (String(item.id) === String(itemId) || String(item.appRefId) === String(itemId)) {
+              return {
+                ...item,
+                assignedConstructorId: String(constId),
+                assignedConstructorName: constName,
+                constructionStatus: item.constructionStatus || 'before_construction',
+                assignedAt: new Date().toISOString()
+              };
+            }
+            return item;
+          });
+          return { ...u, items: updatedItems };
+        }
+        return u;
+      });
+      this.saveUsers(usersList);
+
+      if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
+        const updatedUser = usersList.find(u => String(u.id) === String(uid));
+        if (updatedUser) {
+          window.SupabaseSync.updateUser(uid, { items: updatedUser.items || [] }).catch(() => {});
+        }
+      }
+
+      this.notifyAll(true);
+      return { success: true, constName };
+    },
+
+    // --- 3-5. 영업물건 시공사 배정 초기화 / 변경 ---
+    reassignConstructorItem: function (uid, itemId) {
+      if (!itemId) return { success: false };
+
+      // 1) applications 단일 원천 초기화
+      let apps = this.getApplications();
+      let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
+      if (targetApp) {
+        targetApp.assignedConstructorId = null;
+        targetApp.assignedConstructorName = null;
+        this.saveApplications(apps);
+
+        if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
+          window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
+        }
+      }
+
+      // 2) users.items 동기화
+      let curUsers = this.getUsers();
+      let usersList = curUsers.map(u => {
+        if (String(u.id) === String(uid) || (u.items && u.items.some(it => String(it.id) === String(itemId) || String(it.appRefId) === String(itemId)))) {
+          const updatedItems = (u.items || []).map(item => {
+            if (String(item.id) === String(itemId) || String(item.appRefId) === String(itemId)) {
+              return {
+                ...item,
+                assignedConstructorId: null,
+                assignedConstructorName: null
+              };
+            }
+            return item;
+          });
+          return { ...u, items: updatedItems };
+        }
+        return u;
+      });
+      this.saveUsers(usersList);
+
+      if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
+        const updatedUser = usersList.find(u => String(u.id) === String(uid));
+        if (updatedUser) {
+          window.SupabaseSync.updateUser(uid, { items: updatedUser.items || [] }).catch(() => {});
+        }
+      }
+
+      this.notifyAll(true);
+      return { success: true };
     },
 
     // --- 4. 온라인 간편 지원 신청서 영구 삭제 ---
