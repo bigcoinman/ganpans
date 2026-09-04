@@ -1098,7 +1098,7 @@
       return { success: true, status: newStatus, app: app };
     },
 
-    // --- 6-1. 신청서 세부 정보 전체 수정 (최고관리자 직권 수정 & SSOT 6대 화면 연동) ---
+    // --- 6-1. 신청서 세부 정보 전체 수정 (최고관리자 직권 수정 & SSOT 6대 화면 연동 & 점주 계정 동기화) ---
     updateApplication: function (appId, updatedFields) {
       let apps = this.getApplications();
       const appIndex = apps.findIndex(a => String(a.id).trim().toLowerCase() === String(appId).trim().toLowerCase());
@@ -1112,12 +1112,61 @@
         updatedAt: new Date().toISOString()
       };
 
+      // 1) 점주 연락처 변경 시 자동 생성된 점주 계정(ID, 비밀번호, 연락처) 동기화
+      const oldPhone = String(currentApp.ownerPhone || currentApp.phone || '').trim();
+      const newPhone = String(newApp.ownerPhone || newApp.phone || '').trim();
+      const oldPhoneDigits = oldPhone.replace(/[^0-9]/g, '');
+      const newPhoneDigits = newPhone.replace(/[^0-9]/g, '');
+
+      let users = this.getUsers();
+      let usersUpdated = false;
+      let userAccountChanged = null;
+
+      if (oldPhoneDigits && newPhoneDigits && oldPhoneDigits !== newPhoneDigits) {
+        // 기존 전화번호로 된 일반 점주 회원 계정 탐색 (role === 'normal')
+        const ownerUserIdx = users.findIndex(u =>
+          (u.role === 'normal' || !u.role) &&
+          (String(u.id).toLowerCase() === oldPhoneDigits.toLowerCase() || (u.phone && String(u.phone).replace(/[^0-9]/g, '') === oldPhoneDigits))
+        );
+
+        if (ownerUserIdx !== -1) {
+          const targetOwner = users[ownerUserIdx];
+          const newAutoPw = 'g-' + (newPhoneDigits.length >= 8 ? newPhoneDigits.slice(-8) : newPhoneDigits.padStart(8, '0'));
+          const newHashedPw = (typeof sha256 === 'function') ? sha256(newAutoPw) : newAutoPw;
+
+          userAccountChanged = {
+            oldId: targetOwner.id,
+            oldPhone: targetOwner.phone,
+            newId: newPhoneDigits,
+            newPhone: newPhone,
+            newPw: newAutoPw
+          };
+
+          // 업주 계정 ID 및 정보 변경
+          users[ownerUserIdx] = {
+            ...targetOwner,
+            id: newPhoneDigits,
+            phone: newPhone,
+            name: newApp.ownerName || targetOwner.name,
+            address: newApp.storeAddress || targetOwner.address,
+            pw: newHashedPw
+          };
+          usersUpdated = true;
+
+          // 신청서의 applicantUserId 및 autoAccount 정보도 새 번호로 갱신
+          newApp.applicantUserId = newPhoneDigits;
+          if (newApp.registeredBy === oldPhoneDigits) newApp.registeredBy = newPhoneDigits;
+          if (newApp.autoAccount) {
+            newApp.autoAccount.id = newPhoneDigits;
+            newApp.autoAccount.pw = newAutoPw;
+          }
+        }
+      }
+
       apps[appIndex] = newApp;
       this.saveApplications(apps);
 
-      // users.items 내 매칭 항목 동기화
-      let users = this.getUsers();
-      let usersUpdated = false;
+      // 2) users.items 내 매칭 항목 동기화
       users = users.map(u => {
         if (u.items && Array.isArray(u.items)) {
           let userItemModified = false;
@@ -1146,11 +1195,23 @@
         this.saveUsers(users);
       }
 
-      // 비동기 Supabase 동기화
+      // 3) 비동기 Supabase 동기화 (신청서 + 변경된 업주 계정 + 영업자 items)
       (async () => {
         try {
           if (window.SupabaseSync) {
             await window.SupabaseSync.upsertApplication(newApp);
+
+            if (userAccountChanged) {
+              // 기존 구형 ID 계정 삭제 및 새 ID 계정 저장
+              if (typeof window.SupabaseSync.deleteUser === 'function') {
+                await window.SupabaseSync.deleteUser(userAccountChanged.oldId, userAccountChanged.oldPhone);
+              }
+              const updatedOwnerUser = users.find(u => u.id === userAccountChanged.newId);
+              if (updatedOwnerUser && typeof window.SupabaseSync.upsertUser === 'function') {
+                await window.SupabaseSync.upsertUser(updatedOwnerUser);
+              }
+            }
+
             if (usersUpdated) {
               users.forEach(u => {
                 if (u.role === 'business' || u.role === 'admin') {
@@ -1165,7 +1226,7 @@
       })();
 
       this.notifyAll(true);
-      return { success: true, app: newApp };
+      return { success: true, app: newApp, accountChanged: userAccountChanged };
     },
 
     // --- 7. 3초 간편문의 (Inquiries) 통합 관리 엔진 ---
