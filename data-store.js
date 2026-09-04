@@ -1134,31 +1134,50 @@
           const newAutoPw = 'g-' + (newPhoneDigits.length >= 8 ? newPhoneDigits.slice(-8) : newPhoneDigits.padStart(8, '0'));
           const newHashedPw = (typeof sha256 === 'function') ? sha256(newAutoPw) : newAutoPw;
 
-          userAccountChanged = {
-            oldId: targetOwner.id,
-            oldPhone: targetOwner.phone,
-            newId: newPhoneDigits,
-            newPhone: newPhone,
-            newPw: newAutoPw
-          };
+          // 이미 새 전화번호로 가입된 다른 회원이 존재하는지 확인 (중복 충돌 완벽 방어)
+          const existingTargetIdx = users.findIndex((u, idx) => 
+            idx !== ownerUserIdx && 
+            (String(u.id).toLowerCase() === newPhoneDigits.toLowerCase() || (u.phone && String(u.phone).replace(/[^0-9]/g, '') === newPhoneDigits))
+          );
 
-          // 업주 계정 ID 및 정보 변경
-          users[ownerUserIdx] = {
-            ...targetOwner,
-            id: newPhoneDigits,
-            phone: newPhone,
-            name: newApp.ownerName || targetOwner.name,
-            address: newApp.storeAddress || targetOwner.address,
-            pw: newHashedPw
-          };
-          usersUpdated = true;
+          if (existingTargetIdx !== -1) {
+            // 이미 해당 번호의 회원이 존재하면, 이전 오타 계정만 삭제하고 신청서를 기존 실존 회원에게 안전하게 귀속
+            userAccountChanged = {
+              oldId: targetOwner.id,
+              oldPhone: targetOwner.phone,
+              newId: users[existingTargetIdx].id,
+              newPhone: newPhone,
+              newPw: null
+            };
+            users = users.filter((_, idx) => idx !== ownerUserIdx);
+            usersUpdated = true;
+          } else {
+            // 새 전화번호로 업주 계정 ID 및 정보 변경
+            userAccountChanged = {
+              oldId: targetOwner.id,
+              oldPhone: targetOwner.phone,
+              newId: newPhoneDigits,
+              newPhone: newPhone,
+              newPw: newAutoPw
+            };
+
+            users[ownerUserIdx] = {
+              ...targetOwner,
+              id: newPhoneDigits,
+              phone: newPhone,
+              name: newApp.ownerName || targetOwner.name,
+              address: newApp.storeAddress || targetOwner.address,
+              pw: newHashedPw
+            };
+            usersUpdated = true;
+          }
 
           // 신청서의 applicantUserId 및 autoAccount 정보도 새 번호로 갱신
           newApp.applicantUserId = newPhoneDigits;
           if (newApp.registeredBy === oldPhoneDigits) newApp.registeredBy = newPhoneDigits;
           if (newApp.autoAccount) {
             newApp.autoAccount.id = newPhoneDigits;
-            newApp.autoAccount.pw = newAutoPw;
+            if (userAccountChanged.newPw) newApp.autoAccount.pw = userAccountChanged.newPw;
           }
         }
       }
