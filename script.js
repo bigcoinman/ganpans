@@ -1652,7 +1652,7 @@ function initWizard() {
         status: 'pending',
         isBizItem: false,
         receiptStatus: '접수완료',
-        progressStatus: '심사대기',
+        progressStatus: '심사대기중',
         referrerCode: finalReferrerCode,
         autoAccount: {
           id: loginNoticeId,

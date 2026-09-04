@@ -204,21 +204,16 @@ document.addEventListener('DOMContentLoaded', () => {
           changed = true;
         }
 
-        if (!p || p === '심사 대기' || p === '대기') {
-          p = '지원대기중';
-          changed = true;
-        } else if (p === '서류 보완 필요') {
-          p = '심사대기';
-          changed = true;
-        } else if (p === '서류 심사 통과' || p === '현장 실사 중' || p === '지원금 최종 승인') {
-          p = '대상자선정';
-          changed = true;
-        } else if (p === '간판 시공 중') {
-          p = '간판시공 준비중';
-          changed = true;
-        } else if (p === '시공 완료') {
-          p = '간판시공완료';
-          changed = true;
+        if (p === '심사대기' || p === '심사 대기' || p === '심사대기중' || p === '서류 보완 필요') {
+          if (p !== '심사대기중') { p = '심사대기중'; changed = true; }
+        } else if (p === '대상자선정' || p === '선정' || p === '서류 심사 통과' || p === '현장 실사 중' || p === '지원금 최종 승인') {
+          if (p !== '대상자선정') { p = '대상자선정'; changed = true; }
+        } else if (p === '간판시공 준비중' || p === '간판 시공 중' || p === '시공준비' || p === '시공 준비중') {
+          if (p !== '간판시공 준비중') { p = '간판시공 준비중'; changed = true; }
+        } else if (p === '간판시공완료' || p === '시공 완료' || p === '시공완료' || p === '정산 완료') {
+          if (p !== '간판시공완료') { p = '간판시공완료'; changed = true; }
+        } else if (!p || p === '대기' || p === '지원 대기' || p === '지원대기중') {
+          if (p !== '지원대기중') { p = '지원대기중'; changed = true; }
         }
 
         if (changed) {
@@ -1940,11 +1935,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="display: flex; align-items: center; gap: 6px;">
               <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">진행:</label>
               <select class="status-select select-progress-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff;">
-                <option value="지원대기중" ${(curProgress === '지원대기중' || curProgress === '심사 대기' || !curProgress) ? 'selected' : ''}>지원대기중</option>
-                <option value="심사대기" ${(curProgress === '심사대기' || curProgress === '서류 보완 필요') ? 'selected' : ''}>심사대기</option>
-                <option value="대상자선정" ${(curProgress === '대상자선정' || curProgress === '서류 심사 통과' || curProgress === '현장 실사 중' || curProgress === '지원금 최종 승인') ? 'selected' : ''}>대상자선정</option>
-                <option value="간판시공 준비중" ${(curProgress === '간판시공 준비중' || curProgress === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
-                <option value="간판시공완료" ${(curProgress === '간판시공완료' || curProgress === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
+                <option value="지원대기중" ${(curProgress === '지원대기중' || !curProgress) ? 'selected' : ''}>지원대기중</option>
+                <option value="심사대기중" ${(curProgress === '심사대기중' || curProgress === '심사대기' || curProgress === '심사 대기' || curProgress === '서류 보완 필요') ? 'selected' : ''}>심사대기중</option>
+                <option value="대상자선정" ${(curProgress === '대상자선정' || curProgress === '선정' || curProgress === '승인 완료' || curProgress === '승인완료') ? 'selected' : ''}>대상자선정</option>
+                <option value="간판시공 준비중" ${(curProgress === '간판시공 준비중' || curProgress === '시공준비' || curProgress === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
+                <option value="간판시공완료" ${(curProgress === '간판시공완료' || curProgress === '시공완료' || curProgress === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
               </select>
             </div>
 
@@ -2175,7 +2170,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let statusLabel = '대기중';
       if (u.conversionStatus === 'approved') statusLabel = '승인완료';
       else if (u.conversionStatus === 'rejected') statusLabel = '승인반려';
-      else statusLabel = '심사대기';
+      else statusLabel = '심사대기중';
 
       return [
         String(idx + 1),
@@ -3894,46 +3889,43 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2) 연동된 users items 영업물건에도 사진 자동 반영
         let usersList = JSON.parse(localStorage.getItem('users')) || [];
         let itemUpdated = false;
+        let updatedUsers = [];
         usersList.forEach(u => {
           if (u.items && Array.isArray(u.items)) {
+            let userModified = false;
             u.items.forEach(item => {
               if (String(item.id) === String(appId) || String(item.appRefId) === String(appId)) {
                 item.photos = [base64Data];
                 item.photosCount = 1;
                 itemUpdated = true;
+                userModified = true;
               }
             });
+            if (userModified) updatedUsers.push(u);
           }
         });
         if (itemUpdated) {
           localStorage.setItem('users', JSON.stringify(usersList));
         }
 
-        // 3) Supabase DB 실시간 동기화
-        if (window.supabaseClient) {
+        // 3) Supabase DB SSOT 동기화 (유효 컬럼만 업데이트 및 upsert)
+        if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function' && targetApp) {
+          window.SupabaseSync.upsertApplication(targetApp).catch(e => console.warn('Supabase PC photo upsertApplication err:', e));
+        } else if (window.supabaseClient) {
           try {
             await window.supabaseClient
               .from('applications')
               .update({
-                image_url: base64Data,
-                file_data: base64Data,
-                file_name: fileName,
-                updated_at: new Date().toISOString()
+                image_url: base64Data
               })
               .eq('id', appId);
-
-            if (itemUpdated) {
-              await window.supabaseClient
-                .from('business_items')
-                .update({
-                  photos: [base64Data],
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', appId);
-            }
           } catch (dbErr) {
             console.warn('Supabase application photo sync warning:', dbErr);
           }
+        }
+
+        if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
+          updatedUsers.forEach(u => window.SupabaseSync.upsertUser(u).catch(() => {}));
         }
 
         alert(`📷 [${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : appId}] 현장사진이 성공적으로 업로드되었습니다.`);
@@ -3953,117 +3945,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectEl && typeof selectEl.blur === 'function') {
       selectEl.blur();
     }
-    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') 
-      ? window.DataStore.getApplications() 
-      : (JSON.parse(localStorage.getItem('applications')) || []);
-    
-    let targetApp = null;
-    apps = apps.map(app => {
-      if (String(app.id).trim().toLowerCase() === String(id).trim().toLowerCase()) {
-        let progStatus = '심사대기';
-        if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') progStatus = '서류제출 & 접수예정';
-        else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') progStatus = '지원사업 탈락';
-        else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') progStatus = '지원사업 포기';
-        targetApp = { ...app, status: newStatus, progressStatus: progStatus, constructionStatus: progStatus, updatedAt: new Date().toISOString() };
-        return targetApp;
+    if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
+      const res = window.DataStore.updateApplicationStatus(id, newStatus);
+      const targetApp = res && res.app;
+      let statusLabel = '심사 대기';
+      if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') statusLabel = '서류제출 & 접수예정';
+      else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') statusLabel = '지원사업 탈락';
+      else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') statusLabel = '지원사업 포기';
+
+      const msg = `[${targetApp ? (targetApp.storeName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`;
+      if (typeof window.showToast === 'function') {
+        window.showToast(msg);
+      } else {
+        alert(msg);
       }
-      return app;
-    });
-
-    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-      window.DataStore.saveApplications(apps);
-    } else {
-      localStorage.setItem('applications', JSON.stringify(apps));
+      return res;
     }
-
-    // 1) 영업자 대시보드(PC/모바일 공통) 실시간 동시 연동: users 목록 내 items 상태 동기화
-    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
-      ? window.DataStore.getUsers()
-      : (JSON.parse(localStorage.getItem('users')) || []);
-    let usersUpdated = false;
-    if (targetApp) {
-      curUsers = curUsers.map(u => {
-        if (u.items && Array.isArray(u.items)) {
-          u.items = u.items.map(it => {
-            if (String(it.id) === String(targetApp.id) || String(it.appRefId) === String(targetApp.id)) {
-              let updatedProgress = '지원대기중';
-              if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') updatedProgress = '서류제출 & 접수예정';
-              else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') updatedProgress = '지원사업 탈락';
-              else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') updatedProgress = '지원사업 포기';
-              else updatedProgress = '심사대기';
-
-              it.progressStatus = updatedProgress;
-              it.constructionStatus = updatedProgress;
-              usersUpdated = true;
-            }
-            return it;
-          });
-        }
-        return u;
-      });
-
-      if (usersUpdated) {
-        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-          window.DataStore.saveUsers(curUsers);
-        } else {
-          localStorage.setItem('users', JSON.stringify(curUsers));
-        }
-      }
-    }
-
-    let statusLabel = '심사 대기';
-    if (newStatus === 'approved' || newStatus === '서류제출 & 접수예정') statusLabel = '서류제출 & 접수예정';
-    else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') statusLabel = '지원사업 탈락';
-    else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') statusLabel = '지원사업 포기';
-
-    const msg = `[${targetApp ? (targetApp.storeName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`;
-    if (typeof window.showToast === 'function') {
-      window.showToast(msg);
-    } else {
-      alert(msg);
-    }
-
-    // 전역 0초 즉각 렌더링
-    if (typeof renderApplicationsList === 'function') renderApplicationsList();
-    if (typeof renderManagerPanel === 'function') renderManagerPanel();
-    if (typeof renderBizRegisteredTable === 'function') renderBizRegisteredTable();
-    if (typeof renderAdminStats === 'function') renderAdminStats();
-    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-      window.DataStore.notifyAll(true);
-    }
-
-    // 3) Supabase DB 백그라운드 비동기 영구 저장 (Non-blocking)
-    (async () => {
-      if (window.SupabaseSync) {
-        try {
-          await window.SupabaseSync.updateApplication(id, { status: newStatus });
-          if (targetApp) {
-            await window.SupabaseSync.upsertApplication(targetApp);
-          }
-          if (usersUpdated) {
-            curUsers.forEach(u => {
-              if (u.role === 'business' || u.role === 'admin') {
-                window.SupabaseSync.updateUser(u.id, { items: u.items || [] });
-              }
-            });
-          }
-        } catch (syncErr) {
-          console.warn('Supabase background update status sync warning:', syncErr);
-        }
-      } else if (window.supabaseClient) {
-        try {
-          await window.supabaseClient
-            .from('applications')
-            .update({
-              status: newStatus,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', String(id));
-        } catch (err) {
-          console.warn('Supabase application status update notice:', err);
-        }
-      }
-    })();
   };
   window.updateApplicationStatus = updateApplicationStatus;
   window.renderApplicationsList = renderApplicationsList;
@@ -4489,14 +4386,14 @@ document.addEventListener('DOMContentLoaded', () => {
           ? '<span style="background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-building"></i> 업체신청</span>'
           : '<span style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-clock"></i> 접수예정</span>');
 
-      const progressBadge = (p === '간판시공완료' || p === '시공 완료' || p === '정산 완료')
+      const progressBadge = (p === '간판시공완료' || p === 'completed' || p === 'after_construction' || p === '시공 완료' || p === '시공완료' || p === '정산 완료')
         ? '<span style="background: #fdf4ff; color: #a855f7; border: 1px solid #f0abfc; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-screwdriver-wrench"></i> 간판시공완료</span>'
-        : ((p === '간판시공 준비중' || p === '시공 준비중')
+        : ((p === '간판시공 준비중' || p === 'in_construction' || p === '시공 준비중' || p === '간판 시공 중' || p === '시공준비')
           ? '<span style="background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-paint-roller"></i> 간판시공 준비중</span>'
-          : ((p === '대상자선정' || p === '선정')
+          : ((p === '대상자선정' || p === '선정' || p === '승인 완료' || p === '승인완료' || p === 'approved' || p === 'before_construction' || p === '시공 전' || p === '시공사 배정 (시공 전)' || p === '서류 심사 통과' || p === '현장 실사 중' || p === '지원금 최종 승인')
             ? '<span style="background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>'
-            : ((p === '심사대기' || p === '심사 대기' || p === '서류 보완 필요')
-              ? '<span style="background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-hourglass-half"></i> 심사대기</span>'
+            : ((p === '심사대기' || p === '심사 대기' || p === '심사대기중' || p === '서류 보완 필요')
+              ? '<span style="background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-hourglass-half"></i> 심사대기중</span>'
               : '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-regular fa-clock"></i> 지원대기중</span>')));
 
       tr.innerHTML = `

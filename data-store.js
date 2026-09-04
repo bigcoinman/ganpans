@@ -322,7 +322,26 @@
         }
 
         const rStatus = app.receiptStatus || '접수예정';
-        const pStatus = app.progressStatus || (app.constructionStatus && app.constructionStatus !== 'none' ? app.constructionStatus : null) || '지원대기중';
+        let pStatus = String(app.progressStatus || '').trim();
+        if (!pStatus || pStatus === 'none') {
+          const cs = String(app.constructionStatus || '').trim();
+          if (cs === 'before_construction' || cs === '대상자선정' || cs === '선정') pStatus = '대상자선정';
+          else if (cs === 'in_construction' || cs === '간판시공 준비중' || cs === '시공준비' || cs === '간판 시공 중') pStatus = '간판시공 준비중';
+          else if (cs === 'completed' || cs === 'after_construction' || cs === '간판시공완료' || cs === '시공완료' || cs === '정산 완료') pStatus = '간판시공완료';
+          else pStatus = '지원대기중';
+        }
+        // 영문 또는 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화
+        if (pStatus === '대상자선정' || pStatus === '선정' || pStatus === '승인 완료' || pStatus === '승인완료' || pStatus === 'approved' || pStatus === 'before_construction' || pStatus === '시공 전' || pStatus === '시공사 배정 (시공 전)' || pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인') {
+          pStatus = '대상자선정';
+        } else if (pStatus === '간판시공 준비중' || pStatus === 'in_construction' || pStatus === '시공 준비중' || pStatus === '간판 시공 중' || pStatus === '시공준비') {
+          pStatus = '간판시공 준비중';
+        } else if (pStatus === '간판시공완료' || pStatus === 'completed' || pStatus === 'after_construction' || pStatus === '시공 완료' || pStatus === '정산 완료' || pStatus === '시공완료') {
+          pStatus = '간판시공완료';
+        } else if (pStatus === '심사대기' || pStatus === '심사 대기' || pStatus === '심사대기중' || pStatus === '서류 보완 필요') {
+          pStatus = '심사대기중';
+        } else {
+          pStatus = '지원대기중';
+        }
 
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
         const itemObj = {
@@ -663,6 +682,7 @@
         }
 
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
+        const bizProgressStatus = app.progressStatus || (app.status === 'approved' ? '대상자선정' : (app.status === 'rejected' ? '지원사업 탈락' : (app.status === 'giveup' ? '지원사업 포기' : '지원대기중')));
         const bizItem = {
           id: String(app.id),
           name: app.storeName || app.shopName || app.ownerName || '영업물건',
@@ -670,7 +690,7 @@
           address: app.storeAddress || app.address || '',
           photosCount: photosList.length,
           receiptStatus: app.receiptStatus || '접수예정',
-          progressStatus: (app.status === 'approved' ? '승인 완료' : (app.status === 'rejected' ? '반려됨' : (app.status === 'giveup' ? '지원사업 포기' : '지원대기중'))),
+          progressStatus: bizProgressStatus,
           photos: photosList,
           appRefId: String(app.id)
         };
@@ -722,7 +742,7 @@
         try {
           if (window.supabaseClient) {
             await window.supabaseClient.from('applications').update({
-              memo: JSON.stringify({ isBizItem: isNowBizItem, receiptStatus: app.receiptStatus || '접수예정' }),
+              memo: JSON.stringify({ isBizItem: isNowBizItem, receiptStatus: app.receiptStatus || '접수예정', progressStatus: app.progressStatus || '지원대기중' }),
               referrer_code: app.referrerCode || ''
             }).eq('id', String(app.id));
           }
@@ -763,37 +783,10 @@
       const cleanVal = String(value || '').trim();
       const targetIdStr = String(itemId || '').trim();
 
-      // 1) users.items 내 모든 매칭 항목 갱신 (uid 불일치 시에도 itemId/appRefId로 전수 탐색)
-      users = users.map(u => {
-        if (u.items && Array.isArray(u.items)) {
-          let userItemModified = false;
-          const updatedItems = u.items.map(item => {
-            const isMatch = String(item.id) === targetIdStr || 
-                            (item.appRefId && String(item.appRefId) === targetIdStr) || 
-                            (uid && String(u.id) === String(uid) && String(item.id) === targetIdStr);
-            if (isMatch) {
-              userItemModified = true;
-              if (type === 'receipt') {
-                targetItem = { ...item, receiptStatus: cleanVal };
-              } else {
-                targetItem = { ...item, progressStatus: cleanVal };
-              }
-              return targetItem;
-            }
-            return item;
-          });
-          if (userItemModified) {
-            if (!updatedUserIds.includes(u.id)) updatedUserIds.push(u.id);
-            return { ...u, items: updatedItems };
-          }
-        }
-        return u;
-      });
-
-      // 2) applications 내 매칭 항목 갱신
+      // 1) applications 내 매칭 항목 갱신 (SSOT 원천 최우선 갱신)
       apps = apps.map(app => {
         const isMatch = String(app.id) === targetIdStr || 
-                        (targetItem && targetItem.appRefId && String(app.id) === String(targetItem.appRefId));
+                        (app.appRefId && String(app.appRefId) === targetIdStr);
         if (isMatch) {
           if (type === 'receipt') {
             app.receiptStatus = cleanVal;
@@ -818,13 +811,49 @@
         return app;
       });
 
-      // 3) 만약 users.items에 아직 없었지만 영업자가 지정된 신청서인 경우, 영업자의 items에도 자동 생성/갱신
-      if (targetApp && updatedUserIds.length === 0) {
+      // 2) users.items 내 모든 매칭 항목 갱신 (uid 불일치 시에도 itemId/appRefId/targetApp.id로 전수 탐색)
+      users = users.map(u => {
+        if (u.items && Array.isArray(u.items)) {
+          let userItemModified = false;
+          const updatedItems = u.items.map(item => {
+            const isMatch = String(item.id) === targetIdStr || 
+                            (item.appRefId && String(item.appRefId) === targetIdStr) || 
+                            (targetApp && (String(item.id) === String(targetApp.id) || String(item.appRefId) === String(targetApp.id))) ||
+                            (uid && String(u.id) === String(uid) && String(item.id) === targetIdStr);
+            if (isMatch) {
+              userItemModified = true;
+              if (type === 'receipt') {
+                targetItem = { ...item, receiptStatus: cleanVal };
+              } else {
+                targetItem = { ...item, progressStatus: cleanVal };
+              }
+              return targetItem;
+            }
+            return item;
+          });
+          if (userItemModified) {
+            if (!updatedUserIds.includes(u.id)) updatedUserIds.push(u.id);
+            return { ...u, items: updatedItems };
+          }
+        }
+        return u;
+      });
+
+      // 3) 만약 users.items에 아직 없었지만 영업자가 지정된 신청서인 경우, 영업자의 items에도 자동 생성/갱신 (3+1 원칙)
+      if (targetApp) {
         const refCode = String(targetApp.referrerCode || '').trim().toLowerCase();
         const appUser = String(targetApp.userId || '').trim().toLowerCase();
+        const appIdStr = String(targetApp.id || '').trim().toLowerCase();
+        let prefixCode = '';
+        if (appIdStr.includes('-')) {
+          const parts = appIdStr.split('-');
+          if (parts.length >= 2) prefixCode = parts.slice(0, -1).join('-').toLowerCase();
+        }
+
         let assignedUser = users.find(u =>
           (u.role === 'business' || u.role === 'admin') &&
           ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
+            (prefixCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === prefixCode) ||
             (u.id && String(u.id).trim().toLowerCase() === refCode) ||
             (u.name && String(u.name).trim().toLowerCase() === refCode) ||
             (appUser && String(u.id).trim().toLowerCase() === appUser))
@@ -845,7 +874,7 @@
           if (existingIdx >= 0) {
             assignedUser.items[existingIdx] = { ...assignedUser.items[existingIdx], ...newItemData };
           } else {
-            assignedUser.items.push(newItemData);
+            assignedUser.items.unshift(newItemData);
           }
           if (!updatedUserIds.includes(assignedUser.id)) updatedUserIds.push(assignedUser.id);
         }
@@ -874,7 +903,7 @@
       })();
 
       // 5) 모든 대시보드 화면 0초 즉시 동기화
-      this.notifyAll();
+      this.notifyAll(true);
       return { success: true };
     },
 
@@ -1010,23 +1039,63 @@
       return { success: true, deletedId: targetId };
     },
 
-    // --- 6. 신청서 상태 변경 ---
+    // --- 6. 신청서 상태 변경 (SSOT 단일 원천 & 영업자/시공사 6대 화면 실시간 동기화) ---
     updateApplicationStatus: function (appId, newStatus) {
       let apps = this.getApplications();
-      const appIndex = apps.findIndex(a => String(a.id) === String(appId));
+      const appIndex = apps.findIndex(a => String(a.id).trim().toLowerCase() === String(appId).trim().toLowerCase());
       if (appIndex === -1) return { success: false };
 
       const app = apps[appIndex];
       app.status = newStatus;
+      app.updatedAt = new Date().toISOString();
       apps[appIndex] = app;
       this.saveApplications(apps);
 
-      if (window.SupabaseSync) {
-        window.SupabaseSync.upsertApplication(app);
+      // users.items 내 매칭 항목의 신청 상태(status) 동기화 (progressStatus는 영업물건 진행상황 고유 필드이므로 보존)
+      let users = this.getUsers();
+      let usersUpdated = false;
+      users = users.map(u => {
+        if (u.items && Array.isArray(u.items)) {
+          let userItemModified = false;
+          const updatedItems = u.items.map(it => {
+            if (String(it.id) === String(app.id) || String(it.appRefId) === String(app.id)) {
+              userItemModified = true;
+              return { ...it, status: newStatus };
+            }
+            return it;
+          });
+          if (userItemModified) {
+            usersUpdated = true;
+            return { ...u, items: updatedItems };
+          }
+        }
+        return u;
+      });
+
+      if (usersUpdated) {
+        this.saveUsers(users);
       }
 
-      this.notifyAll();
-      return { success: true, status: newStatus };
+      // 비동기 Supabase 저장
+      (async () => {
+        try {
+          if (window.SupabaseSync) {
+            await window.SupabaseSync.upsertApplication(app);
+            if (usersUpdated) {
+              users.forEach(u => {
+                if (u.role === 'business' || u.role === 'admin') {
+                  window.SupabaseSync.updateUser(u.id, { items: u.items || [] });
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('[DataStore] updateApplicationStatus sync warning:', e);
+        }
+      })();
+
+      this.notifyAll(true);
+      return { success: true, status: newStatus, app: app };
     },
 
     // --- 7. 3초 간편문의 (Inquiries) 통합 관리 엔진 ---

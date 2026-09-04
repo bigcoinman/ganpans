@@ -183,8 +183,11 @@ async function ensureApplicationPhotosLoaded(appOrId) {
   if (typeof appOrId === 'string' || typeof appOrId === 'number') {
     const localApps = JSON.parse(localStorage.getItem('applications')) || [];
     app = localApps.find(a => String(a.id) === String(appOrId));
+    if (!app) {
+      app = { id: String(appOrId) };
+    }
   }
-  if (!app) return null;
+  if (!app || !app.id) return null;
 
   // 이미 메모리나 객체 내에 유효한 사진 데이터가 로드되어 있는 경우 즉시 반환
   if (Array.isArray(app.photos) && app.photos.length > 0 && app.photos[0] && (app.photos[0].startsWith('data:') || app.photos[0].startsWith('http') || app.photos[0].startsWith('blob:'))) {
@@ -224,6 +227,24 @@ async function ensureApplicationPhotosLoaded(appOrId) {
             fileData = imgStr;
           }
         }
+
+        // image_url에 유효한 base64가 없고 users items에 사진이 있는 경우 fallback 복원
+        if (photos.length === 0) {
+          try {
+            const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+            for (const u of localUsers) {
+              if (u.items && Array.isArray(u.items)) {
+                const matchedItem = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
+                if (matchedItem && Array.isArray(matchedItem.photos) && matchedItem.photos.length > 0) {
+                  photos = matchedItem.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+                  fileData = photos[0] || '';
+                  break;
+                }
+              }
+            }
+          } catch (eUserFallback) {}
+        }
+
         app.photos = photos;
         app.photosCount = photos.length;
         app.fileData = fileData;
@@ -1077,7 +1098,7 @@ window.SupabaseSync = {
       store_name: app.storeName || app.store_name || '',
       store_address: app.storeAddress || app.store_address || '',
       sign_type: app.signType || app.sign_type || '간판지원신청',
-      image_url: photoData || app.fileName || null,
+      image_url: photoData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('[')) ? app.image_url : null),
       referrer_code: app.referrerCode || app.referrer_code || '',
       status: app.status || 'pending',
       assigned_constructor_id: app.assignedConstructorId || app.assigned_constructor_id || null,
@@ -1085,7 +1106,7 @@ window.SupabaseSync = {
       construction_status: app.constructionStatus || app.construction_status || 'none',
       construction_photos: app.constructionPhotos || [],
       construction_invoice: app.invoicePhotos ? (app.invoicePhotos[0] || null) : (app.construction_invoice || null),
-      memo: JSON.stringify({ isBizItem: !!app.isBizItem, receiptStatus: app.receiptStatus || '접수예정', photoCount: validCount }),
+      memo: JSON.stringify({ isBizItem: !!app.isBizItem, receiptStatus: app.receiptStatus || '접수예정', progressStatus: app.progressStatus || '지원대기중', photoCount: validCount }),
       applied_at: app.appliedAt || app.created_at || new Date().toISOString()
     };
   },
@@ -1118,10 +1139,10 @@ window.SupabaseSync = {
       store_name: app.storeName || app.store_name || '',
       store_address: app.storeAddress || app.store_address || '',
       sign_type: app.signType || app.sign_type || '간판지원신청',
-      image_url: photoData || app.fileName || null,
+      image_url: photoData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('[')) ? app.image_url : null),
       referrer_code: app.referrerCode || app.referrer_code || '',
       status: app.status || 'pending',
-      memo: JSON.stringify({ isBizItem: !!app.isBizItem, receiptStatus: app.receiptStatus || '접수예정', photoCount: validCount })
+      memo: JSON.stringify({ isBizItem: !!app.isBizItem, receiptStatus: app.receiptStatus || '접수예정', progressStatus: app.progressStatus || '지원대기중', photoCount: validCount })
     };
   },
 
@@ -1159,12 +1180,14 @@ window.SupabaseSync = {
     let photoCount = 0;
     let isBizItem = Boolean(dbApp.is_biz_item || dbApp.isBizItem);
     let receiptStatus = dbApp.receipt_status || dbApp.receiptStatus || '접수예정';
+    let progressStatus = dbApp.progress_status || dbApp.progressStatus || '';
     if (dbApp.memo) {
       try {
         const parsedMemo = typeof dbApp.memo === 'string' ? JSON.parse(dbApp.memo) : dbApp.memo;
         if (parsedMemo && typeof parsedMemo === 'object') {
           if (parsedMemo.isBizItem !== undefined) isBizItem = Boolean(parsedMemo.isBizItem);
           if (parsedMemo.receiptStatus) receiptStatus = parsedMemo.receiptStatus;
+          if (parsedMemo.progressStatus) progressStatus = parsedMemo.progressStatus;
           if (parsedMemo.photoCount !== undefined) photoCount = parseInt(parsedMemo.photoCount, 10) || 0;
         } else if (typeof dbApp.memo === 'string' && (dbApp.memo.includes('"isBizItem":true') || dbApp.memo.includes('"isBizItem": true'))) {
           isBizItem = true;
@@ -1174,6 +1197,18 @@ window.SupabaseSync = {
           isBizItem = true;
         }
       }
+    }
+
+    if (!progressStatus) {
+      const cs = dbApp.construction_status || '';
+      if (cs === 'before_construction') progressStatus = '대상자선정';
+      else if (cs === 'in_construction' || cs === '간판시공 준비중') progressStatus = '간판시공 준비중';
+      else if (cs === 'completed' || cs === 'after_construction' || cs === '간판시공완료') progressStatus = '간판시공완료';
+      else if (cs === 'design_draft') progressStatus = '간판 디자인 시안 및 교정 중';
+      else if (dbApp.status === 'approved') progressStatus = '대상자선정';
+      else if (dbApp.status === 'rejected') progressStatus = '지원사업 탈락';
+      else if (dbApp.status === 'giveup') progressStatus = '지원사업 포기';
+      else progressStatus = '지원대기중';
     }
 
     if (photos.length > 0) photoCount = photos.length;
@@ -1197,6 +1232,7 @@ window.SupabaseSync = {
       referrerCode: dbApp.referrer_code || '',
       isBizItem: isBizItem,
       receiptStatus: receiptStatus,
+      progressStatus: progressStatus,
       assignedConstructorId: dbApp.assigned_constructor_id || '',
       assignedConstructorName: dbApp.assigned_constructor_name || '',
       constructionStatus: dbApp.construction_status || 'none',
@@ -1526,6 +1562,7 @@ window.SupabaseSync = {
       const oldInqsStr = localStorage.getItem('inquiries') || '[]';
 
       // --- A. 회원(Users) Supabase 클라우드 원천 직접 수집 ---
+      let usersChanged = false;
       const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
       if (!usersErr && Array.isArray(supaUsers)) {
         const freshUsers = supaUsers
@@ -1623,17 +1660,6 @@ window.SupabaseSync = {
               if (localApp.invoicePhotos && localApp.invoicePhotos.length > 0 && (!appObj.invoicePhotos || appObj.invoicePhotos.length === 0)) {
                 appObj.invoicePhotos = localApp.invoicePhotos;
               }
-
-              const localTime = new Date(localApp.updatedAt || localApp.appliedAt || 0).getTime();
-              const remoteTime = new Date(sa.updated_at || sa.applied_at || sa.created_at || 0).getTime();
-              if (localTime > remoteTime) {
-                appObj.isBizItem = localApp.isBizItem;
-                appObj.receiptStatus = localApp.receiptStatus;
-                appObj.progressStatus = localApp.progressStatus;
-                appObj.salespersonId = localApp.salespersonId || appObj.salespersonId;
-                appObj.salespersonName = localApp.salespersonName || appObj.salespersonName;
-                appObj.updatedAt = localApp.updatedAt;
-              }
             }
             return appObj;
           })
@@ -1657,6 +1683,30 @@ window.SupabaseSync = {
               console.error('Applications localStorage save failed:', qErr2);
             }
           }
+
+          // users.items 내 모든 물건의 상태(receiptStatus, progressStatus)도 최신 applications SSOT 기준으로 100% 자동 동기화
+          try {
+            const curUsers = JSON.parse(localStorage.getItem('users')) || [];
+            let usersItemsModified = false;
+            curUsers.forEach(u => {
+              if (u.items && Array.isArray(u.items)) {
+                u.items.forEach(it => {
+                  const matchedApp = freshApps.find(fa => String(fa.id) === String(it.id) || String(fa.appRefId) === String(it.id) || (it.appRefId && String(fa.id) === String(it.appRefId)));
+                  if (matchedApp) {
+                    if (it.receiptStatus !== matchedApp.receiptStatus || it.progressStatus !== matchedApp.progressStatus) {
+                      it.receiptStatus = matchedApp.receiptStatus;
+                      it.progressStatus = matchedApp.progressStatus;
+                      usersItemsModified = true;
+                    }
+                  }
+                });
+              }
+            });
+            if (usersItemsModified) {
+              localStorage.setItem('users', JSON.stringify(curUsers));
+              usersChanged = true;
+            }
+          } catch (eUsersSync) {}
         }
       }
 
