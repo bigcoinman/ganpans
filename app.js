@@ -6142,7 +6142,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 실시간 6대 화면 0초 동시 연동 리스너 (모바일 앱 대시보드 자동 리렌더링) ---
     const handleRealtimeSyncMob = () => {
-        if (window.isInteractingWithForm) return; // 폼 조작 중에는 DOM 보호
+        const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+        const isFormActive = Boolean(window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'submit') || activeEl.tagName === 'TEXTAREA')));
+        if (isFormActive) return; // 폼 조작 중에는 DOM 보호
         if (typeof renderStatusTab === 'function') renderStatusTab();
         if (typeof updateDrawerProfile === 'function') updateDrawerProfile();
         if (typeof updateHeaderAuthButton === 'function') updateHeaderAuthButton();

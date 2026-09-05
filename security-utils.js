@@ -1736,6 +1736,15 @@ window.SupabaseSync = {
             const appObj = this.mapDbToApp(sa);
             const localApp = localApps.find(la => String(la.id) === String(appObj.id));
             if (localApp) {
+              // 1) 최근 로컬에서 상태 변경이 일어난 경우(15초 이내 수정 건) Supabase 아직 반영 전이면 로컬 최신 상태 보존 (동기화 레이스 컨디션 방어)
+              if (localApp.updatedAt && localApp.status && localApp.status !== appObj.status) {
+                const localUpdatedTime = new Date(localApp.updatedAt).getTime();
+                const now = Date.now();
+                if (!isNaN(localUpdatedTime) && (now - localUpdatedTime < 15000)) {
+                  appObj.status = localApp.status;
+                  appObj.updatedAt = localApp.updatedAt;
+                }
+              }
               // 로컬 캐시된 고용량 사진이 있으면 유실되지 않도록 보존
               if (localApp.photos && localApp.photos.length > 0 && (!appObj.photos || appObj.photos.length === 0)) {
                 appObj.photos = localApp.photos;

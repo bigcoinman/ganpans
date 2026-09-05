@@ -3705,95 +3705,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderManagerConstProgress();
   };
 
-  // 간판 종류 변경 핸들러
-  window.updateJobSignType = (id, signType) => {
-    const trimmed = String(signType || '').trim();
-    if (!trimmed) return;
-
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
-    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
-    let updatedUid = null;
-
-    apps = apps.map(a => {
-      if (String(a.id) === String(id)) {
-        return { ...a, signType: trimmed };
-      }
-      return a;
-    });
-    localStorage.setItem('applications', JSON.stringify(apps));
-
-    curUsers = curUsers.map(u => {
-      if (u.items && Array.isArray(u.items)) {
-        const updatedItems = u.items.map(it => {
-          if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
-            updatedUid = u.id;
-            return { ...it, signType: trimmed };
-          }
-          return it;
-        });
-        return { ...u, items: updatedItems };
-      }
-      return u;
-    });
-    localStorage.setItem('users', JSON.stringify(curUsers));
-
-    if (window.SupabaseSync) {
-      const app = apps.find(a => String(a.id) === String(id));
-      if (app) window.SupabaseSync.upsertApplication(app);
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
-    }
-  };
-
-  // 간판 디자인 시안 확정 토글 (점주/관리자 양방향 연동)
-  window.toggleDraftApproval = (id, newDraftStatus) => {
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
-    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
-    let updatedUid = null;
-    const approvedTime = (newDraftStatus === 'admin_approved' || newDraftStatus === 'owner_approved') ? new Date().toISOString() : null;
-
-    apps = apps.map(a => {
-      if (String(a.id) === String(id)) {
-        return { ...a, draftStatus: newDraftStatus, draftApprovedAt: approvedTime };
-      }
-      return a;
-    });
-    localStorage.setItem('applications', JSON.stringify(apps));
-
-    curUsers = curUsers.map(u => {
-      if (u.items && Array.isArray(u.items)) {
-        const updatedItems = u.items.map(it => {
-          if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
-            updatedUid = u.id;
-            return { ...it, draftStatus: newDraftStatus, draftApprovedAt: approvedTime };
-          }
-          return it;
-        });
-        return { ...u, items: updatedItems };
-      }
-      return u;
-    });
-    localStorage.setItem('users', JSON.stringify(curUsers));
-
-    if (window.SupabaseSync) {
-      const app = apps.find(a => String(a.id) === String(id));
-      if (app) window.SupabaseSync.upsertApplication(app);
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
-    }
-
-    if (newDraftStatus === 'admin_approved') {
-      alert('관리자 직권으로 [간판 디자인 시안]을 최종 확정하였습니다.\n신청 점주 마이페이지 및 시공사 화면에 실시간으로 반영됩니다.');
-    } else if (newDraftStatus === 'pending') {
-      alert('간판 디자인 시안 확정을 취소하고 [검토중] 상태로 변경하였습니다.');
-    }
-
-    renderManagerConstProgress();
-  };
+  // 간판 종류 변경 및 디자인 시안 토글은 data-store.js의 통합 원천 핸들러(window.updateJobSignType, window.toggleDraftApproval)를 100% 단일 사용합니다.
 
   // 점주가 직접 간판 디자인 시안을 최종 승인/확정하는 핸들러
   window.approveDraftByOwner = (id) => {
@@ -6427,9 +6339,10 @@ function initAIAssistant() {
 
   // --- 실시간 6대 화면 0초 동시 연동 리스너 (최고관리자 대시보드 자동 리렌더링) ---
   const handleRealtimeSync = () => {
-    if (window.isInteractingWithForm) return; // 폼 입력/선택 중에는 DOM 보호
+    const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+    const isFormActive = Boolean(window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'submit') || activeEl.tagName === 'TEXTAREA')));
+    if (isFormActive) return; // 폼 입력/선택 중에는 DOM 보호
     if (typeof updateSessionUI === 'function') updateSessionUI();
-    if (typeof renderDashboard === 'function') renderDashboard();
     if (typeof renderApplicationsList === 'function') renderApplicationsList();
     if (typeof renderBizRegisteredTable === 'function') renderBizRegisteredTable();
     if (typeof renderConstructorPanel === 'function') renderConstructorPanel();

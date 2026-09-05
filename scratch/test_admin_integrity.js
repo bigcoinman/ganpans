@@ -85,7 +85,8 @@ console.log(`[검증 4] 시공사 배정: ${isAssigned ? '✅ PASS' : '❌ FAIL'
 const constJobs = window.DataStore.getConstructionJobs(constUser);
 console.log(`[검증 5] 시공업체 진행현황 연동: ${constJobs.length === 1 ? '✅ PASS' : '❌ FAIL'} (시공물건: ${constJobs[0].storeName}, 영업자: ${constJobs[0].salespersonName})`);
 
-// 6. 상태 변경 검증
+// 6. 상태 변경 검증 (접수완료 후 진행상태 변경)
+window.DataStore.updateItemStatus(bizUser.id, app1.id, 'receipt', '접수완료');
 const statusRes = window.DataStore.updateItemStatus(bizUser.id, app1.id, 'progress', '간판시공 준비중');
 const appsAfterStatus = window.DataStore.getApplications();
 const isStatusUpdated = appsAfterStatus[0].progressStatus === '간판시공 준비중';
