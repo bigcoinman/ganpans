@@ -1068,36 +1068,76 @@
       const codeVal = newBizCode ? String(newBizCode).trim() : '';
 
       let apps = this.getApplications();
-      const targetApp = apps.find(a => String(a.id) === targetId);
+      const targetApp = apps.find(a => String(a.id) === targetId || String(a.appRefId) === targetId);
       if (!targetApp) return { success: false, error: '해당 신청서를 찾을 수 없습니다.' };
 
       // 1) 신청서 referrerCode 갱신 및 영업자 정보 동기화
       targetApp.referrerCode = codeVal;
       targetApp.referrer_code = codeVal;
+      let salesUser = null;
+      let users = this.getUsers();
+      let usersUpdated = false;
+
       if (codeVal) {
-        const users = this.getUsers();
-        const salesUser = users.find(u =>
+        salesUser = users.find(u =>
           (u.role === 'business' || u.role === 'admin') &&
           ((u.bizCode && String(u.bizCode).trim().toLowerCase() === codeVal.toLowerCase()) ||
-            (u.id && String(u.id).trim().toLowerCase() === codeVal.toLowerCase()))
+            (u.id && String(u.id).trim().toLowerCase() === codeVal.toLowerCase()) ||
+            (u.name && String(u.name).trim().toLowerCase() === codeVal.toLowerCase()))
         );
         if (salesUser) {
           targetApp.salespersonId = salesUser.id;
           targetApp.salespersonName = salesUser.name;
+
+          // 3+1 원칙: 해당 영업자의 items 에도 자동 등록/갱신
+          if (!salesUser.items) salesUser.items = [];
+          const existingItemIdx = salesUser.items.findIndex(it => String(it.id) === String(targetApp.id) || String(it.appRefId) === String(targetApp.id));
+          const itemPayload = {
+            id: String(targetApp.id),
+            appRefId: String(targetApp.id),
+            name: targetApp.storeName || targetApp.shopName || targetApp.ownerName || '영업물건',
+            phone: targetApp.ownerPhone || targetApp.phone || '',
+            address: targetApp.storeAddress || targetApp.address || '',
+            receiptStatus: targetApp.receiptStatus || '접수예정',
+            progressStatus: targetApp.progressStatus || '지원대기중',
+            status: targetApp.status || 'pending',
+            registeredAt: targetApp.appliedAt || targetApp.createdAt || new Date().toISOString()
+          };
+
+          if (existingItemIdx >= 0) {
+            salesUser.items[existingItemIdx] = { ...salesUser.items[existingItemIdx], ...itemPayload };
+          } else {
+            salesUser.items.unshift(itemPayload);
+          }
+          usersUpdated = true;
+        } else {
+          targetApp.salespersonId = '';
+          targetApp.salespersonName = '';
         }
+      } else {
+        targetApp.salespersonId = '';
+        targetApp.salespersonName = '';
       }
       targetApp.updatedAt = new Date().toISOString();
 
       this.saveApplications(apps);
+      if (usersUpdated) {
+        this.saveUsers(users);
+      }
 
       // 2) Supabase 비동기 클라우드 DB 저장 (Non-blocking)
-      if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
-        window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
+      if (window.SupabaseSync) {
+        if (typeof window.SupabaseSync.upsertApplication === 'function') {
+          window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
+        }
+        if (usersUpdated && salesUser && typeof window.SupabaseSync.updateUser === 'function') {
+          window.SupabaseSync.updateUser(salesUser.id, { items: salesUser.items || [] }).catch(() => {});
+        }
       }
 
       // 3) 6개 화면 실시간 동기화
       this.notifyAll();
-      return { success: true, app: targetApp };
+      return { success: true, app: targetApp, salesUser: salesUser };
     },
 
     // --- 3-4. 영업물건 시공사 배정 (최고관리자 권한) ---
@@ -1904,12 +1944,15 @@
         const modalEl = document.getElementById('assign-bizuser-modal');
         if (modalEl) modalEl.remove();
 
-        alert(`[${app.shopName || app.storeName || targetId}]의 담당 영업자가 '${selectedText}'(으)로 변경되었습니다.\n영업자 및 시공업체 화면에 실시간 동시 반영됩니다.`);
+        const toastMsg = `[${app.shopName || app.storeName || targetId}] 담당 영업자가 '${selectedText}'(으)로 변경되었습니다.`;
+        if (typeof window.showToast === 'function') {
+          window.showToast(toastMsg);
+        }
 
         // Re-render
         if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
         if (typeof window.renderAdminDashboard === 'function') window.renderAdminDashboard();
-        if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob();
+        if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
         if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
       });
     }

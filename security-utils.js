@@ -921,29 +921,38 @@ function generateBizCode(usersList) {
   return `${prefix}${nextSeq}`;
 }
 
-// 9. 일반회원 간판지원신청 고유번호 생성 헬퍼 (규칙: P-YYMMDD001 ~ 순차 증가)
+// 9. 일반회원 간판지원신청 고유번호 생성 헬퍼 (규칙: P-YYMMDD-001 ~ 순차 증가)
 function generateApplicationId(appsList) {
   const now = new Date();
   const yy = String(now.getFullYear()).slice(-2);
   const mm = String(now.getMonth() + 1).padStart(2, '0');
   const dd = String(now.getDate()).padStart(2, '0');
-  const prefix = `P-${yy}${mm}${dd}`;
+  const prefixWithHyphen = `P-${yy}${mm}${dd}-`;
+  const prefixLegacy = `P-${yy}${mm}${dd}`;
 
   const currentApps = Array.isArray(appsList) ? appsList : (JSON.parse(localStorage.getItem('applications')) || []);
 
   let maxSeq = 0;
   currentApps.forEach(app => {
-    if (app && app.id && typeof app.id === 'string' && app.id.startsWith(prefix)) {
-      const seqStr = app.id.slice(prefix.length);
-      const seqNum = parseInt(seqStr, 10);
-      if (!isNaN(seqNum) && seqNum > maxSeq) {
-        maxSeq = seqNum;
+    if (app && app.id && typeof app.id === 'string') {
+      if (app.id.startsWith(prefixWithHyphen)) {
+        const seqStr = app.id.slice(prefixWithHyphen.length);
+        const seqNum = parseInt(seqStr, 10);
+        if (!isNaN(seqNum) && seqNum > maxSeq) {
+          maxSeq = seqNum;
+        }
+      } else if (app.id.startsWith(prefixLegacy) && !app.id.startsWith(prefixWithHyphen)) {
+        const seqStr = app.id.slice(prefixLegacy.length);
+        const seqNum = parseInt(seqStr, 10);
+        if (!isNaN(seqNum) && seqNum > maxSeq) {
+          maxSeq = seqNum;
+        }
       }
     }
   });
 
   const nextSeq = String(maxSeq + 1).padStart(3, '0');
-  return `${prefix}${nextSeq}`;
+  return `${prefixWithHyphen}${nextSeq}`;
 }
 
 // 10. 영업자 간판접수신청 물건 고유번호 생성 헬퍼 (규칙: {bizCode}-001 ~ 순차 증가, 예: B-260901-001)
