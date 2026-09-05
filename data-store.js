@@ -1772,32 +1772,43 @@
       return { success: true };
     },
 
-    // --- 8. 전체 대시보드 화면 동기화 브로드캐스트 (0초 반응) ---
+    // --- 8. 전체 대시보드 화면 동기화 브로드캐스트 (스마트 선택적 렌더링 & 1회 클릭 즉시 반영 & 0초 연동) ---
     notifyAll: function (force = false) {
       try {
-        // 사용자가 드롭다운(SELECT)이나 텍스트입력(INPUT)을 조작 중일 때는 전체 DOM 재생성을 스킵하여 드롭다운 닫힘 방지 (force인 경우 강제 실행)
-        if (!force) {
-          const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
-          const isFormActive = window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'submit') || activeEl.tagName === 'TEXTAREA'));
-          if (isFormActive) {
-            return;
-          }
+        const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+        const isFormActive = Boolean(window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'submit') || activeEl.tagName === 'TEXTAREA')));
+
+        // 현재 조작 중인 폼이 속한 화면을 정밀 감지하여 해당 테이블만 안전하게 리렌더링 스킵 (In-place로 이미 갱신됨)
+        const isAppSelectActive = isFormActive && activeEl && (activeEl.classList.contains('select-app-status-pc') || activeEl.classList.contains('select-app-status-mob') || (activeEl.closest && (activeEl.closest('#applications-table-body') || activeEl.closest('#admin-apps-list-mobile'))));
+        const isBizSelectActive = isFormActive && activeEl && (activeEl.classList.contains('select-receipt-status') || activeEl.classList.contains('select-progress-status') || activeEl.classList.contains('select-receipt-mob') || activeEl.classList.contains('select-progress-mob') || (activeEl.closest && (activeEl.closest('#manager-biz-tbody') || activeEl.closest('#biz-items-list-mobile'))));
+
+        // 1. 최고관리자 신청서 목록: 관리자가 신청서 드롭다운 조작 중일 때는 DOM 파괴 방지를 위해 스킵 (이미 In-place 갱신됨)
+        if (!isAppSelectActive || force === 'all') {
+          if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
+          if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
         }
 
-        if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
-        if (typeof window.renderManagerPanel === 'function') window.renderManagerPanel();
+        // 2. 최고관리자 영업물건 목록: 관리자가 영업물건 드롭다운 조작 중일 때는 DOM 파괴 방지를 위해 스킵 (이미 In-place 갱신됨)
+        if (!isBizSelectActive || force === 'all') {
+          if (typeof window.renderManagerPanel === 'function') window.renderManagerPanel();
+          if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+        }
+
+        // 3. 영업자 / 시공사 / 점주 화면: 현재 관리자 폼과 무관하므로 항상 100% 즉시 실시간 리렌더링!
         if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
         if (typeof window.renderBusinessDashboard === 'function') window.renderBusinessDashboard();
-        if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
-        if (typeof window.renderInquiriesList === 'function') window.renderInquiriesList();
-        if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
-        if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
-        if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
-        if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
         if (typeof window.renderBusinessDashboardMob === 'function') window.renderBusinessDashboardMob();
         if (typeof window.renderBizRegisteredItemsMob === 'function') window.renderBizRegisteredItemsMob();
         if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
         if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
+        if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
+        if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
+
+        // 4. 기타 회원 / 문의 목록
+        if (!isFormActive || force === 'all') {
+          if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
+          if (typeof window.renderInquiriesList === 'function') window.renderInquiriesList();
+        }
 
         // 전역 실시간 브로드캐스트 발화
         window.dispatchEvent(new CustomEvent('supabase-data-synced'));
