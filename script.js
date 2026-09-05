@@ -1550,11 +1550,14 @@ function initWizard() {
         loginNoticeId = existing.id;
         loginNoticePw = autoPw;
 
+        const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
+
         if (existing.role === 'normal' || !existing.role) {
           users[existingIdx] = {
             ...existing,
             name: ownerName || existing.name,
             phone: ownerPhone,
+            email: enteredEmail || '',
             address: storeAddress || existing.address,
             pw: hashedPassword
           };
@@ -1567,6 +1570,7 @@ function initWizard() {
             window.SupabaseSync.updateUser(existing.id, { 
               name: ownerName || existing.name,
               phone: ownerPhone, 
+              email: enteredEmail || '',
               address: storeAddress || existing.address,
               password_hash: hashedPassword 
             }).catch(() => {});
@@ -1577,12 +1581,13 @@ function initWizard() {
         loginNoticeId = phoneDigits;
         loginNoticePw = autoPw;
         isNewAccount = true;
+        const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
 
         const newUser = {
           id: phoneDigits,
           name: ownerName,
           phone: ownerPhone,
-          email: document.getElementById('owner-email')?.value.trim() || '',
+          email: enteredEmail || '',
           address: storeAddress,
           pw: hashedPassword,
           role: 'normal',
@@ -1642,6 +1647,8 @@ function initWizard() {
         }
       }
 
+      const ownerEmailVal = document.getElementById('owner-email')?.value.trim() || '';
+
       const newApp = {
         id: customId,
         userId: (loggedUser && loggedUser.role === 'business') ? loggedUser.id : userId,
@@ -1651,6 +1658,7 @@ function initWizard() {
         salespersonName: assignedSalespersonName,
         ownerName,
         ownerPhone,
+        ownerEmail: ownerEmailVal,
         storeName,
         storeAddress,
         signType: '간판지원신청',

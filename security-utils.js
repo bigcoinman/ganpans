@@ -1567,7 +1567,13 @@ window.SupabaseSync = {
       if (!usersErr && Array.isArray(supaUsers)) {
         const freshUsers = supaUsers
           .map(su => this.mapDbToUser(su))
-          .filter(u => u && u.id && u.role !== 'deleted');
+          .filter(u => u && u.id && u.role !== 'deleted')
+          .map(u => {
+            if (u.role !== 'admin' && u.email && u.email.endsWith('@ganpan.go.kr')) {
+              u.email = '';
+            }
+            return u;
+          });
 
         // 최고관리자(admin) 계정만 필수 존재 보장 (다른 데모 계정은 사용자가 삭제 시 절대 강제 부활/재생성 금지)
         const adminUser = {

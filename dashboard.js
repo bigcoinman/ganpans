@@ -1754,11 +1754,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const refCode = String(app.referrerCode || app.bizCode || (app.id && app.id.startsWith('B-') ? app.id.split('-').slice(0, 2).join('-') : '')).trim();
         if (!exists) {
+          const appEmailVal = String(app.ownerEmail || app.email || '').trim();
           currentUsers.push({
             id: ownerPhone || app.id,
             name: ownerName || '점주(대표)',
             phone: ownerPhone || '-',
-            email: app.ownerEmail || app.email || '-',
+            email: (appEmailVal && appEmailVal !== '-' && !appEmailVal.endsWith('@ganpan.go.kr')) ? appEmailVal : '',
             address: app.storeAddress || app.address || '-',
             role: 'user',
             isApplicantOwner: true,
@@ -1834,6 +1835,7 @@ document.addEventListener('DOMContentLoaded', () => {
         : `<button type="button" class="btn btn-sm btn-delete-user-admin" onclick="window.deleteUserAdmin('${escapeHtml(u.id)}', this)" style="padding: 4px 8px; font-size: 0.72rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer;"><i class="fa-solid fa-trash-can"></i> 삭제</button>`;
 
       const userJoinDate = typeof formatUserDate === 'function' ? formatUserDate(u.createdAt || u.created_at) : (u.createdAt || u.created_at || '-');
+      const userDisplayEmail = (u.email && u.email !== '-' && (u.role === 'admin' || !u.email.endsWith('@ganpan.go.kr'))) ? u.email : '';
 
       tr.innerHTML = `
         <td style="padding: 12px 14px; font-weight: 700; color: var(--text-primary);">
@@ -1843,7 +1845,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td style="padding: 12px 14px; font-weight: 600; color: var(--text-primary);">${escapeHtml(u.name || '-')}</td>
         <td style="padding: 12px 14px; font-size: 0.8rem; color: var(--text-secondary);">
           <div><a href="tel:${escapeHtml(u.phone || '')}" style="color: var(--accent-primary); text-decoration: none;"><i class="fa-solid fa-phone"></i> ${escapeHtml(u.phone || '-')}</a></div>
-          ${u.email ? `<div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">${escapeHtml(u.email)}</div>` : ''}
+          ${userDisplayEmail ? `<div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">${escapeHtml(userDisplayEmail)}</div>` : ''}
         </td>
         <td style="padding: 12px 14px; font-size: 0.8rem; color: var(--text-secondary); max-width: 220px;">${escapeHtml(u.address || '-')}</td>
         <td style="padding: 12px 14px; text-align: center; white-space: nowrap;">${roleBadge}</td>

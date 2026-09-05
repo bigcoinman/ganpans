@@ -2974,11 +2974,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const refCode = String(app.referrerCode || app.bizCode || (app.id && app.id.startsWith('B-') ? app.id.split('-').slice(0, 2).join('-') : '')).trim();
                 if (!exists) {
+                    const appEmailVal = String(app.ownerEmail || app.email || '').trim();
                     allStoreUsers.push({
                         id: ownerPhone || app.id,
                         name: ownerName || '점주(대표)',
                         phone: ownerPhone || '-',
-                        email: app.ownerEmail || app.email || '-',
+                        email: (appEmailVal && appEmailVal !== '-' && !appEmailVal.endsWith('@ganpan.go.kr')) ? appEmailVal : '',
                         address: app.storeAddress || app.address || '-',
                         role: 'user',
                         isApplicantOwner: true,
@@ -3034,6 +3035,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
 
                     const userJoinDate = typeof formatUserDate === 'function' ? formatUserDate(u.createdAt || u.created_at) : (u.createdAt || u.created_at || '-');
+                    const userDisplayEmail = (u.email && u.email !== '-' && (u.role === 'admin' || !u.email.endsWith('@ganpan.go.kr'))) ? u.email : '';
 
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
@@ -3047,7 +3049,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div>성명: <strong style="color: var(--text-primary);">${escapeHtml(u.name || '-')}</strong> ${u.applicantStore ? `<span style="color: #64748b; font-size: 0.88rem;">(${escapeHtml(u.applicantStore)})</span>` : ''}</div>
                             <div>연락처: <a href="tel:${escapeHtml(u.phone || '')}" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;">${escapeHtml(u.phone || '-')}</a></div>
                             ${u.referrerCode ? `<div>담당영업자: <strong style="color: var(--accent-secondary);">${escapeHtml(u.referrerCode)}</strong></div>` : ''}
-                            ${u.email && u.email !== '-' ? `<div>이메일: <span style="color: #475569;">${escapeHtml(u.email)}</span></div>` : ''}
+                            ${userDisplayEmail ? `<div>이메일: <span style="color: #475569;">${escapeHtml(userDisplayEmail)}</span></div>` : ''}
                             ${u.address && u.address !== '-' ? `<div>주소: <span style="color: #475569;">${escapeHtml(u.address)}</span></div>` : ''}
                         </div>
                         ${deleteBtn ? `<div style="display:flex; justify-content:flex-end; margin-top: 10px;">${deleteBtn}</div>` : ''}
@@ -7668,11 +7670,14 @@ function initWizard() {
         loginNoticeId = existing.id;
         loginNoticePw = autoPw;
 
+        const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
+
         if (existing.role === 'normal' || !existing.role) {
           users[existingIdx] = {
             ...existing,
             name: ownerName || existing.name,
             phone: ownerPhone,
+            email: enteredEmail || '',
             address: storeAddress || existing.address,
             pw: hashedPassword
           };
@@ -7685,6 +7690,7 @@ function initWizard() {
             window.SupabaseSync.updateUser(existing.id, { 
               name: ownerName || existing.name,
               phone: ownerPhone, 
+              email: enteredEmail || '',
               address: storeAddress || existing.address,
               password_hash: hashedPassword 
             }).catch(() => {});
@@ -7695,12 +7701,13 @@ function initWizard() {
         loginNoticeId = phoneDigits;
         loginNoticePw = autoPw;
         isNewAccount = true;
+        const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
 
         const newUser = {
           id: phoneDigits,
           name: ownerName,
           phone: ownerPhone,
-          email: document.getElementById('owner-email')?.value.trim() || '',
+          email: enteredEmail || '',
           address: storeAddress,
           pw: hashedPassword,
           role: 'normal',
@@ -7760,6 +7767,8 @@ function initWizard() {
         }
       }
 
+      const ownerEmailVal = document.getElementById('owner-email')?.value.trim() || '';
+
       const newApp = {
         id: customId,
         userId: (loggedUser && loggedUser.role === 'business') ? loggedUser.id : userId,
@@ -7769,6 +7778,7 @@ function initWizard() {
         salespersonName: assignedSalespersonName,
         ownerName,
         ownerPhone,
+        ownerEmail: ownerEmailVal,
         storeName,
         storeAddress,
         signType: '간판지원신청',
