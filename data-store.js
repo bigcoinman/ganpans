@@ -552,7 +552,7 @@
             ownerName: app.ownerName || '-',
             ownerPhone: app.ownerPhone || app.phone || '-',
             storeAddress: app.storeAddress || '-',
-            signType: app.signType || '플렉스 간판',
+            signType: (!app.signType || app.signType === '간판지원신청' || app.signType === '간판' || app.signType === '-' || app.signType === 'undefined' || app.signType === 'null') ? '플렉스 간판' : app.signType,
             assignedConstructorId: app.assignedConstructorId || '',
             assignedConstructorName: cName || '미배정',
             assignedConstructorCode: cCode,
@@ -861,6 +861,9 @@
               if (cleanVal === '대상자선정' || cleanVal === '간판시공 준비중' || cleanVal === '간판시공완료') {
                 app.status = 'approved';
                 app.constructionStatus = (cleanVal === '간판시공완료' ? 'completed' : (cleanVal === '간판시공 준비중' ? 'in_construction' : 'before_construction'));
+                if (!app.signType || app.signType === '간판지원신청' || app.signType === '간판' || app.signType === '-' || app.signType === 'undefined' || app.signType === 'null') {
+                  app.signType = '플렉스 간판';
+                }
               } else if (cleanVal === '지원사업 탈락' || cleanVal === '반려됨') {
                 app.status = 'rejected';
                 app.constructionStatus = cleanVal;
@@ -1004,12 +1007,12 @@
       (async () => {
         try {
           if (window.SupabaseSync) {
-            if (targetApp) {
+            if (targetApp && typeof window.SupabaseSync.upsertApplication === 'function') {
               await window.SupabaseSync.upsertApplication(targetApp);
             }
             for (const uId of updatedUserIds) {
               const uObj = users.find(u => u.id === uId);
-              if (uObj) {
+              if (uObj && typeof window.SupabaseSync.updateUser === 'function') {
                 await window.SupabaseSync.updateUser(uId, { items: uObj.items || [] });
               }
             }
