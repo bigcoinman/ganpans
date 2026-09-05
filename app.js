@@ -3456,7 +3456,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     const curReceipt = String(item.receiptStatus || '접수예정').trim();
                     const isReceiptPending = (curReceipt === '접수예정' || curReceipt === '접수 대기' || !item.receiptStatus);
-                    const curProgress = isReceiptPending ? '지원대기중' : String(item.progressStatus || '지원대기중').trim();
+                    const curProgress = isReceiptPending ? '지원대기중' : ((!item.progressStatus || item.progressStatus === '지원대기중') ? '심사대기중' : String(item.progressStatus).trim());
 
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">

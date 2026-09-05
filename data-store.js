@@ -326,12 +326,12 @@
         if (rStatus === '접수예정' || rStatus === '접수 대기' || !app.receiptStatus) {
           pStatus = '지원대기중';
         } else {
-          if (!pStatus || pStatus === 'none') {
+          if (!pStatus || pStatus === 'none' || pStatus === '지원대기중') {
             const cs = String(app.constructionStatus || '').trim();
             if (cs === 'before_construction' || cs === '대상자선정' || cs === '선정') pStatus = '대상자선정';
             else if (cs === 'in_construction' || cs === '간판시공 준비중' || cs === '시공준비' || cs === '간판 시공 중') pStatus = '간판시공 준비중';
             else if (cs === 'completed' || cs === 'after_construction' || cs === '간판시공완료' || cs === '시공완료' || cs === '정산 완료') pStatus = '간판시공완료';
-            else pStatus = '지원대기중';
+            else pStatus = '심사대기중';
           }
           // 영문 또는 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화
           if (pStatus === '대상자선정' || pStatus === '선정' || pStatus === '승인 완료' || pStatus === '승인완료' || pStatus === 'approved' || pStatus === 'before_construction' || pStatus === '시공 전' || pStatus === '시공사 배정 (시공 전)' || pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인') {
@@ -343,7 +343,7 @@
           } else if (pStatus === '심사대기' || pStatus === '심사 대기' || pStatus === '심사대기중' || pStatus === '서류 보완 필요') {
             pStatus = '심사대기중';
           } else {
-            pStatus = '지원대기중';
+            pStatus = '심사대기중';
           }
         }
 
@@ -818,11 +818,18 @@
           app.isBizItem = true;
           if (type === 'receipt') {
             app.receiptStatus = cleanVal;
-            // [규칙] 접수: '접수예정'일 때는 진행상태를 무조건 '지원대기중'으로 자동 변경 및 고정
+            // [규칙 1] 접수: '접수예정'일 때는 진행상태를 무조건 '지원대기중'으로 자동 변경 및 고정
             if (cleanVal === '접수예정' || cleanVal === '접수 대기' || !cleanVal) {
               app.progressStatus = '지원대기중';
               app.status = 'pending';
               app.constructionStatus = '지원대기중';
+            } else if (cleanVal === '접수완료' || cleanVal === '업체신청') {
+              // [규칙 2] 접수: '접수완료' 또는 '업체신청'으로 변경 시 자동으로 '심사대기중'으로 기본 적용
+              if (!app.progressStatus || app.progressStatus === '지원대기중' || app.progressStatus === 'none') {
+                app.progressStatus = '심사대기중';
+                app.status = 'pending';
+                app.constructionStatus = '심사대기중';
+              }
             }
           } else {
             // 진행 상태 변경
@@ -856,7 +863,14 @@
       if (!targetApp && sourceItem) {
         const initReceipt = type === 'receipt' ? cleanVal : (sourceItem.receiptStatus || '접수예정');
         const isReceiptPending = (initReceipt === '접수예정' || initReceipt === '접수 대기' || !initReceipt);
-        const initProgress = isReceiptPending ? '지원대기중' : (type === 'progress' ? cleanVal : (sourceItem.progressStatus || '지원대기중'));
+        let initProgress = '지원대기중';
+        if (isReceiptPending) {
+          initProgress = '지원대기중';
+        } else if (type === 'progress') {
+          initProgress = cleanVal;
+        } else {
+          initProgress = (sourceItem.progressStatus && sourceItem.progressStatus !== '지원대기중') ? sourceItem.progressStatus : '심사대기중';
+        }
         targetApp = {
           id: sourceItem.id || targetIdStr,
           appRefId: sourceItem.appRefId || targetIdStr,
@@ -897,10 +911,18 @@
               userItemModified = true;
               if (type === 'receipt') {
                 const isReceiptPending = (cleanVal === '접수예정' || cleanVal === '접수 대기' || !cleanVal);
+                let newProgress = item.progressStatus;
+                if (isReceiptPending) {
+                  newProgress = '지원대기중';
+                } else if (cleanVal === '접수완료' || cleanVal === '업체신청') {
+                  if (!newProgress || newProgress === '지원대기중' || newProgress === 'none') {
+                    newProgress = '심사대기중';
+                  }
+                }
                 targetItem = { 
                   ...item, 
                   receiptStatus: cleanVal,
-                  ...(isReceiptPending ? { progressStatus: '지원대기중' } : {})
+                  progressStatus: newProgress
                 };
               } else {
                 const curReceipt = item.receiptStatus || (targetApp && targetApp.receiptStatus) || '접수예정';
