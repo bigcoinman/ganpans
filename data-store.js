@@ -226,41 +226,22 @@
 
       const myBizList = [];
       adminItems.forEach(entry => {
-        const u = entry.user || {};
-        const it = entry.item || {};
+        const u = entry.user;
+        const it = entry.item;
+        if (!u || !it) return;
 
         const entryUserId = String(u.id || '').trim().toLowerCase();
         const entryBizCode = String(u.bizCode || '').trim().toLowerCase();
         const entryUserName = String(u.name || '').trim().toLowerCase();
         const entryPhone = String(u.phone || '').replace(/[^0-9]/g, '');
-        const itId = String(it.id || '').trim().toLowerCase();
 
-        // 1) assignedUser가 나인지 확인
+        // 1) assignedUser가 나인지 확인 (최고관리자 단일 진실의 원천 100% 추종)
         const isUserMatch = (myUserId && entryUserId === myUserId) ||
                             (myBizCode && entryBizCode === myBizCode) ||
                             (myUserName && entryUserName === myUserName) ||
                             (myPhone && entryPhone === myPhone);
-        // 2) 고유 접수번호 접두사가 내 코드인지 확인
-        const isPrefixMatch = Boolean(myBizCode && itId.startsWith(myBizCode + '-'));
-        // 3) 내 items 목록에 등록되어 있는지 확인
-        const isMyItemMatch = Boolean(user.items && Array.isArray(user.items) && user.items.some(i => String(i.id).toLowerCase() === itId || String(i.appRefId).toLowerCase() === itId));
-        // 4) applications의 원본 건에서 내가 신청/추천/담당영업자인지 직접 전수 대조
-        const rawApp = apps.find(a => String(a.id).toLowerCase() === itId || String(a.appRefId).toLowerCase() === itId);
-        let isRawAppMatch = false;
-        if (rawApp) {
-          const rawRef = String(rawApp.referrerCode || rawApp.referrer_code || '').trim().toLowerCase();
-          const rawSalesId = String(rawApp.salespersonId || '').trim().toLowerCase();
-          const rawSalesName = String(rawApp.salespersonName || '').trim().toLowerCase();
-          const rawUser = String(rawApp.userId || rawApp.registeredBy || rawApp.submitterId || '').trim().toLowerCase();
-          const rawPhone = String(rawApp.ownerPhone || '').replace(/[^0-9]/g, '');
-          const rawOwner = String(rawApp.ownerName || '').trim().toLowerCase();
-          isRawAppMatch = (myBizCode && (rawRef === myBizCode || itId.startsWith(myBizCode + '-'))) ||
-                          (myUserId && (rawSalesId === myUserId || rawUser === myUserId || rawRef === myUserId)) ||
-                          (myUserName && (rawSalesName === myUserName || rawOwner === myUserName || rawRef === myUserName)) ||
-                          (myPhone && rawPhone === myPhone);
-        }
 
-        if (isUserMatch || isPrefixMatch || isMyItemMatch || isRawAppMatch) {
+        if (isUserMatch) {
           myBizList.push({
             id: it.id,
             date: it.registeredAt || new Date().toISOString(),
@@ -311,18 +292,14 @@
         const isApprovedBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
         if (!isApprovedBizItem) return; // 비활성화/미승인 건은 절대 제외!
 
-        // 담당 영업자 찾기 (7중 다각도 정밀 매칭)
+        // 담당 영업자 찾기 (최고관리자 지정 SSOT 우선)
         let assignedUser = null;
         const salesId = String(app.salespersonId || '').trim().toLowerCase();
         const salesName = String(app.salespersonName || '').trim().toLowerCase();
         const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
-        const appUser = String(app.userId || app.registeredBy || app.submitterId || '').trim().toLowerCase();
-        const appId = String(app.id || '').trim().toLowerCase();
-        const appPhone = String(app.ownerPhone || '').replace(/[^0-9]/g, '');
-        const appOwner = String(app.ownerName || '').trim().toLowerCase();
 
         // 0. salespersonId / salespersonName 로 최우선 탐색
-        if (salesId || salesName) {
+        if (salesId || (salesName && salesName !== '본사직접접수')) {
           assignedUser = users.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
             ((salesId && String(u.id).trim().toLowerCase() === salesId) ||
@@ -337,40 +314,6 @@
             ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
               (u.id && String(u.id).trim().toLowerCase() === refCode) ||
               (u.name && String(u.name).trim().toLowerCase() === refCode))
-          );
-        }
-        // 2. appId 접두사로 탐색 (예: B-260901-)
-        if (!assignedUser && appId) {
-          assignedUser = users.find(u =>
-            (u.role === 'business' || u.role === 'admin') &&
-            u.bizCode && appId.startsWith(String(u.bizCode).trim().toLowerCase() + '-')
-          );
-        }
-        // 3. appUser (userId, registeredBy, submitterId)로 탐색
-        if (!assignedUser && appUser) {
-          assignedUser = users.find(u =>
-            (u.role === 'business' || u.role === 'admin') &&
-            (String(u.id).trim().toLowerCase() === appUser || (u.bizCode && String(u.bizCode).trim().toLowerCase() === appUser))
-          );
-        }
-        // 4. users.items에 등록된 영업자 탐색
-        if (!assignedUser) {
-          assignedUser = users.find(u =>
-            u.role === 'business' && u.items && Array.isArray(u.items) &&
-            u.items.some(it => String(it.id).toLowerCase() === appId || String(it.appRefId).toLowerCase() === appId)
-          );
-        }
-        // 5. 신청자 연락처/성명으로 영업자 탐색
-        if (!assignedUser && appPhone) {
-          assignedUser = users.find(u =>
-            (u.role === 'business' || u.role === 'admin') &&
-            u.phone && String(u.phone).replace(/[^0-9]/g, '') === appPhone
-          );
-        }
-        if (!assignedUser && appOwner) {
-          assignedUser = users.find(u =>
-            (u.role === 'business' || u.role === 'admin') &&
-            u.name && String(u.name).trim().toLowerCase() === appOwner
           );
         }
 
