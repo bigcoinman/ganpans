@@ -1844,8 +1844,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             let count = photoList.length;
-            let hasPhoto = count > 0 || Boolean(app.hasPhoto || (app.photosCount > 0));
-            if (!count && hasPhoto) count = app.photosCount || 1;
+            let hasPhoto = count > 0 || Boolean(
+              app.hasPhoto || 
+              (app.photosCount > 0) || 
+              (app.photos_count > 0) || 
+              (app.fileName && app.fileName !== '업로드 파일 없음' && String(app.fileName).trim() !== '') ||
+              (app.file_name && app.file_name !== '업로드 파일 없음' && String(app.file_name).trim() !== '')
+            );
+            if (!count && hasPhoto) count = app.photosCount || app.photos_count || 1;
 
             const downloadBtn = hasPhoto
                 ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}">
@@ -3295,8 +3301,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     let fileAttachmentHtml = '';
                     const photosArr = (Array.isArray(app.photos) && app.photos.length > 0) ? app.photos.filter(p => p && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:'))) : [];
                     const photoSrc = (photosArr.length > 0) ? photosArr[0] : (app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : ''));
-                    const hasPhoto = Boolean((photosArr.length > 0) || (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))));
-                    const count = photosArr.length > 0 ? photosArr.length : (hasPhoto ? (app.photosCount || 1) : 0);
+                    const hasPhoto = Boolean(
+                      (photosArr.length > 0) ||
+                      (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))) ||
+                      (app.photosCount && app.photosCount > 0) ||
+                      (app.photos_count && app.photos_count > 0) ||
+                      app.hasPhoto ||
+                      (app.fileName && app.fileName !== '업로드 파일 없음' && String(app.fileName).trim() !== '') ||
+                      (app.file_name && app.file_name !== '업로드 파일 없음' && String(app.file_name).trim() !== '')
+                    );
+                    const count = photosArr.length > 0 ? photosArr.length : (app.photosCount || app.photos_count || (hasPhoto ? 1 : 0));
 
                     fileAttachmentHtml = `
                         <div style="margin-top: 10px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">

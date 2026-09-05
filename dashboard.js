@@ -3542,8 +3542,16 @@ document.addEventListener('DOMContentLoaded', () => {
           ${(() => {
             const photosArr = (Array.isArray(app.photos) && app.photos.length > 0) ? app.photos.filter(p => p && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:'))) : [];
             const photoSrc = (photosArr.length > 0) ? photosArr[0] : (app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : ''));
-            const hasPhoto = Boolean((photosArr.length > 0) || (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))));
-            const count = photosArr.length > 0 ? photosArr.length : (hasPhoto ? (app.photosCount || 1) : 0);
+            const hasPhoto = Boolean(
+              (photosArr.length > 0) ||
+              (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))) ||
+              (app.photosCount && app.photosCount > 0) ||
+              (app.photos_count && app.photos_count > 0) ||
+              app.hasPhoto ||
+              (app.fileName && app.fileName !== '업로드 파일 없음' && String(app.fileName).trim() !== '') ||
+              (app.file_name && app.file_name !== '업로드 파일 없음' && String(app.file_name).trim() !== '')
+            );
+            const count = photosArr.length > 0 ? photosArr.length : (app.photosCount || app.photos_count || (hasPhoto ? 1 : 0));
             return `
               <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
                 <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.76rem; font-weight: 700; color: #16a34a; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 6px; cursor: pointer; width: 92px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="${hasPhoto ? '현장사진 변경/재등록' : '현장사진 등록'}">
@@ -4685,8 +4693,14 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             }
             let count = photoList.length;
-            let hasPhoto = count > 0 || Boolean(app.hasPhoto || (app.photosCount > 0));
-            if (!count && hasPhoto) count = app.photosCount || 1;
+            let hasPhoto = count > 0 || Boolean(
+              app.hasPhoto || 
+              (app.photosCount > 0) || 
+              (app.photos_count > 0) || 
+              (app.fileName && app.fileName !== '업로드 파일 없음' && String(app.fileName).trim() !== '') ||
+              (app.file_name && app.file_name !== '업로드 파일 없음' && String(app.file_name).trim() !== '')
+            );
+            if (!count && hasPhoto) count = app.photosCount || app.photos_count || 1;
 
             const downloadBtn = hasPhoto
               ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="padding: 4px 8px; font-size: 0.74rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; width: 100%; box-sizing: border-box; text-align: center; box-shadow: 0 1px 2px rgba(37,99,235,0.1); transition: background 0.15s;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}"><i class="fa-solid ${count > 1 ? 'fa-images' : 'fa-download'}" style="color: #2563eb;"></i> ${count > 1 ? `사진 (${count}장)` : '다운로드'}</button>`
