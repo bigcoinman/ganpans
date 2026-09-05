@@ -7645,7 +7645,9 @@ function initWizard() {
         return;
       }
 
-      const activeUser = (typeof getActiveUser === 'function') ? (getActiveUser() || null) : null;
+      const loggedUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function') 
+        ? window.DataStore.getActiveUser() 
+        : (activeUser || JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')) || null);
       let users = JSON.parse(localStorage.getItem('users')) || [];
       const apps = JSON.parse(localStorage.getItem('applications')) || [];
 
@@ -7655,31 +7657,25 @@ function initWizard() {
 
       let userId = phoneDigits || ('guest_' + Date.now());
       let loginNoticeId = phoneDigits;
-      let loginNoticePw = autoPw;
+      let loginNoticePw = '';
       let isNewAccount = false;
 
-      // 점주 대표 전화번호(휴대폰 010... 또는 일반전화 031...) 기반 독립 자동 계정 확인 및 생성
-      const existingIdx = users.findIndex(u => {
-        const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
-        return (uPhoneDigits && uPhoneDigits === phoneDigits) || (u.id && String(u.id).toLowerCase() === phoneDigits.toLowerCase());
-      });
-
-      if (existingIdx !== -1) {
-        const existing = users[existingIdx];
-        userId = existing.id;
-        loginNoticeId = existing.id;
-        loginNoticePw = autoPw;
+      // 1. 현재 로그인한 사용자가 일반회원(점주)인 경우: 본인 계정 정보 그대로 사용 (비밀번호 절대 덮어쓰기 금지)
+      if (loggedUser && (loggedUser.role === 'normal' || !loggedUser.role || loggedUser.role === 'user')) {
+        userId = loggedUser.id;
+        loginNoticeId = loggedUser.id;
+        loginNoticePw = ''; // 기존 비밀번호 유지
+        isNewAccount = false;
 
         const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
-
-        if (existing.role === 'normal' || !existing.role) {
-          users[existingIdx] = {
-            ...existing,
-            name: ownerName || existing.name,
-            phone: ownerPhone,
-            email: enteredEmail || '',
-            address: storeAddress || existing.address,
-            pw: hashedPassword
+        const curUserIdx = users.findIndex(u => String(u.id).toLowerCase() === String(loggedUser.id).toLowerCase());
+        if (curUserIdx !== -1) {
+          users[curUserIdx] = {
+            ...users[curUserIdx],
+            name: ownerName || users[curUserIdx].name,
+            phone: ownerPhone || users[curUserIdx].phone,
+            email: enteredEmail || users[curUserIdx].email || '',
+            address: storeAddress || users[curUserIdx].address
           };
           if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
             window.DataStore.saveUsers(users);
@@ -7687,50 +7683,88 @@ function initWizard() {
             safeSetStorage('users', users);
           }
           if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
-            window.SupabaseSync.updateUser(existing.id, { 
-              name: ownerName || existing.name,
-              phone: ownerPhone, 
-              email: enteredEmail || '',
-              address: storeAddress || existing.address,
-              password_hash: hashedPassword 
+            window.SupabaseSync.updateUser(loggedUser.id, {
+              name: ownerName || users[curUserIdx].name,
+              phone: ownerPhone || users[curUserIdx].phone,
+              email: enteredEmail || users[curUserIdx].email || '',
+              address: storeAddress || users[curUserIdx].address
             }).catch(() => {});
           }
         }
       } else {
-        userId = phoneDigits;
-        loginNoticeId = phoneDigits;
-        loginNoticePw = autoPw;
-        isNewAccount = true;
-        const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
+        // 2. 비회원 신청이거나 영업자/관리자 대리 신청: 전화번호 기준 기존 회원 여부 확인
+        const existingIdx = users.findIndex(u => {
+          const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
+          return (uPhoneDigits && uPhoneDigits === phoneDigits) || (u.id && String(u.id).toLowerCase() === phoneDigits.toLowerCase());
+        });
 
-        const newUser = {
-          id: phoneDigits,
-          name: ownerName,
-          phone: ownerPhone,
-          email: enteredEmail || '',
-          address: storeAddress,
-          pw: hashedPassword,
-          role: 'normal',
-          conversionStatus: 'none',
-          items: [],
-          createdAt: now.toISOString()
-        };
+        if (existingIdx !== -1) {
+          const existing = users[existingIdx];
+          userId = existing.id;
+          loginNoticeId = existing.id;
+          const hasExistingPw = Boolean(existing.pw || existing.password_hash);
+          loginNoticePw = hasExistingPw ? '' : autoPw;
+          isNewAccount = !hasExistingPw;
 
-        users.push(newUser);
-        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-          window.DataStore.saveUsers(users);
+          const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
+
+          if (existing.role === 'normal' || !existing.role || existing.role === 'user') {
+            users[existingIdx] = {
+              ...existing,
+              name: ownerName || existing.name,
+              phone: ownerPhone,
+              email: enteredEmail || existing.email || '',
+              address: storeAddress || existing.address,
+              ...(hasExistingPw ? {} : { pw: hashedPassword })
+            };
+            if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+              window.DataStore.saveUsers(users);
+            } else {
+              safeSetStorage('users', users);
+            }
+            if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
+              window.SupabaseSync.updateUser(existing.id, { 
+                name: ownerName || existing.name,
+                phone: ownerPhone, 
+                email: enteredEmail || existing.email || '',
+                address: storeAddress || existing.address,
+                ...(hasExistingPw ? {} : { password_hash: hashedPassword })
+              }).catch(() => {});
+            }
+          }
         } else {
-          safeSetStorage('users', users);
-        }
+          // 3. 신규 비회원 (처음 신청): 전화번호 기반 임시 계정 자동 생성
+          userId = phoneDigits;
+          loginNoticeId = phoneDigits;
+          loginNoticePw = autoPw;
+          isNewAccount = true;
+          const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
 
-        if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
-          window.SupabaseSync.upsertUser(newUser).catch(e => console.warn('Supabase upsertUser async err:', e));
+          const newUser = {
+            id: phoneDigits,
+            name: ownerName,
+            phone: ownerPhone,
+            email: enteredEmail || '',
+            address: storeAddress,
+            pw: hashedPassword,
+            role: 'normal',
+            conversionStatus: 'none',
+            items: [],
+            createdAt: now.toISOString()
+          };
+
+          users.push(newUser);
+          if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(users);
+          } else {
+            safeSetStorage('users', users);
+          }
+
+          if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
+            window.SupabaseSync.upsertUser(newUser).catch(e => console.warn('Supabase upsertUser async err:', e));
+          }
         }
       }
-
-      const loggedUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function') 
-        ? window.DataStore.getActiveUser() 
-        : (JSON.parse(localStorage.getItem('activeUser')) || null);
 
       const finalReferrerCode = (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin') && loggedUser.bizCode)
         ? loggedUser.bizCode
@@ -7825,6 +7859,8 @@ function initWizard() {
       }
       window.dispatchEvent(new CustomEvent('supabase-data-synced', { detail: { newApp } }));
 
+      const isExistingAccount = !isNewAccount || !loginNoticePw;
+
       const appIdContainer = document.getElementById('success-app-id-container');
       if (appIdContainer) appIdContainer.textContent = customId;
       const storeNameContainer = document.getElementById('success-store-name');
@@ -7832,7 +7868,19 @@ function initWizard() {
       const loginIdContainer = document.getElementById('success-login-id');
       if (loginIdContainer) loginIdContainer.textContent = loginNoticeId;
       const loginPwContainer = document.getElementById('success-login-pw');
-      if (loginPwContainer) loginPwContainer.textContent = loginNoticePw;
+      if (loginPwContainer) {
+        if (isExistingAccount) {
+          loginPwContainer.innerHTML = '<span style="color: #0284c7; font-weight: 700; font-size: 0.88rem;">기존 가입하신 계정으로 바로 조회 가능합니다</span>';
+          if (loginPwContainer.previousElementSibling) {
+            loginPwContainer.previousElementSibling.textContent = '• 비밀번호';
+          }
+        } else {
+          loginPwContainer.textContent = loginNoticePw;
+          if (loginPwContainer.previousElementSibling) {
+            loginPwContainer.previousElementSibling.textContent = '• 임시 비밀번호';
+          }
+        }
+      }
 
       const compAppId = document.getElementById('complete-app-id');
       if (compAppId) compAppId.textContent = customId;
@@ -7847,7 +7895,19 @@ function initWizard() {
       const compLoginId = document.getElementById('complete-login-id');
       if (compLoginId) compLoginId.textContent = loginNoticeId;
       const compLoginPw = document.getElementById('complete-login-pw');
-      if (compLoginPw) compLoginPw.textContent = loginNoticePw;
+      if (compLoginPw) {
+        if (isExistingAccount) {
+          compLoginPw.innerHTML = '<span style="color: #0284c7; font-weight: 700; font-size: 0.92rem;">기존 가입하신 계정으로 바로 조회 가능합니다</span>';
+          if (compLoginPw.previousElementSibling) {
+            compLoginPw.previousElementSibling.textContent = '비밀번호';
+          }
+        } else {
+          compLoginPw.textContent = loginNoticePw;
+          if (compLoginPw.previousElementSibling) {
+            compLoginPw.previousElementSibling.textContent = '임시 비밀번호';
+          }
+        }
+      }
 
       stepNodes.forEach((node) => {
         node.className = 'step-node complete';
