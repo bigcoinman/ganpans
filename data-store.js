@@ -1431,6 +1431,7 @@
 
       const app = apps[appIndex];
       app.status = newStatus;
+      app.reviewStatus = newStatus;
       app.updatedAt = new Date().toISOString();
       apps[appIndex] = app;
       this.saveApplications(apps);
@@ -2175,6 +2176,7 @@
       }
     }
     if (window.DataStore) window.DataStore.notifyAll(true);
+    return true;
   };
   DataStore.updateJobSignType = window.updateJobSignType;
 
@@ -2240,12 +2242,17 @@
     }
 
     if (window.DataStore) window.DataStore.notifyAll(true);
+    return true;
   };
 
   // --- 점주 전용 간판 디자인 시안 승인 핸들러 ---
   window.approveDraftByOwner = function (id) {
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
-    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
+    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || []);
     let updatedUid = null;
     const approvedTime = new Date().toISOString();
 
@@ -2255,7 +2262,11 @@
       }
       return a;
     });
-    localStorage.setItem('applications', JSON.stringify(apps));
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(apps);
+    } else {
+      localStorage.setItem('applications', JSON.stringify(apps));
+    }
 
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
@@ -2270,7 +2281,11 @@
       }
       return u;
     });
-    localStorage.setItem('users', JSON.stringify(curUsers));
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(curUsers);
+    } else {
+      localStorage.setItem('users', JSON.stringify(curUsers));
+    }
 
     if (window.SupabaseSync) {
       const app = apps.find(a => String(a.id) === String(id));
@@ -2283,6 +2298,7 @@
 
     alert('간판 디자인 시안을 최종 승인하셨습니다!\n시공사와 최고관리자 화면에 즉시 공유되어 간판 제작 및 시공이 진행됩니다.');
     if (window.DataStore) window.DataStore.notifyAll();
+    return true;
   };
 
   // --- 간판 디자인 시안 크게보기 모달 (PC웹 & 모바일 공용) ---
