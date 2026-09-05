@@ -204,17 +204,19 @@
         const isPrefixMatch = Boolean(myBizCode && itId.startsWith(myBizCode + '-'));
         // 3) 내 items 목록에 등록되어 있는지 확인
         const isMyItemMatch = Boolean(user.items && Array.isArray(user.items) && user.items.some(i => String(i.id).toLowerCase() === itId || String(i.appRefId).toLowerCase() === itId));
-        // 4) applications의 원본 건에서 내가 신청/추천했는지 직접 전수 대조
+        // 4) applications의 원본 건에서 내가 신청/추천/담당영업자인지 직접 전수 대조
         const rawApp = apps.find(a => String(a.id).toLowerCase() === itId || String(a.appRefId).toLowerCase() === itId);
         let isRawAppMatch = false;
         if (rawApp) {
           const rawRef = String(rawApp.referrerCode || rawApp.referrer_code || '').trim().toLowerCase();
-          const rawUser = String(rawApp.userId || rawApp.registeredBy || rawApp.submitterId || rawApp.salespersonId || '').trim().toLowerCase();
+          const rawSalesId = String(rawApp.salespersonId || '').trim().toLowerCase();
+          const rawSalesName = String(rawApp.salespersonName || '').trim().toLowerCase();
+          const rawUser = String(rawApp.userId || rawApp.registeredBy || rawApp.submitterId || '').trim().toLowerCase();
           const rawPhone = String(rawApp.ownerPhone || '').replace(/[^0-9]/g, '');
           const rawOwner = String(rawApp.ownerName || '').trim().toLowerCase();
           isRawAppMatch = (myBizCode && (rawRef === myBizCode || itId.startsWith(myBizCode + '-'))) ||
-                          (myUserId && (rawUser === myUserId || rawRef === myUserId)) ||
-                          (myUserName && (rawOwner === myUserName || rawRef === myUserName)) ||
+                          (myUserId && (rawSalesId === myUserId || rawUser === myUserId || rawRef === myUserId)) ||
+                          (myUserName && (rawSalesName === myUserName || rawOwner === myUserName || rawRef === myUserName)) ||
                           (myPhone && rawPhone === myPhone);
         }
 
@@ -269,16 +271,27 @@
         const isApprovedBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
         if (!isApprovedBizItem) return; // 비활성화/미승인 건은 절대 제외!
 
-        // 담당 영업자 찾기 (6중 다각도 정밀 매칭)
+        // 담당 영업자 찾기 (7중 다각도 정밀 매칭)
         let assignedUser = null;
+        const salesId = String(app.salespersonId || '').trim().toLowerCase();
+        const salesName = String(app.salespersonName || '').trim().toLowerCase();
         const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
-        const appUser = String(app.userId || app.registeredBy || app.submitterId || app.salespersonId || '').trim().toLowerCase();
+        const appUser = String(app.userId || app.registeredBy || app.submitterId || '').trim().toLowerCase();
         const appId = String(app.id || '').trim().toLowerCase();
         const appPhone = String(app.ownerPhone || '').replace(/[^0-9]/g, '');
         const appOwner = String(app.ownerName || '').trim().toLowerCase();
 
+        // 0. salespersonId / salespersonName 로 최우선 탐색
+        if (salesId || salesName) {
+          assignedUser = users.find(u =>
+            (u.role === 'business' || u.role === 'admin') &&
+            ((salesId && String(u.id).trim().toLowerCase() === salesId) ||
+             (salesId && u.bizCode && String(u.bizCode).trim().toLowerCase() === salesId) ||
+             (salesName && String(u.name).trim().toLowerCase() === salesName))
+          );
+        }
         // 1. referrerCode로 탐색 (코드, ID, 이름)
-        if (refCode) {
+        if (!assignedUser && refCode) {
           assignedUser = users.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
             ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
@@ -642,9 +655,21 @@
       if (isNowBizItem) {
         // 영업물건 등록: 담당 영업자 1명 특정 (3+1 원칙 적용)
         let targetUser = null;
+        const salesId = String(app.salespersonId || '').trim().toLowerCase();
+        const salesName = String(app.salespersonName || '').trim().toLowerCase();
         const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
         const appUser = String(app.userId || '').trim().toLowerCase();
         const appIdStr = String(app.id || '').trim().toLowerCase();
+
+        // 0. salespersonId / salespersonName 로 최우선 탐색 (관리자가 지정한 영업자)
+        if (salesId || salesName) {
+          targetUser = curUsers.find(u =>
+            (u.role === 'business' || u.role === 'admin') &&
+            ((salesId && String(u.id).trim().toLowerCase() === salesId) ||
+             (salesId && u.bizCode && String(u.bizCode).trim().toLowerCase() === salesId) ||
+             (salesName && String(u.name).trim().toLowerCase() === salesName))
+          );
+        }
 
         // 1. 신청번호 앞자리 접두사 (예: B-260903-001 -> B-260903)
         let prefixCode = '';
@@ -655,7 +680,7 @@
           }
         }
 
-        if (refCode) {
+        if (!targetUser && refCode) {
           targetUser = curUsers.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
             ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
@@ -943,7 +968,9 @@
 
       // 3) 만약 users.items에 아직 없었지만 영업자가 지정된 신청서인 경우, 영업자의 items에도 자동 생성/갱신 (3+1 원칙)
       if (targetApp) {
-        const refCode = String(targetApp.referrerCode || '').trim().toLowerCase();
+        const salesId = String(targetApp.salespersonId || '').trim().toLowerCase();
+        const salesName = String(targetApp.salespersonName || '').trim().toLowerCase();
+        const refCode = String(targetApp.referrerCode || targetApp.referrer_code || '').trim().toLowerCase();
         const appUser = String(targetApp.userId || '').trim().toLowerCase();
         const appIdStr = String(targetApp.id || '').trim().toLowerCase();
         let prefixCode = '';
@@ -954,10 +981,13 @@
 
         let assignedUser = users.find(u =>
           (u.role === 'business' || u.role === 'admin') &&
-          ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
+          ((salesId && String(u.id).trim().toLowerCase() === salesId) ||
+            (salesId && u.bizCode && String(u.bizCode).trim().toLowerCase() === salesId) ||
+            (salesName && String(u.name).trim().toLowerCase() === salesName) ||
+            (refCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
+            (refCode && String(u.id).trim().toLowerCase() === refCode) ||
+            (refCode && String(u.name).trim().toLowerCase() === refCode) ||
             (prefixCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === prefixCode) ||
-            (u.id && String(u.id).trim().toLowerCase() === refCode) ||
-            (u.name && String(u.name).trim().toLowerCase() === refCode) ||
             (appUser && String(u.id).trim().toLowerCase() === appUser))
         );
         if (assignedUser) {
@@ -1043,8 +1073,8 @@
         console.warn('[DataStore] In-place DOM update notice:', eDom);
       }
 
-      // 6) 다른 연관 화면 동기화 (사용자가 인터랙션 중일 때는 전체 DOM 파괴 방지: force = false)
-      this.notifyAll(false);
+      // 6) 다른 연관 화면 동기화 (전체 대시보드 0초 강제 동기화)
+      this.notifyAll(true);
 
       // 7) 사용자 피드백 토스트 알림
       try {
@@ -1460,12 +1490,21 @@
           sel.style.backgroundColor = statusBg;
           sel.style.borderColor = statusBorder;
         });
+
+        // 영업자 / 신청자 대시보드의 상태 배지도 즉시 동기화
+        if (typeof window.getAppStatusBadgeHtml === 'function') {
+          const newBadgeHtml = window.getAppStatusBadgeHtml(app);
+          const badgeEls = document.querySelectorAll(`.badge-status[data-id="${appIdStr}"], span.badge-app-status[data-id="${appIdStr}"]`);
+          badgeEls.forEach(b => {
+            b.outerHTML = newBadgeHtml;
+          });
+        }
       } catch (eDom) {
         console.warn('[DataStore] In-place DOM update notice for app status:', eDom);
       }
 
-      // 6) 연관 화면 부드러운 동기화 (인터랙션 중 DOM 파괴 방지)
-      this.notifyAll(false);
+      // 6) 전체 대시보드 화면 0초 강제 동기화 (최고관리자, 영업자, 시공사, 점주 6대 화면 즉시 리렌더링)
+      this.notifyAll(true);
       return { success: true, status: newStatus, app: app };
     },
 
