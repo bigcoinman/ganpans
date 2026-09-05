@@ -1504,19 +1504,30 @@
       let userAccountChanged = null;
 
       if (oldPhoneDigits && newPhoneDigits && oldPhoneDigits !== newPhoneDigits) {
-        // 기존 전화번호로 된 일반 점주 회원 계정 탐색 (role === 'normal')
-        const ownerUserIdx = users.findIndex(u =>
-          (u.role === 'normal' || !u.role) &&
-          (String(u.id).toLowerCase() === oldPhoneDigits.toLowerCase() || (u.phone && String(u.phone).replace(/[^0-9]/g, '') === oldPhoneDigits))
-        );
+        let ownerUserIdx = -1;
+        // 1순위: 신청서에 직접 기록된 userId 또는 applicantUserId 로 우선 탐색
+        if (currentApp.userId || currentApp.applicantUserId) {
+          ownerUserIdx = users.findIndex(u =>
+            (u.role === 'normal' || !u.role || u.role === 'user') &&
+            ((currentApp.userId && String(u.id).toLowerCase() === String(currentApp.userId).toLowerCase()) ||
+             (currentApp.applicantUserId && String(u.id).toLowerCase() === String(currentApp.applicantUserId).toLowerCase()))
+          );
+        }
+        // 2순위: 기존 전화번호로 탐색
+        if (ownerUserIdx === -1) {
+          ownerUserIdx = users.findIndex(u =>
+            (u.role === 'normal' || !u.role || u.role === 'user') &&
+            (String(u.id).toLowerCase() === oldPhoneDigits.toLowerCase() || (u.phone && String(u.phone).replace(/[^0-9]/g, '') === oldPhoneDigits))
+          );
+        }
 
         if (ownerUserIdx !== -1) {
           const targetOwner = users[ownerUserIdx];
-          const isCustomRegisteredUser = Boolean(
-            targetOwner.id && 
-            targetOwner.id.toLowerCase() !== oldPhoneDigits.toLowerCase() && 
-            !targetOwner.isAutoAccount
+          const isAutoPhoneAccount = Boolean(
+            String(targetOwner.id).replace(/[^0-9]/g, '') === String(targetOwner.id) &&
+            String(targetOwner.id) === oldPhoneDigits
           );
+          const isCustomRegisteredUser = !isAutoPhoneAccount;
 
           if (isCustomRegisteredUser) {
             // [원칙 1] 본인 아이디로 직접 가입한 정회원: 아이디(id)와 비밀번호(pw)는 100% 절대 불변 유지하고, 연락처(phone) 및 대표자명만 안전하게 갱신!
