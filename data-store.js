@@ -578,9 +578,6 @@
 
     // --- 관리자 권한 다각도 정밀 판정 ---
     isAdmin: function (user) {
-      if (typeof window !== 'undefined' && window.location && window.location.pathname.includes('dashboard')) {
-        return true;
-      }
       const u = user || this.getActiveUser();
       if (!u) return false;
       return (
