@@ -1360,7 +1360,54 @@
         }
       })();
 
-      this.notifyAll(true);
+      // 5) 낙관적 In-place DOM 부분 갱신 (1회 클릭 즉시 반영 & 전체 DOM 재생성으로 인한 포커스 날아감 방지)
+      try {
+        const appIdStr = String(app.id || appId).trim();
+        let statusColor = '#475569';
+        let statusBg = '#f1f5f9';
+        let statusBorder = '#cbd5e1';
+
+        if (newStatus === 'approved' || newStatus === '서류준비 & 접수대기' || newStatus === '서류제출 & 접수예정' || newStatus === '승인 완료') {
+          statusColor = '#1e40af';
+          statusBg = '#eff6ff';
+          statusBorder = '#bfdbfe';
+        } else if (newStatus === 'unqualified' || newStatus === '신청요건 미달업체' || newStatus === '미달') {
+          statusColor = '#d97706';
+          statusBg = '#fffbeb';
+          statusBorder = '#fde68a';
+        } else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') {
+          statusColor = '#dc2626';
+          statusBg = '#fee2e2';
+          statusBorder = '#fca5a5';
+        } else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') {
+          statusColor = '#b45309';
+          statusBg = '#fffbeb';
+          statusBorder = '#fde68a';
+        }
+
+        // PC 웹 신청서 목록 드롭다운 즉시 부분 동기화
+        const pcSelects = document.querySelectorAll(`select.select-app-status-pc[data-id="${appIdStr}"]`);
+        pcSelects.forEach(sel => {
+          sel.value = newStatus;
+          sel.style.color = statusColor;
+          sel.style.backgroundColor = statusBg;
+          sel.style.borderColor = statusBorder;
+        });
+
+        // 모바일 앱 신청서 목록 드롭다운 즉시 부분 동기화
+        const mobSelects = document.querySelectorAll(`select.select-app-status-mob[data-id="${appIdStr}"]`);
+        mobSelects.forEach(sel => {
+          sel.value = newStatus;
+          sel.style.color = statusColor;
+          sel.style.backgroundColor = statusBg;
+          sel.style.borderColor = statusBorder;
+        });
+      } catch (eDom) {
+        console.warn('[DataStore] In-place DOM update notice for app status:', eDom);
+      }
+
+      // 6) 연관 화면 부드러운 동기화 (인터랙션 중 DOM 파괴 방지)
+      this.notifyAll(false);
       return { success: true, status: newStatus, app: app };
     },
 

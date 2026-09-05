@@ -3378,7 +3378,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 1. 상태 변경 셀렉트 (표준 5대 상태)
       actionButtons += `
         <div style="position: relative; display: inline-flex; align-items: center;">
-          <select class="status-select select-app-status-pc" data-id="${app.id}" onchange="window.updateApplicationStatus('${app.id}', this.value)" style="padding: 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background-color: ${statusBg}; cursor: pointer; height: 30px; line-height: 1.2;">
+          <select class="status-select select-app-status-pc" data-id="${app.id}" onchange="window.updateApplicationStatus('${app.id}', this.value, this)" style="padding: 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background-color: ${statusBg}; cursor: pointer; height: 30px; line-height: 1.2;">
             <option value="pending" ${isPending ? 'selected' : ''}>⏳ 사업시행 전 사전등록업체</option>
             <option value="approved" ${isApproved ? 'selected' : ''}>📑 서류준비 & 접수대기</option>
             <option value="unqualified" ${isUnqualified ? 'selected' : ''}>⚠️ 신청요건 미달업체</option>
