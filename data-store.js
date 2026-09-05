@@ -323,24 +323,28 @@
 
         const rStatus = app.receiptStatus || '접수예정';
         let pStatus = String(app.progressStatus || '').trim();
-        if (!pStatus || pStatus === 'none') {
-          const cs = String(app.constructionStatus || '').trim();
-          if (cs === 'before_construction' || cs === '대상자선정' || cs === '선정') pStatus = '대상자선정';
-          else if (cs === 'in_construction' || cs === '간판시공 준비중' || cs === '시공준비' || cs === '간판 시공 중') pStatus = '간판시공 준비중';
-          else if (cs === 'completed' || cs === 'after_construction' || cs === '간판시공완료' || cs === '시공완료' || cs === '정산 완료') pStatus = '간판시공완료';
-          else pStatus = '지원대기중';
-        }
-        // 영문 또는 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화
-        if (pStatus === '대상자선정' || pStatus === '선정' || pStatus === '승인 완료' || pStatus === '승인완료' || pStatus === 'approved' || pStatus === 'before_construction' || pStatus === '시공 전' || pStatus === '시공사 배정 (시공 전)' || pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인') {
-          pStatus = '대상자선정';
-        } else if (pStatus === '간판시공 준비중' || pStatus === 'in_construction' || pStatus === '시공 준비중' || pStatus === '간판 시공 중' || pStatus === '시공준비') {
-          pStatus = '간판시공 준비중';
-        } else if (pStatus === '간판시공완료' || pStatus === 'completed' || pStatus === 'after_construction' || pStatus === '시공 완료' || pStatus === '정산 완료' || pStatus === '시공완료') {
-          pStatus = '간판시공완료';
-        } else if (pStatus === '심사대기' || pStatus === '심사 대기' || pStatus === '심사대기중' || pStatus === '서류 보완 필요') {
-          pStatus = '심사대기중';
-        } else {
+        if (rStatus === '접수예정' || rStatus === '접수 대기' || !app.receiptStatus) {
           pStatus = '지원대기중';
+        } else {
+          if (!pStatus || pStatus === 'none') {
+            const cs = String(app.constructionStatus || '').trim();
+            if (cs === 'before_construction' || cs === '대상자선정' || cs === '선정') pStatus = '대상자선정';
+            else if (cs === 'in_construction' || cs === '간판시공 준비중' || cs === '시공준비' || cs === '간판 시공 중') pStatus = '간판시공 준비중';
+            else if (cs === 'completed' || cs === 'after_construction' || cs === '간판시공완료' || cs === '시공완료' || cs === '정산 완료') pStatus = '간판시공완료';
+            else pStatus = '지원대기중';
+          }
+          // 영문 또는 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화
+          if (pStatus === '대상자선정' || pStatus === '선정' || pStatus === '승인 완료' || pStatus === '승인완료' || pStatus === 'approved' || pStatus === 'before_construction' || pStatus === '시공 전' || pStatus === '시공사 배정 (시공 전)' || pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인') {
+            pStatus = '대상자선정';
+          } else if (pStatus === '간판시공 준비중' || pStatus === 'in_construction' || pStatus === '시공 준비중' || pStatus === '간판 시공 중' || pStatus === '시공준비') {
+            pStatus = '간판시공 준비중';
+          } else if (pStatus === '간판시공완료' || pStatus === 'completed' || pStatus === 'after_construction' || pStatus === '시공 완료' || pStatus === '정산 완료' || pStatus === '시공완료') {
+            pStatus = '간판시공완료';
+          } else if (pStatus === '심사대기' || pStatus === '심사 대기' || pStatus === '심사대기중' || pStatus === '서류 보완 필요') {
+            pStatus = '심사대기중';
+          } else {
+            pStatus = '지원대기중';
+          }
         }
 
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
@@ -682,15 +686,18 @@
         }
 
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
-        const bizProgressStatus = app.progressStatus || (app.status === 'approved' ? '대상자선정' : (app.status === 'rejected' ? '지원사업 탈락' : (app.status === 'giveup' ? '지원사업 포기' : '지원대기중')));
+        // [규칙] 영업물건으로 전환 시 기본값은 접수: '접수예정', 진행: '지원대기중'
+        app.receiptStatus = '접수예정';
+        app.progressStatus = '지원대기중';
+        app.status = 'pending';
         const bizItem = {
           id: String(app.id),
           name: app.storeName || app.shopName || app.ownerName || '영업물건',
           phone: app.ownerPhone || app.phone || '',
           address: app.storeAddress || app.address || '',
           photosCount: photosList.length,
-          receiptStatus: app.receiptStatus || '접수예정',
-          progressStatus: bizProgressStatus,
+          receiptStatus: '접수예정',
+          progressStatus: '지원대기중',
           photos: photosList,
           appRefId: String(app.id)
         };
@@ -811,20 +818,34 @@
           app.isBizItem = true;
           if (type === 'receipt') {
             app.receiptStatus = cleanVal;
-          } else {
-            app.progressStatus = cleanVal;
-            if (cleanVal === '대상자선정' || cleanVal === '간판시공 준비중' || cleanVal === '간판시공완료') {
-              app.status = 'approved';
-              app.constructionStatus = (cleanVal === '간판시공완료' ? 'completed' : (cleanVal === '간판시공 준비중' ? 'in_construction' : 'before_construction'));
-            } else if (cleanVal === '지원사업 탈락' || cleanVal === '반려됨') {
-              app.status = 'rejected';
-              app.constructionStatus = cleanVal;
-            } else if (cleanVal === '지원사업 포기') {
-              app.status = 'giveup';
-              app.constructionStatus = cleanVal;
-            } else {
+            // [규칙] 접수: '접수예정'일 때는 진행상태를 무조건 '지원대기중'으로 자동 변경 및 고정
+            if (cleanVal === '접수예정' || cleanVal === '접수 대기' || !cleanVal) {
+              app.progressStatus = '지원대기중';
               app.status = 'pending';
-              app.constructionStatus = cleanVal;
+              app.constructionStatus = '지원대기중';
+            }
+          } else {
+            // 진행 상태 변경
+            // [규칙] 현재 접수 상태가 '접수예정'인 경우 진행상태는 오직 '지원대기중'만 허용
+            if (app.receiptStatus === '접수예정' || app.receiptStatus === '접수 대기' || !app.receiptStatus) {
+              app.progressStatus = '지원대기중';
+              app.status = 'pending';
+              app.constructionStatus = '지원대기중';
+            } else {
+              app.progressStatus = cleanVal;
+              if (cleanVal === '대상자선정' || cleanVal === '간판시공 준비중' || cleanVal === '간판시공완료') {
+                app.status = 'approved';
+                app.constructionStatus = (cleanVal === '간판시공완료' ? 'completed' : (cleanVal === '간판시공 준비중' ? 'in_construction' : 'before_construction'));
+              } else if (cleanVal === '지원사업 탈락' || cleanVal === '반려됨') {
+                app.status = 'rejected';
+                app.constructionStatus = cleanVal;
+              } else if (cleanVal === '지원사업 포기') {
+                app.status = 'giveup';
+                app.constructionStatus = cleanVal;
+              } else {
+                app.status = 'pending';
+                app.constructionStatus = cleanVal;
+              }
             }
           }
           targetApp = app;
@@ -833,6 +854,9 @@
       });
 
       if (!targetApp && sourceItem) {
+        const initReceipt = type === 'receipt' ? cleanVal : (sourceItem.receiptStatus || '접수예정');
+        const isReceiptPending = (initReceipt === '접수예정' || initReceipt === '접수 대기' || !initReceipt);
+        const initProgress = isReceiptPending ? '지원대기중' : (type === 'progress' ? cleanVal : (sourceItem.progressStatus || '지원대기중'));
         targetApp = {
           id: sourceItem.id || targetIdStr,
           appRefId: sourceItem.appRefId || targetIdStr,
@@ -842,10 +866,10 @@
           storeName: sourceItem.name || '영업물건',
           storeAddress: sourceItem.address || '',
           isBizItem: true,
-          receiptStatus: type === 'receipt' ? cleanVal : (sourceItem.receiptStatus || '접수예정'),
-          progressStatus: type === 'progress' ? cleanVal : (sourceItem.progressStatus || '지원대기중'),
-          status: (cleanVal === '대상자선정' || cleanVal === '간판시공 준비중' || cleanVal === '간판시공완료') ? 'approved' : 'pending',
-          constructionStatus: (cleanVal === '간판시공완료' ? 'completed' : (cleanVal === '간판시공 준비중' ? 'in_construction' : 'before_construction')),
+          receiptStatus: initReceipt,
+          progressStatus: initProgress,
+          status: (initProgress === '대상자선정' || initProgress === '간판시공 준비중' || initProgress === '간판시공완료') ? 'approved' : 'pending',
+          constructionStatus: (initProgress === '간판시공완료' ? 'completed' : (initProgress === '간판시공 준비중' ? 'in_construction' : 'before_construction')),
           appliedAt: sourceItem.registeredAt || new Date().toISOString()
         };
         apps.push(targetApp);
@@ -872,9 +896,16 @@
             if (isIdMatch || isMetaMatch) {
               userItemModified = true;
               if (type === 'receipt') {
-                targetItem = { ...item, receiptStatus: cleanVal };
+                const isReceiptPending = (cleanVal === '접수예정' || cleanVal === '접수 대기' || !cleanVal);
+                targetItem = { 
+                  ...item, 
+                  receiptStatus: cleanVal,
+                  ...(isReceiptPending ? { progressStatus: '지원대기중' } : {})
+                };
               } else {
-                targetItem = { ...item, progressStatus: cleanVal };
+                const curReceipt = item.receiptStatus || (targetApp && targetApp.receiptStatus) || '접수예정';
+                const isReceiptPending = (curReceipt === '접수예정' || curReceipt === '접수 대기' || !curReceipt);
+                targetItem = { ...item, progressStatus: isReceiptPending ? '지원대기중' : cleanVal };
               }
               return targetItem;
             }

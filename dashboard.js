@@ -2205,7 +2205,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const curReceipt = String(item.receiptStatus || '접수예정').trim();
-        const curProgress = String(item.progressStatus || '지원대기중').trim();
+        const isReceiptPending = (curReceipt === '접수예정' || curReceipt === '접수 대기' || !item.receiptStatus);
+        const curProgress = isReceiptPending ? '지원대기중' : String(item.progressStatus || '지원대기중').trim();
 
         row.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -2227,21 +2228,21 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="status-select-wrapper" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 6px; padding-top: 8px; border-top: 1px dashed #f1f5f9;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">접수:</label>
-              <select class="status-select select-receipt-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff;">
+              <select class="status-select select-receipt-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff; cursor: pointer;">
                 <option value="업체신청" ${(curReceipt === '업체신청') ? 'selected' : ''}>업체신청</option>
-                <option value="접수예정" ${(curReceipt === '접수예정' || curReceipt === '접수 대기' || !curReceipt) ? 'selected' : ''}>접수예정</option>
+                <option value="접수예정" ${(isReceiptPending) ? 'selected' : ''}>접수예정</option>
                 <option value="접수완료" ${(curReceipt === '접수완료' || curReceipt === '접수 완료' || curReceipt.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
               </select>
             </div>
             
             <div style="display: flex; align-items: center; gap: 6px;">
               <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">진행:</label>
-              <select class="status-select select-progress-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 600; background: #fff;">
-                <option value="지원대기중" ${(curProgress === '지원대기중' || !curProgress) ? 'selected' : ''}>지원대기중</option>
-                <option value="심사대기중" ${(curProgress === '심사대기중' || curProgress === '심사대기' || curProgress === '심사 대기' || curProgress === '서류 보완 필요') ? 'selected' : ''}>심사대기중</option>
-                <option value="대상자선정" ${(curProgress === '대상자선정' || curProgress === '선정' || curProgress === '승인 완료' || curProgress === '승인완료') ? 'selected' : ''}>대상자선정</option>
-                <option value="간판시공 준비중" ${(curProgress === '간판시공 준비중' || curProgress === '시공준비' || curProgress === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
-                <option value="간판시공완료" ${(curProgress === '간판시공완료' || curProgress === '시공완료' || curProgress === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
+              <select class="status-select select-progress-status" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatus('${u.id}', '${item.id}', 'progress', this.value)" ${isReceiptPending ? 'disabled' : ''} style="padding: 4px 8px; border-radius: 6px; border: 1px solid ${isReceiptPending ? '#e2e8f0' : '#cbd5e1'}; font-size: 0.78rem; font-weight: 600; background: ${isReceiptPending ? '#f1f5f9' : '#fff'}; color: ${isReceiptPending ? '#64748b' : 'inherit'}; cursor: ${isReceiptPending ? 'not-allowed' : 'pointer'};" title="${isReceiptPending ? '접수예정 상태에서는 지원대기중으로 고정됩니다' : '진행상황 선택'}">
+                <option value="지원대기중" ${(curProgress === '지원대기중' || isReceiptPending || !curProgress) ? 'selected' : ''}>지원대기중</option>
+                <option value="심사대기중" ${(curProgress === '심사대기중' || curProgress === '심사대기' || curProgress === '심사 대기' || curProgress === '서류 보완 필요') ? 'selected' : ''} ${isReceiptPending ? 'disabled' : ''}>심사대기중</option>
+                <option value="대상자선정" ${(curProgress === '대상자선정' || curProgress === '선정' || curProgress === '승인 완료' || curProgress === '승인완료') ? 'selected' : ''} ${isReceiptPending ? 'disabled' : ''}>대상자선정</option>
+                <option value="간판시공 준비중" ${(curProgress === '간판시공 준비중' || curProgress === '시공준비' || curProgress === '간판 시공 중') ? 'selected' : ''} ${isReceiptPending ? 'disabled' : ''}>간판시공 준비중</option>
+                <option value="간판시공완료" ${(curProgress === '간판시공완료' || curProgress === '시공완료' || curProgress === '시공 완료') ? 'selected' : ''} ${isReceiptPending ? 'disabled' : ''}>간판시공완료</option>
               </select>
             </div>
 

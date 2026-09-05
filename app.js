@@ -3454,6 +3454,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             itemDateText = String(rawDate).slice(0, 10).replace(/\./g, '-');
                         }
                     }
+                    const curReceipt = String(item.receiptStatus || '접수예정').trim();
+                    const isReceiptPending = (curReceipt === '접수예정' || curReceipt === '접수 대기' || !item.receiptStatus);
+                    const curProgress = isReceiptPending ? '지원대기중' : String(item.progressStatus || '지원대기중').trim();
 
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -3473,19 +3476,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div style="display:flex; align-items:center; gap: 6px;">
                                 <span style="font-size: 0.88rem; font-weight: 700; width: 50px; color: #475569;">접수:</span>
                                 <select class="status-select-mob select-receipt-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'receipt', this.value)" style="padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
-                                    <option value="업체신청" ${(String(item.receiptStatus || '').trim() === '업체신청') ? 'selected' : ''}>업체신청</option>
-                                    <option value="접수예정" ${(String(item.receiptStatus || '').trim() === '접수예정' || String(item.receiptStatus || '').trim() === '접수 대기' || !item.receiptStatus) ? 'selected' : ''}>접수예정</option>
-                                    <option value="접수완료" ${(String(item.receiptStatus || '').trim() === '접수완료' || String(item.receiptStatus || '').trim() === '접수 완료' || String(item.receiptStatus || '').includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
+                                    <option value="업체신청" ${(curReceipt === '업체신청') ? 'selected' : ''}>업체신청</option>
+                                    <option value="접수예정" ${(isReceiptPending) ? 'selected' : ''}>접수예정</option>
+                                    <option value="접수완료" ${(curReceipt === '접수완료' || curReceipt === '접수 완료' || curReceipt.includes('접수 완료')) ? 'selected' : ''}>접수완료</option>
                                 </select>
                             </div>
                             <div style="display:flex; align-items:center; gap: 6px;">
                                 <span style="font-size: 0.88rem; font-weight: 700; width: 50px; color: #475569;">진행:</span>
-                                <select class="status-select-mob select-progress-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'progress', this.value)" style="padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; font-weight: 600;">
-                                    <option value="지원대기중" ${(String(item.progressStatus || '').trim() === '지원대기중' || !item.progressStatus) ? 'selected' : ''}>지원대기중</option>
-                                    <option value="심사대기중" ${(String(item.progressStatus || '').trim() === '심사대기중' || String(item.progressStatus || '').trim() === '심사대기' || String(item.progressStatus || '').trim() === '심사 대기' || String(item.progressStatus || '').trim() === '서류 보완 필요') ? 'selected' : ''}>심사대기중</option>
-                                    <option value="대상자선정" ${(String(item.progressStatus || '').trim() === '대상자선정' || String(item.progressStatus || '').trim() === '선정' || String(item.progressStatus || '').trim() === '승인 완료' || String(item.progressStatus || '').trim() === '승인완료') ? 'selected' : ''}>대상자선정</option>
-                                    <option value="간판시공 준비중" ${(String(item.progressStatus || '').trim() === '간판시공 준비중' || String(item.progressStatus || '').trim() === '시공준비' || String(item.progressStatus || '').trim() === '간판 시공 중') ? 'selected' : ''}>간판시공 준비중</option>
-                                    <option value="간판시공완료" ${(String(item.progressStatus || '').trim() === '간판시공완료' || String(item.progressStatus || '').trim() === '시공완료' || String(item.progressStatus || '').trim() === '시공 완료') ? 'selected' : ''}>간판시공완료</option>
+                                <select class="status-select-mob select-progress-mob" data-uid="${u.id}" data-itemid="${item.id}" onchange="window.updateItemStatusMob('${u.id}', '${item.id}', 'progress', this.value)" ${isReceiptPending ? 'disabled' : ''} style="padding: 6px 8px; font-size: 0.9rem; border-radius: 6px; border: 1px solid ${isReceiptPending ? '#cbd5e1' : 'var(--border-color)'}; background: ${isReceiptPending ? '#f1f5f9' : 'white'}; color: ${isReceiptPending ? '#64748b' : 'inherit'}; flex: 1; font-weight: 600; cursor: ${isReceiptPending ? 'not-allowed' : 'pointer'};" title="${isReceiptPending ? '접수예정 상태에서는 지원대기중으로 고정됩니다' : '진행상황 선택'}">
+                                    <option value="지원대기중" ${(curProgress === '지원대기중' || isReceiptPending || !curProgress) ? 'selected' : ''}>지원대기중</option>
+                                    <option value="심사대기중" ${(curProgress === '심사대기중' || curProgress === '심사대기' || curProgress === '심사 대기' || curProgress === '서류 보완 필요') ? 'selected' : ''} ${isReceiptPending ? 'disabled' : ''}>심사대기중</option>
+                                    <option value="대상자선정" ${(curProgress === '대상자선정' || curProgress === '선정' || curProgress === '승인 완료' || curProgress === '승인완료') ? 'selected' : ''} ${isReceiptPending ? 'disabled' : ''}>대상자선정</option>
+                                    <option value="간판시공 준비중" ${(curProgress === '간판시공 준비중' || curProgress === '시공준비' || curProgress === '간판 시공 중') ? 'selected' : ''} ${isReceiptPending ? 'disabled' : ''}>간판시공 준비중</option>
+                                    <option value="간판시공완료" ${(curProgress === '간판시공완료' || curProgress === '시공완료' || curProgress === '시공 완료') ? 'selected' : ''} ${isReceiptPending ? 'disabled' : ''}>간판시공완료</option>
                                 </select>
                             </div>
 
