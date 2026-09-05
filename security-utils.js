@@ -1155,7 +1155,14 @@ window.SupabaseSync = {
       construction_status: app.constructionStatus || app.construction_status || 'none',
       construction_photos: app.constructionPhotos || [],
       construction_invoice: app.invoicePhotos ? (app.invoicePhotos[0] || null) : (app.construction_invoice || null),
-      memo: JSON.stringify({ isBizItem: !!app.isBizItem, receiptStatus: app.receiptStatus || '접수예정', progressStatus: app.progressStatus || '지원대기중', photoCount: validCount }),
+      memo: JSON.stringify({
+        isBizItem: Boolean(app.isBizItem === true || String(app.isBizItem) === 'true'),
+        receiptStatus: app.receiptStatus || '접수예정',
+        progressStatus: app.progressStatus || '지원대기중',
+        salespersonId: app.salespersonId || '',
+        salespersonName: app.salespersonName || '',
+        photoCount: validCount
+      }),
       applied_at: app.appliedAt || app.created_at || new Date().toISOString()
     };
   },
@@ -1191,7 +1198,14 @@ window.SupabaseSync = {
       image_url: photoData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('[')) ? app.image_url : null),
       referrer_code: app.referrerCode || app.referrer_code || '',
       status: app.status || 'pending',
-      memo: JSON.stringify({ isBizItem: !!app.isBizItem, receiptStatus: app.receiptStatus || '접수예정', progressStatus: app.progressStatus || '지원대기중', photoCount: validCount })
+      memo: JSON.stringify({
+        isBizItem: Boolean(app.isBizItem === true || String(app.isBizItem) === 'true'),
+        receiptStatus: app.receiptStatus || '접수예정',
+        progressStatus: app.progressStatus || '지원대기중',
+        salespersonId: app.salespersonId || '',
+        salespersonName: app.salespersonName || '',
+        photoCount: validCount
+      })
     };
   },
 
@@ -1199,6 +1213,45 @@ window.SupabaseSync = {
     if (!dbApp) return null;
     let photos = [];
     let fileData = '';
+    let isBizItem = false;
+    let receiptStatus = '접수예정';
+    let progressStatus = '지원대기중';
+    let salespersonId = '';
+    let salespersonName = '';
+    let photoCount = 0;
+
+    // memo JSON 파싱하여 영업물건 여부, 접수/진행상태, 담당영업자 복원
+    if (dbApp.memo) {
+      try {
+        const parsedMemo = typeof dbApp.memo === 'string' ? JSON.parse(dbApp.memo) : dbApp.memo;
+        if (parsedMemo && typeof parsedMemo === 'object') {
+          if (parsedMemo.isBizItem !== undefined) isBizItem = Boolean(parsedMemo.isBizItem === true || String(parsedMemo.isBizItem) === 'true');
+          if (parsedMemo.receiptStatus) receiptStatus = parsedMemo.receiptStatus;
+          if (parsedMemo.progressStatus) progressStatus = parsedMemo.progressStatus;
+          if (parsedMemo.salespersonId) salespersonId = String(parsedMemo.salespersonId).trim();
+          if (parsedMemo.salespersonName) salespersonName = String(parsedMemo.salespersonName).trim();
+          if (parsedMemo.photoCount !== undefined) photoCount = Number(parsedMemo.photoCount) || 0;
+        }
+      } catch (eMemo) {}
+    }
+
+    // 담당 영업자 정보 폴백 매칭 (referrer_code 기반)
+    if ((!salespersonId || !salespersonName) && dbApp.referrer_code) {
+      try {
+        const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+        const refLower = String(dbApp.referrer_code).trim().toLowerCase();
+        const matchedSales = localUsers.find(u =>
+          (u.role === 'business' || u.role === 'admin') &&
+          ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refLower) ||
+           (u.id && String(u.id).trim().toLowerCase() === refLower) ||
+           (u.name && String(u.name).trim().toLowerCase() === refLower))
+        );
+        if (matchedSales) {
+          salespersonId = matchedSales.id;
+          salespersonName = matchedSales.name;
+        }
+      } catch (eRef) {}
+    }
 
     if (dbApp.image_url) {
       const imgStr = String(dbApp.image_url).trim();
@@ -1227,11 +1280,9 @@ window.SupabaseSync = {
     if (photos.length > 0) {
       photoCount = photos.length;
     } else if (fileData && (fileData.startsWith('data:') || fileData.startsWith('http') || fileData.startsWith('blob:'))) {
-      photoCount = 1;
+      photoCount = Math.max(photoCount, 1);
     } else if (dbApp.image_url && typeof dbApp.image_url === 'string' && (dbApp.image_url.startsWith('data:') || dbApp.image_url.startsWith('http') || dbApp.image_url.startsWith('['))) {
-      photoCount = 1;
-    } else {
-      photoCount = 0;
+      photoCount = Math.max(photoCount, 1);
     }
 
     const hasPhoto = photoCount > 0;
@@ -1253,6 +1304,8 @@ window.SupabaseSync = {
       appliedAt: dbApp.applied_at || dbApp.created_at || new Date().toISOString(),
       status: dbApp.status || 'pending',
       referrerCode: dbApp.referrer_code || '',
+      salespersonId: salespersonId,
+      salespersonName: salespersonName,
       isBizItem: isBizItem,
       receiptStatus: receiptStatus,
       progressStatus: progressStatus,
@@ -1723,24 +1776,76 @@ window.SupabaseSync = {
             }
           }
 
-          // users.items 내 모든 물건의 상태(receiptStatus, progressStatus)도 최신 applications SSOT 기준으로 100% 자동 동기화
+          // users.items 내 모든 물건을 최신 applications SSOT 기준으로 100% 자동 동기화 (3+1 원칙 & 부존재 일치)
           try {
             const curUsers = JSON.parse(localStorage.getItem('users')) || [];
             let usersItemsModified = false;
-            curUsers.forEach(u => {
-              if (u.items && Array.isArray(u.items)) {
-                u.items.forEach(it => {
-                  const matchedApp = freshApps.find(fa => String(fa.id) === String(it.id) || String(fa.appRefId) === String(it.id) || (it.appRefId && String(fa.id) === String(it.appRefId)));
-                  if (matchedApp) {
-                    if (it.receiptStatus !== matchedApp.receiptStatus || it.progressStatus !== matchedApp.progressStatus) {
-                      it.receiptStatus = matchedApp.receiptStatus;
-                      it.progressStatus = matchedApp.progressStatus;
-                      usersItemsModified = true;
-                    }
+
+            // 1) freshApps 중 isBizItem === true 인 건들을 담당 영업자의 items에 확실하게 보장
+            freshApps.forEach(fa => {
+              const isBiz = Boolean(fa.isBizItem === true || String(fa.isBizItem) === 'true');
+              if (isBiz) {
+                const salesId = String(fa.salespersonId || '').trim().toLowerCase();
+                const salesName = String(fa.salespersonName || '').trim().toLowerCase();
+                const refCode = String(fa.referrerCode || '').trim().toLowerCase();
+                const appUser = String(fa.userId || '').trim().toLowerCase();
+                const appIdStr = String(fa.id || '').trim().toLowerCase();
+                let prefixCode = '';
+                if (appIdStr.includes('-')) {
+                  const parts = appIdStr.split('-');
+                  if (parts.length >= 2) prefixCode = parts.slice(0, -1).join('-').toLowerCase();
+                }
+
+                const targetUser = curUsers.find(u =>
+                  (u.role === 'business' || u.role === 'admin') &&
+                  ((salesId && String(u.id).trim().toLowerCase() === salesId) ||
+                    (salesId && u.bizCode && String(u.bizCode).trim().toLowerCase() === salesId) ||
+                    (salesName && String(u.name).trim().toLowerCase() === salesName) ||
+                    (refCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
+                    (refCode && String(u.id).trim().toLowerCase() === refCode) ||
+                    (refCode && String(u.name).trim().toLowerCase() === refCode) ||
+                    (prefixCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === prefixCode) ||
+                    (appUser && String(u.id).trim().toLowerCase() === appUser))
+                );
+
+                if (targetUser) {
+                  if (!targetUser.items) targetUser.items = [];
+                  const existingIdx = targetUser.items.findIndex(it => String(it.id) === String(fa.id) || String(it.appRefId) === String(fa.id));
+                  const itemPayload = {
+                    id: String(fa.id),
+                    appRefId: String(fa.id),
+                    name: fa.storeName || fa.ownerName || '영업물건',
+                    phone: fa.ownerPhone || fa.phone || '',
+                    address: fa.storeAddress || '',
+                    receiptStatus: fa.receiptStatus || '접수예정',
+                    progressStatus: fa.progressStatus || '지원대기중',
+                    status: fa.status || 'pending',
+                    registeredAt: fa.appliedAt || new Date().toISOString()
+                  };
+                  if (existingIdx >= 0) {
+                    targetUser.items[existingIdx] = { ...targetUser.items[existingIdx], ...itemPayload };
+                  } else {
+                    targetUser.items.unshift(itemPayload);
                   }
-                });
+                  usersItemsModified = true;
+                }
               }
             });
+
+            // 2) freshApps에 없거나 isBizItem: false 인 건은 영업자 items에서 완전 제거 (부존재 일치 의무)
+            curUsers.forEach(u => {
+              if (u.items && Array.isArray(u.items)) {
+                const prevLen = u.items.length;
+                u.items = u.items.filter(it => {
+                  const matchedApp = freshApps.find(fa => String(fa.id) === String(it.id) || String(fa.appRefId) === String(it.id) || (it.appRefId && String(fa.id) === String(it.appRefId)));
+                  return matchedApp && Boolean(matchedApp.isBizItem === true || String(matchedApp.isBizItem) === 'true');
+                });
+                if (u.items.length !== prevLen) {
+                  usersItemsModified = true;
+                }
+              }
+            });
+
             if (usersItemsModified) {
               localStorage.setItem('users', JSON.stringify(curUsers));
               usersChanged = true;
