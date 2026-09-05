@@ -3433,20 +3433,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 영업담당자 이름 매칭 (예: 김만석영업자)
       let bizUserName = '';
-      if (app.referrerCode) {
-        const matchedUser = curUsersList.find(u => u.bizCode === app.referrerCode || u.id === app.referrerCode);
+      if (app.salespersonName) {
+        bizUserName = `${app.salespersonName}영업자`;
+      } else if (app.referrerCode) {
+        const refCode = String(app.referrerCode).trim();
+        const matchedUser = curUsersList.find(u =>
+          (u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode.toLowerCase()) ||
+          (u.id && String(u.id).trim().toLowerCase() === refCode.toLowerCase()) ||
+          (u.name && String(u.name).trim().toLowerCase() === refCode.toLowerCase())
+        );
         if (matchedUser && matchedUser.name) {
           bizUserName = `${matchedUser.name}영업자`;
+        } else {
+          bizUserName = `${app.referrerCode}영업자`;
         }
-      }
-      if (!bizUserName && app.userId) {
+      } else if (app.userId) {
         const matchedUser = curUsersList.find(u => u.id === app.userId && (u.role === 'business' || u.bizCode));
         if (matchedUser && matchedUser.name) {
           bizUserName = `${matchedUser.name}영업자`;
         }
-      }
-      if (!bizUserName && app.referrerCode) {
-        bizUserName = `${app.referrerCode}영업자`;
       }
       if (!bizUserName) {
         bizUserName = '본사직접접수';

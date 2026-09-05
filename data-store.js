@@ -1066,9 +1066,18 @@
       if (!appId) return { success: false, error: '유효하지 않은 신청서입니다.' };
       const targetId = String(appId).trim();
       const codeVal = newBizCode ? String(newBizCode).trim() : '';
+      const normTargetId = targetId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
       let apps = this.getApplications();
-      const targetApp = apps.find(a => String(a.id) === targetId || String(a.appRefId) === targetId);
+      const targetApp = apps.find(a => {
+        const aid = String(a.id || '').trim();
+        const aref = String(a.appRefId || '').trim();
+        if (aid === targetId || aref === targetId) return true;
+        if (aid.toLowerCase() === targetId.toLowerCase() || aref.toLowerCase() === targetId.toLowerCase()) return true;
+        if (aid.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === normTargetId) return true;
+        return false;
+      });
+
       if (!targetApp) return { success: false, error: '해당 신청서를 찾을 수 없습니다.' };
 
       // 1) 신청서 referrerCode 갱신 및 영업자 정보 동기화
@@ -1135,8 +1144,8 @@
         }
       }
 
-      // 3) 6개 화면 실시간 동기화
-      this.notifyAll();
+      // 3) 6개 화면 실시간 강제 동기화 (모달 닫힌 후 즉시 반영)
+      this.notifyAll(true);
       return { success: true, app: targetApp, salesUser: salesUser };
     },
 
@@ -1927,12 +1936,21 @@
         const selectedCode = selectEl ? selectEl.value : '';
         const selectedText = selectEl ? selectEl.options[selectEl.selectedIndex].text : '';
 
+        // 1. 모달 및 포커스 즉시 해제 (드롭다운/폼 인터랙션 잠금 해제)
+        if (typeof document !== 'undefined' && document.activeElement) {
+          try { document.activeElement.blur(); } catch (e) {}
+        }
+        const modalEl = document.getElementById('assign-bizuser-modal');
+        if (modalEl) modalEl.remove();
+
+        // 2. DataStore 갱신 및 3+1 원칙 동기화
+        let res = null;
         if (window.DataStore && typeof window.DataStore.updateApplicationReferrer === 'function') {
-          window.DataStore.updateApplicationReferrer(targetId, selectedCode);
+          res = window.DataStore.updateApplicationReferrer(targetId, selectedCode);
         } else {
           // Fallback
           const curApps = JSON.parse(localStorage.getItem('applications')) || [];
-          const t = curApps.find(a => String(a.id) === targetId);
+          const t = curApps.find(a => String(a.id) === targetId || String(a.id).trim() === targetId);
           if (t) {
             t.referrerCode = selectedCode;
             t.referrer_code = selectedCode;
@@ -1941,15 +1959,68 @@
           }
         }
 
-        const modalEl = document.getElementById('assign-bizuser-modal');
-        if (modalEl) modalEl.remove();
+        // 3. 변경된 영업자 이름 계산
+        let newBizUserName = '본사직접접수';
+        if (res && res.salesUser && res.salesUser.name) {
+          newBizUserName = `${res.salesUser.name}영업자`;
+        } else if (selectedCode) {
+          newBizUserName = selectedText ? selectedText.split('(')[0].trim() + '영업자' : `${selectedCode}영업자`;
+        }
 
-        const toastMsg = `[${app.shopName || app.storeName || targetId}] 담당 영업자가 '${selectedText}'(으)로 변경되었습니다.`;
+        // 4. In-place DOM 즉시 갱신 (PC웹 & 모바일 0초 원클릭 변경 보장)
+        try {
+          const matchingBtns = document.querySelectorAll(`button[onclick*="${targetId}"]`);
+          matchingBtns.forEach(btn => {
+            // PC웹 Table 행 갱신
+            const tr = btn.closest('tr');
+            if (tr) {
+              const allTds = tr.querySelectorAll('td');
+              if (allTds && allTds.length >= 4) {
+                const td4 = allTds[3];
+                const isHeadquarter = (!selectedCode || newBizUserName === '본사직접접수');
+                const nameDisplay = isHeadquarter ? '본사직접접수' : newBizUserName;
+                const iconClass = isHeadquarter ? 'fa-building' : 'fa-user-tie';
+                const textColor = isHeadquarter ? '#64748b' : 'var(--accent-primary, #2563eb)';
+                const iconColor = isHeadquarter ? '#94a3b8' : 'var(--accent-secondary, #3b82f6)';
+                
+                const managerDiv = td4.querySelector('div:first-child');
+                if (managerDiv) {
+                  managerDiv.style.color = textColor;
+                  managerDiv.innerHTML = `<i class="fa-solid ${iconClass}" style="color: ${iconColor}; font-size: 0.82rem;"></i> ${nameDisplay}`;
+                }
+              }
+            }
+
+            // 모바일 Card 갱신
+            const card = btn.closest('div');
+            if (card) {
+              const allDivs = Array.from(card.querySelectorAll('div'));
+              const bizDiv = allDivs.find(d => d.textContent && (d.textContent.includes('담당자 :') || d.textContent.includes('담당자:')));
+              if (bizDiv) {
+                const isHeadquarter = (!selectedCode || newBizUserName === '본사직접접수');
+                const nameDisplay = isHeadquarter ? '본사직접접수' : (newBizUserName.replace(/영업자$/, '') || newBizUserName);
+                const iconClass = isHeadquarter ? 'fa-building' : 'fa-user-tie';
+                const textColor = isHeadquarter ? '#64748b' : 'var(--accent-primary, #2563eb)';
+                const iconColor = isHeadquarter ? '#94a3b8' : 'var(--accent-secondary, #3b82f6)';
+                
+                const span = bizDiv.querySelector('span');
+                if (span) {
+                  span.innerHTML = `<i class="fa-solid ${iconClass}" style="color: ${iconColor};"></i> 담당자 : ${nameDisplay}`;
+                }
+                bizDiv.style.color = textColor;
+              }
+            }
+          });
+        } catch (domErr) {
+          console.warn('[In-place DOM] assign modal update err:', domErr);
+        }
+
+        const toastMsg = `[${app.shopName || app.storeName || targetId}] 담당 영업자가 '${selectedText || '본사직접접수'}'(으)로 변경되었습니다.`;
         if (typeof window.showToast === 'function') {
           window.showToast(toastMsg);
         }
 
-        // Re-render
+        // 5. 전체 렌더러 안전 호출
         if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
         if (typeof window.renderAdminDashboard === 'function') window.renderAdminDashboard();
         if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);

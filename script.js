@@ -1667,9 +1667,12 @@ function initWizard() {
         }
       }
 
-      const finalReferrerCode = (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin') && loggedUser.bizCode)
-        ? loggedUser.bizCode
-        : (referrerCode || (loggedUser ? (loggedUser.bizCode || loggedUser.id) : ''));
+      let finalReferrerCode = '';
+      if (referrerCode && String(referrerCode).trim()) {
+        finalReferrerCode = String(referrerCode).trim();
+      } else if (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin') && loggedUser.bizCode) {
+        finalReferrerCode = String(loggedUser.bizCode).trim();
+      }
 
       let customId = '';
       const dateTag = String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
@@ -1681,7 +1684,7 @@ function initWizard() {
       } else {
         customId = typeof generateApplicationId === 'function' 
           ? generateApplicationId(apps) 
-          : `P-${dateTag}001`;
+          : `P-${dateTag}-001`;
       }
 
       let assignedSalespersonId = '';
