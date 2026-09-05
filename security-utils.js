@@ -1736,12 +1736,19 @@ window.SupabaseSync = {
             const appObj = this.mapDbToApp(sa);
             const localApp = localApps.find(la => String(la.id) === String(appObj.id));
             if (localApp) {
-              // 1) 최근 로컬에서 상태 변경이 일어난 경우(15초 이내 수정 건) Supabase 아직 반영 전이면 로컬 최신 상태 보존 (동기화 레이스 컨디션 방어)
-              if (localApp.updatedAt && localApp.status && localApp.status !== appObj.status) {
+              // 1) 최근 로컬에서 상태 변경이 일어난 경우(30초 이내 수정 건) Supabase 아직 반영 전이면 로컬 최신 상태 완전 보존 (동기화 레이스 컨디션 방어)
+              if (localApp.updatedAt) {
                 const localUpdatedTime = new Date(localApp.updatedAt).getTime();
                 const now = Date.now();
-                if (!isNaN(localUpdatedTime) && (now - localUpdatedTime < 15000)) {
-                  appObj.status = localApp.status;
+                if (!isNaN(localUpdatedTime) && (now - localUpdatedTime < 30000)) {
+                  if (localApp.status !== undefined) appObj.status = localApp.status;
+                  if (localApp.receiptStatus !== undefined) appObj.receiptStatus = localApp.receiptStatus;
+                  if (localApp.progressStatus !== undefined) appObj.progressStatus = localApp.progressStatus;
+                  if (localApp.isBizItem !== undefined) appObj.isBizItem = localApp.isBizItem;
+                  if (localApp.signType !== undefined) appObj.signType = localApp.signType;
+                  if (localApp.assignedConstructorId !== undefined) appObj.assignedConstructorId = localApp.assignedConstructorId;
+                  if (localApp.assignedConstructorName !== undefined) appObj.assignedConstructorName = localApp.assignedConstructorName;
+                  if (localApp.constructionStatus !== undefined) appObj.constructionStatus = localApp.constructionStatus;
                   appObj.updatedAt = localApp.updatedAt;
                 }
               }
