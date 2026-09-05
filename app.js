@@ -4856,17 +4856,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateJobConstructionStatusMob(id, val) {
         // 1) applications
-        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
         apps = apps.map(app => {
             if (String(app.id) === String(id)) {
                 return { ...app, constructionStatus: val };
             }
             return app;
         });
-        localStorage.setItem('applications', JSON.stringify(apps));
+        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            window.DataStore.saveApplications(apps);
+        } else {
+            localStorage.setItem('applications', JSON.stringify(apps));
+        }
 
         // 2) users.items
-        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
         let updatedUid = null;
         curUsers = curUsers.map(u => {
             if (u.items && Array.isArray(u.items)) {
@@ -4881,13 +4885,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return u;
         });
-        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(curUsers);
+        } else {
+            localStorage.setItem('users', JSON.stringify(curUsers));
+        }
+
         if (updatedUid && window.SupabaseSync) {
             const u = curUsers.find(usr => usr.id === updatedUid);
             if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
         }
 
-        renderConstructorDashboardMob();
+        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+            window.DataStore.notifyAll(true);
+        }
     }
 
     // 모바일 시공사 간판 디자인 시안 1MB 압축 업로드
@@ -4910,7 +4921,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (uploadedBase64List.length === 0) return;
 
-        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
         apps = apps.map(app => {
             if (String(app.id) === String(id)) {
                 const existing = app.signDraftPhotos || [];
@@ -4923,9 +4934,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return app;
         });
-        localStorage.setItem('applications', JSON.stringify(apps));
+        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            window.DataStore.saveApplications(apps);
+        } else {
+            localStorage.setItem('applications', JSON.stringify(apps));
+        }
 
-        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
         let updatedUid = null;
         curUsers = curUsers.map(u => {
             if (u.items && Array.isArray(u.items)) {
@@ -4946,7 +4961,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return u;
         });
-        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(curUsers);
+        } else {
+            localStorage.setItem('users', JSON.stringify(curUsers));
+        }
 
         if (window.SupabaseSync) {
             const app = apps.find(a => String(a.id) === String(id));
@@ -4958,7 +4977,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         alert('간판 디자인 시안이 1MB 이하로 자동 압축되어 업로드되었습니다.\n신청 점주 및 관리자 화면에 즉시 공유됩니다.');
-        renderConstructorDashboardMob();
+        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+            window.DataStore.notifyAll(true);
+        }
     }
 
     // 모바일 시공사 시공 후 사진 1MB 압축 업로드 (3~5컷)
@@ -4981,7 +5002,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (uploadedBase64List.length === 0) return;
 
-        let apps = JSON.parse(localStorage.getItem('applications')) || [];
+        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
         apps = apps.map(app => {
             if (String(app.id) === String(id)) {
                 const existing = app.constructionPhotos || [];
@@ -4990,9 +5011,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return app;
         });
-        localStorage.setItem('applications', JSON.stringify(apps));
+        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            window.DataStore.saveApplications(apps);
+        } else {
+            localStorage.setItem('applications', JSON.stringify(apps));
+        }
 
-        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
         let updatedUid = null;
         curUsers = curUsers.map(u => {
             if (u.items && Array.isArray(u.items)) {
@@ -5009,7 +5034,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return u;
         });
-        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(curUsers);
+        } else {
+            localStorage.setItem('users', JSON.stringify(curUsers));
+        }
 
         if (window.SupabaseSync) {
             const app = apps.find(a => String(a.id) === String(id));
@@ -5021,12 +5050,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         alert('시공 후 현장 사진이 2MB 이하로 자동 압축되어 업로드되었습니다.');
-        renderConstructorDashboardMob();
+        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+            window.DataStore.notifyAll(true);
+        }
     }
 
     function reportJobCompletionMob(id) {
-        let apps = JSON.parse(localStorage.getItem('applications')) || [];
-        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
+        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
 
         let targetJob = apps.find(a => String(a.id) === String(id));
         if (!targetJob) {
@@ -5056,7 +5087,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return a;
         });
-        localStorage.setItem('applications', JSON.stringify(apps));
+        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            window.DataStore.saveApplications(apps);
+        } else {
+            localStorage.setItem('applications', JSON.stringify(apps));
+        }
 
         let updatedUid = null;
         curUsers = curUsers.map(u => {
@@ -5076,7 +5111,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return u;
         });
-        localStorage.setItem('users', JSON.stringify(curUsers));
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(curUsers);
+        } else {
+            localStorage.setItem('users', JSON.stringify(curUsers));
+        }
 
         if (updatedUid && window.SupabaseSync) {
             const u = curUsers.find(usr => usr.id === updatedUid);

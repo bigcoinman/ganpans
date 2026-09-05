@@ -23,7 +23,15 @@
 
     saveApplications: function (apps) {
       try {
-        localStorage.setItem('applications', JSON.stringify(apps));
+        if (!Array.isArray(apps)) apps = [];
+        const nowStr = new Date().toISOString();
+        const stampedApps = apps.map(a => {
+          if (a && typeof a === 'object') {
+            if (!a.updatedAt) return { ...a, updatedAt: nowStr };
+          }
+          return a;
+        });
+        localStorage.setItem('applications', JSON.stringify(stampedApps));
         return true;
       } catch (e) {
         console.error('[DataStore] saveApplications error:', e);
@@ -45,7 +53,17 @@
 
     saveUsers: function (users) {
       try {
-        localStorage.setItem('users', JSON.stringify(users || []));
+        if (!Array.isArray(users)) users = [];
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        // activeUser 세션도 함께 자동 동기화
+        const curActive = this.getActiveUser();
+        if (curActive && curActive.id) {
+          const fresh = users.find(u => String(u.id).toLowerCase() === String(curActive.id).toLowerCase());
+          if (fresh) {
+            this.setActiveUser(fresh);
+          }
+        }
         return true;
       } catch (e) {
         console.error('[DataStore] saveUsers error:', e);
@@ -60,7 +78,7 @@
           user = window.getActiveUser();
         }
         if (!user) {
-          user = JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser'));
+          user = JSON.parse(localStorage.getItem('activeUser')) || (typeof sessionStorage !== 'undefined' ? JSON.parse(sessionStorage.getItem('activeUser')) : null);
         }
         if (user && user.id) {
           const freshUsers = this.getUsers();

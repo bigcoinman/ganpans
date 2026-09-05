@@ -2290,7 +2290,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return u;
     });
     users = curUsers;
-    localStorage.setItem('users', JSON.stringify(curUsers));
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(curUsers);
+    } else {
+      localStorage.setItem('users', JSON.stringify(curUsers));
+    }
 
     // 3) activeUser 세션 갱신
     let activeU = typeof getActiveUser === 'function' ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')));
@@ -2308,7 +2312,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return app;
     });
-    localStorage.setItem('applications', JSON.stringify(curApps));
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(curApps);
+    } else {
+      localStorage.setItem('applications', JSON.stringify(curApps));
+    }
 
     // 5) Supabase DB Sync
     if (window.SupabaseSync) {
@@ -2324,8 +2332,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     alert(`[${targetItemName}] 영업 물건이 안전하게 영구 삭제되었습니다.`);
-    if (typeof renderManagerPanel === 'function') {
-      renderManagerPanel();
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
     }
     updateSessionUI();
   };
@@ -5321,17 +5329,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const updateJobConstructionStatus = (id, val) => {
     // 1) Update applications
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
     apps = apps.map(app => {
       if (String(app.id) === String(id)) {
         return { ...app, constructionStatus: val };
       }
       return app;
     });
-    localStorage.setItem('applications', JSON.stringify(apps));
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(apps);
+    } else {
+      localStorage.setItem('applications', JSON.stringify(apps));
+    }
 
     // 2) Update users.items
-    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
     let updatedUid = null;
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
@@ -5346,13 +5358,28 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return u;
     });
-    localStorage.setItem('users', JSON.stringify(curUsers));
-    if (updatedUid && window.SupabaseSync) {
-      const u = curUsers.find(usr => usr.id === updatedUid);
-      if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(curUsers);
+    } else {
+      localStorage.setItem('users', JSON.stringify(curUsers));
     }
 
-    renderConstructorDashboard();
+    if (window.SupabaseSync) {
+      if (typeof window.SupabaseSync.updateApplication === 'function') {
+        window.SupabaseSync.updateApplication(id, { construction_status: val });
+      } else {
+        const app = apps.find(a => String(a.id) === String(id));
+        if (app) window.SupabaseSync.upsertApplication(app);
+      }
+      if (updatedUid) {
+        const u = curUsers.find(usr => usr.id === updatedUid);
+        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+      }
+    }
+
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
   };
 
   // 간판 디자인 시안 업로드 핸들러 (1MB 이하 강제 자동 압축)
@@ -5374,7 +5401,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 1) applications
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
     apps = apps.map(app => {
       if (String(app.id) === String(id)) {
         const existing = app.signDraftPhotos || app.designPhotos || [];
@@ -5388,10 +5415,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return app;
     });
-    localStorage.setItem('applications', JSON.stringify(apps));
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(apps);
+    } else {
+      localStorage.setItem('applications', JSON.stringify(apps));
+    }
 
     // 2) users.items
-    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
     let updatedUid = null;
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
@@ -5413,7 +5444,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return u;
     });
-    localStorage.setItem('users', JSON.stringify(curUsers));
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(curUsers);
+    } else {
+      localStorage.setItem('users', JSON.stringify(curUsers));
+    }
 
     if (window.SupabaseSync) {
       const app = apps.find(a => String(a.id) === String(id));
@@ -5425,7 +5460,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     alert('간판 디자인 시안이 1MB 이하로 자동 최적화되어 등록되었습니다.\n점주 및 최고관리자 화면에 실시간으로 공유됩니다.');
-    renderConstructorDashboard();
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
   };
 
   // 시공 후 사진 업로드 핸들러 (1MB 이하 강제 자동 압축)
@@ -5447,7 +5484,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 1) applications
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
     apps = apps.map(app => {
       if (String(app.id) === String(id)) {
         const existing = app.constructionPhotos || app.afterPhotos || [];
@@ -5456,10 +5493,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return app;
     });
-    localStorage.setItem('applications', JSON.stringify(apps));
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(apps);
+    } else {
+      localStorage.setItem('applications', JSON.stringify(apps));
+    }
 
     // 2) users.items
-    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
     let updatedUid = null;
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
@@ -5476,7 +5517,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return u;
     });
-    localStorage.setItem('users', JSON.stringify(curUsers));
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(curUsers);
+    } else {
+      localStorage.setItem('users', JSON.stringify(curUsers));
+    }
 
     if (window.SupabaseSync) {
       const app = apps.find(a => String(a.id) === String(id));
@@ -5488,12 +5533,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     alert('시공 후 사진이 2MB 이하로 자동 압축되어 등록되었습니다.');
-    renderConstructorDashboard();
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
   };
 
   const reportJobCompletion = (id) => {
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
-    let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
+    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
     
     let targetJob = apps.find(a => String(a.id) === String(id));
     if (!targetJob) {
@@ -5525,7 +5572,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return a;
     });
-    localStorage.setItem('applications', JSON.stringify(apps));
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(apps);
+    } else {
+      localStorage.setItem('applications', JSON.stringify(apps));
+    }
 
     // 2) users.items update
     let updatedUid = null;
@@ -5547,7 +5598,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return u;
     });
-    localStorage.setItem('users', JSON.stringify(curUsers));
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(curUsers);
+    } else {
+      localStorage.setItem('users', JSON.stringify(curUsers));
+    }
 
     if (window.SupabaseSync) {
       const app = apps.find(a => String(a.id) === String(id));
@@ -5558,8 +5613,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    alert('시공 완료 보고가 완료되었습니다.\n최고관리자의 최종 시공 사진 검수 후 정산 종결 처리가 진행됩니다.');
-    renderConstructorDashboard();
+    alert('시공 완료 보고가 최고관리자에게 정상 제출되었습니다.');
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
   };
 
   // Initial Sync
