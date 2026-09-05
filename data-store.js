@@ -2111,7 +2111,7 @@
 
     apps = apps.map(a => {
       if (String(a.id) === String(id)) {
-        return { ...a, signType: trimmed };
+        return { ...a, signType: trimmed, updatedAt: new Date().toISOString() };
       }
       return a;
     });
@@ -2154,6 +2154,7 @@
     }
     if (window.DataStore) window.DataStore.notifyAll(true);
   };
+  DataStore.updateJobSignType = window.updateJobSignType;
 
   // --- 공통 간판 디자인 시안 확정 토글 핸들러 (PC웹 & 모바일 공용) ---
   window.toggleDraftApproval = function (id, newDraftStatus) {
