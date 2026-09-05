@@ -3244,8 +3244,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     let fileAttachmentHtml = '';
                     const photosArr = (Array.isArray(app.photos) && app.photos.length > 0) ? app.photos.filter(p => p && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:'))) : [];
                     const photoSrc = (photosArr.length > 0) ? photosArr[0] : (app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : ''));
-                    const hasPhoto = Boolean((photosArr.length > 0) || (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))) || app.hasPhoto || (app.photosCount > 0));
-                    const count = photosArr.length > 0 ? photosArr.length : (app.photosCount || (hasPhoto ? 1 : 0));
+                    const hasPhoto = Boolean((photosArr.length > 0) || (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))));
+                    const count = photosArr.length > 0 ? photosArr.length : (hasPhoto ? (app.photosCount || 1) : 0);
 
                     fileAttachmentHtml = `
                         <div style="margin-top: 10px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -5448,8 +5448,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 2) Supabase REST API로 직접 저장 (supabaseClient 초기화 여부 무관, 100% 보장)
-            const _sbUrl = (window.SUPABASE_URL) || 'https://nfexylsehsucctoefwdz.supabase.co';
-            const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh';
+            const _sbUrl = (window.SUPABASE_URL) || 'https://nosobuzwrxxtrgohufsp.supabase.co';
+            const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_2b3sZmB3zTAbTLx-pTh9uQ_rTqmRBmS';
             const _dbPayload = {
                 id: newInquiry.id,
                 name: newInquiry.name,
@@ -8260,8 +8260,8 @@ function initModalsAndSearch() {
       }
 
       // 2) Supabase REST API로 직접 저장 (supabaseClient 초기화 여부 무관, 100% 보장)
-      const _sbUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) || 'https://nfexylsehsucctoefwdz.supabase.co';
-      const _sbKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) || 'sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh';
+      const _sbUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) || 'https://nosobuzwrxxtrgohufsp.supabase.co';
+      const _sbKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) || 'sb_publishable_2b3sZmB3zTAbTLx-pTh9uQ_rTqmRBmS';
       const _dbPayload = {
         id: newInquiry.id,
         name: newInquiry.name,

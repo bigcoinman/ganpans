@@ -3142,8 +3142,8 @@ function initModalsAndSearch() {
       }
 
       // 2) Supabase REST API로 직접 저장 (supabaseClient 초기화 여부 무관, 100% 보장)
-      const _sbUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) || 'https://nfexylsehsucctoefwdz.supabase.co';
-      const _sbKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) || 'sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh';
+      const _sbUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) || 'https://nosobuzwrxxtrgohufsp.supabase.co';
+      const _sbKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) || 'sb_publishable_2b3sZmB3zTAbTLx-pTh9uQ_rTqmRBmS';
       const _dbPayload = {
         id: newInquiry.id,
         name: newInquiry.name,

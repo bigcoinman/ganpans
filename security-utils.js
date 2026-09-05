@@ -746,8 +746,8 @@ if (typeof window !== 'undefined') {
 }
 
 // 6. Supabase 클라이언트 초기화 (전역 설정 파일 supabase-config.js 및 내장 Fallback 지원)
-const defaultDbUrl = "https://nfexylsehsucctoefwdz.supabase.co";
-const defaultDbKey = "sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh";
+const defaultDbUrl = "https://nosobuzwrxxtrgohufsp.supabase.co";
+const defaultDbKey = "sb_publishable_2b3sZmB3zTAbTLx-pTh9uQ_rTqmRBmS";
 const dbUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) ? window.SUPABASE_URL : defaultDbUrl;
 const dbKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) ? window.SUPABASE_ANON_KEY : defaultDbKey;
 window.SUPABASE_URL = dbUrl;
@@ -1224,44 +1224,18 @@ window.SupabaseSync = {
       fileData = dbApp.file_data;
     }
 
-    const photoName = (!fileData && dbApp.image_url) ? dbApp.image_url : (dbApp.file_name || '현장사진.jpg');
-
-    let photoCount = 0;
-    let isBizItem = Boolean(dbApp.is_biz_item || dbApp.isBizItem);
-    let receiptStatus = dbApp.receipt_status || dbApp.receiptStatus || '접수예정';
-    let progressStatus = dbApp.progress_status || dbApp.progressStatus || '';
-    if (dbApp.memo) {
-      try {
-        const parsedMemo = typeof dbApp.memo === 'string' ? JSON.parse(dbApp.memo) : dbApp.memo;
-        if (parsedMemo && typeof parsedMemo === 'object') {
-          if (parsedMemo.isBizItem !== undefined) isBizItem = Boolean(parsedMemo.isBizItem);
-          if (parsedMemo.receiptStatus) receiptStatus = parsedMemo.receiptStatus;
-          if (parsedMemo.progressStatus) progressStatus = parsedMemo.progressStatus;
-          if (parsedMemo.photoCount !== undefined) photoCount = parseInt(parsedMemo.photoCount, 10) || 0;
-        } else if (typeof dbApp.memo === 'string' && (dbApp.memo.includes('"isBizItem":true') || dbApp.memo.includes('"isBizItem": true'))) {
-          isBizItem = true;
-        }
-      } catch (e) {
-        if (typeof dbApp.memo === 'string' && (dbApp.memo.includes('"isBizItem":true') || dbApp.memo.includes('"isBizItem": true'))) {
-          isBizItem = true;
-        }
-      }
+    if (photos.length > 0) {
+      photoCount = photos.length;
+    } else if (fileData && (fileData.startsWith('data:') || fileData.startsWith('http') || fileData.startsWith('blob:'))) {
+      photoCount = 1;
+    } else if (dbApp.image_url && typeof dbApp.image_url === 'string' && (dbApp.image_url.startsWith('data:') || dbApp.image_url.startsWith('http') || dbApp.image_url.startsWith('['))) {
+      photoCount = 1;
+    } else {
+      photoCount = 0;
     }
 
-    if (!progressStatus) {
-      const cs = dbApp.construction_status || '';
-      if (cs === 'before_construction') progressStatus = '대상자선정';
-      else if (cs === 'in_construction' || cs === '간판시공 준비중') progressStatus = '간판시공 준비중';
-      else if (cs === 'completed' || cs === 'after_construction' || cs === '간판시공완료') progressStatus = '간판시공완료';
-      else if (cs === 'design_draft') progressStatus = '간판 디자인 시안 및 교정 중';
-      else if (dbApp.status === 'approved') progressStatus = '대상자선정';
-      else if (dbApp.status === 'rejected') progressStatus = '지원사업 탈락';
-      else if (dbApp.status === 'giveup') progressStatus = '지원사업 포기';
-      else progressStatus = '지원대기중';
-    }
-
-    if (photos.length > 0) photoCount = photos.length;
-    else if (photoCount === 0 && (fileData || dbApp.image_url)) photoCount = 1;
+    const hasPhoto = photoCount > 0;
+    const photoName = hasPhoto ? (dbApp.file_name || '현장사진.jpg') : '업로드 파일 없음';
 
     return {
       id: String(dbApp.id),
@@ -1275,7 +1249,7 @@ window.SupabaseSync = {
       fileData: fileData,
       photos: photos,
       photosCount: photoCount,
-      hasPhoto: photoCount > 0,
+      hasPhoto: hasPhoto,
       appliedAt: dbApp.applied_at || dbApp.created_at || new Date().toISOString(),
       status: dbApp.status || 'pending',
       referrerCode: dbApp.referrer_code || '',

@@ -811,8 +811,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof renderInquiriesList === 'function') renderInquiriesList();
 
       // 2) 백그라운드 inquiries 동기화 (Non-blocking)
-      const _sbUrl = (window.SUPABASE_URL) || 'https://nfexylsehsucctoefwdz.supabase.co';
-      const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh';
+      const _sbUrl = (window.SUPABASE_URL) || 'https://nosobuzwrxxtrgohufsp.supabase.co';
+      const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_2b3sZmB3zTAbTLx-pTh9uQ_rTqmRBmS';
       fetch(_sbUrl + '/rest/v1/inquiries?select=*&order=created_at.desc', {
         headers: { 'apikey': _sbKey, 'Authorization': 'Bearer ' + _sbKey }
       }).then(res => res.json()).then(rows => {
@@ -3484,8 +3484,8 @@ document.addEventListener('DOMContentLoaded', () => {
           ${(() => {
             const photosArr = (Array.isArray(app.photos) && app.photos.length > 0) ? app.photos.filter(p => p && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:'))) : [];
             const photoSrc = (photosArr.length > 0) ? photosArr[0] : (app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : ''));
-            const hasPhoto = Boolean((photosArr.length > 0) || (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))) || app.hasPhoto || (app.photosCount > 0));
-            const count = photosArr.length > 0 ? photosArr.length : (app.photosCount || (hasPhoto ? 1 : 0));
+            const hasPhoto = Boolean((photosArr.length > 0) || (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))));
+            const count = photosArr.length > 0 ? photosArr.length : (hasPhoto ? (app.photosCount || 1) : 0);
             return `
               <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
                 <button type="button" class="btn btn-sm btn-upload-app-photo-pc" data-id="${app.id}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.76rem; font-weight: 700; color: #16a34a; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 6px; cursor: pointer; width: 92px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="${hasPhoto ? '현장사진 변경/재등록' : '현장사진 등록'}">
@@ -3566,8 +3566,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!currentAdmin) return;
 
     // Supabase REST로 최신 데이터 직접 fetch 후 렌더링 (localStorage 캐시 여부 무관)
-    const _sbUrl = (window.SUPABASE_URL) || 'https://nfexylsehsucctoefwdz.supabase.co';
-    const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh';
+    const _sbUrl = (window.SUPABASE_URL) || 'https://nosobuzwrxxtrgohufsp.supabase.co';
+    const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_2b3sZmB3zTAbTLx-pTh9uQ_rTqmRBmS';
     fetch(_sbUrl + '/rest/v1/inquiries?select=*&order=created_at.desc', {
       headers: { 'apikey': _sbKey, 'Authorization': 'Bearer ' + _sbKey }
     }).then(res => res.json()).then(rows => {

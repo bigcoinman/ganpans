@@ -1983,20 +1983,20 @@
 
     // 4. In-place DOM 즉시 갱신 (PC웹 & 모바일 0초 원클릭 변경 보장)
     try {
-      const matchingBtns = document.querySelectorAll(`button[onclick*="${targetId}"]`);
-      matchingBtns.forEach(btn => {
-        // PC웹 Table 행 갱신
-        const tr = btn.closest('tr');
-        if (tr) {
+      const isHeadquarter = (!selectedCode || newBizUserName === '본사직접접수');
+      const nameDisplay = isHeadquarter ? '본사직접접수' : newBizUserName;
+      const mobNameDisplay = isHeadquarter ? '본사직접접수' : (newBizUserName.replace(/영업자$/, '') || newBizUserName);
+      const iconClass = isHeadquarter ? 'fa-building' : 'fa-user-tie';
+      const textColor = isHeadquarter ? '#64748b' : 'var(--accent-primary, #2563eb)';
+      const iconColor = isHeadquarter ? '#94a3b8' : 'var(--accent-secondary, #3b82f6)';
+
+      // 4-1. PC웹 Table 행 갱신 (정밀 검색)
+      const allRows = document.querySelectorAll('#applications-table-body tr, table tr');
+      allRows.forEach(tr => {
+        if (tr.innerHTML && tr.innerHTML.includes(targetId)) {
           const allTds = tr.querySelectorAll('td');
           if (allTds && allTds.length >= 4) {
             const td4 = allTds[3];
-            const isHeadquarter = (!selectedCode || newBizUserName === '본사직접접수');
-            const nameDisplay = isHeadquarter ? '본사직접접수' : newBizUserName;
-            const iconClass = isHeadquarter ? 'fa-building' : 'fa-user-tie';
-            const textColor = isHeadquarter ? '#64748b' : 'var(--accent-primary, #2563eb)';
-            const iconColor = isHeadquarter ? '#94a3b8' : 'var(--accent-secondary, #3b82f6)';
-            
             const managerDiv = td4.querySelector('div:first-child');
             if (managerDiv) {
               managerDiv.style.color = textColor;
@@ -2004,25 +2004,20 @@
             }
           }
         }
+      });
 
-        // 모바일 Card 갱신
-        const card = btn.closest('div');
-        if (card) {
-          const allDivs = Array.from(card.querySelectorAll('div'));
-          const bizDiv = allDivs.find(d => d.textContent && (d.textContent.includes('담당자 :') || d.textContent.includes('담당자:')));
-          if (bizDiv) {
-            const isHeadquarter = (!selectedCode || newBizUserName === '본사직접접수');
-            const nameDisplay = isHeadquarter ? '본사직접접수' : (newBizUserName.replace(/영업자$/, '') || newBizUserName);
-            const iconClass = isHeadquarter ? 'fa-building' : 'fa-user-tie';
-            const textColor = isHeadquarter ? '#64748b' : 'var(--accent-primary, #2563eb)';
-            const iconColor = isHeadquarter ? '#94a3b8' : 'var(--accent-secondary, #3b82f6)';
-            
+      // 4-2. 모바일 Card 갱신 (정밀 검색)
+      const allCards = document.querySelectorAll('#admin-applications-list > div, .card, [style*="border-radius"]');
+      allCards.forEach(card => {
+        if (card.innerHTML && card.innerHTML.includes(targetId)) {
+          const bizDivs = Array.from(card.querySelectorAll('div')).filter(d => d.textContent && (d.textContent.includes('담당자 :') || d.textContent.includes('담당자:')));
+          bizDivs.forEach(bizDiv => {
             const span = bizDiv.querySelector('span');
             if (span) {
-              span.innerHTML = `<i class="fa-solid ${iconClass}" style="color: ${iconColor};"></i> 담당자 : ${nameDisplay}`;
+              span.innerHTML = `<i class="fa-solid ${iconClass}" style="color: ${iconColor};"></i> 담당자 : ${mobNameDisplay}`;
             }
             bizDiv.style.color = textColor;
-          }
+          });
         }
       });
     } catch (domErr) {
