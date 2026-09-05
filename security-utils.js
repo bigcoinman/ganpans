@@ -2049,7 +2049,7 @@ if (typeof window !== 'undefined') {
 
         if (!res.error && res.data) {
           const data = res.data;
-          const isDemoMatch = (idValLower === 'bizuser' || idValLower === 'bugsman2026') && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'bizuser' || pwVal === 'bugsman2026') ||
+          const isDemoMatch = (idValLower === 'bizuser' || idValLower === 'bugsman2026' || idValLower === 'robinhood') && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'bizuser' || pwVal === 'bugsman2026' || pwVal === 'robinhood') ||
             (idValLower === 'constuser') && (pwVal === 'const1234!' || pwVal === 'const1234' || pwVal === '1234' || pwVal === 'constuser');
           const isPwMatch = (data.password_hash === hashedPassword) || (data.password_hash === pwVal) || isDemoMatch;
           if (isPwMatch) {
@@ -2064,12 +2064,27 @@ if (typeof window !== 'undefined') {
       }
     }
 
-    // 시스템 기본 계정(bizuser, bugsman2026, constuser) 및 로컬 캐시 검증
+    // 시스템 기본 계정(robinhood, bizuser, bugsman2026, constuser) 및 로컬 캐시 검증
     if (!user) {
-      if (idValLower === 'bizuser' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === 'bizuser' || pwVal === '1234')) {
+      if (idValLower === 'robinhood' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'robinhood')) {
+        user = {
+          id: 'robinhood',
+          pw: '8a093c7195aba1fe3777e36d64e199771f7028e0462068301e95c932a31c6ac8',
+          name: '김로빈',
+          address: '경기도 수원시 권선구 효원로 266',
+          email: '',
+          phone: '010-9084-3778',
+          role: 'business',
+          isSNS: false,
+          bizCode: 'B-260901',
+          conversionStatus: 'approved',
+          items: []
+        };
+        if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
+      } else if (idValLower === 'bizuser' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === 'bizuser' || pwVal === '1234')) {
         user = {
           id: 'bizuser',
-          pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
+          pw: '8a093c7195aba1fe3777e36d64e199771f7028e0462068301e95c932a31c6ac8',
           name: '김영업',
           address: '경기도 성남시 분당구 판교역로 235',
           email: 'kim@naver.com',
@@ -2084,7 +2099,7 @@ if (typeof window !== 'undefined') {
       } else if (idValLower === 'bugsman2026' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'bugs1234!' || pwVal === 'bugsman2026')) {
         user = {
           id: 'bugsman2026',
-          pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
+          pw: '8a093c7195aba1fe3777e36d64e199771f7028e0462068301e95c932a31c6ac8',
           name: '김나완',
           address: '서울특별시 송파구 올림픽로 300',
           email: 'bugsman@naver.com',
