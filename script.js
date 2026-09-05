@@ -1231,17 +1231,23 @@ function initWizard() {
   }
 
   async function handlePhotoFiles(fileList) {
-    const validExtensions = ['jpg', 'jpeg', 'png'];
-    const validMimes = ['image/jpeg', 'image/png'];
-    const newFiles = Array.from(fileList);
+    const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'jfif', 'gif', 'bmp'];
+    const newFiles = Array.from(fileList || []);
+    if (newFiles.length === 0) return;
 
+    // 모바일 카메라 실시간 촬영본(blob, 확장자 누락, image/* 등) 전수 허용
     const invalidFiles = newFiles.filter(f => {
-      const ext = (f.name.split('.').pop() || '').toLowerCase();
-      return !validExtensions.includes(ext) && !validMimes.includes(f.type);
+      if (!f) return true;
+      if (f.type && f.type.startsWith('image/')) return false; // 모든 image/ MIME 허용
+      const ext = (f.name ? f.name.split('.').pop() : '').toLowerCase();
+      if (validExtensions.includes(ext)) return false;
+      // 파일명이 없거나 blob/capture인 경우에도 크기가 유효하면 허용
+      if (!ext && f.size && f.size > 0) return false;
+      return true;
     });
 
     if (invalidFiles.length > 0) {
-      alert('사진 파일은 JPG 및 PNG 형식만 업로드 가능합니다.');
+      alert('사진 파일(JPG, PNG, WebP, HEIC 등)만 업로드 가능합니다.');
       return;
     }
 
@@ -1254,24 +1260,34 @@ function initWizard() {
 
     const filesToProcess = newFiles.slice(0, availableSlots);
 
-    for (const file of filesToProcess) {
+    for (let i = 0; i < filesToProcess.length; i++) {
+      const file = filesToProcess[i];
+      const safeName = file.name || `현장촬영사진_${Date.now()}_${uploadedPhotos.length + 1}.jpg`;
       try {
         let base64 = '';
         if (typeof compressImageToBase64 === 'function') {
-          base64 = await compressImageToBase64(file, 300 * 1024);
-        } else {
+          try {
+            base64 = await compressImageToBase64(file, 300 * 1024);
+          } catch (compErr) {
+            console.warn('[script.js] compressImageToBase64 fallback:', compErr);
+          }
+        }
+        if (!base64) {
           base64 = await new Promise(res => {
             const reader = new FileReader();
-            reader.onload = ev => res(ev.target.result);
+            reader.onload = ev => res(ev.target.result || '');
+            reader.onerror = () => res('');
             reader.readAsDataURL(file);
           });
         }
-        uploadedPhotos.push({
-          name: file.name,
-          dataUrl: base64
-        });
+        if (base64) {
+          uploadedPhotos.push({
+            name: safeName,
+            dataUrl: base64
+          });
+        }
       } catch (err) {
-        console.error('Image compression error:', err);
+        console.error('Image processing error:', err);
       }
     }
 

@@ -1004,10 +1004,49 @@
         }
       })();
 
-      // 5) 모든 대시보드 화면 0초 즉시 동기화
-      this.notifyAll(true);
+      // 5) 낙관적 In-place DOM 부분 갱신 (1회 클릭 즉시 반영 & 전체 DOM 재생성으로 인한 포커스 날아감 방지)
+      try {
+        const isReceiptPending = (targetApp && (targetApp.receiptStatus === '접수예정' || targetApp.receiptStatus === '접수 대기' || !targetApp.receiptStatus));
+        const curReceiptVal = targetApp ? targetApp.receiptStatus : (type === 'receipt' ? cleanVal : '접수예정');
+        const curProgressVal = targetApp ? targetApp.progressStatus : (type === 'progress' ? cleanVal : '지원대기중');
 
-      // 6) 사용자 피드백 토스트 알림
+        // PC 웹 드롭다운 즉시 부분 동기화
+        const pcReceiptSelects = document.querySelectorAll(`select.select-receipt-status[data-itemid="${targetIdStr}"]`);
+        pcReceiptSelects.forEach(sel => { sel.value = curReceiptVal; });
+
+        const pcProgressSelects = document.querySelectorAll(`select.select-progress-status[data-itemid="${targetIdStr}"]`);
+        pcProgressSelects.forEach(sel => {
+          sel.value = curProgressVal;
+          sel.disabled = isReceiptPending;
+          sel.style.background = isReceiptPending ? '#f1f5f9' : '#fff';
+          sel.style.color = isReceiptPending ? '#64748b' : 'inherit';
+          sel.style.cursor = isReceiptPending ? 'not-allowed' : 'pointer';
+          sel.style.borderColor = isReceiptPending ? '#e2e8f0' : '#cbd5e1';
+          sel.title = isReceiptPending ? '접수예정 상태에서는 지원대기중으로 고정됩니다' : '진행상황 선택';
+        });
+
+        // 모바일 앱 드롭다운 즉시 부분 동기화
+        const mobReceiptSelects = document.querySelectorAll(`select.select-receipt-mob[data-itemid="${targetIdStr}"]`);
+        mobReceiptSelects.forEach(sel => { sel.value = curReceiptVal; });
+
+        const mobProgressSelects = document.querySelectorAll(`select.select-progress-mob[data-itemid="${targetIdStr}"]`);
+        mobProgressSelects.forEach(sel => {
+          sel.value = curProgressVal;
+          sel.disabled = isReceiptPending;
+          sel.style.background = isReceiptPending ? '#f1f5f9' : 'white';
+          sel.style.color = isReceiptPending ? '#64748b' : 'inherit';
+          sel.style.cursor = isReceiptPending ? 'not-allowed' : 'pointer';
+          sel.style.borderColor = isReceiptPending ? '#cbd5e1' : 'var(--border-color)';
+          sel.title = isReceiptPending ? '접수예정 상태에서는 지원대기중으로 고정됩니다' : '진행상황 선택';
+        });
+      } catch (eDom) {
+        console.warn('[DataStore] In-place DOM update notice:', eDom);
+      }
+
+      // 6) 다른 연관 화면 동기화 (사용자가 인터랙션 중일 때는 전체 DOM 파괴 방지: force = false)
+      this.notifyAll(false);
+
+      // 7) 사용자 피드백 토스트 알림
       try {
         const itemLabel = targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName || targetIdStr) : targetIdStr;
         const typeLabel = type === 'receipt' ? '접수 상태' : '진행 상황';
