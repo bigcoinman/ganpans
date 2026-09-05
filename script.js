@@ -1651,10 +1651,6 @@ function initWizard() {
         }
       }
 
-      const loggedUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function') 
-        ? window.DataStore.getActiveUser() 
-        : (JSON.parse(localStorage.getItem('activeUser')) || null);
-
       const finalReferrerCode = (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin') && loggedUser.bizCode)
         ? loggedUser.bizCode
         : (referrerCode || (loggedUser ? (loggedUser.bizCode || loggedUser.id) : ''));
