@@ -177,6 +177,46 @@ function sanitizeUrl(url) {
   return escapeHtml(trimmed);
 }
 
+// 4-0. 비침해형 Non-blocking 토스트 알림 (UI 인터랙션 및 드롭다운 방해 0%)
+function showToast(message, type = 'success') {
+  if (typeof document === 'undefined') return;
+  let container = document.getElementById('global-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'global-toast-container';
+    container.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; max-width: 90vw; width: max-content;';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  const isError = type === 'error';
+  const bgColor = isError ? '#ef4444' : '#0f172a';
+  const icon = isError ? 'fa-triangle-exclamation' : 'fa-circle-check';
+  const iconColor = isError ? '#fee2e2' : '#38bdf8';
+
+  toast.style.cssText = `background: ${bgColor}; color: #ffffff; padding: 10px 18px; border-radius: 9999px; font-size: 0.86rem; font-weight: 700; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px; opacity: 0; transform: translateY(-10px); transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: none; border: 1px solid rgba(255,255,255,0.15);`;
+  toast.innerHTML = `<i class="fa-solid ${icon}" style="color: ${iconColor}; font-size: 0.95rem;"></i> <span>${escapeHtml(message)}</span>`;
+
+  container.appendChild(toast);
+
+  // 애니메이션 페이드인
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+
+  // 2.2초 후 페이드아웃 및 제거
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px)';
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 250);
+  }, 2200);
+}
+window.showToast = showToast;
+window.showNotification = showToast;
+
 // 4-0. 현장 사진 온디맨드 로딩 헬퍼 (대역폭 99% 절감을 위해 목록 조회 시 제외된 사진을 필요 시 1건만 Supabase에서 직접 로드)
 async function ensureApplicationPhotosLoaded(appOrId) {
   let app = appOrId;

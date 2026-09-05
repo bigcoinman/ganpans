@@ -12,6 +12,26 @@ window.updateItemStatus = function(uid, itemId, type, value) {
     }
 };
 
+// --- 신청서 목록 상태 변경 모바일 글로벌 핸들러 (0초 즉시 전역 등록) ---
+window.updateApplicationStatusMob = function(id, newStatus, selectEl) {
+    if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
+        const res = window.DataStore.updateApplicationStatus(id, newStatus);
+        const targetApp = res && res.app;
+        let statusLabel = '사업시행 전 사전등록업체';
+        if (newStatus === 'approved' || newStatus === '서류준비 & 접수대기' || newStatus === '서류제출 & 접수예정') statusLabel = '서류준비 & 접수대기';
+        else if (newStatus === 'unqualified' || newStatus === '신청요건 미달업체') statusLabel = '신청요건 미달업체';
+        else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') statusLabel = '지원사업 탈락';
+        else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') statusLabel = '지원사업 포기';
+
+        const msg = `[${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`;
+        if (typeof window.showToast === 'function') {
+            window.showToast(msg);
+        }
+        return res;
+    }
+};
+window.updateApplicationStatus = window.updateApplicationStatusMob;
+
 // --- 신청서 세부 정보 직접 수정 모달 (모바일/공통 최상단 즉시 정의) ---
 window.safeHtmlForEditAppMob = function(s) {
     return (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -4082,9 +4102,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const updateApplicationStatusMob = (id, newStatus, selectEl) => {
-        if (selectEl && typeof selectEl.blur === 'function') {
-            selectEl.blur();
-        }
         if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
             const res = window.DataStore.updateApplicationStatus(id, newStatus);
             const targetApp = res && res.app;
@@ -4097,8 +4114,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const msg = `[${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`;
             if (typeof window.showToast === 'function') {
                 window.showToast(msg);
-            } else {
-                alert(msg);
             }
             return res;
         }

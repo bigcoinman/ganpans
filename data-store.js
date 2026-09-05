@@ -1775,6 +1775,18 @@
     }
   };
 
+  // 신청서 상태 변경 전역 브릿지
+  window.updateApplicationStatus = function (id, newStatus, selectEl) {
+    if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
+      return window.DataStore.updateApplicationStatus(id, newStatus);
+    }
+  };
+  window.updateApplicationStatusMob = function (id, newStatus, selectEl) {
+    if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
+      return window.DataStore.updateApplicationStatus(id, newStatus);
+    }
+  };
+
   // --- 신청서 담당 영업자 수정/변경 모달 전역 브릿지 (PC웹 & 모바일 공용) ---
   window.openAssignBizUserModal = function (appId, event) {
     if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
