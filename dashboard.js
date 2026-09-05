@@ -802,7 +802,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (activeUser && activeUser.role === 'admin') {
-      // Supabase에서 최신 inquiries를 직접 fetch 후 localStorage 갱신 → 화면 렌더링
+      // 1) 0초 즉시 동기 렌더링 (지연 딜레이 원천 차단)
+      if (typeof renderAllUsersList === 'function') renderAllUsersList();
+      if (typeof renderManagerPanel === 'function') renderManagerPanel();
+      if (typeof renderAdminStats === 'function') renderAdminStats();
+      if (typeof renderApplicationsList === 'function') renderApplicationsList();
+      if (typeof renderManagerConstProgress === 'function') renderManagerConstProgress();
+      if (typeof renderInquiriesList === 'function') renderInquiriesList();
+
+      // 2) 백그라운드 inquiries 동기화 (Non-blocking)
       const _sbUrl = (window.SUPABASE_URL) || 'https://nfexylsehsucctoefwdz.supabase.co';
       const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_Ux7dNNRDLqVX8MAX6-MlIA_HueFAGhh';
       fetch(_sbUrl + '/rest/v1/inquiries?select=*&order=created_at.desc', {
@@ -825,15 +833,9 @@ document.addEventListener('DOMContentLoaded', () => {
               created_at: r.created_at || new Date().toISOString()
             }));
           localStorage.setItem('inquiries', JSON.stringify(mapped));
+          if (typeof renderInquiriesList === 'function') renderInquiriesList();
         }
-      }).catch(() => {}).finally(() => {
-        renderAllUsersList();
-        renderManagerPanel();
-        renderAdminStats();
-        renderApplicationsList();
-        renderManagerConstProgress();
-        renderInquiriesList();
-      });
+      }).catch(() => {});
     } else if (activeUser && activeUser.role === 'business') {
       renderBusinessDashboard();
       renderUserApplicationsList();
