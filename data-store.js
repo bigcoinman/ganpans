@@ -1228,12 +1228,20 @@
         if (row && row.parentNode) row.parentNode.removeChild(row);
       }
 
-      // 2) users 배열에서 직접 제거
+      // 2) users 배열에서 직접 제거 (targetId 및 해당 유저의 전화번호 매칭건 전수 삭제)
       let rawUsers = JSON.parse(localStorage.getItem('users')) || [];
       const targetUser = rawUsers.find(u => String(u.id).toLowerCase() === targetLower);
       const targetPhone = targetUser ? String(targetUser.phone || '').trim() : '';
+      const targetDigits = targetPhone.replace(/[^0-9]/g, '');
 
-      rawUsers = rawUsers.filter(u => u && u.id && String(u.id).toLowerCase() !== targetLower);
+      rawUsers = rawUsers.filter(u => {
+        if (!u || !u.id) return false;
+        const uId = String(u.id).toLowerCase();
+        const uPhone = String(u.phone || '').replace(/[^0-9]/g, '');
+        if (uId === targetLower) return false;
+        if (targetDigits && uPhone && uPhone === targetDigits) return false;
+        return true;
+      });
       this.saveUsers(rawUsers);
 
       // 3) 현재 로그인 세션이 삭제된 회원이면 즉시 세션 파기

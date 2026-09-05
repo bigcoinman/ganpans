@@ -1306,6 +1306,7 @@ window.SupabaseSync = {
 
     const targetId = String(uid).trim();
     const targetLower = targetId.toLowerCase();
+    const targetDigits = phone ? String(phone).replace(/[^0-9]/g, '') : '';
 
     const headers = {
       'apikey': _sbKey,
@@ -1315,18 +1316,25 @@ window.SupabaseSync = {
     };
 
     try {
-      const appIds = [targetId, ...(targetLower !== targetId ? [targetLower] : [])];
-      for (const id of appIds) {
+      const deleteIds = new Set([targetId, targetLower]);
+      if (targetDigits) deleteIds.add(targetDigits);
+
+      for (const id of deleteIds) {
+        // 1) applications 외래키 참조 해제 (user_id -> null)
         await fetch(_sbUrl + '/rest/v1/applications?user_id=eq.' + encodeURIComponent(id), {
           method: 'PATCH',
           headers,
           body: JSON.stringify({ user_id: null })
         }).catch(() => {});
+
+        // 2) inquiries 외래키 참조 해제 (user_id -> null)
         await fetch(_sbUrl + '/rest/v1/inquiries?user_id=eq.' + encodeURIComponent(id), {
           method: 'PATCH',
           headers,
           body: JSON.stringify({ user_id: null })
         }).catch(() => {});
+
+        // 3) users 테이블에서 영구 DELETE
         await fetch(_sbUrl + '/rest/v1/users?id=eq.' + encodeURIComponent(id), {
           method: 'DELETE',
           headers
@@ -1334,7 +1342,9 @@ window.SupabaseSync = {
       }
 
       if (window.supabaseClient) {
-        await window.supabaseClient.from('users').delete().eq('id', targetId).catch(() => {});
+        for (const id of deleteIds) {
+          await window.supabaseClient.from('users').delete().eq('id', id).catch(() => {});
+        }
       }
     } catch (e) {
       console.error('[deleteUser] Supabase DELETE error:', e);

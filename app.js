@@ -2948,49 +2948,10 @@ document.addEventListener('DOMContentLoaded', () => {
             syncAdminDataFromSupabaseMob();
         }
 
-        // SSOT 유저 목록을 최상단에서 일괄 로드 + applications(신청서) 점주 대표 포괄 연동
+        // SSOT 유저 목록을 최상단에서 일괄 로드
         let allStoreUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
             ? window.DataStore.getUsers()
             : (JSON.parse(localStorage.getItem('users')) || []);
-
-        const allAppsForUsers = (window.DataStore && typeof window.DataStore.getApplications === 'function')
-            ? window.DataStore.getApplications()
-            : (JSON.parse(localStorage.getItem('applications')) || []);
-
-        allAppsForUsers.forEach(app => {
-            const ownerPhone = String(app.ownerPhone || app.phone || '').trim();
-            const ownerName = String(app.ownerName || app.shopName || app.storeName || '').trim();
-            if (ownerPhone || ownerName) {
-                const cleanDigits = ownerPhone.replace(/[^0-9]/g, '');
-                const exists = allStoreUsers.some(u => {
-                    const uPhone = String(u.phone || '').replace(/[^0-9]/g, '');
-                    const uId = String(u.id || '').toLowerCase();
-                    const uName = String(u.name || '').toLowerCase();
-                    return (cleanDigits && uPhone && uPhone === cleanDigits) ||
-                           (cleanDigits && uId === cleanDigits) ||
-                           (uId === String(app.id).toLowerCase()) ||
-                           (uName && ownerName && uName === ownerName.toLowerCase() && (!cleanDigits || uPhone === cleanDigits));
-                });
-
-                const refCode = String(app.referrerCode || app.bizCode || (app.id && app.id.startsWith('B-') ? app.id.split('-').slice(0, 2).join('-') : '')).trim();
-                if (!exists) {
-                    const appEmailVal = String(app.ownerEmail || app.email || '').trim();
-                    allStoreUsers.push({
-                        id: ownerPhone || app.id,
-                        name: ownerName || '점주(대표)',
-                        phone: ownerPhone || '-',
-                        email: (appEmailVal && appEmailVal !== '-' && !appEmailVal.endsWith('@ganpan.go.kr')) ? appEmailVal : '',
-                        address: app.storeAddress || app.address || '-',
-                        role: 'user',
-                        isApplicantOwner: true,
-                        applicantStore: app.storeName || app.shopName || '',
-                        referrerCode: refCode,
-                        appliedByBiz: Boolean(refCode || app.appliedByBiz),
-                        createdAt: app.createdAt || app.created_at || new Date().toISOString()
-                    });
-                }
-            }
-        });
 
         // 0) Render All Users list (회원정보관리)
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');

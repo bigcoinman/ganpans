@@ -1732,44 +1732,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ? window.DataStore.getUsers() 
       : (JSON.parse(localStorage.getItem('users')) || []);
 
-    // applications(간편 지원 신청서)에 등록된 점주(업체 대표)도 회원 명부에 100% 자동 포괄 연동
-    const allApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
-      ? window.DataStore.getApplications()
-      : (JSON.parse(localStorage.getItem('applications')) || []);
-
-    allApps.forEach(app => {
-      const ownerPhone = String(app.ownerPhone || app.phone || '').trim();
-      const ownerName = String(app.ownerName || app.shopName || app.storeName || '').trim();
-      if (ownerPhone || ownerName) {
-        const cleanDigits = ownerPhone.replace(/[^0-9]/g, '');
-        const exists = currentUsers.some(u => {
-          const uPhone = String(u.phone || '').replace(/[^0-9]/g, '');
-          const uId = String(u.id || '').toLowerCase();
-          const uName = String(u.name || '').toLowerCase();
-          return (cleanDigits && uPhone && uPhone === cleanDigits) ||
-                 (cleanDigits && uId === cleanDigits) ||
-                 (uId === String(app.id).toLowerCase()) ||
-                 (uName && ownerName && uName === ownerName.toLowerCase() && (!cleanDigits || uPhone === cleanDigits));
-        });
-
-        const refCode = String(app.referrerCode || app.bizCode || (app.id && app.id.startsWith('B-') ? app.id.split('-').slice(0, 2).join('-') : '')).trim();
-        if (!exists) {
-          const appEmailVal = String(app.ownerEmail || app.email || '').trim();
-          currentUsers.push({
-            id: ownerPhone || app.id,
-            name: ownerName || '점주(대표)',
-            phone: ownerPhone || '-',
-            email: (appEmailVal && appEmailVal !== '-' && !appEmailVal.endsWith('@ganpan.go.kr')) ? appEmailVal : '',
-            address: app.storeAddress || app.address || '-',
-            role: 'user',
-            isApplicantOwner: true,
-            applicantStore: app.storeName || app.shopName || '',
-            createdAt: app.createdAt || app.created_at || new Date().toISOString()
-          });
-        }
-      }
-    });
-
+    currentUsers = currentUsers.filter(u => u && u.id && u.role !== 'deleted');
     currentUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(currentUsers) : currentUsers;
 
     // 검색 필터링
