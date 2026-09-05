@@ -7606,11 +7606,16 @@ function initWizard() {
         return;
       }
 
+      const activeUser = (typeof getActiveUser === 'function') ? (getActiveUser() || null) : null;
       const loggedUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function') 
         ? window.DataStore.getActiveUser() 
         : (activeUser || JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')) || null);
-      let users = JSON.parse(localStorage.getItem('users')) || [];
-      const apps = JSON.parse(localStorage.getItem('applications')) || [];
+      let users = (window.DataStore && typeof window.DataStore.getUsers === 'function') 
+        ? window.DataStore.getUsers() 
+        : (JSON.parse(localStorage.getItem('users')) || []);
+      const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') 
+        ? window.DataStore.getApplications() 
+        : (JSON.parse(localStorage.getItem('applications')) || []);
 
       const phoneDigits = ownerPhone.replace(/[^0-9]/g, '');
       const autoPw = 'g-' + (phoneDigits.length >= 8 ? phoneDigits.slice(-8) : phoneDigits.padStart(8, '0'));
@@ -7622,7 +7627,7 @@ function initWizard() {
       let isNewAccount = false;
 
       // 1. 현재 로그인한 사용자가 일반회원(점주)인 경우: 본인 계정 정보 그대로 사용 (비밀번호 절대 덮어쓰기 금지)
-      if (loggedUser && (loggedUser.role === 'normal' || !loggedUser.role || loggedUser.role === 'user')) {
+      if (loggedUser && (loggedUser.role === 'normal' || !loggedUser.role || loggedUser.role === 'user' || loggedUser.id)) {
         userId = loggedUser.id;
         loginNoticeId = loggedUser.id;
         loginNoticePw = ''; // 기존 비밀번호 유지
@@ -7653,10 +7658,11 @@ function initWizard() {
           }
         }
       } else {
-        // 2. 비회원 신청이거나 영업자/관리자 대리 신청: 전화번호 기준 기존 회원 여부 확인
+        // 2. 비회원 신청이거나 영업자/관리자 대리 신청: 전화번호/아이디 기준 기존 회원 여부 다각도 확인
         const existingIdx = users.findIndex(u => {
           const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
-          return (uPhoneDigits && uPhoneDigits === phoneDigits) || (u.id && String(u.id).toLowerCase() === phoneDigits.toLowerCase());
+          const uId = String(u.id || '').toLowerCase();
+          return (uPhoneDigits && uPhoneDigits === phoneDigits) || (uId && uId === phoneDigits.toLowerCase());
         });
 
         if (existingIdx !== -1) {
@@ -7764,6 +7770,16 @@ function initWizard() {
 
       const ownerEmailVal = document.getElementById('owner-email')?.value.trim() || '';
 
+      const isExistingAccount = Boolean(
+        (loggedUser && (loggedUser.role === 'normal' || !loggedUser.role || loggedUser.role === 'user' || loggedUser.id)) ||
+        !isNewAccount ||
+        !loginNoticePw
+      );
+
+      if (isExistingAccount) {
+        loginNoticePw = '';
+      }
+
       const newApp = {
         id: customId,
         userId: (loggedUser && loggedUser.role === 'business') ? loggedUser.id : userId,
@@ -7790,7 +7806,7 @@ function initWizard() {
         autoAccount: {
           id: loginNoticeId,
           pw: loginNoticePw,
-          isNew: isNewAccount
+          isNew: !isExistingAccount
         }
       };
 
@@ -7820,8 +7836,6 @@ function initWizard() {
       }
       window.dispatchEvent(new CustomEvent('supabase-data-synced', { detail: { newApp } }));
 
-      const isExistingAccount = !isNewAccount || !loginNoticePw;
-
       const appIdContainer = document.getElementById('success-app-id-container');
       if (appIdContainer) appIdContainer.textContent = customId;
       const storeNameContainer = document.getElementById('success-store-name');
@@ -7830,7 +7844,7 @@ function initWizard() {
       if (loginIdContainer) loginIdContainer.textContent = loginNoticeId;
       const loginPwContainer = document.getElementById('success-login-pw');
       if (loginPwContainer) {
-        if (isExistingAccount) {
+        if (isExistingAccount || !loginNoticePw) {
           loginPwContainer.innerHTML = '<span style="color: #0284c7; font-weight: 700; font-size: 0.88rem;">기존 가입하신 계정으로 바로 조회 가능합니다</span>';
           if (loginPwContainer.previousElementSibling) {
             loginPwContainer.previousElementSibling.textContent = '• 비밀번호';
@@ -7857,7 +7871,7 @@ function initWizard() {
       if (compLoginId) compLoginId.textContent = loginNoticeId;
       const compLoginPw = document.getElementById('complete-login-pw');
       if (compLoginPw) {
-        if (isExistingAccount) {
+        if (isExistingAccount || !loginNoticePw) {
           compLoginPw.innerHTML = '<span style="color: #0284c7; font-weight: 700; font-size: 0.92rem;">기존 가입하신 계정으로 바로 조회 가능합니다</span>';
           if (compLoginPw.previousElementSibling) {
             compLoginPw.previousElementSibling.textContent = '비밀번호';

@@ -2390,11 +2390,13 @@ if (typeof window !== 'undefined') {
         localStorage.setItem('users', JSON.stringify(localUsers));
       }
 
-      // 4) 자동 로그인 세션 생성
+      // 4) 자동 로그인 세션 생성 (DataStore 및 Storage 동시 완벽 동기화)
       const sanitized = typeof sanitizeUser === 'function' ? sanitizeUser(newUser) : newUser;
       sessionStorage.setItem('activeUser', JSON.stringify(sanitized));
-      localStorage.removeItem('activeUser_remember');
-      localStorage.removeItem('activeUser');
+      localStorage.setItem('activeUser', JSON.stringify(sanitized));
+      if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+        window.DataStore.setActiveUser(sanitized);
+      }
 
       alert('회원가입이 완료되었습니다! 자동 로그인됩니다.');
 
