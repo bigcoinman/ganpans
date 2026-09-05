@@ -1972,7 +1972,7 @@ function initAuthAndDashboard() {
         }
       });
       if (updated) {
-        localStorage.setItem('users', JSON.stringify(parsedUsers));
+        (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(parsedUsers) : localStorage.setItem('users', JSON.stringify(parsedUsers)));
       }
     } catch (e) {
       console.error('Failed to migrate users passwords:', e);
@@ -1995,7 +1995,7 @@ function initAuthAndDashboard() {
         items: []
       }
     ];
-    localStorage.setItem('users', JSON.stringify(defaultUsers));
+    (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(defaultUsers) : localStorage.setItem('users', JSON.stringify(defaultUsers)));
   }
 
   let users = JSON.parse(localStorage.getItem('users')) || [];
@@ -2014,7 +2014,7 @@ function initAuthAndDashboard() {
       conversionStatus: 'none',
       items: []
     });
-    localStorage.setItem('users', JSON.stringify(users));
+    (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
   }
 
   let activeUser = (typeof getActiveUser === 'function') ? (getActiveUser() || null) : null;
@@ -2222,7 +2222,7 @@ function initAuthAndDashboard() {
     const idx = users.findIndex(u => u.id === foundPwUser.id);
     if (idx !== -1) {
       users[idx].pw = typeof sha256 === 'function' ? sha256(newPw) : newPw;
-      localStorage.setItem('users', JSON.stringify(users));
+      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
     }
     const result = document.getElementById('find-pw-result');
     if (result) {
@@ -3138,7 +3138,7 @@ function initModalsAndSearch() {
       } else {
         const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
         inquiries.unshift(newInquiry);
-        localStorage.setItem('inquiries', JSON.stringify(inquiries));
+        (typeof DataStore !== 'undefined' && DataStore.saveInquiries ? DataStore.saveInquiries(inquiries) : localStorage.setItem('inquiries', JSON.stringify(inquiries)));
       }
 
       // 2) Supabase REST API로 직접 저장 (supabaseClient 초기화 여부 무관, 100% 보장)

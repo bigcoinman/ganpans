@@ -348,7 +348,7 @@ window.toggleInquiryStatus = function(id, e) {
     const isNowResolved = (curStatus !== 'resolved' && curStatus !== 'completed' && curStatus !== '확인완료' && curStatus !== '상담완료');
     const newStatus = isNowResolved ? 'resolved' : 'pending';
     target.status = newStatus;
-    localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+    (typeof DataStore !== 'undefined' && DataStore.saveInquiries ? DataStore.saveInquiries(currentInquiries) : localStorage.setItem('inquiries', JSON.stringify(currentInquiries)));
 
     // 0초 낙관적 DOM 즉시 갱신 (사용자 클릭 즉각 반응)
     if (btnEl) {
@@ -397,7 +397,7 @@ window.deleteInquiryAdmin = function(id, btnEl) {
 
   const deleteTargetId = inqToDelete ? inqToDelete.id : id;
   currentInquiries = currentInquiries.filter(i => String(i.id) !== String(deleteTargetId));
-  localStorage.setItem('inquiries', JSON.stringify(currentInquiries));
+  (typeof DataStore !== 'undefined' && DataStore.saveInquiries ? DataStore.saveInquiries(currentInquiries) : localStorage.setItem('inquiries', JSON.stringify(currentInquiries)));
 
   if (btnEl) {
     const row = btnEl.closest('tr');
@@ -417,7 +417,7 @@ window.deleteInquiryAdmin = function(id, btnEl) {
 // --- 3초 간편문의 전체 초기화 글로벌 핸들러 ---
 window.clearAllInquiriesAdmin = function() {
   if (!confirm('정말로 모든 3초 간편 문의 접수 내역을 영구 삭제하고 초기화하시겠습니까?\n삭제 후 복구할 수 없습니다.')) return;
-  localStorage.setItem('inquiries', JSON.stringify([]));
+  (typeof DataStore !== 'undefined' && DataStore.saveInquiries ? DataStore.saveInquiries([]) : localStorage.setItem('inquiries', JSON.stringify([])));
   if (window.DataStore && typeof window.DataStore.saveInquiries === 'function') {
     window.DataStore.saveInquiries([]);
   }
@@ -549,7 +549,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   if (needUsersSave) {
-    localStorage.setItem('users', JSON.stringify(users));
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(users);
+    } else {
+      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+    }
   }
 
   // 1. Guard for unauthorized access
@@ -832,7 +836,7 @@ document.addEventListener('DOMContentLoaded', () => {
               submittedAt: r.created_at || new Date().toISOString(),
               created_at: r.created_at || new Date().toISOString()
             }));
-          localStorage.setItem('inquiries', JSON.stringify(mapped));
+          (typeof DataStore !== 'undefined' && DataStore.saveInquiries ? DataStore.saveInquiries(mapped) : localStorage.setItem('inquiries', JSON.stringify(mapped)));
           if (typeof renderInquiriesList === 'function') renderInquiriesList();
         }
       }).catch(() => {});
@@ -974,7 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
           window.DataStore.saveUsers(users);
         } else {
-          localStorage.setItem('users', JSON.stringify(users));
+          (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
         }
         localStorage.setItem('activeUser', JSON.stringify(activeUser));
         sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
@@ -1044,7 +1048,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
         window.DataStore.saveUsers(users);
       } else {
-        localStorage.setItem('users', JSON.stringify(users));
+        (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
       }
       localStorage.setItem('activeUser', JSON.stringify(activeUser));
       sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
@@ -1225,7 +1229,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Update in users array
       users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
-      localStorage.setItem('users', JSON.stringify(users));
+      if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+        window.DataStore.saveUsers(users);
+      } else {
+        (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+      }
       localStorage.setItem('activeUser', JSON.stringify(activeUser));
 
       // Also update the application with this business user's ID and referrerCode if not set
@@ -1238,7 +1246,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return app;
       });
-      localStorage.setItem('applications', JSON.stringify(updatedApps));
+      if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+        window.DataStore.saveApplications(updatedApps);
+      } else {
+        (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(updatedApps) : localStorage.setItem('applications', JSON.stringify(updatedApps)));
+      }
 
       alert(`성공적으로 고객 신청서 [${targetApp.storeName}] 건을 내 영업물건으로 연동하였습니다!`);
       linkAppIdInput.value = '';
@@ -1547,17 +1559,21 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         apps = apps.map(a => a.id === itemId ? newApp : a);
       }
-      try {
-        localStorage.setItem('applications', JSON.stringify(apps));
-      } catch (quotaErr) {
-        console.warn('[저장 용량 초과] 사진 데이터를 제외하고 기본 정보만 저장합니다.', quotaErr);
-        const appsLite = apps.map(a => a.id === itemId ? { ...a, fileData: '', photos: [], photosCount: 0 } : a);
+      if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+        window.DataStore.saveApplications(apps);
+      } else {
         try {
-          localStorage.setItem('applications', JSON.stringify(appsLite));
-          alert('저장 공간이 부족하여 사진은 제외하고 기본 정보만 등록되었습니다.\n관리자에게 문의하거나 이전 데이터를 정리해 주세요.');
-        } catch (e2) {
-          alert('저장 공간이 부족합니다. 이전 데이터를 정리 후 다시 시도해 주세요.');
-          return;
+          (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
+        } catch (quotaErr) {
+          console.warn('[저장 용량 초과] 사진 데이터를 제외하고 기본 정보만 저장합니다.', quotaErr);
+          const appsLite = apps.map(a => a.id === itemId ? { ...a, fileData: '', photos: [], photosCount: 0 } : a);
+          try {
+            (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(appsLite) : localStorage.setItem('applications', JSON.stringify(appsLite)));
+            alert('저장 공간이 부족하여 사진은 제외하고 기본 정보만 등록되었습니다.\n관리자에게 문의하거나 이전 데이터를 정리해 주세요.');
+          } catch (e2) {
+            alert('저장 공간이 부족합니다. 이전 데이터를 정리 후 다시 시도해 주세요.');
+            return;
+          }
         }
       }
 
@@ -1578,20 +1594,24 @@ document.addEventListener('DOMContentLoaded', () => {
         activeUser.items = activeUser.items.map(i => i.id === itemId ? newItem : i);
       }
       users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
-      try {
-        localStorage.setItem('users', JSON.stringify(users));
-        localStorage.setItem('activeUser', JSON.stringify(activeUser));
-      } catch (quotaErr2) {
-        console.warn('[users 저장 실패]', quotaErr2);
-        const usersLite = users.map(u => {
-          if (u.id !== activeUser.id) return u;
-          const itemsLite = (u.items || []).map(it => it.id === itemId ? { ...it, photos: [] } : it);
-          return { ...u, items: itemsLite };
-        });
+      if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+        window.DataStore.saveUsers(users);
+      } else {
         try {
-          localStorage.setItem('users', JSON.stringify(usersLite));
-          localStorage.setItem('activeUser', JSON.stringify({ ...activeUser, items: usersLite.find(u => u.id === activeUser.id)?.items || [] }));
-        } catch (e3) { console.warn('[users 저장 실패]', e3); }
+          (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+          localStorage.setItem('activeUser', JSON.stringify(activeUser));
+        } catch (quotaErr2) {
+          console.warn('[users 저장 실패]', quotaErr2);
+          const usersLite = users.map(u => {
+            if (u.id !== activeUser.id) return u;
+            const itemsLite = (u.items || []).map(it => it.id === itemId ? { ...it, photos: [] } : it);
+            return { ...u, items: itemsLite };
+          });
+          try {
+            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(usersLite) : localStorage.setItem('users', JSON.stringify(usersLite)));
+            localStorage.setItem('activeUser', JSON.stringify({ ...activeUser, items: usersLite.find(u => u.id === activeUser.id)?.items || [] }));
+          } catch (e3) { console.warn('[users 저장 실패]', e3); }
+        }
       }
 
       // Supabase 클라우드 DB 실시간 양방향 동기화
@@ -2293,7 +2313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
       window.DataStore.saveUsers(curUsers);
     } else {
-      localStorage.setItem('users', JSON.stringify(curUsers));
+      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
     }
 
     // 3) activeUser 세션 갱신
@@ -2315,7 +2335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(curApps);
     } else {
-      localStorage.setItem('applications', JSON.stringify(curApps));
+      (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(curApps) : localStorage.setItem('applications', JSON.stringify(curApps)));
     }
 
     // 5) Supabase DB Sync
@@ -2788,7 +2808,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return u;
       });
-      localStorage.setItem('users', JSON.stringify(curUsers));
+      if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+        window.DataStore.saveUsers(curUsers);
+      } else {
+        (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+      }
       users = curUsers;
 
       // Supabase Sync
@@ -2816,7 +2840,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return u;
       });
-      localStorage.setItem('users', JSON.stringify(curUsers));
+      if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+        window.DataStore.saveUsers(curUsers);
+      } else {
+        (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+      }
       users = curUsers;
 
       // Supabase Sync
@@ -2861,7 +2889,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return u;
     });
 
-    localStorage.setItem('users', JSON.stringify(curUsers));
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(curUsers);
+    } else {
+      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+    }
     users = curUsers;
 
     if (window.SupabaseSync) {
@@ -2916,7 +2948,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
         window.DataStore.saveApplications(apps);
       } else {
-        localStorage.setItem('applications', JSON.stringify(apps));
+        (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
       }
 
       if (window.SupabaseSync) {
@@ -2947,7 +2979,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
       window.DataStore.saveUsers(usersList);
     } else {
-      localStorage.setItem('users', JSON.stringify(usersList));
+      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(usersList) : localStorage.setItem('users', JSON.stringify(usersList)));
     }
 
     if (window.SupabaseSync) {
@@ -2977,12 +3009,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const reassignConstructorItem = (uid, itemId) => {
 
     // 1) applications 단일 원천 초기화
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
     let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
     if (targetApp) {
       targetApp.assignedConstructorId = null;
       targetApp.assignedConstructorName = null;
-      localStorage.setItem('applications', JSON.stringify(apps));
+      if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+        window.DataStore.saveApplications(apps);
+      } else {
+        (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
+      }
       if (window.SupabaseSync) {
         window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
       }
@@ -3006,7 +3044,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return u;
     });
 
-    localStorage.setItem('users', JSON.stringify(users));
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(users);
+    } else {
+      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+    }
     if (window.SupabaseSync) {
       const updatedUser = users.find(u => String(u.id) === String(uid));
       if (updatedUser) {
@@ -3041,7 +3083,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 1) 로컬 users에서 제거
       users = users.filter(u => String(u.id) !== deletedUid);
-      localStorage.setItem('users', JSON.stringify(users));
+      if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+        window.DataStore.saveUsers(users);
+      } else {
+        (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+      }
 
       // 2) Supabase DB에서 영구 삭제
       if (window.SupabaseSync) {
@@ -3049,7 +3095,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // 3) 세션 종료
-      clearActiveUser();
+      if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+        window.DataStore.setActiveUser(null);
+      } else {
+        clearActiveUser();
+      }
 
       alert('회원탈퇴가 성공적으로 완료되었습니다. 이용해 주셔서 감사합니다.');
       window.location.href = 'index.html';
@@ -3553,7 +3603,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return a;
           });
-          localStorage.setItem('applications', JSON.stringify(updatedApps));
+          if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            window.DataStore.saveApplications(updatedApps);
+          } else {
+            (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(updatedApps) : localStorage.setItem('applications', JSON.stringify(updatedApps)));
+          }
           alert('공사 증빙 검수가 통과되어 최종 정산 종결 처리되었습니다.');
           updateSessionUI();
         }
@@ -3596,7 +3650,7 @@ document.addEventListener('DOMContentLoaded', () => {
             submittedAt: r.created_at || new Date().toISOString(),
             created_at: r.created_at || new Date().toISOString()
           }));
-        localStorage.setItem('inquiries', JSON.stringify(inquiries));
+        (typeof DataStore !== 'undefined' && DataStore.saveInquiries ? DataStore.saveInquiries(inquiries) : localStorage.setItem('inquiries', JSON.stringify(inquiries)));
       } else {
         // Supabase 조회 실패 시 localStorage fallback
         inquiries = (window.DataStore && typeof window.DataStore.getInquiries === 'function')
@@ -4102,7 +4156,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const fileName = file.name || `현장사진_${appId}.jpg`;
 
         // 1) localStorage applications 업데이트
-        let curApps = JSON.parse(localStorage.getItem('applications')) || [];
+        let curApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+          ? window.DataStore.getApplications()
+          : (JSON.parse(localStorage.getItem('applications')) || []);
         const targetApp = curApps.find(a => String(a.id) === String(appId));
         if (targetApp) {
           targetApp.fileData = base64Data;
@@ -4112,11 +4168,17 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           targetApp.photos.push(base64Data);
           targetApp.photosCount = targetApp.photos.length;
-          localStorage.setItem('applications', JSON.stringify(curApps));
+          if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            window.DataStore.saveApplications(curApps);
+          } else {
+            (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(curApps) : localStorage.setItem('applications', JSON.stringify(curApps)));
+          }
         }
 
         // 2) 연동된 users items 영업물건에도 사진 자동 반영
-        let usersList = JSON.parse(localStorage.getItem('users')) || [];
+        let usersList = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+          ? window.DataStore.getUsers()
+          : (JSON.parse(localStorage.getItem('users')) || []);
         let itemUpdated = false;
         let updatedUsers = [];
         usersList.forEach(u => {
@@ -4134,7 +4196,11 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
         if (itemUpdated) {
-          localStorage.setItem('users', JSON.stringify(usersList));
+          if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(usersList);
+          } else {
+            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(usersList) : localStorage.setItem('users', JSON.stringify(usersList)));
+          }
         }
 
         // 3) Supabase DB SSOT 동기화 (유효 컬럼만 업데이트 및 upsert)
@@ -4383,7 +4449,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(apps);
     } else {
-      localStorage.setItem('applications', JSON.stringify(apps));
+      (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
     }
     if (window.SupabaseSync) {
       window.SupabaseSync.deleteApplication(id);
@@ -4397,9 +4463,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const deleteOwnApplication = (id) => {
     if (!confirm('정말로 이 지원 신청을 취소하고 신청 내역을 삭제하시겠습니까?')) return;
-    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
     apps = apps.filter(app => app.id !== id);
-    localStorage.setItem('applications', JSON.stringify(apps));
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(apps);
+    } else {
+      (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
+    }
     alert('신청이 취소되고 신청 내역이 삭제되었습니다.');
     updateSessionUI();
   };
@@ -4465,7 +4537,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (updated) {
-      localStorage.setItem('applications', JSON.stringify(apps));
+      if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+        window.DataStore.saveApplications(apps);
+      } else {
+        (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
+      }
     }
 
     if (!activeUser) return;
@@ -5339,7 +5415,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(apps);
     } else {
-      localStorage.setItem('applications', JSON.stringify(apps));
+      (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
     }
 
     // 2) Update users.items
@@ -5361,7 +5437,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
       window.DataStore.saveUsers(curUsers);
     } else {
-      localStorage.setItem('users', JSON.stringify(curUsers));
+      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
     }
 
     if (window.SupabaseSync) {
@@ -5418,7 +5494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(apps);
     } else {
-      localStorage.setItem('applications', JSON.stringify(apps));
+      (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
     }
 
     // 2) users.items
@@ -5447,7 +5523,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
       window.DataStore.saveUsers(curUsers);
     } else {
-      localStorage.setItem('users', JSON.stringify(curUsers));
+      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
     }
 
     if (window.SupabaseSync) {
@@ -5496,7 +5572,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(apps);
     } else {
-      localStorage.setItem('applications', JSON.stringify(apps));
+      (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
     }
 
     // 2) users.items
@@ -5520,7 +5596,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
       window.DataStore.saveUsers(curUsers);
     } else {
-      localStorage.setItem('users', JSON.stringify(curUsers));
+      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
     }
 
     if (window.SupabaseSync) {
@@ -5575,7 +5651,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(apps);
     } else {
-      localStorage.setItem('applications', JSON.stringify(apps));
+      (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
     }
 
     // 2) users.items update
@@ -5601,7 +5677,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
       window.DataStore.saveUsers(curUsers);
     } else {
-      localStorage.setItem('users', JSON.stringify(curUsers));
+      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
     }
 
     if (window.SupabaseSync) {
@@ -6046,7 +6122,7 @@ function initAIAssistant() {
       } else {
         const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
         inquiries.unshift(newInquiry);
-        localStorage.setItem('inquiries', JSON.stringify(inquiries));
+        (typeof DataStore !== 'undefined' && DataStore.saveInquiries ? DataStore.saveInquiries(inquiries) : localStorage.setItem('inquiries', JSON.stringify(inquiries)));
         if (window.SupabaseSync && typeof window.SupabaseSync.upsertInquiry === 'function') {
           window.SupabaseSync.upsertInquiry(newInquiry);
         }
@@ -6276,7 +6352,9 @@ function initAIAssistant() {
       }
 
       // Local users update
-      users = JSON.parse(localStorage.getItem('users')) || [];
+      users = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+        ? window.DataStore.getUsers()
+        : (JSON.parse(localStorage.getItem('users')) || []);
       const idx = users.findIndex(u => u.id === user.id);
 
       if (idx !== -1) {
@@ -6285,11 +6363,19 @@ function initAIAssistant() {
         if (phoneVal) users[idx].phone = phoneVal;
         if (addressVal !== undefined) users[idx].address = addressVal;
         if (newPw) users[idx].pw = sha256(newPw);
-        localStorage.setItem('users', JSON.stringify(users));
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+          window.DataStore.saveUsers(users);
+        } else {
+          (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+        }
 
         const updatedUser = users[idx];
-        const storage = localStorage.getItem('activeUser') ? localStorage : sessionStorage;
-        storage.setItem('activeUser', JSON.stringify(typeof sanitizeUser === 'function' ? sanitizeUser(updatedUser) : updatedUser));
+        if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+          window.DataStore.setActiveUser(updatedUser);
+        } else {
+          const storage = localStorage.getItem('activeUser') ? localStorage : sessionStorage;
+          storage.setItem('activeUser', JSON.stringify(typeof sanitizeUser === 'function' ? sanitizeUser(updatedUser) : updatedUser));
+        }
 
         activeUser = getActiveUser();
 

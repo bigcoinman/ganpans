@@ -110,6 +110,28 @@
       }
     },
 
+    getInquiries: function () {
+      try {
+        const raw = localStorage.getItem('inquiries');
+        const inqs = raw ? JSON.parse(raw) : [];
+        return Array.isArray(inqs) ? inqs : [];
+      } catch (e) {
+        console.error('[DataStore] getInquiries error:', e);
+        return [];
+      }
+    },
+
+    saveInquiries: function (inquiries) {
+      try {
+        if (!Array.isArray(inquiries)) inquiries = [];
+        localStorage.setItem('inquiries', JSON.stringify(inquiries));
+        return true;
+      } catch (e) {
+        console.error('[DataStore] saveInquiries error:', e);
+        return false;
+      }
+    },
+
     getDeletedAppIds: function () {
       return [];
     },

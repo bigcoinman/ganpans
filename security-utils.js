@@ -296,7 +296,9 @@ async function ensureApplicationPhotosLoaded(appOrId) {
         }
 
         // 로컬 스토리지 캐시에 저장하여 다음 번 클릭 시 0초 즉시 반응
-        const localApps = JSON.parse(localStorage.getItem('applications')) || [];
+        let localApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+          ? window.DataStore.getApplications()
+          : (JSON.parse(localStorage.getItem('applications')) || []);
         const idx = localApps.findIndex(a => String(a.id) === String(app.id));
         if (idx !== -1) {
           localApps[idx].photos = app.photos;
@@ -304,9 +306,11 @@ async function ensureApplicationPhotosLoaded(appOrId) {
           localApps[idx].photosCount = app.photosCount;
           if (app.constructionPhotos) localApps[idx].constructionPhotos = app.constructionPhotos;
           if (app.invoicePhotos) localApps[idx].invoicePhotos = app.invoicePhotos;
-          try {
-            localStorage.setItem('applications', JSON.stringify(localApps));
-          } catch (eStorage) {}
+          if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            window.DataStore.saveApplications(localApps);
+          } else {
+            if (window.DataStore && typeof window.DataStore.saveApplications === 'function') { window.DataStore.saveApplications(localApps); }
+          }
         }
       }
     } catch (eFetch) {
@@ -1627,7 +1631,11 @@ window.SupabaseSync = {
           await window.supabaseClient.from('inquiries').delete().in('id', ids);
         }
       }
-      localStorage.setItem('inquiries', JSON.stringify([]));
+      if (window.DataStore && typeof window.DataStore.saveInquiries === 'function') {
+        window.DataStore.saveInquiries([]);
+      } else {
+        if (window.DataStore && typeof window.DataStore.saveInquiries === 'function') { window.DataStore.saveInquiries([]); } else { localStorage.setItem('inquiries', JSON.stringify([])); }
+      }
       return true;
     } catch (e) {
       console.error('Supabase clearAllInquiries error:', e);
@@ -1682,12 +1690,18 @@ window.SupabaseSync = {
 
         const newUsersStr = JSON.stringify(freshUsers);
         if (oldUsersStr !== newUsersStr) {
-          localStorage.setItem('users', newUsersStr);
+          if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(freshUsers);
+          } else {
+            if (window.DataStore && typeof window.DataStore.saveUsers === 'function') { window.DataStore.saveUsers(freshUsers); } else { localStorage.setItem('users', newUsersStr); }
+          }
           usersChanged = true;
         }
 
         // 현재 로그인 세션 최신 상태 동기화 또는 삭제 계정 세션 강제 파기
-        const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')));
+        const activeUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function')
+          ? window.DataStore.getActiveUser()
+          : (typeof getActiveUser === 'function' ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser'))));
         if (activeUser && activeUser.id) {
           const freshCur = freshUsers.find(u => String(u.id).toLowerCase() === String(activeUser.id).toLowerCase());
           if (freshCur) {
@@ -1696,11 +1710,18 @@ window.SupabaseSync = {
             if (localStorage.getItem('activeUser')) {
               localStorage.setItem('activeUser', JSON.stringify(sanitized));
             }
+            if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+              window.DataStore.setActiveUser(sanitized);
+            }
           } else {
             // DB에 없거나 삭제된 계정이면 즉시 세션 파기
             if (typeof clearActiveUser === 'function') clearActiveUser();
-            localStorage.removeItem('activeUser');
-            sessionStorage.removeItem('activeUser');
+            if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+              window.DataStore.setActiveUser(null);
+            } else {
+              localStorage.removeItem('activeUser');
+              sessionStorage.removeItem('activeUser');
+            }
           }
         }
       }
@@ -1775,26 +1796,33 @@ window.SupabaseSync = {
 
         const newAppsStr = JSON.stringify(freshApps);
         if (oldAppsStr !== newAppsStr) {
-          try {
-            localStorage.setItem('applications', newAppsStr);
+          if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            window.DataStore.saveApplications(freshApps);
             appsChanged = true;
-          } catch (qErr) {
+          } else {
             try {
-              const lightApps = freshApps.map(a => ({
-                ...a,
-                photos: (a.photos && a.photos.length > 0) ? [a.photos[0]] : [],
-                fileData: ''
-              }));
-              localStorage.setItem('applications', JSON.stringify(lightApps));
+              if (window.DataStore && typeof window.DataStore.saveApplications === 'function') { window.DataStore.saveApplications(freshApps); } else { localStorage.setItem('applications', newAppsStr); }
               appsChanged = true;
-            } catch (qErr2) {
-              console.error('Applications localStorage save failed:', qErr2);
+            } catch (qErr) {
+              try {
+                const lightApps = freshApps.map(a => ({
+                  ...a,
+                  photos: (a.photos && a.photos.length > 0) ? [a.photos[0]] : [],
+                  fileData: ''
+                }));
+                if (window.DataStore && typeof window.DataStore.saveApplications === 'function') { window.DataStore.saveApplications(lightApps); } else { localStorage.setItem('applications', JSON.stringify(lightApps)); }
+                appsChanged = true;
+              } catch (qErr2) {
+                console.error('Applications localStorage save failed:', qErr2);
+              }
             }
           }
 
           // users.items 내 모든 물건을 최신 applications SSOT 기준으로 100% 자동 동기화 (3+1 원칙 & 부존재 일치)
           try {
-            const curUsers = JSON.parse(localStorage.getItem('users')) || [];
+            const curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+              ? window.DataStore.getUsers()
+              : (JSON.parse(localStorage.getItem('users')) || []);
             let usersItemsModified = false;
 
             // 1) freshApps 중 isBizItem === true 인 건들을 담당 영업자의 items에 확실하게 보장
@@ -1863,7 +1891,11 @@ window.SupabaseSync = {
             });
 
             if (usersItemsModified) {
-              localStorage.setItem('users', JSON.stringify(curUsers));
+              if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+                window.DataStore.saveUsers(curUsers);
+              } else {
+                if (window.DataStore && typeof window.DataStore.saveUsers === 'function') { window.DataStore.saveUsers(curUsers); } else { localStorage.setItem('users', JSON.stringify(curUsers)); }
+              }
               usersChanged = true;
             }
           } catch (eUsersSync) {}
@@ -1879,7 +1911,11 @@ window.SupabaseSync = {
           .filter(i => i && i.id);
         const newInqsStr = JSON.stringify(freshInqs);
         if (oldInqsStr !== newInqsStr) {
-          localStorage.setItem('inquiries', newInqsStr);
+          if (window.DataStore && typeof window.DataStore.saveInquiries === 'function') {
+            window.DataStore.saveInquiries(freshInqs);
+          } else {
+            if (window.DataStore && typeof window.DataStore.saveInquiries === 'function') { window.DataStore.saveInquiries(freshInqs); } else { localStorage.setItem('inquiries', newInqsStr); }
+          }
           inqsChanged = true;
         }
       }
@@ -2106,7 +2142,9 @@ if (typeof window !== 'undefined') {
 
     // 1) 최고관리자 (admin) 직통 즉각 로그인 (기존 변경 개인정보 100% 보존)
     if (idValLower === 'admin' || idValLower === 'administrator' || idValLower === 'superadmin') {
-      let users = JSON.parse(localStorage.getItem('users')) || [];
+      let users = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+        ? window.DataStore.getUsers()
+        : (JSON.parse(localStorage.getItem('users')) || []);
       let existingAdmin = users.find(u => String(u.id).toLowerCase() === 'admin');
 
       const adminUser = existingAdmin ? { ...existingAdmin, role: 'admin' } : {
@@ -2125,20 +2163,31 @@ if (typeof window !== 'undefined') {
 
       if (!existingAdmin) {
         users.push(adminUser);
-        localStorage.setItem('users', JSON.stringify(users));
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+          window.DataStore.saveUsers(users);
+        } else {
+          if (window.DataStore && typeof window.DataStore.saveUsers === 'function') { window.DataStore.saveUsers(users); } else { localStorage.setItem('users', JSON.stringify(users)); }
+        }
         if (window.SupabaseSync) {
           window.SupabaseSync.upsertUser(adminUser).catch(() => {});
         }
       }
 
       if (rememberMe) {
-        localStorage.setItem('activeUser', JSON.stringify(adminUser));
+        if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+          window.DataStore.setActiveUser(adminUser);
+        } else {
+          localStorage.setItem('activeUser', JSON.stringify(adminUser));
+          sessionStorage.removeItem('activeUser');
+        }
         localStorage.setItem('activeUser_remember', 'true');
-        sessionStorage.removeItem('activeUser');
       } else {
         sessionStorage.setItem('activeUser', JSON.stringify(adminUser));
         localStorage.removeItem('activeUser_remember');
         localStorage.removeItem('activeUser');
+        if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+          window.DataStore.setActiveUser(adminUser);
+        }
       }
 
       const authModal = document.getElementById('auth-modal');
@@ -2334,7 +2383,9 @@ if (typeof window !== 'undefined') {
         };
 
         // 로컬스토리지 및 Supabase에 영구 등록
-        let curUsers = JSON.parse(localStorage.getItem('users')) || [];
+        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+          ? window.DataStore.getUsers()
+          : (JSON.parse(localStorage.getItem('users')) || []);
         const existIdx = curUsers.findIndex(u => String(u.id).toLowerCase() === restoredUserId.toLowerCase());
         if (existIdx !== -1) {
           curUsers[existIdx] = user;
@@ -2344,7 +2395,7 @@ if (typeof window !== 'undefined') {
         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
           window.DataStore.saveUsers(curUsers);
         } else {
-          localStorage.setItem('users', JSON.stringify(curUsers));
+          if (window.DataStore && typeof window.DataStore.saveUsers === 'function') { window.DataStore.saveUsers(curUsers); } else { localStorage.setItem('users', JSON.stringify(curUsers)); }
         }
         if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
           window.SupabaseSync.upsertUser(user).catch(() => {});
@@ -2353,20 +2404,33 @@ if (typeof window !== 'undefined') {
     }
 
     if (user) {
-      let currentUsers = JSON.parse(localStorage.getItem('users')) || [];
+      let currentUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+        ? window.DataStore.getUsers()
+        : (JSON.parse(localStorage.getItem('users')) || []);
       if (!currentUsers.some(u => String(u.id).toLowerCase() === String(user.id).toLowerCase())) {
         currentUsers.push(user);
-        localStorage.setItem('users', JSON.stringify(currentUsers));
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+          window.DataStore.saveUsers(currentUsers);
+        } else {
+          if (window.DataStore && typeof window.DataStore.saveUsers === 'function') { window.DataStore.saveUsers(currentUsers); } else { localStorage.setItem('users', JSON.stringify(currentUsers)); }
+        }
       }
 
       if (rememberMe) {
-        localStorage.setItem('activeUser', JSON.stringify(user));
+        if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+          window.DataStore.setActiveUser(user);
+        } else {
+          localStorage.setItem('activeUser', JSON.stringify(user));
+          sessionStorage.removeItem('activeUser');
+        }
         localStorage.setItem('activeUser_remember', 'true');
-        sessionStorage.removeItem('activeUser');
       } else {
         sessionStorage.setItem('activeUser', JSON.stringify(user));
         localStorage.removeItem('activeUser_remember');
         localStorage.removeItem('activeUser');
+        if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+          window.DataStore.setActiveUser(user);
+        }
       }
 
       const authModal = document.getElementById('auth-modal');
@@ -2546,7 +2610,7 @@ if (typeof window !== 'undefined') {
         } else {
           localUsers.push(newUser);
         }
-        localStorage.setItem('users', JSON.stringify(localUsers));
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') { window.DataStore.saveUsers(localUsers); } else { localStorage.setItem('users', JSON.stringify(localUsers)); }
       }
 
       // 4) 자동 로그인 세션 생성 (DataStore 및 Storage 동시 완벽 동기화)
