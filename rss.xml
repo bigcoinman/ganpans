@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>간판지원단 - 소상공인 간판 교체 및 정부지원사업 원스톱 플랫폼</title>
+    <link>https://ganpans.com/</link>
+    <description>소상공인 간판 무료 교체, 간판 제작 지원, 공단 및 진흥원 지원사업 전문 대행 간판지원단</description>
+    <language>ko</language>
+    <lastBuildDate>Fri, 11 Sep 2026 10:12:00 GMT</lastBuildDate>
+    <atom:link href="https://ganpans.com/rss.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>간판지원단 소상공인 간판 간편 지원 신청</title>
+      <link>https://ganpans.com/</link>
+      <description>정부 및 지자체 소상공인 간판 지원사업 신청 대행 및 전문 시공 원스톱 지원</description>
+      <pubDate>Fri, 11 Sep 2026 10:12:00 GMT</pubDate>
+      <guid>https://ganpans.com/</guid>
+    </item>
+    <item>
+      <title>간판지원단 모바일 전용 간편 신청 및 현황 조회</title>
+      <link>https://ganpans.com/app</link>
+      <description>모바일에서 간편하게 신청하고 실시간 진행 현황을 확인하세요.</description>
+      <pubDate>Fri, 11 Sep 2026 10:12:00 GMT</pubDate>
+      <guid>https://ganpans.com/app</guid>
+    </item>
+  </channel>
+</rss>
