@@ -752,17 +752,21 @@
       // 4) Supabase DB 완전 비동기 백그라운드 저장 (Non-blocking)
       (async () => {
         try {
-          if (window.supabaseClient) {
+          if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
+            await window.SupabaseSync.updateApplication(app.id, {
+              memo: typeof app.memo === 'object' ? JSON.stringify(app.memo) : (app.memo || ''),
+              referrer_code: app.referrerCode || '',
+              receipt_status: app.receiptStatus || '접수예정',
+              progress_status: app.progressStatus || '지원대기중'
+            });
+            for (const itemUser of usersToSync) {
+              await window.SupabaseSync.updateUser(itemUser.id, { items: itemUser.items });
+            }
+          } else if (window.supabaseClient) {
             await window.supabaseClient.from('applications').update({
               memo: JSON.stringify({ isBizItem: isNowBizItem, receiptStatus: app.receiptStatus || '접수예정', progressStatus: app.progressStatus || '지원대기중' }),
               referrer_code: app.referrerCode || ''
             }).eq('id', String(app.id));
-          }
-          if (window.SupabaseSync) {
-            await window.SupabaseSync.upsertApplication(app);
-            for (const itemUser of usersToSync) {
-              await window.SupabaseSync.updateUser(itemUser.id, { items: itemUser.items });
-            }
           }
         } catch (err) {
           console.warn('[DataStore] toggleBizItem background sync notice:', err);
@@ -987,7 +991,17 @@
       (async () => {
         try {
           if (window.SupabaseSync) {
-            if (targetApp && typeof window.SupabaseSync.upsertApplication === 'function') {
+            if (targetApp && typeof window.SupabaseSync.updateApplication === 'function') {
+              await window.SupabaseSync.updateApplication(targetApp.id, {
+                status: targetApp.status || '심사 대기',
+                receipt_status: targetApp.receiptStatus || '접수예정',
+                progress_status: targetApp.progressStatus || '지원대기중',
+                construction_status: targetApp.constructionStatus || '간판시공 준비중',
+                sign_type: targetApp.signType || '',
+                referrer_code: targetApp.referrerCode || '',
+                memo: typeof targetApp.memo === 'object' ? JSON.stringify(targetApp.memo) : (targetApp.memo || '')
+              });
+            } else if (targetApp && typeof window.SupabaseSync.upsertApplication === 'function') {
               await window.SupabaseSync.upsertApplication(targetApp);
             }
             for (const uId of updatedUserIds) {
@@ -1145,7 +1159,12 @@
 
       // 2) Supabase 비동기 클라우드 DB 저장 (Non-blocking)
       if (window.SupabaseSync) {
-        if (typeof window.SupabaseSync.upsertApplication === 'function') {
+        if (typeof window.SupabaseSync.updateApplication === 'function') {
+          window.SupabaseSync.updateApplication(targetApp.id, {
+            referrer_code: targetApp.referrerCode || '',
+            memo: typeof targetApp.memo === 'object' ? JSON.stringify(targetApp.memo) : (targetApp.memo || '')
+          }).catch(() => {});
+        } else if (typeof window.SupabaseSync.upsertApplication === 'function') {
           window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
         }
         if (usersUpdated && salesUser && typeof window.SupabaseSync.updateUser === 'function') {
@@ -1177,7 +1196,14 @@
         targetApp.assignedAt = new Date().toISOString();
         this.saveApplications(apps);
 
-        if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
+        if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
+          window.SupabaseSync.updateApplication(targetApp.id, {
+            assigned_constructor_id: targetApp.assignedConstructorId,
+            assigned_constructor_name: targetApp.assignedConstructorName,
+            construction_status: targetApp.constructionStatus,
+            assigned_at: targetApp.assignedAt
+          }).catch(() => {});
+        } else if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
           window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
         }
       }
@@ -1226,7 +1252,12 @@
         targetApp.assignedConstructorName = null;
         this.saveApplications(apps);
 
-        if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
+        if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
+          window.SupabaseSync.updateApplication(targetApp.id, {
+            assigned_constructor_id: null,
+            assigned_constructor_name: null
+          }).catch(() => {});
+        } else if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
           window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
         }
       }
@@ -2021,7 +2052,14 @@
         t.referrerCode = selectedCode;
         t.referrer_code = selectedCode;
         localStorage.setItem('applications', JSON.stringify(curApps));
-        if (window.SupabaseSync) window.SupabaseSync.upsertApplication(t);
+        if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
+          window.SupabaseSync.updateApplication(t.id, {
+            referrer_code: selectedCode,
+            memo: typeof t.memo === 'object' ? JSON.stringify(t.memo) : (t.memo || '')
+          });
+        } else if (window.SupabaseSync) {
+          window.SupabaseSync.upsertApplication(t);
+        }
       }
     }
 
@@ -2257,8 +2295,15 @@
     }
 
     if (window.SupabaseSync) {
-      const app = apps.find(a => String(a.id) === String(id));
-      if (app) window.SupabaseSync.upsertApplication(app);
+      if (typeof window.SupabaseSync.updateApplication === 'function') {
+        window.SupabaseSync.updateApplication(id, {
+          draft_status: 'owner_approved',
+          draft_approved_at: approvedTime
+        });
+      } else {
+        const app = apps.find(a => String(a.id) === String(id));
+        if (app) window.SupabaseSync.upsertApplication(app);
+      }
       if (updatedUid) {
         const u = curUsers.find(usr => usr.id === updatedUid);
         if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });

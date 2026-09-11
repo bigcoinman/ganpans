@@ -217,6 +217,52 @@ function showToast(message, type = 'success') {
 window.showToast = showToast;
 window.showNotification = showToast;
 
+// [영구 무결 헬퍼] 신청서 객체로부터 현장 사진 목록을 안전하고 포괄적으로 추출
+function extractValidPhotos(app) {
+  if (!app) return [];
+  let photos = [];
+  if (Array.isArray(app.photos) && app.photos.length > 0) {
+    photos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:') || p.length > 100));
+  } else if (typeof app.photos === 'string' && app.photos.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(app.photos.trim());
+      if (Array.isArray(parsed)) {
+        photos = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:') || p.length > 100));
+      }
+    } catch (e) {}
+  } else if (typeof app.photos === 'string' && (app.photos.startsWith('data:') || app.photos.startsWith('http') || app.photos.startsWith('blob:') || app.photos.length > 100)) {
+    photos = [app.photos];
+  }
+
+  if (photos.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:') || app.fileData.length > 100)) {
+    photos = [app.fileData];
+  }
+  if (photos.length === 0 && app.image_url && typeof app.image_url === 'string') {
+    const trimmed = app.image_url.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          photos = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:') || p.length > 100));
+        }
+      } catch (e) {
+        photos = [trimmed];
+      }
+    } else if (trimmed.startsWith('data:') || trimmed.startsWith('http') || trimmed.startsWith('blob:') || trimmed.length > 100) {
+      photos = [trimmed];
+    }
+  }
+  // raw base64 접두어 누락 시 자동 보정
+  return photos.map(p => {
+    if (typeof p === 'string' && !p.startsWith('data:') && !p.startsWith('http') && !p.startsWith('blob:')) {
+      if (p.startsWith('/9j/')) return `data:image/jpeg;base64,${p}`;
+      if (p.startsWith('iVBORw0KGgo')) return `data:image/png;base64,${p}`;
+    }
+    return p;
+  });
+}
+window.extractValidPhotos = extractValidPhotos;
+
 // 4-0. 현장 사진 온디맨드 로딩 헬퍼 (대역폭 99% 절감을 위해 목록 조회 시 제외된 사진을 필요 시 1건만 Supabase에서 직접 로드)
 async function ensureApplicationPhotosLoaded(appOrId) {
   let app = appOrId;
@@ -230,10 +276,11 @@ async function ensureApplicationPhotosLoaded(appOrId) {
   if (!app || !app.id) return null;
 
   // 이미 메모리나 객체 내에 유효한 사진 데이터가 로드되어 있는 경우 즉시 반환
-  if (Array.isArray(app.photos) && app.photos.length > 0 && app.photos[0] && (app.photos[0].startsWith('data:') || app.photos[0].startsWith('http') || app.photos[0].startsWith('blob:'))) {
-    return app;
-  }
-  if (app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
+  let existingPhotos = extractValidPhotos(app);
+  if (existingPhotos.length > 0) {
+    app.photos = existingPhotos;
+    app.photosCount = existingPhotos.length;
+    app.fileData = existingPhotos[0];
     return app;
   }
 
@@ -251,24 +298,29 @@ async function ensureApplicationPhotosLoaded(appOrId) {
         let fileData = '';
         if (data.image_url) {
           const imgStr = String(data.image_url).trim();
-          if (imgStr.startsWith('[') && imgStr.includes('data:')) {
+          if (imgStr.startsWith('[')) {
             try {
               const parsed = JSON.parse(imgStr);
               if (Array.isArray(parsed)) {
-                photos = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+                photos = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:') || p.length > 100));
                 fileData = photos[0] || '';
               }
             } catch (e) {
               photos = [imgStr];
               fileData = imgStr;
             }
-          } else if (imgStr.startsWith('data:') || imgStr.startsWith('http') || imgStr.startsWith('blob:')) {
-            photos = [imgStr];
-            fileData = imgStr;
+          } else if (imgStr.startsWith('data:') || imgStr.startsWith('http') || imgStr.startsWith('blob:') || imgStr.length > 100) {
+            let formattedImg = imgStr;
+            if (!formattedImg.startsWith('data:') && !formattedImg.startsWith('http') && !formattedImg.startsWith('blob:')) {
+              if (formattedImg.startsWith('/9j/')) formattedImg = `data:image/jpeg;base64,${formattedImg}`;
+              else if (formattedImg.startsWith('iVBORw0KGgo')) formattedImg = `data:image/png;base64,${formattedImg}`;
+            }
+            photos = [formattedImg];
+            fileData = formattedImg;
           }
         }
 
-        // image_url에 유효한 base64가 없고 users items에 사진이 있는 경우 fallback 복원
+        // image_url에 사진이 없는 경우 users.items 로컬 및 원격 2중 fallback 복원
         if (photos.length === 0) {
           try {
             const localUsers = JSON.parse(localStorage.getItem('users')) || [];
@@ -276,13 +328,32 @@ async function ensureApplicationPhotosLoaded(appOrId) {
               if (u.items && Array.isArray(u.items)) {
                 const matchedItem = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
                 if (matchedItem && Array.isArray(matchedItem.photos) && matchedItem.photos.length > 0) {
-                  photos = matchedItem.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+                  photos = matchedItem.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:') || p.length > 100));
                   fileData = photos[0] || '';
                   break;
                 }
               }
             }
           } catch (eUserFallback) {}
+        }
+
+        // 원격 Supabase users 테이블에서 추가 Fallback 탐색
+        if (photos.length === 0 && window.supabaseClient) {
+          try {
+            const { data: supaUsers } = await window.supabaseClient.from('users').select('id, items').not('items', 'is', null);
+            if (Array.isArray(supaUsers)) {
+              for (const su of supaUsers) {
+                if (su.items && Array.isArray(su.items)) {
+                  const mItem = su.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
+                  if (mItem && Array.isArray(mItem.photos) && mItem.photos.length > 0) {
+                    photos = mItem.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:') || p.length > 100));
+                    fileData = photos[0] || '';
+                    break;
+                  }
+                }
+              }
+            }
+          } catch (eRemoteUserFallback) {}
         }
 
         app.photos = photos;
@@ -309,7 +380,7 @@ async function ensureApplicationPhotosLoaded(appOrId) {
           if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
             window.DataStore.saveApplications(localApps);
           } else {
-            if (window.DataStore && typeof window.DataStore.saveApplications === 'function') { window.DataStore.saveApplications(localApps); }
+            localStorage.setItem('applications', JSON.stringify(localApps));
           }
         }
       }
@@ -322,7 +393,7 @@ async function ensureApplicationPhotosLoaded(appOrId) {
 }
 window.ensureApplicationPhotosLoaded = ensureApplicationPhotosLoaded;
 
-// 4-1. 현장 사진 다운로드 (1장이면 이미지 단일 다운로드, 2장 이상이면 ZIP 압축 파일 자동 일괄 다운로드)
+// 4-1. 현장 사진 다운로드 (1장이면 이미지 단일 다운로드, 2장 이상이면 전용 팝업 모달 표시)
 async function downloadApplicationPhotos(appOrId) {
   let app = await ensureApplicationPhotosLoaded(appOrId);
   if (!app) {
@@ -331,31 +402,7 @@ async function downloadApplicationPhotos(appOrId) {
   }
 
   const storeName = app.storeName || app.shopName || app.ownerName || '신청점포';
-  let photos = [];
-
-  // 1) photos 배열에서 추출
-  if (Array.isArray(app.photos) && app.photos.length > 0) {
-    photos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
-  }
-
-  // 2) fileData 에서 보강
-  if (photos.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
-    photos = [app.fileData];
-  }
-
-  // 3) image_url 에서 JSON 배열 또는 단일 URL 파싱
-  if (photos.length === 0 && app.image_url && typeof app.image_url === 'string') {
-    if (app.image_url.startsWith('[') && app.image_url.includes('data:')) {
-      try {
-        const parsed = JSON.parse(app.image_url);
-        if (Array.isArray(parsed)) {
-          photos = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
-        }
-      } catch (e) {}
-    } else if (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) {
-      photos = [app.image_url];
-    }
-  }
+  let photos = extractValidPhotos(app);
 
   if (photos.length === 0) {
     alert('다운로드 가능한 현장 사진이 없습니다.\n[사진 등록] 버튼으로 사진을 등록해 주세요.');
@@ -370,7 +417,7 @@ async function downloadApplicationPhotos(appOrId) {
       const m = singleData.match(/^data:image\/([a-zA-Z0-9]+);/);
       if (m && m[1]) ext = (m[1] === 'jpeg') ? 'jpg' : m[1];
     }
-    const fileName = (app.fileName && !app.fileName.includes(',') && !app.fileName.startsWith('data:') && app.fileName !== '현장사진')
+    const fileName = (app.fileName && !app.fileName.includes(',') && !app.fileName.startsWith('data:') && app.fileName !== '현장사진' && app.fileName !== '업로드 파일 없음')
       ? app.fileName
       : `${storeName}_현장사진.${ext}`;
 
@@ -398,17 +445,10 @@ async function downloadZipFile(appOrId) {
 
   const storeName = app.storeName || app.shopName || app.ownerName || '신청점포';
   const safeStoreName = storeName.replace(/[\\/:*?"<>|]/g, '_').trim() || '신청점포';
-  let photos = [];
-
-  if (Array.isArray(app.photos) && app.photos.length > 0) {
-    photos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
-  }
-  if (photos.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
-    photos = [app.fileData];
-  }
+  let photos = extractValidPhotos(app);
 
   if (photos.length === 0) {
-    alert('다운로드 가능한 현장 사진이 없습니다.');
+    alert('다운로드 가능한 현장 사진이 없습니다.\n[사진 등록] 버튼으로 사진을 등록해 주세요.');
     return;
   }
 
@@ -479,17 +519,10 @@ async function downloadIndividualPhotos(appOrId) {
 
   const storeName = app.storeName || app.shopName || app.ownerName || '신청점포';
   const safeStoreName = storeName.replace(/[\\/:*?"<>|]/g, '_').trim() || '신청점포';
-  let photos = [];
-
-  if (Array.isArray(app.photos) && app.photos.length > 0) {
-    photos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
-  }
-  if (photos.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
-    photos = [app.fileData];
-  }
+  let photos = extractValidPhotos(app);
 
   if (photos.length === 0) {
-    alert('다운로드 가능한 현장 사진이 없습니다.');
+    alert('다운로드 가능한 현장 사진이 없습니다.\n[사진 등록] 버튼으로 사진을 등록해 주세요.');
     return;
   }
 
@@ -523,26 +556,7 @@ async function showPhotoDownloadModal(appOrId) {
 
   const storeName = app.storeName || app.shopName || app.ownerName || '신청점포';
   const safeStoreName = storeName.replace(/[\\/:*?"<>|]/g, '_').trim() || '신청점포';
-  let photos = [];
-
-  if (Array.isArray(app.photos) && app.photos.length > 0) {
-    photos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
-  }
-  if (photos.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
-    photos = [app.fileData];
-  }
-  if (photos.length === 0 && app.image_url && typeof app.image_url === 'string') {
-    if (app.image_url.startsWith('[') && app.image_url.includes('data:')) {
-      try {
-        const parsed = JSON.parse(app.image_url);
-        if (Array.isArray(parsed)) {
-          photos = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
-        }
-      } catch (e) {}
-    } else if (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) {
-      photos = [app.image_url];
-    }
-  }
+  let photos = extractValidPhotos(app);
 
   if (photos.length === 0) {
     alert('등록된 현장 사진이 없습니다.');
@@ -1128,22 +1142,21 @@ window.SupabaseSync = {
     const safeUserId = (app.userId && app.userId !== 'guest') ? (app.userId || app.user_id) : null;
     let photoData = null;
     let validCount = 0;
-    if (Array.isArray(app.photos) && app.photos.length > 0) {
-      const validPhotos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+    const validPhotos = extractValidPhotos(app);
+    if (validPhotos.length > 0) {
       validCount = validPhotos.length;
       if (validPhotos.length > 1) {
         photoData = JSON.stringify(validPhotos);
-      } else if (validPhotos.length === 1) {
+      } else {
         photoData = validPhotos[0];
       }
-    }
-    if (!photoData) {
-      photoData = app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http')) ? app.image_url : null);
-      if (photoData) validCount = (app.photosCount || 1);
+    } else if (app.image_url && typeof app.image_url === 'string' && (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('['))) {
+      photoData = app.image_url;
+      validCount = Math.max(validCount, app.photosCount || 1);
     }
     if (validCount === 0 && app.photosCount) validCount = app.photosCount;
 
-    return {
+    const payload = {
       id: String(app.id),
       user_id: safeUserId,
       owner_name: app.ownerName || app.owner_name || '',
@@ -1151,14 +1164,11 @@ window.SupabaseSync = {
       store_name: app.storeName || app.store_name || '',
       store_address: app.storeAddress || app.store_address || '',
       sign_type: app.signType || app.sign_type || '간판지원신청',
-      image_url: photoData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('[')) ? app.image_url : null),
       referrer_code: app.referrerCode || app.referrer_code || '',
       status: app.status || 'pending',
       assigned_constructor_id: app.assignedConstructorId || app.assigned_constructor_id || null,
       assigned_constructor_name: app.assignedConstructorName || app.assigned_constructor_name || null,
       construction_status: app.constructionStatus || app.construction_status || 'none',
-      construction_photos: app.constructionPhotos || [],
-      construction_invoice: app.invoicePhotos ? (app.invoicePhotos[0] || null) : (app.construction_invoice || null),
       memo: JSON.stringify({
         isBizItem: Boolean(app.isBizItem === true || String(app.isBizItem) === 'true'),
         receiptStatus: app.receiptStatus || '접수예정',
@@ -1169,6 +1179,25 @@ window.SupabaseSync = {
       }),
       applied_at: app.appliedAt || app.created_at || new Date().toISOString()
     };
+
+    // [중요 영구 방어] 사진 데이터가 유효할 때만 포함하여 기존 DB의 사진 덮어쓰기 파괴 차단
+    if (photoData) {
+      payload.image_url = photoData;
+    } else if (app._clearPhotos === true) {
+      payload.image_url = null;
+    }
+
+    if (Array.isArray(app.constructionPhotos) && app.constructionPhotos.length > 0) {
+      payload.construction_photos = app.constructionPhotos;
+    }
+
+    if (app.invoicePhotos && app.invoicePhotos.length > 0 && app.invoicePhotos[0]) {
+      payload.construction_invoice = app.invoicePhotos[0];
+    } else if (app.construction_invoice && typeof app.construction_invoice === 'string') {
+      payload.construction_invoice = app.construction_invoice;
+    }
+
+    return payload;
   },
 
   mapAppToBaseDb(app) {
@@ -1176,22 +1205,21 @@ window.SupabaseSync = {
     const safeUserId = (app.userId && app.userId !== 'guest') ? (app.userId || app.user_id) : null;
     let photoData = null;
     let validCount = 0;
-    if (Array.isArray(app.photos) && app.photos.length > 0) {
-      const validPhotos = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+    const validPhotos = extractValidPhotos(app);
+    if (validPhotos.length > 0) {
       validCount = validPhotos.length;
       if (validPhotos.length > 1) {
         photoData = JSON.stringify(validPhotos);
-      } else if (validPhotos.length === 1) {
+      } else {
         photoData = validPhotos[0];
       }
-    }
-    if (!photoData) {
-      photoData = app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http')) ? app.image_url : null);
-      if (photoData) validCount = (app.photosCount || 1);
+    } else if (app.image_url && typeof app.image_url === 'string' && (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('['))) {
+      photoData = app.image_url;
+      validCount = Math.max(validCount, app.photosCount || 1);
     }
     if (validCount === 0 && app.photosCount) validCount = app.photosCount;
 
-    return {
+    const payload = {
       id: String(app.id),
       user_id: safeUserId,
       owner_name: app.ownerName || app.owner_name || '',
@@ -1199,7 +1227,6 @@ window.SupabaseSync = {
       store_name: app.storeName || app.store_name || '',
       store_address: app.storeAddress || app.store_address || '',
       sign_type: app.signType || app.sign_type || '간판지원신청',
-      image_url: photoData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('[')) ? app.image_url : null),
       referrer_code: app.referrerCode || app.referrer_code || '',
       status: app.status || 'pending',
       memo: JSON.stringify({
@@ -1211,6 +1238,14 @@ window.SupabaseSync = {
         photoCount: validCount
       })
     };
+
+    if (photoData) {
+      payload.image_url = photoData;
+    } else if (app._clearPhotos === true) {
+      payload.image_url = null;
+    }
+
+    return payload;
   },
 
   mapDbToApp(dbApp) {
@@ -1259,20 +1294,25 @@ window.SupabaseSync = {
 
     if (dbApp.image_url) {
       const imgStr = String(dbApp.image_url).trim();
-      if (imgStr.startsWith('[') && imgStr.includes('data:')) {
+      if (imgStr.startsWith('[')) {
         try {
           const parsed = JSON.parse(imgStr);
           if (Array.isArray(parsed)) {
-            photos = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+            photos = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:') || p.length > 100));
             fileData = photos[0] || '';
           }
         } catch (e) {
           photos = [imgStr];
           fileData = imgStr;
         }
-      } else if (imgStr.startsWith('data:') || imgStr.startsWith('http') || imgStr.startsWith('blob:')) {
-        photos = [imgStr];
-        fileData = imgStr;
+      } else if (imgStr.startsWith('data:') || imgStr.startsWith('http') || imgStr.startsWith('blob:') || imgStr.length > 100) {
+        let formatted = imgStr;
+        if (!formatted.startsWith('data:') && !formatted.startsWith('http') && !formatted.startsWith('blob:')) {
+          if (formatted.startsWith('/9j/')) formatted = `data:image/jpeg;base64,${formatted}`;
+          else if (formatted.startsWith('iVBORw0KGgo')) formatted = `data:image/png;base64,${formatted}`;
+        }
+        photos = [formatted];
+        fileData = formatted;
       }
     }
 
@@ -1448,6 +1488,9 @@ window.SupabaseSync = {
     }
 
     const fullPayload = this.mapAppToDb(app);
+    if (!fullPayload.image_url && app._clearPhotos !== true) delete fullPayload.image_url;
+    if ((!fullPayload.construction_photos || fullPayload.construction_photos.length === 0) && app._clearPhotos !== true) delete fullPayload.construction_photos;
+    if (!fullPayload.construction_invoice && app._clearPhotos !== true) delete fullPayload.construction_invoice;
 
     try {
       const { error } = await window.supabaseClient.from('applications').upsert([fullPayload], { onConflict: 'id' });
@@ -1464,6 +1507,7 @@ window.SupabaseSync = {
 
       // 컬럼 누락 에러인 경우 basePayload로 안전하게 재시도
       const basePayload = this.mapAppToBaseDb(app);
+      if (!basePayload.image_url && app._clearPhotos !== true) delete basePayload.image_url;
       const { error: retryErr } = await window.supabaseClient.from('applications').upsert([basePayload], { onConflict: 'id' });
       if (!retryErr) return true;
 

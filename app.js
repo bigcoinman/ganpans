@@ -1720,15 +1720,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                // 3) Supabase DB SSOT 동기화 (유효 컬럼만 업데이트 및 upsert)
-                if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function' && targetApp) {
+                // 3) Supabase DB SSOT 동기화 (image_url 및 사진 메타데이터 직접 저장)
+                const photoJson = (targetApp && Array.isArray(targetApp.photos) && targetApp.photos.length > 0)
+                    ? JSON.stringify(targetApp.photos)
+                    : base64Data;
+                const photoMemo = (targetApp && typeof targetApp.memo === 'object')
+                    ? JSON.stringify({ ...targetApp.memo, photoCount: (targetApp.photos ? targetApp.photos.length : 1) })
+                    : (targetApp ? targetApp.memo : '');
+
+                if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
+                    window.SupabaseSync.updateApplication(appId, {
+                        image_url: photoJson,
+                        memo: photoMemo
+                    }).catch(e => console.warn('Supabase photo updateApplication err:', e));
+                } else if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function' && targetApp) {
                     window.SupabaseSync.upsertApplication(targetApp).catch(e => console.warn('Supabase photo upsertApplication err:', e));
                 } else if (window.supabaseClient) {
                     try {
                         await window.supabaseClient
                             .from('applications')
                             .update({
-                                image_url: base64Data
+                                image_url: photoJson,
+                                memo: photoMemo
                             })
                             .eq('id', appId);
                     } catch (dbErr) {
@@ -4553,7 +4566,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (window.SupabaseSync) {
-                window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
+                if (typeof window.SupabaseSync.updateApplication === 'function') {
+                    window.SupabaseSync.updateApplication(targetApp.id, {
+                        assigned_constructor_id: constId,
+                        assigned_constructor_name: constName,
+                        construction_status: targetApp.constructionStatus || 'before_construction',
+                        assigned_at: targetApp.assignedAt || new Date().toISOString()
+                    }).catch(() => {});
+                } else {
+                    window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
+                }
             }
         }
 
@@ -4621,7 +4643,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
             }
             if (window.SupabaseSync) {
-                window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
+                if (typeof window.SupabaseSync.updateApplication === 'function') {
+                    window.SupabaseSync.updateApplication(targetApp.id, {
+                        assigned_constructor_id: null,
+                        assigned_constructor_name: null
+                    }).catch(() => {});
+                } else {
+                    window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
+                }
             }
         }
 
@@ -5071,8 +5100,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (window.SupabaseSync) {
-            const app = apps.find(a => String(a.id) === String(id));
-            if (app) window.SupabaseSync.upsertApplication(app);
+            if (typeof window.SupabaseSync.updateApplication === 'function') {
+                const app = apps.find(a => String(a.id) === String(id));
+                window.SupabaseSync.updateApplication(id, {
+                    sign_draft_photos: app ? (app.signDraftPhotos || []) : uploadedBase64List,
+                    construction_status: app && app.constructionStatus === 'before_construction' ? 'design_draft' : (app ? app.constructionStatus : 'design_draft')
+                });
+            } else {
+                const app = apps.find(a => String(a.id) === String(id));
+                if (app) window.SupabaseSync.upsertApplication(app);
+            }
             if (updatedUid) {
                 const u = curUsers.find(usr => usr.id === updatedUid);
                 if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
@@ -5144,8 +5181,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (window.SupabaseSync) {
-            const app = apps.find(a => String(a.id) === String(id));
-            if (app) window.SupabaseSync.upsertApplication(app);
+            if (typeof window.SupabaseSync.updateApplication === 'function') {
+                const app = apps.find(a => String(a.id) === String(id));
+                window.SupabaseSync.updateApplication(id, {
+                    construction_photos: app ? (app.constructionPhotos || []) : uploadedBase64List
+                });
+            } else {
+                const app = apps.find(a => String(a.id) === String(id));
+                if (app) window.SupabaseSync.upsertApplication(app);
+            }
             if (updatedUid) {
                 const u = curUsers.find(usr => usr.id === updatedUid);
                 if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
@@ -5223,8 +5267,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (updatedUid && window.SupabaseSync) {
             const u = curUsers.find(usr => usr.id === updatedUid);
             if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-            const app = apps.find(a => String(a.id) === String(id));
-            if (app) window.SupabaseSync.upsertApplication(app);
+            if (typeof window.SupabaseSync.updateApplication === 'function') {
+                window.SupabaseSync.updateApplication(id, {
+                    construction_status: 'after_construction',
+                    construction_completed_at: new Date().toISOString()
+                });
+            } else {
+                const app = apps.find(a => String(a.id) === String(id));
+                if (app) window.SupabaseSync.upsertApplication(app);
+            }
         }
 
         alert('시공 완료 보고가 정상 접수되었습니다!\n최고관리자의 최종 시공 사진 검수 후 정산 종결 처리가 진행됩니다.');
