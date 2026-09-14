@@ -29,5 +29,7 @@ desktop.ini
 *.pem
 credentials.json
 client_secret*.json
-config.env
+# Cloudflare / Vercel cache
+.wrangler/
+.vercel/
 
