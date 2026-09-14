@@ -4589,19 +4589,32 @@ document.addEventListener('DOMContentLoaded', () => {
       const myId = String(activeUser.id || '').trim().toLowerCase();
       const myName = String(activeUser.name || '').trim().toLowerCase();
 
-      // 최고관리자 SSOT: 담당 영업자가 다른 사람으로 명시 지정된 경우 절대 내 목록에 노출 금지 (부존재 일치 의무)
+      // 1. 점주 본인 신청 건 확인 (내 계정 ID, 연락처, 대표자명 일치)
+      const isMyOwnApp = Boolean(
+        (app.userId && app.userId === activeUser.id) ||
+        (app.registeredBy && app.registeredBy === activeUser.id) ||
+        (activeUser.phone && app.ownerPhone && app.ownerPhone.replace(/[^0-9]/g, '') === activeUser.phone.replace(/[^0-9]/g, '')) ||
+        (activeUser.name && app.ownerName && app.ownerName === activeUser.name)
+      );
+
+      // 2. 일반 점주/회원인 경우: 본인이 신청한 건은 담당 영업자 지정과 무관하게 항상 100% 정상 노출
+      if (activeUser.role !== 'business') {
+        return isMyOwnApp;
+      }
+
+      // 3. 영업자 회원인 경우: 최고관리자 SSOT 기준 적용
+      // 3-1) 최고관리자가 담당 영업자를 다른 사람으로 명시 지정한 건은 절대 내 목록에 노출 금지 (부존재 일치 의무)
       const isAssignedToOtherSales = Boolean(
         (salesId && salesId !== myId && salesId !== myBiz) ||
         (refCode && refCode !== myBiz && refCode !== myId && refCode !== myName)
       );
       if (isAssignedToOtherSales) return false;
 
-      const isMyId = app.userId === activeUser.id || app.registeredBy === activeUser.id || app.salespersonId === activeUser.id;
-      const isMyPhone = activeUser.phone && app.ownerPhone && app.ownerPhone.replace(/[^0-9]/g, '') === activeUser.phone.replace(/[^0-9]/g, '');
-      const isMyName = activeUser.name && app.ownerName === activeUser.name;
+      // 3-2) 내게 귀속된 건: 담당코드가 내 코드이거나, 내게 배정된 건, 또는 내가 영업자로서 직접 접수한 건
       const isMyBizCode = Boolean(refCode && (refCode === myBiz || refCode === myId || refCode === myName));
+      const isMyAssigned = Boolean(salesId && (salesId === myId || salesId === myBiz));
 
-      return isMyId || isMyPhone || isMyName || isMyBizCode;
+      return isMyBizCode || isMyAssigned || isMyOwnApp;
     });
 
     // 검색 필터링 및 엑셀 버튼 동적 보장
