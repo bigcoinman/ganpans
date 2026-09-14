@@ -155,9 +155,22 @@
             const originalLength = u.items.length;
             const validItems = u.items.filter(item => {
               if (!item || !item.id) return false;
-              const matchingApp = apps.find(a => String(a.id) === String(item.id) || String(a.id) === String(item.appRefId));
+              const iid = String(item.id || '').trim().toLowerCase();
+              const iref = String(item.appRefId || '').trim().toLowerCase();
+              const normIid = iid.replace(/[^a-zA-Z0-9]/g, '');
+
+              const matchingApp = apps.find(a => {
+                if (!a) return false;
+                const aid = String(a.id || '').trim().toLowerCase();
+                const aref = String(a.appRefId || '').trim().toLowerCase();
+                if (aid === iid || aref === iid) return true;
+                if (iref && (aid === iref || aref === iref)) return true;
+                if (normIid && (aid.replace(/[^a-zA-Z0-9]/g, '') === normIid || aref.replace(/[^a-zA-Z0-9]/g, '') === normIid)) return true;
+                return false;
+              });
+
               if (!matchingApp) return false; // 최고관리자 대시보드에 없는 삭제건 100% 영구 제거
-              if (matchingApp.isBizItem !== true && String(matchingApp.isBizItem) !== 'true') return false; // 미승인건 영구 제거
+              if (matchingApp.isBizItem !== true && String(matchingApp.isBizItem) !== 'true') return false; // 미승인/비활성화건 100% 영구 제거
               return true;
             });
 
@@ -869,12 +882,19 @@
         memoObj.isBizItem = false;
         app.memo = JSON.stringify(memoObj);
 
+        const normAppId = String(app.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const targetAppIdStr = String(app.id || '').trim().toLowerCase();
+        const targetAppRefStr = String(app.appRefId || '').trim().toLowerCase();
+
         curUsers = curUsers.map(u => {
           if (u.items && u.items.length > 0) {
             const filteredItems = u.items.filter(it => {
-              const matchId = String(it.id).trim().toLowerCase() === String(app.id).trim().toLowerCase();
-              const matchAppRef = String(it.appRefId || '').trim().toLowerCase() === String(app.id).trim().toLowerCase();
-              return !matchId && !matchAppRef;
+              const iid = String(it.id || '').trim().toLowerCase();
+              const iref = String(it.appRefId || '').trim().toLowerCase();
+              if (iid === targetAppIdStr || iref === targetAppIdStr) return false;
+              if (targetAppRefStr && (iid === targetAppRefStr || iref === targetAppRefStr)) return false;
+              if (normAppId && (iid.replace(/[^a-zA-Z0-9]/g, '') === normAppId || iref.replace(/[^a-zA-Z0-9]/g, '') === normAppId)) return false;
+              return true;
             });
             if (filteredItems.length !== u.items.length) {
               usersToSync.push({ id: u.id, items: filteredItems });
@@ -942,12 +962,17 @@
 
       const cleanVal = String(value || '').trim();
       const targetIdStr = String(itemId || '').trim();
+      const normTargetId = targetIdStr.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
       // 0) itemId로 users.items 내 해당 물건의 메타데이터(상호명, 연락처 등) 사전 탐색
       let sourceItem = null;
       for (let u of users) {
         if (u.items && Array.isArray(u.items)) {
-          const found = u.items.find(it => String(it.id) === targetIdStr || (it.appRefId && String(it.appRefId) === targetIdStr));
+          const found = u.items.find(it => {
+            const iid = String(it.id || '').trim().toLowerCase();
+            const iref = String(it.appRefId || '').trim().toLowerCase();
+            return iid === targetIdStr.toLowerCase() || iref === targetIdStr.toLowerCase() || (normTargetId && (iid.replace(/[^a-zA-Z0-9]/g, '') === normTargetId || iref.replace(/[^a-zA-Z0-9]/g, '') === normTargetId));
+          });
           if (found) {
             sourceItem = found;
             break;
@@ -955,9 +980,13 @@
         }
       }
 
-      // 1) applications 내 매칭 항목 갱신 (고유 ID 단일 원천 매칭)
+      // 1) applications 내 매칭 항목 갱신 (고유 ID 단일 원천 매칭 & 정규화)
       apps = apps.map(app => {
-        const isIdMatch = String(app.id) === targetIdStr || (app.appRefId && String(app.appRefId) === targetIdStr);
+        const aid = String(app.id || '').trim().toLowerCase();
+        const aref = String(app.appRefId || '').trim().toLowerCase();
+        const isIdMatch = aid === targetIdStr.toLowerCase() ||
+                          aref === targetIdStr.toLowerCase() ||
+                          (normTargetId && (aid.replace(/[^a-zA-Z0-9]/g, '') === normTargetId || aref.replace(/[^a-zA-Z0-9]/g, '') === normTargetId));
 
         if (isIdMatch) {
           app.isBizItem = true;
@@ -1004,6 +1033,20 @@
               }
             }
           }
+
+          // ** [SSOT 보장] memo JSON 객체에 최신 접수/진행 상태 및 영업물건 여부 100% 최신 직렬화 **
+          let memoObj = {};
+          try {
+            memoObj = typeof app.memo === 'object' ? (app.memo || {}) : JSON.parse(app.memo || '{}');
+          } catch (e) { memoObj = {}; }
+          memoObj.isBizItem = true;
+          memoObj.receiptStatus = app.receiptStatus || '접수예정';
+          memoObj.progressStatus = app.progressStatus || '지원대기중';
+          if (app.salespersonId) memoObj.salespersonId = app.salespersonId;
+          if (app.salespersonName) memoObj.salespersonName = app.salespersonName;
+          if (app.referrerCode) memoObj.referrerCode = app.referrerCode;
+          app.memo = JSON.stringify(memoObj);
+
           targetApp = app;
         }
         return app;
@@ -1034,19 +1077,30 @@
           status: (initProgress === '대상자선정' || initProgress === '간판시공 준비중' || initProgress === '간판시공완료') ? 'approved' : 'pending',
           constructionStatus: (initProgress === '간판시공완료' ? 'completed' : (initProgress === '간판시공 준비중' ? 'in_construction' : 'before_construction')),
           appliedAt: sourceItem.registeredAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          memo: JSON.stringify({
+            isBizItem: true,
+            receiptStatus: initReceipt,
+            progressStatus: initProgress,
+            salespersonId: sourceItem.salespersonId || '',
+            salespersonName: sourceItem.salespersonName || '',
+            referrerCode: sourceItem.referrerCode || ''
+          })
         };
         apps.push(targetApp);
       }
 
-      // 2) users.items 내 매칭 항목 갱신 (고유 ID 단일 원천 매칭)
+      // 2) users.items 내 매칭 항목 갱신 (고유 ID 단일 원천 매칭 & 정규화)
       users = users.map(u => {
         if (u.items && Array.isArray(u.items)) {
           let userItemModified = false;
           const updatedItems = u.items.map(item => {
-            const isIdMatch = String(item.id) === targetIdStr || 
-                              (item.appRefId && String(item.appRefId) === targetIdStr) || 
-                              (targetApp && (String(item.id) === String(targetApp.id) || String(item.appRefId) === String(targetApp.id)));
+            const iid = String(item.id || '').trim().toLowerCase();
+            const iref = String(item.appRefId || '').trim().toLowerCase();
+            const isIdMatch = iid === targetIdStr.toLowerCase() || 
+                              iref === targetIdStr.toLowerCase() || 
+                              (normTargetId && (iid.replace(/[^a-zA-Z0-9]/g, '') === normTargetId || iref.replace(/[^a-zA-Z0-9]/g, '') === normTargetId)) ||
+                              (targetApp && (iid === String(targetApp.id).toLowerCase() || iref === String(targetApp.id).toLowerCase()));
 
             if (isIdMatch) {
               userItemModified = true;

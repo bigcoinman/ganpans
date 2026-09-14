@@ -1853,6 +1853,7 @@ window.SupabaseSync = {
                   if (localApp.receiptStatus !== undefined) appObj.receiptStatus = localApp.receiptStatus;
                   if (localApp.progressStatus !== undefined) appObj.progressStatus = localApp.progressStatus;
                   if (localApp.isBizItem !== undefined) appObj.isBizItem = localApp.isBizItem;
+                  if (localApp.memo !== undefined) appObj.memo = localApp.memo;
                   if (localApp.signType !== undefined) appObj.signType = localApp.signType;
                   if (localApp.assignedConstructorId !== undefined) appObj.assignedConstructorId = localApp.assignedConstructorId;
                   if (localApp.assignedConstructorName !== undefined) appObj.assignedConstructorName = localApp.assignedConstructorName;
