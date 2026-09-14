@@ -190,7 +190,10 @@ body.mobile-app-body {
 }
 
 .header-brand img {
-    height: 29px !important;
+    height: 36px !important;
+    max-height: 40px !important;
+    width: auto !important;
+    object-fit: contain;
 }
 
 .brand-icon {
