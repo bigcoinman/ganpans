@@ -3546,7 +3546,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     let curReceipt = String(item.receiptStatus || '접수예정').trim();
-                    let curProgress = String(item.progressStatus || '').trim();
+                    let curProgress = String(item.progressStatus || '지원대기중').trim();
 
                     // 영문 및 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화
                     if (curProgress === '대상자선정' || curProgress === '대상자 선정' || curProgress === '선정' || curProgress === '승인 완료' || curProgress === '승인완료' || curProgress === 'approved' || curProgress === 'before_construction') {
@@ -3557,21 +3557,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         curProgress = '간판시공완료';
                     } else if (curProgress === '심사대기' || curProgress === '심사 대기' || curProgress === '심사대기중') {
                         curProgress = '심사대기중';
-                    }
-
-                    // 진행 상태가 대상자선정 이상이거나 심사대기중이면 접수상태는 자동으로 접수완료로 보정
-                    if (curProgress === '대상자선정' || curProgress === '간판시공 준비중' || curProgress === '간판시공완료' || curProgress === '심사대기중') {
-                        if (curReceipt === '접수예정' || curReceipt === '접수 대기' || !curReceipt) {
-                            curReceipt = '접수완료';
-                        }
-                    }
-
-                    const isReceiptPending = (curReceipt === '접수예정' || curReceipt === '접수 대기' || !curReceipt);
-                    if (isReceiptPending) {
+                    } else if (!curProgress || curProgress === '지원대기중' || curProgress === 'pending') {
                         curProgress = '지원대기중';
-                    } else if (!curProgress || curProgress === '지원대기중') {
-                        curProgress = '심사대기중';
                     }
+
+                    if (curReceipt === '접수완료' || curReceipt === '접수 완료') {
+                        curReceipt = '접수완료';
+                    } else if (curReceipt === '업체신청') {
+                        curReceipt = '업체신청';
+                    } else {
+                        curReceipt = '접수예정';
+                    }
+
+                    const isReceiptPending = (curReceipt === '접수예정');
 
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">

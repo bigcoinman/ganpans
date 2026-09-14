@@ -406,11 +406,10 @@
           );
         }
 
-        // [락 확인 및 최신 상태 보장]
         const normAid = String(app.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
         const recentLock = (this._recentStatusUpdates && (this._recentStatusUpdates[String(app.id)] || (normAid && this._recentStatusUpdates[normAid]))) || null;
         let rStatus = (recentLock && recentLock.receiptStatus) ? recentLock.receiptStatus : (app.receiptStatus || '접수예정');
-        let pStatus = (recentLock && recentLock.progressStatus) ? recentLock.progressStatus : String(app.progressStatus || '').trim();
+        let pStatus = (recentLock && recentLock.progressStatus) ? recentLock.progressStatus : (app.progressStatus || '지원대기중');
 
         // 영문 또는 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화
         if (pStatus === '대상자선정' || pStatus === '대상자 선정' || pStatus === '선정' || pStatus === '승인 완료' || pStatus === '승인완료' || pStatus === 'approved' || pStatus === 'before_construction' || pStatus === '시공 전' || pStatus === '시공사 배정 (시공 전)' || pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인') {
@@ -421,15 +420,16 @@
           pStatus = '간판시공완료';
         } else if (pStatus === '심사대기' || pStatus === '심사 대기' || pStatus === '심사대기중' || pStatus === '서류 보완 필요') {
           pStatus = '심사대기중';
+        } else if (pStatus === '지원대기중' || pStatus === 'pending' || !pStatus) {
+          pStatus = '지원대기중';
         }
 
-        // 만약 진행 상태가 대상자선정/간판시공준비/간판시공완료인데 접수 상태가 접수예정이면 접수상태를 자동으로 접수완료로 승격
-        if (pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' || pStatus === '심사대기중') {
-          if (rStatus === '접수예정' || rStatus === '접수 대기' || !rStatus) {
-            rStatus = '접수완료';
-          }
-        } else if (rStatus === '접수예정' || rStatus === '접수 대기' || !rStatus) {
-          pStatus = '지원대기중';
+        if (rStatus === '접수 완료' || rStatus === '접수완료') {
+          rStatus = '접수완료';
+        } else if (rStatus === '업체신청') {
+          rStatus = '업체신청';
+        } else {
+          rStatus = '접수예정';
         }
 
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
