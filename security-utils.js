@@ -1884,17 +1884,24 @@ window.SupabaseSync = {
                   if (parts.length >= 2) prefixCode = parts.slice(0, -1).join('-').toLowerCase();
                 }
 
-                const targetUser = curUsers.find(u =>
-                  (u.role === 'business' || u.role === 'admin') &&
-                  ((salesId && String(u.id).trim().toLowerCase() === salesId) ||
-                    (salesId && u.bizCode && String(u.bizCode).trim().toLowerCase() === salesId) ||
-                    (salesName && String(u.name).trim().toLowerCase() === salesName) ||
-                    (refCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
-                    (refCode && String(u.id).trim().toLowerCase() === refCode) ||
-                    (refCode && String(u.name).trim().toLowerCase() === refCode) ||
-                    (prefixCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === prefixCode) ||
-                    (appUser && String(u.id).trim().toLowerCase() === appUser))
-                );
+                let targetUser = null;
+                if (salesId || salesName || refCode) {
+                  targetUser = curUsers.find(u =>
+                    (u.role === 'business' || u.role === 'admin') &&
+                    ((salesId && String(u.id).trim().toLowerCase() === salesId) ||
+                      (salesId && u.bizCode && String(u.bizCode).trim().toLowerCase() === salesId) ||
+                      (salesName && String(u.name).trim().toLowerCase() === salesName) ||
+                      (refCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
+                      (refCode && String(u.id).trim().toLowerCase() === refCode) ||
+                      (refCode && String(u.name).trim().toLowerCase() === refCode))
+                  );
+                } else if (prefixCode || appUser) {
+                  targetUser = curUsers.find(u =>
+                    (u.role === 'business' || u.role === 'admin') &&
+                    ((prefixCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === prefixCode) ||
+                      (appUser && String(u.id).trim().toLowerCase() === appUser))
+                  );
+                }
 
                 if (targetUser) {
                   if (!targetUser.items) targetUser.items = [];
@@ -1920,13 +1927,29 @@ window.SupabaseSync = {
               }
             });
 
-            // 2) freshApps에 없거나 isBizItem: false 인 건은 영업자 items에서 완전 제거 (부존재 일치 의무)
+            // 2) freshApps에 없거나 isBizItem: false 인 건, 또는 최고관리자가 다른 영업자로 변경한 건은 해당 영업자 items에서 완전 제거 (부존재 일치 의무)
             curUsers.forEach(u => {
               if (u.items && Array.isArray(u.items)) {
                 const prevLen = u.items.length;
+                const uBiz = String(u.bizCode || '').trim().toLowerCase();
+                const uId = String(u.id || '').trim().toLowerCase();
+                const uName = String(u.name || '').trim().toLowerCase();
+
                 u.items = u.items.filter(it => {
                   const matchedApp = freshApps.find(fa => String(fa.id) === String(it.id) || String(fa.appRefId) === String(it.id) || (it.appRefId && String(fa.id) === String(it.appRefId)));
-                  return matchedApp && Boolean(matchedApp.isBizItem === true || String(matchedApp.isBizItem) === 'true');
+                  if (!matchedApp || !Boolean(matchedApp.isBizItem === true || String(matchedApp.isBizItem) === 'true')) {
+                    return false;
+                  }
+                  // 최고관리자 SSOT: 담당 영업자가 다른 사람으로 명시 지정된 경우 이전 영업자 items에서 즉시 삭제
+                  const sId = String(matchedApp.salespersonId || '').trim().toLowerCase();
+                  const rCode = String(matchedApp.referrerCode || matchedApp.referrer_code || '').trim().toLowerCase();
+                  const isAssignedToOther = Boolean(
+                    (sId && sId !== uId && sId !== uBiz) ||
+                    (rCode && rCode !== uBiz && rCode !== uId && rCode !== uName)
+                  );
+                  if (isAssignedToOther) return false;
+
+                  return true;
                 });
                 if (u.items.length !== prevLen) {
                   usersItemsModified = true;

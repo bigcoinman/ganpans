@@ -4583,16 +4583,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!activeUser) return;
     const myApps = apps.filter(app => {
-      const isMyId = app.userId === activeUser.id || app.registeredBy === activeUser.id || app.salespersonId === activeUser.id;
-      const isMyPhone = activeUser.phone && app.ownerPhone && app.ownerPhone.replace(/[^0-9]/g, '') === activeUser.phone.replace(/[^0-9]/g, '');
-      const isMyName = activeUser.name && app.ownerName === activeUser.name;
       const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
+      const salesId = String(app.salespersonId || '').trim().toLowerCase();
       const myBiz = String(activeUser.bizCode || '').trim().toLowerCase();
       const myId = String(activeUser.id || '').trim().toLowerCase();
       const myName = String(activeUser.name || '').trim().toLowerCase();
+
+      // 최고관리자 SSOT: 담당 영업자가 다른 사람으로 명시 지정된 경우 절대 내 목록에 노출 금지 (부존재 일치 의무)
+      const isAssignedToOtherSales = Boolean(
+        (salesId && salesId !== myId && salesId !== myBiz) ||
+        (refCode && refCode !== myBiz && refCode !== myId && refCode !== myName)
+      );
+      if (isAssignedToOtherSales) return false;
+
+      const isMyId = app.userId === activeUser.id || app.registeredBy === activeUser.id || app.salespersonId === activeUser.id;
+      const isMyPhone = activeUser.phone && app.ownerPhone && app.ownerPhone.replace(/[^0-9]/g, '') === activeUser.phone.replace(/[^0-9]/g, '');
+      const isMyName = activeUser.name && app.ownerName === activeUser.name;
       const isMyBizCode = Boolean(refCode && (refCode === myBiz || refCode === myId || refCode === myName));
-      const isMyPrefix = Boolean(myBiz && String(app.id || '').toLowerCase().startsWith(myBiz + '-'));
-      return isMyId || isMyPhone || isMyName || isMyBizCode || isMyPrefix;
+
+      return isMyId || isMyPhone || isMyName || isMyBizCode;
     });
 
     // 검색 필터링 및 엑셀 버튼 동적 보장
