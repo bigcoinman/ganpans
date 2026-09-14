@@ -1269,22 +1269,39 @@ window.SupabaseSync = {
           if (parsedMemo.progressStatus) progressStatus = parsedMemo.progressStatus;
           if (parsedMemo.salespersonId) salespersonId = String(parsedMemo.salespersonId).trim();
           if (parsedMemo.salespersonName) salespersonName = String(parsedMemo.salespersonName).trim();
+          if (parsedMemo.referrerCode && !dbApp.referrer_code) dbApp.referrer_code = String(parsedMemo.referrerCode).trim();
           if (parsedMemo.photoCount !== undefined) photoCount = Number(parsedMemo.photoCount) || 0;
         }
       } catch (eMemo) {}
     }
 
-    // 담당 영업자 정보 폴백 매칭 (referrer_code 기반)
-    if ((!salespersonId || !salespersonName) && dbApp.referrer_code) {
+    // 담당 영업자 코드 및 정보 폴백 매칭 (신청번호 채번 앞자리 접두사 폴백 포함)
+    let finalRefCode = dbApp.referrer_code || '';
+    if (!finalRefCode && dbApp.id && String(dbApp.id).includes('-')) {
+      const parts = String(dbApp.id).split('-');
+      if (parts.length >= 2) {
+        finalRefCode = parts.slice(0, -1).join('-');
+      }
+    }
+
+    if ((!salespersonId || !salespersonName) && finalRefCode) {
       try {
         const localUsers = JSON.parse(localStorage.getItem('users')) || [];
-        const refLower = String(dbApp.referrer_code).trim().toLowerCase();
-        const matchedSales = localUsers.find(u =>
-          (u.role === 'business' || u.role === 'admin') &&
-          ((u.bizCode && String(u.bizCode).trim().toLowerCase() === refLower) ||
-           (u.id && String(u.id).trim().toLowerCase() === refLower) ||
-           (u.name && String(u.name).trim().toLowerCase() === refLower))
-        );
+        const normRef = finalRefCode.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const numRef = normRef.replace(/^b/i, '');
+        const matchedSales = localUsers.find(u => {
+          if (u.role !== 'business' && u.role !== 'admin') return false;
+          const uBiz = String(u.bizCode || '').trim().toLowerCase();
+          const normUBiz = uBiz.replace(/[^a-zA-Z0-9]/g, '');
+          const numUBiz = normUBiz.replace(/^b/i, '');
+          const uId = String(u.id || '').trim().toLowerCase();
+          const uName = String(u.name || '').trim().toLowerCase();
+          return (
+            (uBiz && (uBiz === finalRefCode.toLowerCase() || normUBiz === normRef || (numRef && numUBiz === numRef))) ||
+            (uId && (uId === finalRefCode.toLowerCase() || uId.replace(/[^a-zA-Z0-9]/g, '') === normRef)) ||
+            (uName && uName === finalRefCode.toLowerCase())
+          );
+        });
         if (matchedSales) {
           salespersonId = matchedSales.id;
           salespersonName = matchedSales.name;
@@ -1347,12 +1364,13 @@ window.SupabaseSync = {
       hasPhoto: hasPhoto,
       appliedAt: dbApp.applied_at || dbApp.created_at || new Date().toISOString(),
       status: dbApp.status || 'pending',
-      referrerCode: dbApp.referrer_code || '',
+      referrerCode: finalRefCode,
       salespersonId: salespersonId,
       salespersonName: salespersonName,
       isBizItem: isBizItem,
       receiptStatus: receiptStatus,
       progressStatus: progressStatus,
+      memo: dbApp.memo || '',
       assignedConstructorId: dbApp.assigned_constructor_id || '',
       assignedConstructorName: dbApp.assigned_constructor_name || '',
       constructionStatus: dbApp.construction_status || 'none',
@@ -1523,12 +1541,27 @@ window.SupabaseSync = {
     return false;
   },
 
-  // 5. 지원 신청서 필드 수정
+  // 5. 지원 신청서 필드 수정 (유효 컬럼 화이트리스트 필터링으로 스키마 불일치 에러 원천 차단)
   async updateApplication(appId, updateFields) {
-    if (!window.supabaseClient || !appId) return false;
+    if (!window.supabaseClient || !appId || !updateFields) return false;
     try {
-      const { error } = await window.supabaseClient.from('applications').update(updateFields).eq('id', String(appId));
+      const validCols = [
+        'user_id', 'owner_name', 'phone', 'store_name', 'store_address',
+        'sign_type', 'referrer_code', 'status', 'assigned_constructor_id',
+        'assigned_constructor_name', 'construction_status', 'memo',
+        'image_url', 'construction_photos', 'construction_invoice', 'applied_at'
+      ];
+      const safePayload = {};
+      for (const [k, v] of Object.entries(updateFields)) {
+        if (validCols.includes(k)) {
+          safePayload[k] = v;
+        }
+      }
+      if (Object.keys(safePayload).length === 0) return true;
+
+      const { error } = await window.supabaseClient.from('applications').update(safePayload).eq('id', String(appId));
       if (!error) return true;
+      console.warn('Supabase updateApplication error:', error.message);
     } catch (err) {
       console.error('Supabase updateApplication exception:', err);
     }
@@ -1799,7 +1832,17 @@ window.SupabaseSync = {
         const freshApps = supaApps
           .map(sa => {
             const appObj = this.mapDbToApp(sa);
-            const localApp = localApps.find(la => String(la.id) === String(appObj.id));
+            if (!appObj) return null;
+            const normObjId = String(appObj.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+            const localApp = localApps.find(la => {
+              if (!la) return false;
+              const laid = String(la.id || '').trim().toLowerCase();
+              const laref = String(la.appRefId || '').trim().toLowerCase();
+              const objid = String(appObj.id || '').trim().toLowerCase();
+              if (laid === objid || laref === objid) return true;
+              if (normObjId && (laid.replace(/[^a-zA-Z0-9]/g, '') === normObjId || laref.replace(/[^a-zA-Z0-9]/g, '') === normObjId)) return true;
+              return false;
+            });
             if (localApp) {
               // 1) 최근 로컬에서 상태 변경이 일어난 경우(30초 이내 수정 건) Supabase 아직 반영 전이면 로컬 최신 상태 완전 보존 (동기화 레이스 컨디션 방어)
               if (localApp.updatedAt) {
