@@ -1746,6 +1746,42 @@ window.SupabaseSync = {
             return u;
           });
 
+        // [SSOT 영구 방어] Supabase users 테이블에서 읽어온 items의 구형 상태값(접수예정/지원대기중)이
+        // 로컬 applications 및 DataStore 최신 상태를 파괴하지 못하도록 100% 동기화 방어
+        const localCurrentApps = JSON.parse(localStorage.getItem('applications')) || [];
+        const recentLocks = (window.DataStore && window.DataStore._recentStatusUpdates) || {};
+        freshUsers.forEach(fu => {
+          if (fu.items && Array.isArray(fu.items)) {
+            fu.items = fu.items.map(it => {
+              const itIdStr = String(it.id || '').trim().toLowerCase();
+              const normItId = itIdStr.replace(/[^a-zA-Z0-9]/g, '');
+              const lock = recentLocks[it.id] || (normItId && recentLocks[normItId]);
+              if (lock) {
+                return {
+                  ...it,
+                  receiptStatus: lock.receiptStatus || it.receiptStatus,
+                  progressStatus: lock.progressStatus || it.progressStatus,
+                  status: lock.status || it.status
+                };
+              }
+              const matchedApp = localCurrentApps.find(la => {
+                const laid = String(la.id || '').trim().toLowerCase();
+                const laref = String(la.appRefId || '').trim().toLowerCase();
+                return laid === itIdStr || laref === itIdStr || (normItId && (laid.replace(/[^a-zA-Z0-9]/g, '') === normItId || laref.replace(/[^a-zA-Z0-9]/g, '') === normItId));
+              });
+              if (matchedApp) {
+                return {
+                  ...it,
+                  receiptStatus: matchedApp.receiptStatus || it.receiptStatus,
+                  progressStatus: matchedApp.progressStatus || it.progressStatus,
+                  status: matchedApp.status || it.status
+                };
+              }
+              return it;
+            });
+          }
+        });
+
         // 최고관리자(admin) 계정만 필수 존재 보장 (다른 데모 계정은 사용자가 삭제 시 절대 강제 부활/재생성 금지)
         const adminUser = {
           id: 'admin',
@@ -1844,22 +1880,29 @@ window.SupabaseSync = {
               return false;
             });
             if (localApp) {
-              // 1) 최근 로컬에서 상태 변경이 일어난 경우(30초 이내 수정 건) Supabase 아직 반영 전이면 로컬 최신 상태 완전 보존 (동기화 레이스 컨디션 방어)
-              if (localApp.updatedAt) {
-                const localUpdatedTime = new Date(localApp.updatedAt).getTime();
-                const now = Date.now();
-                if (!isNaN(localUpdatedTime) && (now - localUpdatedTime < 30000)) {
-                  if (localApp.status !== undefined) appObj.status = localApp.status;
-                  if (localApp.receiptStatus !== undefined) appObj.receiptStatus = localApp.receiptStatus;
-                  if (localApp.progressStatus !== undefined) appObj.progressStatus = localApp.progressStatus;
-                  if (localApp.isBizItem !== undefined) appObj.isBizItem = localApp.isBizItem;
-                  if (localApp.memo !== undefined) appObj.memo = localApp.memo;
-                  if (localApp.signType !== undefined) appObj.signType = localApp.signType;
-                  if (localApp.assignedConstructorId !== undefined) appObj.assignedConstructorId = localApp.assignedConstructorId;
-                  if (localApp.assignedConstructorName !== undefined) appObj.assignedConstructorName = localApp.assignedConstructorName;
-                  if (localApp.constructionStatus !== undefined) appObj.constructionStatus = localApp.constructionStatus;
-                  appObj.updatedAt = localApp.updatedAt;
-                }
+              // 1) 최근 로컬에서 상태 변경이 일어난 경우(60초 이내 수정 건) 또는 recentLock이 걸린 건은 Supabase 구형 데이터로 덮어쓰지 않고 로컬 최신 상태 완전 보존 (동기화 레이스 컨디션 방어)
+              const normObjKey = String(appObj.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+              const recentLock = (window.DataStore && window.DataStore._recentStatusUpdates && (window.DataStore._recentStatusUpdates[String(appObj.id)] || window.DataStore._recentStatusUpdates[normObjKey]));
+              const localUpdatedTime = localApp.updatedAt ? new Date(localApp.updatedAt).getTime() : 0;
+              const isRecentModified = !isNaN(localUpdatedTime) && (Date.now() - localUpdatedTime < 60000);
+
+              if (recentLock || isRecentModified) {
+                const rStat = (recentLock && recentLock.receiptStatus) || localApp.receiptStatus;
+                const pStat = (recentLock && recentLock.progressStatus) || localApp.progressStatus;
+                const mObj = (recentLock && recentLock.memo) || localApp.memo;
+                const st = (recentLock && recentLock.status) || localApp.status;
+                const cs = (recentLock && recentLock.constructionStatus) || localApp.constructionStatus;
+
+                if (st !== undefined) appObj.status = st;
+                if (rStat !== undefined) appObj.receiptStatus = rStat;
+                if (pStat !== undefined) appObj.progressStatus = pStat;
+                if (localApp.isBizItem !== undefined) appObj.isBizItem = localApp.isBizItem;
+                if (mObj !== undefined) appObj.memo = mObj;
+                if (localApp.signType !== undefined) appObj.signType = localApp.signType;
+                if (localApp.assignedConstructorId !== undefined) appObj.assignedConstructorId = localApp.assignedConstructorId;
+                if (localApp.assignedConstructorName !== undefined) appObj.assignedConstructorName = localApp.assignedConstructorName;
+                if (cs !== undefined) appObj.constructionStatus = cs;
+                appObj.updatedAt = localApp.updatedAt || new Date().toISOString();
               }
               // 로컬 캐시된 고용량 사진이 있으면 유실되지 않도록 보존
               if (localApp.photos && localApp.photos.length > 0 && (!appObj.photos || appObj.photos.length === 0)) {

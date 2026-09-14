@@ -2210,9 +2210,33 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
 
-        const curReceipt = String(item.receiptStatus || '접수예정').trim();
-        const isReceiptPending = (curReceipt === '접수예정' || curReceipt === '접수 대기' || !item.receiptStatus);
-        const curProgress = isReceiptPending ? '지원대기중' : ((!item.progressStatus || item.progressStatus === '지원대기중') ? '심사대기중' : String(item.progressStatus).trim());
+        let curReceipt = String(item.receiptStatus || '접수예정').trim();
+        let curProgress = String(item.progressStatus || '').trim();
+
+        // 영문 및 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화
+        if (curProgress === '대상자선정' || curProgress === '대상자 선정' || curProgress === '선정' || curProgress === '승인 완료' || curProgress === '승인완료' || curProgress === 'approved' || curProgress === 'before_construction') {
+          curProgress = '대상자선정';
+        } else if (curProgress === '간판시공 준비중' || curProgress === '간판 시공 준비중' || curProgress === 'in_construction' || curProgress === '시공준비') {
+          curProgress = '간판시공 준비중';
+        } else if (curProgress === '간판시공완료' || curProgress === '간판 시공 완료' || curProgress === 'completed' || curProgress === 'after_construction' || curProgress === '시공완료') {
+          curProgress = '간판시공완료';
+        } else if (curProgress === '심사대기' || curProgress === '심사 대기' || curProgress === '심사대기중') {
+          curProgress = '심사대기중';
+        }
+
+        // 진행 상태가 대상자선정 이상이거나 심사대기중이면 접수상태는 자동으로 접수완료로 보정
+        if (curProgress === '대상자선정' || curProgress === '간판시공 준비중' || curProgress === '간판시공완료' || curProgress === '심사대기중') {
+          if (curReceipt === '접수예정' || curReceipt === '접수 대기' || !curReceipt) {
+            curReceipt = '접수완료';
+          }
+        }
+
+        const isReceiptPending = (curReceipt === '접수예정' || curReceipt === '접수 대기' || !curReceipt);
+        if (isReceiptPending) {
+          curProgress = '지원대기중';
+        } else if (!curProgress || curProgress === '지원대기중') {
+          curProgress = '심사대기중';
+        }
 
         row.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
