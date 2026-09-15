@@ -1351,8 +1351,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
             }
-            localStorage.setItem('activeUser', JSON.stringify(curUser));
-            sessionStorage.setItem('activeUser', JSON.stringify(curUser));
+            if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+                window.DataStore.setActiveUser(curUser);
+            } else if (typeof isRememberMeActive === 'function' && isRememberMeActive()) {
+                localStorage.setItem('activeUser', JSON.stringify(curUser));
+            } else {
+                sessionStorage.setItem('activeUser', JSON.stringify(curUser));
+            }
 
             // 0초 즉각 화면 갱신 (1번 클릭으로 즉각 '영업자 승인 대기중' 전환)
             renderStatusTab();

@@ -665,7 +665,13 @@ document.addEventListener('DOMContentLoaded', () => {
       : (JSON.parse(localStorage.getItem('activeUser')) || activeUser);
     if (freshDbUser) {
       activeUser = sanitizeUser(freshDbUser);
-      localStorage.setItem('activeUser', JSON.stringify(activeUser));
+      if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+        window.DataStore.setActiveUser(activeUser);
+      } else if (typeof isRememberMeActive === 'function' && isRememberMeActive()) {
+        localStorage.setItem('activeUser', JSON.stringify(activeUser));
+      } else {
+        sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+      }
     }
 
     let roleText = '일반';
@@ -797,9 +803,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const refreshedActive = users.find(u => u.id === activeUser.id);
       if (refreshedActive) {
         activeUser = sanitizeUser(refreshedActive);
-        if (localStorage.getItem('activeUser')) {
+        if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+          window.DataStore.setActiveUser(activeUser);
+        } else if (typeof isRememberMeActive === 'function' && isRememberMeActive()) {
           localStorage.setItem('activeUser', JSON.stringify(activeUser));
-        } else if (sessionStorage.getItem('activeUser')) {
+        } else {
           sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
         }
       }
@@ -991,8 +999,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
         }
-        localStorage.setItem('activeUser', JSON.stringify(activeUser));
-        sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+        if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+          window.DataStore.setActiveUser(activeUser);
+        } else if (typeof isRememberMeActive === 'function' && isRememberMeActive()) {
+          localStorage.setItem('activeUser', JSON.stringify(activeUser));
+        } else {
+          sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+        }
 
         if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
           window.DataStore.notifyAll();
@@ -1061,8 +1074,13 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
       }
-      localStorage.setItem('activeUser', JSON.stringify(activeUser));
-      sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+      if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+        window.DataStore.setActiveUser(activeUser);
+      } else if (typeof isRememberMeActive === 'function' && isRememberMeActive()) {
+        localStorage.setItem('activeUser', JSON.stringify(activeUser));
+      } else {
+        sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+      }
 
       if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
         window.DataStore.notifyAll();
@@ -1245,7 +1263,13 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
       }
-      localStorage.setItem('activeUser', JSON.stringify(activeUser));
+      if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+        window.DataStore.setActiveUser(activeUser);
+      } else if (typeof isRememberMeActive === 'function' && isRememberMeActive()) {
+        localStorage.setItem('activeUser', JSON.stringify(activeUser));
+      } else {
+        sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+      }
 
       // Also update the application with this business user's ID and referrerCode if not set
       const updatedApps = apps.map(app => {
@@ -2316,8 +2340,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeU = typeof getActiveUser === 'function' ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')));
     if (activeU && activeU.items) {
       activeU.items = activeU.items.filter(it => !isMatchTarget(it));
-      if (localStorage.getItem('activeUser')) localStorage.setItem('activeUser', JSON.stringify(activeU));
-      if (sessionStorage.getItem('activeUser')) sessionStorage.setItem('activeUser', JSON.stringify(activeU));
+      if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+        window.DataStore.setActiveUser(activeU);
+      } else if (typeof isRememberMeActive === 'function' && isRememberMeActive()) {
+        localStorage.setItem('activeUser', JSON.stringify(activeU));
+      } else {
+        sessionStorage.setItem('activeUser', JSON.stringify(activeU));
+      }
     }
 
     // 4) applications 에서도 isBizItem 해제
@@ -4823,7 +4852,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const freshUser = curUsersList.find(u => u.id === activeUser.id);
     if (freshUser) {
       activeUser = { ...activeUser, ...freshUser };
-      localStorage.setItem('activeUser', JSON.stringify(activeUser));
+      if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+        window.DataStore.setActiveUser(activeUser);
+      } else if (typeof isRememberMeActive === 'function' && isRememberMeActive()) {
+        localStorage.setItem('activeUser', JSON.stringify(activeUser));
+      } else {
+        sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+      }
     }
 
     const bizList = (window.DataStore && typeof window.DataStore.getBizItemsForUser === 'function')

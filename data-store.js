@@ -331,29 +331,7 @@
             });
           }
 
-          // 2. 신청번호 채번 규칙 앞자리 접두사 탐색 (단, 반드시 B- 로 시작하는 정식 영업자 코드일 때만 인정!)
-          if (!assignedUser && !refCode && !salesId && appIdStr.includes('-')) {
-            const parts = appIdStr.split('-');
-            if (parts.length >= 2) {
-              const prefixCode = parts.slice(0, -1).join('-');
-              if (/^b-\d+/i.test(prefixCode)) {
-                const normPrefix = prefixCode.replace(/[^a-zA-Z0-9]/g, '');
-                const numPrefix = normPrefix.replace(/^b/i, '');
-                assignedUser = users.find(u => {
-                  if (u.role !== 'business' && u.role !== 'admin') return false;
-                  const uBiz = String(u.bizCode || '').trim().toLowerCase();
-                  const normUBiz = uBiz.replace(/[^a-zA-Z0-9]/g, '');
-                  const numUBiz = normUBiz.replace(/^b/i, '');
-                  return (
-                    (uBiz && (uBiz === prefixCode || normUBiz === normPrefix || (numPrefix && numUBiz === numPrefix))) ||
-                    (String(u.id || '').trim().toLowerCase() === prefixCode)
-                  );
-                });
-              }
-            }
-          }
-
-          // 3. 신청서 userId 매칭 (영업자 본인 직접 접수 건)
+          // 2. 신청서 userId 매칭 (영업자 본인 직접 접수 건)
           if (!assignedUser && !refCode && !salesId && app.userId) {
             const aUid = String(app.userId).trim().toLowerCase();
             assignedUser = users.find(u =>
@@ -737,41 +715,11 @@
           });
         }
 
-        // 2. 신청번호 채번 앞자리 접두사 (예: B-260901-004 -> B-260901 또는 260901)
-        if (!targetUser && appIdStr.includes('-')) {
-          const parts = appIdStr.split('-');
-          if (parts.length >= 2) {
-            const prefixCode = parts.slice(0, -1).join('-');
-            const normPrefix = prefixCode.replace(/[^a-zA-Z0-9]/g, '');
-            const numPrefix = normPrefix.replace(/^b/i, '');
-            targetUser = curUsers.find(u => {
-              if (u.role !== 'business' && u.role !== 'admin') return false;
-              const uBiz = String(u.bizCode || '').trim().toLowerCase();
-              const normUBiz = uBiz.replace(/[^a-zA-Z0-9]/g, '');
-              const numUBiz = normUBiz.replace(/^b/i, '');
-              return (
-                (uBiz && (uBiz === prefixCode || normUBiz === normPrefix || (numPrefix && numUBiz === numPrefix))) ||
-                (String(u.id || '').trim().toLowerCase() === prefixCode)
-              );
-            });
-          }
-        }
-
-        // 3. 신청서 userId 매칭 (영업자 본인 직접 신청 건)
+        // 2. 신청서 userId 매칭 (영업자 본인 직접 신청 건)
         if (!targetUser && appUser) {
           targetUser = curUsers.find(u =>
             (u.role === 'business' || u.role === 'admin') &&
             (String(u.id).trim().toLowerCase() === appUser || String(u.bizCode || '').trim().toLowerCase() === appUser)
-          );
-        }
-
-        // 4. users.items 역추적 (이미 영업자 items에 배정/등록된 건)
-        if (!targetUser) {
-          const targetAid = String(app.id || '').trim();
-          targetUser = curUsers.find(u =>
-            u.role === 'business' &&
-            Array.isArray(u.items) &&
-            u.items.some(it => String(it.id || '').trim() === targetAid || String(it.appRefId || '').trim() === targetAid)
           );
         }
 
@@ -781,6 +729,9 @@
           if (targetUser.bizCode && !app.referrerCode) {
             app.referrerCode = targetUser.bizCode;
           }
+        } else {
+          app.salespersonId = '';
+          app.salespersonName = '본사직접접수';
         }
 
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);

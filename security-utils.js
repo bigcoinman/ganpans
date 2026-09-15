@@ -1295,21 +1295,13 @@ window.SupabaseSync = {
     if (dbApp.referrer_code === '' || String(dbApp.referrer_code || '').trim() === '') {
       if (dbApp.memo && (dbApp.memo.includes('"salespersonId":""') || dbApp.memo.includes('"salespersonName":"본사직접접수"'))) {
         isDirectHeadquarters = true;
+      } else if (!salespersonId || salespersonName === '본사직접접수' || salespersonName === '본사 직접 접수') {
+        isDirectHeadquarters = true;
       }
     }
 
-    // 담당 영업자 코드 및 정보 폴백 매칭 (단, B-로 시작하는 정식 영업자 코드만 인정, P- 접두사 오탐색 원천 차단)
+    // 담당 영업자 코드 (단일 진실의 원천: 임의의 신청번호 접두사 역추측 금지, 순수 referrer_code만 인정)
     let finalRefCode = isDirectHeadquarters ? '' : (dbApp.referrer_code || '');
-    if (!isDirectHeadquarters && !finalRefCode && !salespersonId && dbApp.id && String(dbApp.id).includes('-')) {
-      const parts = String(dbApp.id).split('-');
-      if (parts.length >= 2) {
-        const prefixCandidate = parts.slice(0, -1).join('-');
-        // 반드시 B- 로 시작하는 정식 영업자 코드일 때만 인정 (P- 일반접수번호 등은 절대 영업자 코드로 인식 금지)
-        if (/^b-\d+/i.test(prefixCandidate)) {
-          finalRefCode = prefixCandidate;
-        }
-      }
-    }
 
     if (isDirectHeadquarters) {
       finalRefCode = '';
@@ -2010,13 +2002,6 @@ window.SupabaseSync = {
                 const salesName = String(fa.salespersonName || '').trim().toLowerCase();
                 const refCode = String(fa.referrerCode || '').trim().toLowerCase();
                 const appUser = String(fa.userId || '').trim().toLowerCase();
-                const appIdStr = String(fa.id || '').trim().toLowerCase();
-                let prefixCode = '';
-                if (appIdStr.includes('-')) {
-                  const parts = appIdStr.split('-');
-                  if (parts.length >= 2) prefixCode = parts.slice(0, -1).join('-').toLowerCase();
-                }
-
                 // 명시적 본사 직접 접수(담당자 없음) 건은 영업자 items에 절대 배정 금지
                 const isExplicitDirect = (!salesId && !refCode) || (salesName === '본사직접접수' || salesName === '본사 직접 접수');
                 if (isExplicitDirect && !refCode) {
@@ -2033,11 +2018,6 @@ window.SupabaseSync = {
                       (refCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
                       (refCode && String(u.id).trim().toLowerCase() === refCode) ||
                       (refCode && String(u.name).trim().toLowerCase() === refCode))
-                  );
-                } else if (prefixCode && /^b-\d+/i.test(prefixCode)) {
-                  targetUser = curUsers.find(u =>
-                    (u.role === 'business' || u.role === 'admin') &&
-                    (u.bizCode && String(u.bizCode).trim().toLowerCase() === prefixCode)
                   );
                 } else if (appUser) {
                   targetUser = curUsers.find(u =>

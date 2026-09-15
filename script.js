@@ -2246,7 +2246,13 @@ function initAuthAndDashboard() {
       const currentDbUser = users.find(u => u.id === activeUser.id);
       if (currentDbUser) {
         activeUser = typeof sanitizeUser === 'function' ? sanitizeUser(currentDbUser) : currentDbUser;
-        localStorage.setItem('activeUser', JSON.stringify(activeUser));
+        if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+          window.DataStore.setActiveUser(activeUser);
+        } else if (typeof isRememberMeActive === 'function' && isRememberMeActive()) {
+          localStorage.setItem('activeUser', JSON.stringify(activeUser));
+        } else {
+          sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+        }
       }
 
       if (authBtn) authBtn.style.display = 'none';
