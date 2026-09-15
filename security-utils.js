@@ -626,36 +626,37 @@ function isRememberMeActive() {
 function recordUserActivity() {
   const now = Date.now().toString();
   sessionStorage.setItem('last_active_time', now);
-  localStorage.setItem('last_active_time_session', now);
+  if (isRememberMeActive()) {
+    localStorage.setItem('last_active_time', now);
+  }
 }
 
 function checkInactivityTimeout() {
-  // '로그인 상태 유지' 체크가 활성화되어 있다면 1시간 자동 로그아웃을 건너뜁니다.
-  if (isRememberMeActive()) {
-    return false;
-  }
-
-  // 세션 사용자가 존재하는 경우 (로그인 상태 유지 체크 안 함)
+  // 현재 로그인된 사용자가 있는지 확인
   const sessionUser = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('activeUser') : null;
-  const localUser = typeof localStorage !== 'undefined' ? localStorage.getItem('activeUser') : null;
-  
-  if (sessionUser || (localUser && typeof localStorage !== 'undefined' && localStorage.getItem('activeUser_remember') !== 'true')) {
-    const lastActiveStr = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('last_active_time') : null) || (typeof localStorage !== 'undefined' ? localStorage.getItem('last_active_time_session') : null);
-    
+  const isRemember = typeof localStorage !== 'undefined' && localStorage.getItem('activeUser_remember') === 'true';
+  const localUser = isRemember ? localStorage.getItem('activeUser') : null;
+
+  if (sessionUser || localUser) {
+    const lastActiveStr = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('last_active_time') : null)
+      || (isRemember ? localStorage.getItem('last_active_time') : null);
+
     if (lastActiveStr) {
       const lastActive = parseInt(lastActiveStr, 10);
       const elapsed = Date.now() - lastActive;
-      
+
       if (!isNaN(lastActive) && elapsed >= INACTIVITY_TIMEOUT_MS) {
-        // 1시간 초과 -> 자동 로그아웃
+        // 1시간 초과 -> 어떤 사용자/어떤 로그인 상태든 100% 무조건 자동 로그아웃
         clearActiveUser();
-        alert('1시간 동안 사용이 없어 보안을 위해 자동 로그아웃되었습니다.');
-        
+        if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+          try { alert('1시간 동안 사용이 없어 보안을 위해 자동 로그아웃되었습니다.'); } catch(e) {}
+        }
+
         // 대시보드 페이지인 경우 메인으로 이동하거나 새로고침
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && window.location && window.location.pathname) {
           if (window.location.pathname.includes('dashboard.html')) {
             window.location.href = 'index.html#apply-section';
-          } else {
+          } else if (typeof window.location.reload === 'function') {
             window.location.reload();
           }
         }
@@ -670,26 +671,30 @@ function checkInactivityTimeout() {
 }
 
 function getActiveUser() {
-  // 1시간 타임아웃 검사 먼저 수행
+  // 1시간 타임아웃 검사 먼저 수행 (1시간 초과 시 세션 파기 후 null 반환)
   if (checkInactivityTimeout()) {
     return null;
   }
 
   let user = null;
 
-  // 1) 로그인 상태 유지 (localStorage)
-  const localUser = localStorage.getItem('activeUser');
-  if (localUser && localStorage.getItem('activeUser_remember') === 'true') {
-    try { user = JSON.parse(localUser); } catch(e) { user = null; }
-  } else {
-    // 2) 세션 로그인 (sessionStorage)
-    const sessionUser = sessionStorage.getItem('activeUser');
-    if (sessionUser) {
-      try { user = JSON.parse(sessionUser); } catch(e) { user = null; }
-    } else if (localUser) {
-      // 3) 만약 localStorage에만 있고 remember_me가 지정되지 않은 구버전 캐시라면
+  // 1) 세션 로그인 우선 (sessionStorage)
+  const sessionUser = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('activeUser') : null;
+  if (sessionUser) {
+    try { user = JSON.parse(sessionUser); } catch(e) { user = null; }
+  }
+
+  // 2) 로그인 상태 유지 명시 체크된 경우만 localStorage 허용
+  if (!user && isRememberMeActive()) {
+    const localUser = localStorage.getItem('activeUser');
+    if (localUser) {
       try { user = JSON.parse(localUser); } catch(e) { user = null; }
     }
+  } else if (!user && localStorage.getItem('activeUser') && !isRememberMeActive()) {
+    // 3) remember_me 체크가 안 된 과거 쓰레기 캐시가 로컬스토리지에 남아있다면 즉시 강제 영구 파기!
+    localStorage.removeItem('activeUser');
+    localStorage.removeItem('activeUser_remember');
+    localStorage.removeItem('last_active_time');
   }
 
   if (user && user.id) {
@@ -703,7 +708,7 @@ function getActiveUser() {
         if (sessionStorage.getItem('activeUser')) {
           sessionStorage.setItem('activeUser', JSON.stringify(user));
         }
-        if (localStorage.getItem('activeUser')) {
+        if (isRememberMeActive()) {
           localStorage.setItem('activeUser', JSON.stringify(user));
         }
       }
@@ -716,9 +721,13 @@ function getActiveUser() {
 function clearActiveUser() {
   localStorage.removeItem('activeUser');
   localStorage.removeItem('activeUser_remember');
+  localStorage.removeItem('last_active_time');
   localStorage.removeItem('last_active_time_session');
   sessionStorage.removeItem('activeUser');
   sessionStorage.removeItem('last_active_time');
+  if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+    window.DataStore.setActiveUser(null);
+  }
 }
 
 // 사용자 활동 감지 이벤트 리스너 등록
@@ -732,7 +741,7 @@ function initInactivityListeners() {
     if (!throttleTimer) {
       throttleTimer = setTimeout(() => {
         throttleTimer = null;
-        if (!isRememberMeActive() && getActiveUser()) {
+        if (getActiveUser()) {
           recordUserActivity();
         }
       }, 1000); // 1초 단위 쓰로틀링으로 성능 최적화
@@ -1836,17 +1845,20 @@ window.SupabaseSync = {
         // 현재 로그인 세션 최신 상태 동기화 또는 삭제 계정 세션 강제 파기
         const activeUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function')
           ? window.DataStore.getActiveUser()
-          : (typeof getActiveUser === 'function' ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser'))));
+          : (typeof getActiveUser === 'function' ? getActiveUser() : null);
         if (activeUser && activeUser.id) {
           const freshCur = freshUsers.find(u => String(u.id).toLowerCase() === String(activeUser.id).toLowerCase());
           if (freshCur) {
             const sanitized = typeof sanitizeUser === 'function' ? sanitizeUser(freshCur) : freshCur;
-            sessionStorage.setItem('activeUser', JSON.stringify(sanitized));
-            if (localStorage.getItem('activeUser')) {
+            const isRemember = localStorage.getItem('activeUser_remember') === 'true';
+            if (isRemember) {
               localStorage.setItem('activeUser', JSON.stringify(sanitized));
+            } else {
+              sessionStorage.setItem('activeUser', JSON.stringify(sanitized));
+              localStorage.removeItem('activeUser');
             }
             if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
-              window.DataStore.setActiveUser(sanitized);
+              window.DataStore.setActiveUser(sanitized, isRemember);
             }
           } else {
             // DB에 없거나 삭제된 계정이면 즉시 세션 파기
@@ -1855,6 +1867,7 @@ window.SupabaseSync = {
               window.DataStore.setActiveUser(null);
             } else {
               localStorage.removeItem('activeUser');
+              localStorage.removeItem('activeUser_remember');
               sessionStorage.removeItem('activeUser');
             }
           }
@@ -2385,18 +2398,19 @@ if (typeof window !== 'undefined') {
 
       if (rememberMe) {
         if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
-          window.DataStore.setActiveUser(adminUser);
+          window.DataStore.setActiveUser(adminUser, true);
         } else {
           localStorage.setItem('activeUser', JSON.stringify(adminUser));
+          localStorage.setItem('activeUser_remember', 'true');
           sessionStorage.removeItem('activeUser');
         }
-        localStorage.setItem('activeUser_remember', 'true');
       } else {
-        sessionStorage.setItem('activeUser', JSON.stringify(adminUser));
-        localStorage.removeItem('activeUser_remember');
-        localStorage.removeItem('activeUser');
         if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
-          window.DataStore.setActiveUser(adminUser);
+          window.DataStore.setActiveUser(adminUser, false);
+        } else {
+          sessionStorage.setItem('activeUser', JSON.stringify(adminUser));
+          localStorage.removeItem('activeUser_remember');
+          localStorage.removeItem('activeUser');
         }
       }
 
@@ -2628,18 +2642,19 @@ if (typeof window !== 'undefined') {
 
       if (rememberMe) {
         if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
-          window.DataStore.setActiveUser(user);
+          window.DataStore.setActiveUser(user, true);
         } else {
           localStorage.setItem('activeUser', JSON.stringify(user));
+          localStorage.setItem('activeUser_remember', 'true');
           sessionStorage.removeItem('activeUser');
         }
-        localStorage.setItem('activeUser_remember', 'true');
       } else {
-        sessionStorage.setItem('activeUser', JSON.stringify(user));
-        localStorage.removeItem('activeUser_remember');
-        localStorage.removeItem('activeUser');
         if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
-          window.DataStore.setActiveUser(user);
+          window.DataStore.setActiveUser(user, false);
+        } else {
+          sessionStorage.setItem('activeUser', JSON.stringify(user));
+          localStorage.removeItem('activeUser_remember');
+          localStorage.removeItem('activeUser');
         }
       }
 
@@ -2823,12 +2838,14 @@ if (typeof window !== 'undefined') {
         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') { window.DataStore.saveUsers(localUsers); } else { localStorage.setItem('users', JSON.stringify(localUsers)); }
       }
 
-      // 4) 자동 로그인 세션 생성 (DataStore 및 Storage 동시 완벽 동기화)
+      // 4) 자동 로그인 세션 생성 (기본값: 세션 로그인, rememberMe = false)
       const sanitized = typeof sanitizeUser === 'function' ? sanitizeUser(newUser) : newUser;
-      sessionStorage.setItem('activeUser', JSON.stringify(sanitized));
-      localStorage.setItem('activeUser', JSON.stringify(sanitized));
       if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
-        window.DataStore.setActiveUser(sanitized);
+        window.DataStore.setActiveUser(sanitized, false);
+      } else {
+        sessionStorage.setItem('activeUser', JSON.stringify(sanitized));
+        localStorage.removeItem('activeUser');
+        localStorage.removeItem('activeUser_remember');
       }
 
       alert('회원가입이 완료되었습니다! 자동 로그인됩니다.');

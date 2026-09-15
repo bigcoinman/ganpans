@@ -78,7 +78,15 @@
           user = window.getActiveUser();
         }
         if (!user) {
-          user = JSON.parse(localStorage.getItem('activeUser')) || (typeof sessionStorage !== 'undefined' ? JSON.parse(sessionStorage.getItem('activeUser')) : null);
+          const sessionUser = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('activeUser') : null;
+          if (sessionUser) {
+            try { user = JSON.parse(sessionUser); } catch (e) {}
+          } else if (localStorage.getItem('activeUser_remember') === 'true') {
+            const localUser = localStorage.getItem('activeUser');
+            if (localUser) {
+              try { user = JSON.parse(localUser); } catch (e) {}
+            }
+          }
         }
         if (user && user.id) {
           const freshUsers = this.getUsers();
@@ -94,14 +102,29 @@
       }
     },
 
-    setActiveUser: function (user) {
+    setActiveUser: function (user, rememberMe) {
       try {
         if (user) {
-          localStorage.setItem('activeUser', JSON.stringify(user));
-          sessionStorage.setItem('activeUser', JSON.stringify(user));
+          const isRemember = (rememberMe === true || (rememberMe === undefined && localStorage.getItem('activeUser_remember') === 'true'));
+          if (isRemember) {
+            localStorage.setItem('activeUser', JSON.stringify(user));
+            localStorage.setItem('activeUser_remember', 'true');
+            localStorage.setItem('last_active_time', Date.now().toString());
+            sessionStorage.removeItem('activeUser');
+            sessionStorage.removeItem('last_active_time');
+          } else {
+            sessionStorage.setItem('activeUser', JSON.stringify(user));
+            sessionStorage.setItem('last_active_time', Date.now().toString());
+            localStorage.removeItem('activeUser');
+            localStorage.removeItem('activeUser_remember');
+            localStorage.removeItem('last_active_time');
+          }
         } else {
           localStorage.removeItem('activeUser');
+          localStorage.removeItem('activeUser_remember');
+          localStorage.removeItem('last_active_time');
           sessionStorage.removeItem('activeUser');
+          sessionStorage.removeItem('last_active_time');
         }
         return true;
       } catch (e) {
