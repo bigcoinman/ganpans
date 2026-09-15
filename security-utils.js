@@ -1260,6 +1260,7 @@ window.SupabaseSync = {
     let photoCount = 0;
 
     // memo JSON 파싱하여 영업물건 여부, 접수/진행상태, 담당영업자 복원
+    let isDirectHeadquarters = false;
     if (dbApp.memo) {
       try {
         const parsedMemo = typeof dbApp.memo === 'string' ? JSON.parse(dbApp.memo) : dbApp.memo;
@@ -1267,24 +1268,45 @@ window.SupabaseSync = {
           if (parsedMemo.isBizItem !== undefined) isBizItem = Boolean(parsedMemo.isBizItem === true || String(parsedMemo.isBizItem) === 'true');
           if (parsedMemo.receiptStatus) receiptStatus = parsedMemo.receiptStatus;
           if (parsedMemo.progressStatus) progressStatus = parsedMemo.progressStatus;
-          if (parsedMemo.salespersonId) salespersonId = String(parsedMemo.salespersonId).trim();
-          if (parsedMemo.salespersonName) salespersonName = String(parsedMemo.salespersonName).trim();
-          if (parsedMemo.referrerCode && !dbApp.referrer_code) dbApp.referrer_code = String(parsedMemo.referrerCode).trim();
+          if (parsedMemo.salespersonId !== undefined) salespersonId = String(parsedMemo.salespersonId || '').trim();
+          if (parsedMemo.salespersonName !== undefined) salespersonName = String(parsedMemo.salespersonName || '').trim();
+          if (parsedMemo.referrerCode !== undefined) {
+            const memoRef = String(parsedMemo.referrerCode || '').trim();
+            if (memoRef) dbApp.referrer_code = memoRef;
+            else if (parsedMemo.referrerCode === '') isDirectHeadquarters = true;
+          }
+          if (salespersonName === '본사직접접수' || salespersonName === '본사 직접 접수' || (parsedMemo.salespersonId === '' && parsedMemo.referrerCode === '')) {
+            isDirectHeadquarters = true;
+          }
           if (parsedMemo.photoCount !== undefined) photoCount = Number(parsedMemo.photoCount) || 0;
         }
       } catch (eMemo) {}
     }
 
-    // 담당 영업자 코드 및 정보 폴백 매칭 (신청번호 채번 앞자리 접두사 폴백 포함)
-    let finalRefCode = dbApp.referrer_code || '';
-    if (!finalRefCode && dbApp.id && String(dbApp.id).includes('-')) {
-      const parts = String(dbApp.id).split('-');
-      if (parts.length >= 2) {
-        finalRefCode = parts.slice(0, -1).join('-');
+    if (dbApp.referrer_code === '' || String(dbApp.referrer_code || '').trim() === '') {
+      if (dbApp.memo && (dbApp.memo.includes('"salespersonId":""') || dbApp.memo.includes('"salespersonName":"본사직접접수"'))) {
+        isDirectHeadquarters = true;
       }
     }
 
-    if ((!salespersonId || !salespersonName) && finalRefCode) {
+    // 담당 영업자 코드 및 정보 폴백 매칭 (단, B-로 시작하는 정식 영업자 코드만 인정, P- 접두사 오탐색 원천 차단)
+    let finalRefCode = isDirectHeadquarters ? '' : (dbApp.referrer_code || '');
+    if (!isDirectHeadquarters && !finalRefCode && !salespersonId && dbApp.id && String(dbApp.id).includes('-')) {
+      const parts = String(dbApp.id).split('-');
+      if (parts.length >= 2) {
+        const prefixCandidate = parts.slice(0, -1).join('-');
+        // 반드시 B- 로 시작하는 정식 영업자 코드일 때만 인정 (P- 일반접수번호 등은 절대 영업자 코드로 인식 금지)
+        if (/^b-\d+/i.test(prefixCandidate)) {
+          finalRefCode = prefixCandidate;
+        }
+      }
+    }
+
+    if (isDirectHeadquarters) {
+      finalRefCode = '';
+      salespersonId = '';
+      salespersonName = '본사직접접수';
+    } else if ((!salespersonId || !salespersonName) && finalRefCode && /^b-\d+/i.test(finalRefCode)) {
       try {
         const localUsers = JSON.parse(localStorage.getItem('users')) || [];
         const normRef = finalRefCode.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
@@ -1756,7 +1778,7 @@ window.SupabaseSync = {
               const itIdStr = String(it.id || '').trim().toLowerCase();
               const normItId = itIdStr.replace(/[^a-zA-Z0-9]/g, '');
               const lock = recentLocks[it.id] || (normItId && recentLocks[normItId]);
-              if (lock) {
+              if (lock && (Date.now() - (lock.timestamp || 0) < 4000)) {
                 return {
                   ...it,
                   receiptStatus: lock.receiptStatus || it.receiptStatus,
@@ -1880,29 +1902,40 @@ window.SupabaseSync = {
               return false;
             });
             if (localApp) {
-              // 1) 최근 로컬에서 상태 변경이 일어난 경우(60초 이내 수정 건) 또는 recentLock이 걸린 건은 Supabase 구형 데이터로 덮어쓰지 않고 로컬 최신 상태 완전 보존 (동기화 레이스 컨디션 방어)
+              // 1) 최근 로컬에서 직접 상태/영업자 변경이 일어난 경우(4초 이내) Supabase 구형 데이터로 덮어쓰지 않고 로컬 최신 상태 보존 (동기화 레이스 컨디션 방어)
               const normObjKey = String(appObj.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-              const recentLock = (window.DataStore && window.DataStore._recentStatusUpdates && (window.DataStore._recentStatusUpdates[String(appObj.id)] || window.DataStore._recentStatusUpdates[normObjKey]));
-              const localUpdatedTime = localApp.updatedAt ? new Date(localApp.updatedAt).getTime() : 0;
-              const isRecentModified = !isNaN(localUpdatedTime) && (Date.now() - localUpdatedTime < 60000);
+              const recentLocks = (window.DataStore && window.DataStore._recentStatusUpdates) || {};
+              const lock = recentLocks[String(appObj.id)] || (normObjKey && recentLocks[normObjKey]);
+              const isLocalLockActive = Boolean(lock && (Date.now() - (lock.timestamp || 0) < 4000));
 
-              if (recentLock || isRecentModified) {
-                const rStat = (recentLock && recentLock.receiptStatus) || localApp.receiptStatus;
-                const pStat = (recentLock && recentLock.progressStatus) || localApp.progressStatus;
-                const mObj = (recentLock && recentLock.memo) || localApp.memo;
-                const st = (recentLock && recentLock.status) || localApp.status;
-                const cs = (recentLock && recentLock.constructionStatus) || localApp.constructionStatus;
+              if (isLocalLockActive) {
+                const rStat = lock.receiptStatus !== undefined ? lock.receiptStatus : localApp.receiptStatus;
+                const pStat = lock.progressStatus !== undefined ? lock.progressStatus : localApp.progressStatus;
+                const mObj = lock.memo !== undefined ? lock.memo : localApp.memo;
+                const st = lock.status !== undefined ? lock.status : localApp.status;
+                const cs = lock.constructionStatus !== undefined ? lock.constructionStatus : localApp.constructionStatus;
 
                 if (st !== undefined) appObj.status = st;
                 if (rStat !== undefined) appObj.receiptStatus = rStat;
                 if (pStat !== undefined) appObj.progressStatus = pStat;
-                if (localApp.isBizItem !== undefined) appObj.isBizItem = localApp.isBizItem;
+                if (cs !== undefined) appObj.constructionStatus = cs;
                 if (mObj !== undefined) appObj.memo = mObj;
+                if (lock.referrerCode !== undefined) {
+                  appObj.referrerCode = lock.referrerCode;
+                  appObj.referrer_code = lock.referrerCode;
+                } else if (localApp.referrerCode !== undefined) {
+                  appObj.referrerCode = localApp.referrerCode;
+                  appObj.referrer_code = localApp.referrerCode;
+                }
+                if (lock.salespersonId !== undefined) appObj.salespersonId = lock.salespersonId;
+                else if (localApp.salespersonId !== undefined) appObj.salespersonId = localApp.salespersonId;
+                if (lock.salespersonName !== undefined) appObj.salespersonName = lock.salespersonName;
+                else if (localApp.salespersonName !== undefined) appObj.salespersonName = localApp.salespersonName;
+                if (localApp.isBizItem !== undefined) appObj.isBizItem = localApp.isBizItem;
                 if (localApp.signType !== undefined) appObj.signType = localApp.signType;
                 if (localApp.assignedConstructorId !== undefined) appObj.assignedConstructorId = localApp.assignedConstructorId;
                 if (localApp.assignedConstructorName !== undefined) appObj.assignedConstructorName = localApp.assignedConstructorName;
-                if (cs !== undefined) appObj.constructionStatus = cs;
-                appObj.updatedAt = localApp.updatedAt || new Date().toISOString();
+                appObj.updatedAt = new Date().toISOString();
               }
               // 로컬 캐시된 고용량 사진이 있으면 유실되지 않도록 보존
               if (localApp.photos && localApp.photos.length > 0 && (!appObj.photos || appObj.photos.length === 0)) {
@@ -1971,6 +2004,12 @@ window.SupabaseSync = {
                   if (parts.length >= 2) prefixCode = parts.slice(0, -1).join('-').toLowerCase();
                 }
 
+                // 명시적 본사 직접 접수(담당자 없음) 건은 영업자 items에 절대 배정 금지
+                const isExplicitDirect = (!salesId && !refCode) || (salesName === '본사직접접수' || salesName === '본사 직접 접수');
+                if (isExplicitDirect && !refCode) {
+                  return; // 영업자 items에 담지 않고 패스
+                }
+
                 let targetUser = null;
                 if (salesId || salesName || refCode) {
                   targetUser = curUsers.find(u =>
@@ -1982,11 +2021,15 @@ window.SupabaseSync = {
                       (refCode && String(u.id).trim().toLowerCase() === refCode) ||
                       (refCode && String(u.name).trim().toLowerCase() === refCode))
                   );
-                } else if (prefixCode || appUser) {
+                } else if (prefixCode && /^b-\d+/i.test(prefixCode)) {
                   targetUser = curUsers.find(u =>
                     (u.role === 'business' || u.role === 'admin') &&
-                    ((prefixCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === prefixCode) ||
-                      (appUser && String(u.id).trim().toLowerCase() === appUser))
+                    (u.bizCode && String(u.bizCode).trim().toLowerCase() === prefixCode)
+                  );
+                } else if (appUser) {
+                  targetUser = curUsers.find(u =>
+                    (u.role === 'business' || u.role === 'admin') &&
+                    String(u.id).trim().toLowerCase() === appUser
                   );
                 }
 
@@ -2027,9 +2070,13 @@ window.SupabaseSync = {
                   if (!matchedApp || !Boolean(matchedApp.isBizItem === true || String(matchedApp.isBizItem) === 'true')) {
                     return false;
                   }
-                  // 최고관리자 SSOT: 담당 영업자가 다른 사람으로 명시 지정된 경우 이전 영업자 items에서 즉시 삭제
+                  // 최고관리자 SSOT: 담당 영업자가 다른 사람으로 명시 지정되었거나, 담당자 없음(본사 직접 접수)인 경우 이전 영업자 items에서 즉시 삭제
                   const sId = String(matchedApp.salespersonId || '').trim().toLowerCase();
                   const rCode = String(matchedApp.referrerCode || matchedApp.referrer_code || '').trim().toLowerCase();
+                  const sName = String(matchedApp.salespersonName || '').trim();
+                  const isHeadquartersDirect = (!sId && !rCode) || (sName === '본사직접접수' || sName === '본사 직접 접수');
+                  if (isHeadquartersDirect && !rCode) return false;
+
                   const isAssignedToOther = Boolean(
                     (sId && sId !== uId && sId !== uBiz) ||
                     (rCode && rCode !== uBiz && rCode !== uId && rCode !== uName)
@@ -2109,21 +2156,29 @@ window.SupabaseSync = {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'inquiries' }, () => {
           this.syncAllData();
         })
-        .subscribe();
+        .subscribe((status, err) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
+            try {
+              if (this.realtimeChannel && window.supabaseClient) window.supabaseClient.removeChannel(this.realtimeChannel);
+            } catch (eRm) {}
+            this.realtimeChannel = null;
+            setTimeout(() => this.initRealtimeSubscription(), 5000);
+          }
+        });
     } catch (err) {
       console.warn('Supabase Realtime subscription exception:', err);
     }
   },
 
-  // 9. 자동 동기화 시작 (실시간 웹소켓 + 주기적 폴링 + 탭 활성화 시 즉시 동기화)
-  initAutoSync(intervalMs = 5000) {
+  // 9. 자동 동기화 시작 (실시간 웹소켓 + 탭 활성화 즉시 갱신 + 60초 안전망 폴링)
+  initAutoSync(intervalMs = 60000) {
     // 초기 로드 시 1회 즉시 실행 및 웹소켓 실시간 리스너 연결
     setTimeout(() => {
       this.syncAllData();
       this.initRealtimeSubscription();
     }, 200);
 
-    // 탭 포커스 / 활성화 시 즉시 동기화
+    // 탭 포커스 / 활성화 시 즉시 0초 동기화
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -2135,17 +2190,18 @@ window.SupabaseSync = {
       });
     }
 
-    // 백그라운드 주기적 폴링 (웹소켓 연결 유실 대비)
+    // [트래픽 완벽 동결] 비활성 탭(document.hidden)에서는 폴링 전면 차단 & 60초 안전망 폴링
     if (this.autoSyncTimer) clearInterval(this.autoSyncTimer);
     this.autoSyncTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return; // 백그라운드 탭 트래픽 100% 차단
       this.syncAllData();
     }, intervalMs);
   }
 };
 
-// 페이지 로드 시 SupabaseSync 자동 가동
+// 페이지 로드 시 SupabaseSync 자동 가동 (트래픽 완벽 방어 60초 안전망)
 if (typeof window !== 'undefined') {
-  window.SupabaseSync.initAutoSync(30000);
+  window.SupabaseSync.initAutoSync(60000);
 }
 
 // 전역 단일 인증 실행 핸들러 및 탭 전환 엔진 (모든 플랫폼·화면 100% 호환 보장)

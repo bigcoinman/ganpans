@@ -145,59 +145,8 @@
     },
 
     cleanGhostItems: function () {
-      try {
-        const apps = this.getApplications();
-        let users = this.getUsers();
-        let anyChanged = false;
-
-        users = users.map(u => {
-          if (u.items && Array.isArray(u.items) && u.items.length > 0) {
-            const originalLength = u.items.length;
-            const validItems = u.items.filter(item => {
-              if (!item || !item.id) return false;
-              const iid = String(item.id || '').trim().toLowerCase();
-              const iref = String(item.appRefId || '').trim().toLowerCase();
-              const normIid = iid.replace(/[^a-zA-Z0-9]/g, '');
-
-              const matchingApp = apps.find(a => {
-                if (!a) return false;
-                const aid = String(a.id || '').trim().toLowerCase();
-                const aref = String(a.appRefId || '').trim().toLowerCase();
-                if (aid === iid || aref === iid) return true;
-                if (iref && (aid === iref || aref === iref)) return true;
-                if (normIid && (aid.replace(/[^a-zA-Z0-9]/g, '') === normIid || aref.replace(/[^a-zA-Z0-9]/g, '') === normIid)) return true;
-                return false;
-              });
-
-              if (!matchingApp) return false; // 최고관리자 대시보드에 없는 삭제건 100% 영구 제거
-              if (matchingApp.isBizItem !== true && String(matchingApp.isBizItem) !== 'true') return false; // 미승인/비활성화건 100% 영구 제거
-              return true;
-            });
-
-            if (validItems.length !== originalLength) {
-              anyChanged = true;
-              if (window.SupabaseSync) {
-                window.SupabaseSync.updateUser(u.id, { items: validItems });
-              }
-              return { ...u, items: validItems };
-            }
-          }
-          return u;
-        });
-
-        if (anyChanged) {
-          this.saveUsers(users);
-          const active = this.getActiveUser();
-          if (active) {
-            const freshMe = users.find(u => String(u.id) === String(active.id));
-            if (freshMe) {
-              this.setActiveUser(freshMe);
-            }
-          }
-        }
-      } catch (e) {
-        console.error('[DataStore] cleanGhostItems error:', e);
-      }
+      // [일원화 완료] 영업자 물건은 applications SSOT에서 직접 조회하므로 불필요한 users.items 반복 쓰기 제거
+      return;
     },
 
     // --- 2. 영업물건 전용 데이터 조회 (최고관리자 대시보드 절대 SSOT 기반 & 완벽한 중복 방지) ---
@@ -264,22 +213,6 @@
                           (myUserName && entryUserName === myUserName) ||
                           (myPhone && entryPhone === myPhone);
 
-        // 2) 만약 assignedUser가 admin(최고관리자)으로 폴백되었더라도 본인 물건인지 역추적 확인 (3+1 영구 원칙 안전망)
-        if (!isUserMatch && (entryUserId === 'admin' || entryBizCode === 'admin')) {
-          const itIdStr = String(it.id || it.appRefId || '').trim().toLowerCase();
-          let itPrefix = '';
-          if (itIdStr.includes('-')) {
-            itPrefix = itIdStr.split('-').slice(0, -1).join('-');
-          }
-          const normItPrefix = itPrefix.replace(/[^a-zA-Z0-9]/g, '');
-          const numItPrefix = normItPrefix.replace(/^b/i, '');
-          if (normMyBiz && (normMyBiz === normItPrefix || (numMyBiz && numItPrefix && numMyBiz === numItPrefix))) {
-            isUserMatch = true;
-          } else if (Array.isArray(user.items) && user.items.some(ui => String(ui.id) === String(it.id) || String(ui.appRefId) === String(it.id))) {
-            isUserMatch = true;
-          }
-        }
-
         if (isUserMatch) {
           myBizList.push({
             id: it.id,
@@ -338,78 +271,80 @@
         const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
         const appIdStr = String(app.id || '').trim().toLowerCase();
 
-        // 0. salespersonId / salespersonName 로 최우선 탐색
-        if (salesId || (salesName && salesName !== '본사직접접수')) {
-          assignedUser = users.find(u =>
-            (u.role === 'business' || u.role === 'admin') &&
-            ((salesId && String(u.id).trim().toLowerCase() === salesId) ||
-             (salesId && u.bizCode && String(u.bizCode).trim().toLowerCase() === salesId) ||
-             (salesName && String(u.name).trim().toLowerCase() === salesName))
-          );
-        }
-
-        // 1. referrerCode로 정밀 탐색 (B 유무, 특수문자 제거 정규화 비교 포함)
-        if (!assignedUser && refCode) {
-          const normRef = refCode.replace(/[^a-zA-Z0-9]/g, '');
-          const numRef = normRef.replace(/^b/i, '');
-          assignedUser = users.find(u => {
-            if (u.role !== 'business' && u.role !== 'admin') return false;
-            const uId = String(u.id || '').trim().toLowerCase();
-            const uName = String(u.name || '').trim().toLowerCase();
-            const uBiz = String(u.bizCode || '').trim().toLowerCase();
-            const normUBiz = uBiz.replace(/[^a-zA-Z0-9]/g, '');
-            const numUBiz = normUBiz.replace(/^b/i, '');
-            return (
-              (uBiz && (uBiz === refCode || normUBiz === normRef || (numRef && numUBiz === numRef))) ||
-              (uId && (uId === refCode || uId.replace(/[^a-zA-Z0-9]/g, '') === normRef)) ||
-              (uName && uName === refCode)
+        // 0. 명시적 본사 직접 접수(담당자 없음) 건은 즉시 최고관리자로 확정 (신청번호 ID 접두사 오탐색 원천 차단)
+        const isExplicitlyDirect = (!refCode && !salesId) ||
+                                   (app.referrerCode === '' && app.salespersonId === '') ||
+                                   (app.referrer_code === '' && !app.salespersonId) ||
+                                   (app.salespersonName === '본사직접접수' || app.salespersonName === '본사 직접 접수');
+        if (isExplicitlyDirect && !refCode) {
+          assignedUser = { id: 'admin', name: '최고관리자', role: 'admin', bizCode: 'ADMIN' };
+        } else {
+          // 0. salespersonId / salespersonName 로 최우선 탐색
+          if (salesId || (salesName && salesName !== '본사직접접수')) {
+            assignedUser = users.find(u =>
+              (u.role === 'business' || u.role === 'admin') &&
+              ((salesId && String(u.id).trim().toLowerCase() === salesId) ||
+               (salesId && u.bizCode && String(u.bizCode).trim().toLowerCase() === salesId) ||
+               (salesName && String(u.name).trim().toLowerCase() === salesName))
             );
-          });
-        }
+          }
 
-        // 2. 신청번호 채번 규칙 앞자리 접두사 탐색 (예: B-260901-004 -> B-260901 또는 260901)
-        if (!assignedUser && appIdStr.includes('-')) {
-          const parts = appIdStr.split('-');
-          if (parts.length >= 2) {
-            const prefixCode = parts.slice(0, -1).join('-');
-            const normPrefix = prefixCode.replace(/[^a-zA-Z0-9]/g, '');
-            const numPrefix = normPrefix.replace(/^b/i, '');
+          // 1. referrerCode로 정밀 탐색 (B- 코드로 시작하는 경우 정규화 포함)
+          if (!assignedUser && refCode) {
+            const normRef = refCode.replace(/[^a-zA-Z0-9]/g, '');
+            const numRef = normRef.replace(/^b/i, '');
             assignedUser = users.find(u => {
               if (u.role !== 'business' && u.role !== 'admin') return false;
+              const uId = String(u.id || '').trim().toLowerCase();
+              const uName = String(u.name || '').trim().toLowerCase();
               const uBiz = String(u.bizCode || '').trim().toLowerCase();
               const normUBiz = uBiz.replace(/[^a-zA-Z0-9]/g, '');
               const numUBiz = normUBiz.replace(/^b/i, '');
               return (
-                (uBiz && (uBiz === prefixCode || normUBiz === normPrefix || (numPrefix && numUBiz === numPrefix))) ||
-                (String(u.id || '').trim().toLowerCase() === prefixCode)
+                (uBiz && (uBiz === refCode || normUBiz === normRef || (numRef && numUBiz === numRef))) ||
+                (uId && (uId === refCode || uId.replace(/[^a-zA-Z0-9]/g, '') === normRef)) ||
+                (uName && uName === refCode)
               );
             });
           }
-        }
 
-        // 3. 신청서 userId 매칭 (영업자 본인 직접 접수 건)
-        if (!assignedUser && app.userId) {
-          const aUid = String(app.userId).trim().toLowerCase();
-          assignedUser = users.find(u =>
-            (u.role === 'business' || u.role === 'admin') &&
-            String(u.id).trim().toLowerCase() === aUid
-          );
-        }
+          // 2. 신청번호 채번 규칙 앞자리 접두사 탐색 (단, 반드시 B- 로 시작하는 정식 영업자 코드일 때만 인정!)
+          if (!assignedUser && !refCode && !salesId && appIdStr.includes('-')) {
+            const parts = appIdStr.split('-');
+            if (parts.length >= 2) {
+              const prefixCode = parts.slice(0, -1).join('-');
+              if (/^b-\d+/i.test(prefixCode)) {
+                const normPrefix = prefixCode.replace(/[^a-zA-Z0-9]/g, '');
+                const numPrefix = normPrefix.replace(/^b/i, '');
+                assignedUser = users.find(u => {
+                  if (u.role !== 'business' && u.role !== 'admin') return false;
+                  const uBiz = String(u.bizCode || '').trim().toLowerCase();
+                  const normUBiz = uBiz.replace(/[^a-zA-Z0-9]/g, '');
+                  const numUBiz = normUBiz.replace(/^b/i, '');
+                  return (
+                    (uBiz && (uBiz === prefixCode || normUBiz === normPrefix || (numPrefix && numUBiz === numPrefix))) ||
+                    (String(u.id || '').trim().toLowerCase() === prefixCode)
+                  );
+                });
+              }
+            }
+          }
 
-        // 4. users.items 역추적 (이미 영업자의 items에 배정/등록된 건)
-        if (!assignedUser) {
-          const targetAid = String(app.id || '').trim();
-          assignedUser = users.find(u =>
-            u.role === 'business' &&
-            Array.isArray(u.items) &&
-            u.items.some(it => String(it.id || '').trim() === targetAid || String(it.appRefId || '').trim() === targetAid)
-          );
+          // 3. 신청서 userId 매칭 (영업자 본인 직접 접수 건)
+          if (!assignedUser && !refCode && !salesId && app.userId) {
+            const aUid = String(app.userId).trim().toLowerCase();
+            assignedUser = users.find(u =>
+              (u.role === 'business' || u.role === 'admin') &&
+              String(u.id).trim().toLowerCase() === aUid
+            );
+          }
         }
 
         const normAid = String(app.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
         const recentLock = (this._recentStatusUpdates && (this._recentStatusUpdates[String(app.id)] || (normAid && this._recentStatusUpdates[normAid]))) || null;
-        let rStatus = (recentLock && recentLock.receiptStatus) ? recentLock.receiptStatus : (app.receiptStatus || '접수예정');
-        let pStatus = (recentLock && recentLock.progressStatus) ? recentLock.progressStatus : (app.progressStatus || '지원대기중');
+        const isLockActive = Boolean(recentLock && (Date.now() - (recentLock.timestamp || 0) < 4000));
+        let rStatus = (isLockActive && recentLock.receiptStatus) ? recentLock.receiptStatus : (app.receiptStatus || '접수예정');
+        let pStatus = (isLockActive && recentLock.progressStatus) ? recentLock.progressStatus : (app.progressStatus || '지원대기중');
 
         // 영문 또는 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화
         if (pStatus === '대상자선정' || pStatus === '대상자 선정' || pStatus === '선정' || pStatus === '승인 완료' || pStatus === '승인완료' || pStatus === 'approved' || pStatus === 'before_construction' || pStatus === '시공 전' || pStatus === '시공사 배정 (시공 전)' || pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인') {
@@ -1103,92 +1038,16 @@
         apps.push(targetApp);
       }
 
-      // 2) users.items 내 매칭 항목 갱신 (고유 ID 단일 원천 매칭 & 정규화)
-      users = users.map(u => {
-        if (u.items && Array.isArray(u.items)) {
-          let userItemModified = false;
-          const updatedItems = u.items.map(item => {
-            const iid = String(item.id || '').trim().toLowerCase();
-            const iref = String(item.appRefId || '').trim().toLowerCase();
-            const isIdMatch = iid === targetIdStr.toLowerCase() || 
-                              iref === targetIdStr.toLowerCase() || 
-                              (normTargetId && (iid.replace(/[^a-zA-Z0-9]/g, '') === normTargetId || iref.replace(/[^a-zA-Z0-9]/g, '') === normTargetId)) ||
-                              (targetApp && (iid === String(targetApp.id).toLowerCase() || iref === String(targetApp.id).toLowerCase()));
-
-            if (isIdMatch) {
-              userItemModified = true;
-              // targetApp 최신 상태를 100% 온전히 추종 (SSOT)
-              const finalReceipt = targetApp ? targetApp.receiptStatus : (type === 'receipt' ? cleanVal : (item.receiptStatus || '접수예정'));
-              const finalProgress = targetApp ? targetApp.progressStatus : (type === 'progress' ? cleanVal : (item.progressStatus || '지원대기중'));
-              targetItem = { 
-                ...item, 
-                receiptStatus: finalReceipt,
-                progressStatus: finalProgress,
-                status: targetApp ? targetApp.status : item.status
-              };
-              return targetItem;
-            }
-            return item;
-          });
-          if (userItemModified) {
-            if (!updatedUserIds.includes(u.id)) updatedUserIds.push(u.id);
-            return { ...u, items: updatedItems };
-          }
-        }
-        return u;
-      });
-
-      // 3) 만약 users.items에 아직 없었지만 영업자가 지정된 신청서인 경우, 영업자의 items에도 자동 생성/갱신 (3+1 원칙)
+      // [100% 순수 일원화] applications 단일 테이블 락 등록 & 저장
       if (targetApp) {
-        const salesId = String(targetApp.salespersonId || '').trim().toLowerCase();
-        const salesName = String(targetApp.salespersonName || '').trim().toLowerCase();
-        const refCode = String(targetApp.referrerCode || targetApp.referrer_code || '').trim().toLowerCase();
-        const appUser = String(targetApp.userId || '').trim().toLowerCase();
-        const appIdStr = String(targetApp.id || '').trim().toLowerCase();
-        let prefixCode = '';
-        if (appIdStr.includes('-')) {
-          const parts = appIdStr.split('-');
-          if (parts.length >= 2) prefixCode = parts.slice(0, -1).join('-').toLowerCase();
-        }
-
-        let assignedUser = users.find(u =>
-          (u.role === 'business' || u.role === 'admin') &&
-          ((salesId && String(u.id).trim().toLowerCase() === salesId) ||
-            (salesId && u.bizCode && String(u.bizCode).trim().toLowerCase() === salesId) ||
-            (salesName && String(u.name).trim().toLowerCase() === salesName) ||
-            (refCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === refCode) ||
-            (refCode && String(u.id).trim().toLowerCase() === refCode) ||
-            (refCode && String(u.name).trim().toLowerCase() === refCode) ||
-            (prefixCode && u.bizCode && String(u.bizCode).trim().toLowerCase() === prefixCode) ||
-            (appUser && String(u.id).trim().toLowerCase() === appUser))
-        );
-        if (assignedUser) {
-          if (!assignedUser.items) assignedUser.items = [];
-          const existingIdx = assignedUser.items.findIndex(it => String(it.id) === String(targetApp.id) || String(it.appRefId) === String(targetApp.id));
-          const newItemData = {
-            id: String(targetApp.id),
-            appRefId: String(targetApp.id),
-            name: targetApp.storeName || targetApp.shopName || targetApp.ownerName || '영업물건',
-            phone: targetApp.ownerPhone || targetApp.phone || '',
-            address: targetApp.storeAddress || targetApp.address || '',
-            receiptStatus: targetApp.receiptStatus || '접수예정',
-            progressStatus: targetApp.progressStatus || '지원대기중',
-            registeredAt: targetApp.appliedAt || targetApp.createdAt || new Date().toISOString()
-          };
-          if (existingIdx >= 0) {
-            assignedUser.items[existingIdx] = { ...assignedUser.items[existingIdx], ...newItemData };
-          } else {
-            assignedUser.items.unshift(newItemData);
-          }
-          if (!updatedUserIds.includes(assignedUser.id)) updatedUserIds.push(assignedUser.id);
-        }
-
-        // [레이스 컨디션 완벽 방어 락 등록]
         this._recentStatusUpdates[String(targetApp.id)] = {
           receiptStatus: targetApp.receiptStatus,
           progressStatus: targetApp.progressStatus,
           status: targetApp.status,
           constructionStatus: targetApp.constructionStatus,
+          referrerCode: targetApp.referrerCode || '',
+          salespersonId: targetApp.salespersonId || '',
+          salespersonName: targetApp.salespersonName || '',
           memo: targetApp.memo,
           timestamp: Date.now()
         };
@@ -1197,9 +1056,8 @@
       }
 
       this.saveApplications(apps);
-      this.saveUsers(users);
 
-      // 4) Supabase DB 비동기 백그라운드 저장 (Non-blocking & 실시간 SSOT 보장)
+      // 4) Supabase DB 비동기 백그라운드 저장 (단일 원천 applications 만 저장)
       (async () => {
         try {
           if (window.SupabaseSync) {
@@ -1215,12 +1073,6 @@
               });
             } else if (targetApp && typeof window.SupabaseSync.upsertApplication === 'function') {
               await window.SupabaseSync.upsertApplication(targetApp);
-            }
-            for (const uId of updatedUserIds) {
-              const uObj = users.find(u => u.id === uId);
-              if (uObj && typeof window.SupabaseSync.updateUser === 'function') {
-                await window.SupabaseSync.updateUser(uId, { items: uObj.items || [] });
-              }
             }
           }
         } catch (err) {
@@ -1311,56 +1163,42 @@
       targetApp.referrer_code = codeVal;
       let salesUser = null;
       let users = this.getUsers();
-      let usersUpdated = false;
-
-      // 3+1 SSOT 원칙: 모든 사용자의 items 에서 해당 신청서 잔재를 전수 정리 (이전 영업자 물건에서 자동 제거)
-      users.forEach(u => {
-        if (u && Array.isArray(u.items) && u.items.length > 0) {
-          const prevLen = u.items.length;
-          u.items = u.items.filter(it => {
-            const iid = String(it.id || '').trim();
-            const iref = String(it.appRefId || '').trim();
-            return (iid !== targetId && iref !== targetId && iid.toLowerCase() !== targetId.toLowerCase() && iref.toLowerCase() !== targetId.toLowerCase());
-          });
-          if (u.items.length !== prevLen) {
-            usersUpdated = true;
-          }
-        }
-      });
 
       if (codeVal) {
-        salesUser = users.find(u =>
-          (u.role === 'business' || u.role === 'admin') &&
-          ((u.bizCode && String(u.bizCode).trim().toLowerCase() === codeVal.toLowerCase()) ||
-            (u.id && String(u.id).trim().toLowerCase() === codeVal.toLowerCase()) ||
-            (u.name && String(u.name).trim().toLowerCase() === codeVal.toLowerCase()))
-        );
+        const normCode = codeVal.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const numCode = normCode.replace(/^b/i, '');
+        salesUser = users.find(u => {
+          if (u.role !== 'business' && u.role !== 'admin') return false;
+          const uBiz = String(u.bizCode || '').trim().toLowerCase();
+          const normUBiz = uBiz.replace(/[^a-zA-Z0-9]/g, '');
+          const numUBiz = normUBiz.replace(/^b/i, '');
+          const uId = String(u.id || '').trim().toLowerCase();
+          const normUId = uId.replace(/[^a-zA-Z0-9]/g, '');
+          const uName = String(u.name || '').trim().toLowerCase();
+          return (
+            (uBiz && (uBiz === codeVal.toLowerCase() || normUBiz === normCode || (numCode && numUBiz === numCode))) ||
+            (uId && (uId === codeVal.toLowerCase() || normUId === normCode)) ||
+            (uName && uName === codeVal.toLowerCase())
+          );
+        });
+
         if (salesUser) {
+          targetApp.referrerCode = salesUser.bizCode || salesUser.id;
+          targetApp.referrer_code = targetApp.referrerCode;
           targetApp.salespersonId = salesUser.id;
           targetApp.salespersonName = salesUser.name;
-
-          // 3+1 원칙: 새 영업자의 items 에만 최상단 단일 귀속
-          if (!salesUser.items) salesUser.items = [];
-          const itemPayload = {
-            id: String(targetApp.id),
-            appRefId: String(targetApp.id),
-            name: targetApp.storeName || targetApp.shopName || targetApp.ownerName || '영업물건',
-            phone: targetApp.ownerPhone || targetApp.phone || '',
-            address: targetApp.storeAddress || targetApp.address || '',
-            receiptStatus: targetApp.receiptStatus || '접수예정',
-            progressStatus: targetApp.progressStatus || '지원대기중',
-            status: targetApp.status || 'pending',
-            registeredAt: targetApp.appliedAt || targetApp.createdAt || new Date().toISOString()
-          };
-          salesUser.items.unshift(itemPayload);
-          usersUpdated = true;
         } else {
+          targetApp.referrerCode = codeVal;
+          targetApp.referrer_code = codeVal;
           targetApp.salespersonId = '';
           targetApp.salespersonName = '';
         }
       } else {
+        // 본사 직접 접수 (담당자 없음)
+        targetApp.referrerCode = '';
+        targetApp.referrer_code = '';
         targetApp.salespersonId = '';
-        targetApp.salespersonName = '';
+        targetApp.salespersonName = '본사직접접수';
       }
       targetApp.updatedAt = new Date().toISOString();
 
@@ -1369,16 +1207,28 @@
       try {
         memoObj = typeof targetApp.memo === 'object' ? (targetApp.memo || {}) : JSON.parse(targetApp.memo || '{}');
       } catch (e) { memoObj = {}; }
-      memoObj.referrerCode = codeVal;
+      memoObj.referrerCode = targetApp.referrerCode || '';
       memoObj.salespersonId = targetApp.salespersonId || '';
       memoObj.salespersonName = targetApp.salespersonName || '';
       if (targetApp.isBizItem !== undefined) memoObj.isBizItem = Boolean(targetApp.isBizItem === true || String(targetApp.isBizItem) === 'true');
       targetApp.memo = JSON.stringify(memoObj);
 
+      // [레이스 컨디션 완벽 방어 락 등록 - 1회 변경 즉시 고정]
+      this._recentStatusUpdates[String(targetApp.id)] = {
+        receiptStatus: targetApp.receiptStatus,
+        progressStatus: targetApp.progressStatus,
+        status: targetApp.status,
+        constructionStatus: targetApp.constructionStatus,
+        referrerCode: targetApp.referrerCode || '',
+        salespersonId: targetApp.salespersonId || '',
+        salespersonName: targetApp.salespersonName || '',
+        memo: targetApp.memo,
+        timestamp: Date.now()
+      };
+      if (normTargetId) this._recentStatusUpdates[normTargetId] = this._recentStatusUpdates[String(targetApp.id)];
+
+      // [100% 순수 일원화] applications 단일 테이블에만 즉시 저장
       this.saveApplications(apps);
-      if (usersUpdated) {
-        this.saveUsers(users);
-      }
 
       // 2) Supabase 비동기 클라우드 DB 저장 (Non-blocking)
       if (window.SupabaseSync) {
@@ -1389,9 +1239,6 @@
           }).catch(() => {});
         } else if (typeof window.SupabaseSync.upsertApplication === 'function') {
           window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
-        }
-        if (usersUpdated && salesUser && typeof window.SupabaseSync.updateUser === 'function') {
-          window.SupabaseSync.updateUser(salesUser.id, { items: salesUser.items || [] }).catch(() => {});
         }
       }
 
@@ -2064,9 +1911,14 @@
           if (typeof window.renderInquiriesList === 'function') window.renderInquiriesList();
         }
 
-        // 전역 실시간 브로드캐스트 발화
-        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
-          window.dispatchEvent(new CustomEvent('supabase-data-synced'));
+        // 5. 전역 및 다른 브라우저 탭 실시간 브로드캐스트 발화 (0초 즉시 동기화)
+        if (typeof window !== 'undefined') {
+          if (typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('supabase-data-synced'));
+          }
+          try {
+            localStorage.setItem('ganpan_cross_tab_sync', String(Date.now()));
+          } catch (eStorage) {}
         }
       } catch (e) {
         console.error('[DataStore] notifyAll error:', e);
@@ -2177,13 +2029,23 @@
       return (u.role === 'business' || (u.bizCode && String(u.bizCode).trim().length > 0));
     });
 
-    // 현재 배정된 영업자 확인
-    const curRef = String(app.referrerCode || '').trim();
+    // 현재 배정된 영업자 확인 (P- 접두사나 본사직접접수는 담당자 없음으로 확정)
+    const rawCurRef = String(app.referrerCode || app.referrer_code || app.salespersonId || '').trim();
+    const isDirect = (app.salespersonName === '본사직접접수' || app.salespersonName === '본사 직접 접수') || (!rawCurRef || !/^b-\d+/i.test(rawCurRef));
+    const curRef = isDirect ? '' : rawCurRef;
     let currentBizName = '담당자 없음 (본사 직접 접수)';
     if (curRef) {
-      const matched = bizUsers.find(u => u.bizCode === curRef || u.id === curRef);
+      const normCur = curRef.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+      const matched = bizUsers.find(u => {
+        const uBiz = String(u.bizCode || '').trim().toLowerCase();
+        const uId = String(u.id || '').trim().toLowerCase();
+        return (uBiz && (uBiz === curRef.toLowerCase() || uBiz.replace(/[^a-zA-Z0-9]/g, '') === normCur)) ||
+               (uId && (uId === curRef.toLowerCase() || uId.replace(/[^a-zA-Z0-9]/g, '') === normCur));
+      });
       if (matched) {
         currentBizName = `${matched.name} (${matched.bizCode || matched.id})`;
+      } else if (app.salespersonName && app.salespersonName !== '본사직접접수') {
+        currentBizName = `${app.salespersonName} (${curRef})`;
       } else {
         currentBizName = `${curRef} 영업자`;
       }
@@ -2220,7 +2082,9 @@
               <option value="" ${!curRef ? 'selected' : ''}>-- 담당자 없음 (본사 직접 접수) --</option>
               ${bizUsers.map(u => {
                 const code = u.bizCode || u.id;
-                const isSelected = (curRef && (curRef === u.bizCode || curRef === u.id)) ? 'selected' : '';
+                const normCode = String(code).toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+                const normCur = curRef.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+                const isSelected = (curRef && (code.toLowerCase() === curRef.toLowerCase() || normCode === normCur || String(u.id).toLowerCase() === curRef.toLowerCase())) ? 'selected' : '';
                 const phoneText = u.phone ? ` - ${u.phone}` : '';
                 return `<option value="${code}" ${isSelected}>${escapeText(u.name)} (${escapeText(code)})${escapeText(phoneText)}</option>`;
               }).join('')}
@@ -2342,11 +2206,14 @@
       window.showToast(toastMsg);
     }
 
-    // 5. 전체 렌더러 동기식 즉시 호출
+    // 5. 전체 렌더러 동기식 즉시 호출 (최고관리자 & 영업자 6대 화면 0초 동시 연동)
     if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
     if (typeof window.renderAdminDashboard === 'function') window.renderAdminDashboard();
     if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
     if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
+    if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
+    if (typeof window.renderBizRegisteredItemsMob === 'function') window.renderBizRegisteredItemsMob();
+    if (typeof window.renderManagerPanel === 'function') window.renderManagerPanel();
   };
 
   // --- 공통 간판 종류 변경 핸들러 (PC웹 & 모바일 공용) ---

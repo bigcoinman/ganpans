@@ -2077,9 +2077,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (freshMe) activeUser = freshMe;
         }
         if (!activeUser || activeUser.role !== 'business') return;
-        if (window.DataStore && typeof window.DataStore.cleanGhostItems === 'function') {
-            window.DataStore.cleanGhostItems();
-        }
 
         renderUserApplicationsMob();
         renderBizRegisteredItemsMob();
@@ -2493,58 +2490,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                // 2. 영업자 items에는 사진 메타데이터만 저장 (용량 절약)
-                const newItem = {
-                    id: itemId,
-                    name: nameVal,
-                    phone: phoneVal,
-                    address: addressVal,
-                    photos: base64PhotosList.slice(0, 3), // 미리보기용 최대 3장만
-                    photosCount: base64PhotosList.length,
-                    receiptStatus: '접수예정',
-                    progressStatus: '지원대기중',
-                    createdAt: new Date().toISOString()
-                };
-
-                if (!activeUser.items) activeUser.items = [];
-                const existingIdx = activeUser.items.findIndex(it => it.id === itemId);
-                if (existingIdx >= 0) {
-                    activeUser.items[existingIdx] = newItem;
-                } else {
-                    activeUser.items.unshift(newItem);
-                }
-
-                users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
-                if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-                    window.DataStore.saveUsers(users);
-                } else {
-                    try {
-                        (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
-                        localStorage.setItem('activeUser', JSON.stringify(activeUser));
-                    } catch (quotaErr2) {
-                        const usersLite = users.map(u => {
-                            if (u.id !== activeUser.id) return u;
-                            const itemsLite = (u.items || []).map(it =>
-                                it.id === itemId ? { ...it, photos: [], photosCount: base64PhotosList.length } : it
-                            );
-                            return { ...u, items: itemsLite };
-                        });
-                        try {
-                            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(usersLite) : localStorage.setItem('users', JSON.stringify(usersLite)));
-                            localStorage.setItem('activeUser', JSON.stringify({ ...activeUser, items: usersLite.find(u => u.id === activeUser.id)?.items || [] }));
-                        } catch (e3) {
-                            console.warn('[users 저장 실패]', e3);
-                        }
-                    }
-                }
-
-                // 3. Supabase 클라우드 DB 실시간 양방향 동기화
+                // [100% 순수 일원화] applications 단일 테이블에만 저장 (불필요한 users.items 이중 쓰기 전수 삭제)
+                // 3. Supabase 클라우드 DB 실시간 단일 원천 동기화
                 if (window.SupabaseSync) {
                     try {
                         window.SupabaseSync.upsertApplication(newApp);
-                        if (typeof window.SupabaseSync.updateUser === 'function') {
-                            window.SupabaseSync.updateUser(activeUser.id, { items: activeUser.items });
-                        }
                     } catch (syncErr) {
                         console.warn('[Supabase 동기화 오류]', syncErr);
                     }
@@ -3370,10 +3320,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
 
-                    // 영업자 이름 매칭 (예: 담당자 : 김만석)
+                    // 영업자 이름 매칭 (예: 담당자 : 김만석 또는 본사직접접수)
                     let bizUserName = '';
                     const curUsersList = JSON.parse(localStorage.getItem('users')) || users || [];
-                    if (app.salespersonName) {
+                    if (app.salespersonName === '본사직접접수' || app.salespersonName === '본사 직접 접수' || (!app.referrerCode && !app.salespersonId && !app.salespersonName)) {
+                        bizUserName = '';
+                    } else if (app.salespersonName) {
                         bizUserName = app.salespersonName;
                     } else if (app.referrerCode) {
                         const refCode = String(app.referrerCode).trim();
@@ -8955,5 +8907,26 @@ function initModalsAndSearch() {
       });
     });
   }
+
+  // --- 모바일 화면 실시간 6대 연동 리스너 (0초 즉시 동기화) ---
+  const handleMobileRealtimeSync = () => {
+    const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+    const isFormActive = Boolean(window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'submit') || activeEl.tagName === 'TEXTAREA')));
+    if (isFormActive) return;
+
+    if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob(true);
+    if (typeof renderBizRegisteredItemsMob === 'function') renderBizRegisteredItemsMob();
+    if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
+    if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
+    if (typeof renderBusinessDashboardMob === 'function') renderBusinessDashboardMob();
+  };
+
+  window.addEventListener('supabase-data-synced', handleMobileRealtimeSync);
+  window.addEventListener('storage', (e) => {
+    if (!e.key || e.key === 'applications' || e.key === 'users' || e.key === 'site_stats' || e.key === 'inquiries' || e.key === 'ganpan_cross_tab_sync') {
+      handleMobileRealtimeSync();
+    }
+  });
 }
+
 

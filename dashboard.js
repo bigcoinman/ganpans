@@ -857,6 +857,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'applications' || e.key === 'users' || e.key === 'inquiries') {
       users = JSON.parse(localStorage.getItem('users')) || [];
       applications = JSON.parse(localStorage.getItem('applications')) || [];
+      if (activeUser) {
+        const freshActive = users.find(u => u.id === activeUser.id);
+        if (freshActive) {
+          activeUser = sanitizeUser(freshActive);
+        }
+      }
       if (activeUser && activeUser.role === 'admin') {
         renderAllUsersList();
         renderApplicationsList();
@@ -867,6 +873,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderBusinessDashboard();
         renderUserApplicationsList();
         renderBizRegisteredTable();
+      } else if (activeUser && activeUser.role === 'constructor') {
+        renderConstructorDashboard();
+        renderUserApplicationsList();
+      } else if (activeUser) {
+        renderUserApplicationsList();
       }
     }
   });
@@ -1577,48 +1588,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // 영업자 본인의 items 에도 등록 (실제 촬영 사진 base64 포함)
-      const newItem = {
-        id: itemId,
-        name: nameVal,
-        phone: phoneVal,
-        address: addrVal,
-        receiptStatus: '접수예정',
-        progressStatus: '지원대기중',
-        photos: base64Photo ? [base64Photo] : []
-      };
-      activeUser.items = activeUser.items || [];
-      if (!activeUser.items.some(i => i.id === itemId)) {
-        activeUser.items.push(newItem);
-      } else {
-        activeUser.items = activeUser.items.map(i => i.id === itemId ? newItem : i);
-      }
-      users = users.map(u => u.id === activeUser.id ? { ...u, items: activeUser.items } : u);
-      if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-        window.DataStore.saveUsers(users);
-      } else {
-        try {
-          (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
-          localStorage.setItem('activeUser', JSON.stringify(activeUser));
-        } catch (quotaErr2) {
-          console.warn('[users 저장 실패]', quotaErr2);
-          const usersLite = users.map(u => {
-            if (u.id !== activeUser.id) return u;
-            const itemsLite = (u.items || []).map(it => it.id === itemId ? { ...it, photos: [] } : it);
-            return { ...u, items: itemsLite };
-          });
-          try {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(usersLite) : localStorage.setItem('users', JSON.stringify(usersLite)));
-            localStorage.setItem('activeUser', JSON.stringify({ ...activeUser, items: usersLite.find(u => u.id === activeUser.id)?.items || [] }));
-          } catch (e3) { console.warn('[users 저장 실패]', e3); }
-        }
-      }
-
-      // Supabase 클라우드 DB 실시간 양방향 동기화
+      // [100% 순수 일원화] applications 단일 테이블에만 저장 (불필요한 users.items 이중 쓰기 전수 삭제)
+      // Supabase 클라우드 DB 실시간 단일 원천 동기화
       if (window.SupabaseSync) {
         try {
           window.SupabaseSync.upsertApplication(newApp);
-          window.SupabaseSync.updateUser(activeUser.id, { items: activeUser.items });
         } catch (syncErr) { console.warn('[Supabase 동기화 오류]', syncErr); }
       }
 
@@ -3529,10 +3503,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="button" class="btn btn-secondary btn-sm btn-delete-app" data-id="${app.id}" onclick="window.deleteApplicationAdmin('${app.id}', this, event)" style="padding: 5px 8px; font-size: 0.75rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; height: 30px;" title="신청서 영구 삭제"><i class="fa-solid fa-trash-can"></i> 삭제</button>
       </div>`;
 
-      // 영업담당자 이름 매칭 (예: 김만석영업자)
+      // 영업담당자 이름 매칭 (예: 김만석영업자 또는 본사직접접수)
       let bizUserName = '';
-      if (app.salespersonName) {
-        bizUserName = `${app.salespersonName}영업자`;
+      if (app.salespersonName === '본사직접접수' || app.salespersonName === '본사 직접 접수' || (!app.referrerCode && !app.salespersonId && !app.salespersonName)) {
+        bizUserName = '본사직접접수';
+      } else if (app.salespersonName) {
+        bizUserName = app.salespersonName.endsWith('영업자') ? app.salespersonName : `${app.salespersonName}영업자`;
       } else if (app.referrerCode) {
         const refCode = String(app.referrerCode).trim();
         const matchedUser = curUsersList.find(u =>
@@ -6608,7 +6584,7 @@ function initAIAssistant() {
 
   window.addEventListener('supabase-data-synced', handleRealtimeSync);
   window.addEventListener('storage', (e) => {
-    if (!e.key || e.key === 'applications' || e.key === 'users' || e.key === 'site_stats' || e.key === 'inquiries') {
+    if (!e.key || e.key === 'applications' || e.key === 'users' || e.key === 'site_stats' || e.key === 'inquiries' || e.key === 'ganpan_cross_tab_sync') {
       handleRealtimeSync();
     }
   });
