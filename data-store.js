@@ -789,6 +789,17 @@
           memoObj = typeof app.memo === 'object' ? (app.memo || {}) : JSON.parse(app.memo || '{}');
         } catch (e) { memoObj = {}; }
         memoObj.isBizItem = false;
+        const existingCount = Math.max(
+          Number(memoObj.photoCount) || 0,
+          Number(app.photosCount) || 0,
+          Number(app.photos_count) || 0,
+          (Array.isArray(app.photos) ? app.photos.length : 0)
+        );
+        if (existingCount > 0) {
+          memoObj.photoCount = existingCount;
+          app.photosCount = existingCount;
+          app.hasPhoto = true;
+        }
         app.memo = JSON.stringify(memoObj);
 
         const normAppId = String(app.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
@@ -967,6 +978,17 @@
           if (app.salespersonId) memoObj.salespersonId = app.salespersonId;
           if (app.salespersonName) memoObj.salespersonName = app.salespersonName;
           if (app.referrerCode) memoObj.referrerCode = app.referrerCode;
+          const existingCount = Math.max(
+            Number(memoObj.photoCount) || 0,
+            Number(app.photosCount) || 0,
+            Number(app.photos_count) || 0,
+            (Array.isArray(app.photos) ? app.photos.length : 0)
+          );
+          if (existingCount > 0) {
+            memoObj.photoCount = existingCount;
+            app.photosCount = existingCount;
+            app.hasPhoto = true;
+          }
           app.memo = JSON.stringify(memoObj);
 
           targetApp = app;
@@ -1185,6 +1207,17 @@
       memoObj.salespersonId = targetApp.salespersonId || '';
       memoObj.salespersonName = targetApp.salespersonName || '';
       if (targetApp.isBizItem !== undefined) memoObj.isBizItem = Boolean(targetApp.isBizItem === true || String(targetApp.isBizItem) === 'true');
+      const existingCount = Math.max(
+        Number(memoObj.photoCount) || 0,
+        Number(targetApp.photosCount) || 0,
+        Number(targetApp.photos_count) || 0,
+        (Array.isArray(targetApp.photos) ? targetApp.photos.length : 0)
+      );
+      if (existingCount > 0) {
+        memoObj.photoCount = existingCount;
+        targetApp.photosCount = existingCount;
+        targetApp.hasPhoto = true;
+      }
       targetApp.memo = JSON.stringify(memoObj);
 
       // [레이스 컨디션 완벽 방어 락 등록 - 1회 변경 즉시 고정]

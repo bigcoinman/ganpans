@@ -1883,15 +1883,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     photoList = [app.image_url];
                 }
             }
-            let count = photoList.length;
+            const memoPhotoCount = (() => {
+              try {
+                const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+                return (m && m.photoCount) ? Number(m.photoCount) : 0;
+              } catch(e) { return 0; }
+            })();
+            let count = Math.max(
+              photoList.length,
+              Number(app.photosCount) || 0,
+              Number(app.photos_count) || 0,
+              memoPhotoCount
+            );
             let hasPhoto = count > 0 || Boolean(
               app.hasPhoto || 
-              (app.photosCount > 0) || 
-              (app.photos_count > 0) || 
               (app.fileName && app.fileName !== '업로드 파일 없음' && String(app.fileName).trim() !== '') ||
               (app.file_name && app.file_name !== '업로드 파일 없음' && String(app.file_name).trim() !== '')
             );
-            if (!count && hasPhoto) count = app.photosCount || app.photos_count || 1;
+            if (!count && hasPhoto) count = 1;
 
             const downloadBtn = hasPhoto
                 ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}">
@@ -3291,30 +3300,40 @@ document.addEventListener('DOMContentLoaded', () => {
                     let fileAttachmentHtml = '';
                     const photosArr = (Array.isArray(app.photos) && app.photos.length > 0) ? app.photos.filter(p => p && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:'))) : [];
                     const photoSrc = (photosArr.length > 0) ? photosArr[0] : (app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : ''));
+                    const memoPhotoCount = (() => {
+                      try {
+                        const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+                        return (m && m.photoCount) ? Number(m.photoCount) : 0;
+                      } catch(e) { return 0; }
+                    })();
+                    const count = Math.max(
+                      photosArr.length,
+                      Number(app.photosCount) || 0,
+                      Number(app.photos_count) || 0,
+                      memoPhotoCount
+                    );
                     const hasPhoto = Boolean(
-                      (photosArr.length > 0) ||
+                      count > 0 ||
                       (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))) ||
-                      (app.photosCount && app.photosCount > 0) ||
-                      (app.photos_count && app.photos_count > 0) ||
                       app.hasPhoto ||
                       (app.fileName && app.fileName !== '업로드 파일 없음' && String(app.fileName).trim() !== '') ||
                       (app.file_name && app.file_name !== '업로드 파일 없음' && String(app.file_name).trim() !== '')
                     );
-                    const count = photosArr.length > 0 ? photosArr.length : (app.photosCount || app.photos_count || (hasPhoto ? 1 : 0));
+                    const finalCount = count > 0 ? count : (hasPhoto ? 1 : 0);
 
                     fileAttachmentHtml = `
                         <div style="margin-top: 10px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <div style="font-size: 0.88rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
                                 <i class="fa-solid fa-camera" style="color: var(--accent-primary);"></i> 현장사진: 
-                                <span style="font-weight: 700; font-size: 0.82rem; color: ${hasPhoto ? '#16a34a' : '#94a3b8'};">${hasPhoto ? `등록됨 (${count}장)` : '미등록'}</span>
+                                <span style="font-weight: 700; font-size: 0.82rem; color: ${hasPhoto ? '#16a34a' : '#94a3b8'};">${hasPhoto ? `등록됨 (${finalCount}장)` : '미등록'}</span>
                             </div>
                             <div style="display: flex; gap: 6px; align-items: center;">
                                 <button type="button" class="btn btn-sm btn-upload-app-photo-mob" data-id="${app.id}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 700; color: #16a34a; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${hasPhoto ? '현장사진 변경/재등록' : '현장사진 등록'}">
                                     <i class="fa-solid fa-camera" style="font-size: 0.8rem;"></i> 사진 등록
                                 </button>
                                 ${hasPhoto ? `
-                                    <button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}">
-                                        <i class="fa-solid ${count > 1 ? 'fa-images' : 'fa-download'}" style="font-size: 0.76rem; color: #2563eb;"></i> ${count > 1 ? `사진 (${count}장)` : '다운로드'}
+                                    <button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${finalCount > 1 ? `현장사진 ${finalCount}장 개별 다운로드` : '현장사진 다운로드'}">
+                                        <i class="fa-solid ${finalCount > 1 ? 'fa-images' : 'fa-download'}" style="font-size: 0.76rem; color: #2563eb;"></i> ${finalCount > 1 ? `사진 (${finalCount}장)` : '다운로드'}
                                     </button>
                                 ` : `
                                     <button type="button" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 500; color: #94a3b8; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; cursor: not-allowed; height: 32px; box-sizing: border-box;" title="등록된 사진 없음">
@@ -7500,18 +7519,18 @@ function initWizard() {
     });
 
     if (uploadInput) {
-      uploadInput.addEventListener('change', (e) => {
+      uploadInput.addEventListener('change', async (e) => {
         if (e.target.files && e.target.files.length) {
-          handlePhotoFiles(e.target.files);
+          await handlePhotoFiles(e.target.files);
         }
         uploadInput.value = '';
       });
     }
 
     if (uploadCameraInput) {
-      uploadCameraInput.addEventListener('change', (e) => {
+      uploadCameraInput.addEventListener('change', async (e) => {
         if (e.target.files && e.target.files.length) {
-          handlePhotoFiles(e.target.files);
+          await handlePhotoFiles(e.target.files);
         }
         uploadCameraInput.value = '';
       });
@@ -8041,6 +8060,16 @@ function initWizard() {
         loginNoticePw = '';
       }
 
+      const memoPayload = {
+        isBizItem: false,
+        receiptStatus: '접수완료',
+        progressStatus: '심사대기중',
+        salespersonId: assignedSalespersonId || '',
+        salespersonName: assignedSalespersonName || (finalReferrerCode ? '' : '본사직접접수'),
+        referrerCode: finalReferrerCode,
+        photoCount: photos.length
+      };
+
       const newApp = {
         id: customId,
         userId: (loggedUser && loggedUser.role === 'business') ? loggedUser.id : userId,
@@ -8058,6 +8087,8 @@ function initWizard() {
         fileData,
         photos,
         photosCount: photos.length,
+        hasPhoto: photos.length > 0,
+        memo: JSON.stringify(memoPayload),
         appliedAt: now.toISOString(),
         status: 'pending',
         isBizItem: false,
@@ -8073,6 +8104,9 @@ function initWizard() {
 
       apps.push(newApp);
       safeSetStorage('applications', apps);
+      if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+        window.DataStore.saveApplications(apps);
+      }
 
       if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
         try {

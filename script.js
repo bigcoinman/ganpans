@@ -1177,18 +1177,18 @@ function initWizard() {
     });
 
     if (uploadInput) {
-      uploadInput.addEventListener('change', (e) => {
+      uploadInput.addEventListener('change', async (e) => {
         if (e.target.files && e.target.files.length) {
-          handlePhotoFiles(e.target.files);
+          await handlePhotoFiles(e.target.files);
         }
         uploadInput.value = '';
       });
     }
 
     if (uploadCameraInput) {
-      uploadCameraInput.addEventListener('change', (e) => {
+      uploadCameraInput.addEventListener('change', async (e) => {
         if (e.target.files && e.target.files.length) {
-          handlePhotoFiles(e.target.files);
+          await handlePhotoFiles(e.target.files);
         }
         uploadCameraInput.value = '';
       });
@@ -1724,6 +1724,16 @@ function initWizard() {
         fileData,
         photos,
         photosCount: photos.length,
+        hasPhoto: photos.length > 0,
+        memo: JSON.stringify({
+          isBizItem: false,
+          receiptStatus: '접수완료',
+          progressStatus: '심사대기중',
+          salespersonId: assignedSalespersonId || '',
+          salespersonName: assignedSalespersonName || (finalReferrerCode ? '' : '본사직접접수'),
+          referrerCode: finalReferrerCode,
+          photoCount: photos.length
+        }),
         appliedAt: now.toISOString(),
         status: 'pending',
         isBizItem: false,
@@ -1739,6 +1749,9 @@ function initWizard() {
 
       apps.push(newApp);
       safeSetStorage('applications', apps);
+      if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+        window.DataStore.saveApplications(apps);
+      }
 
       if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
         try {

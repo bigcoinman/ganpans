@@ -1163,7 +1163,15 @@ window.SupabaseSync = {
       photoData = app.image_url;
       validCount = Math.max(validCount, app.photosCount || 1);
     }
-    if (validCount === 0 && app.photosCount) validCount = app.photosCount;
+    const memoCount = (() => {
+      try {
+        const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+        return (m && m.photoCount) ? Number(m.photoCount) : 0;
+      } catch (e) { return 0; }
+    })();
+    if (validCount === 0 && memoCount > 0) validCount = memoCount;
+    if (validCount === 0 && app.photosCount) validCount = Number(app.photosCount) || 0;
+    if (validCount === 0 && app.photos_count) validCount = Number(app.photos_count) || 0;
 
     const payload = {
       id: String(app.id),
@@ -1226,7 +1234,15 @@ window.SupabaseSync = {
       photoData = app.image_url;
       validCount = Math.max(validCount, app.photosCount || 1);
     }
-    if (validCount === 0 && app.photosCount) validCount = app.photosCount;
+    const memoCountBase = (() => {
+      try {
+        const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+        return (m && m.photoCount) ? Number(m.photoCount) : 0;
+      } catch (e) { return 0; }
+    })();
+    if (validCount === 0 && memoCountBase > 0) validCount = memoCountBase;
+    if (validCount === 0 && app.photosCount) validCount = Number(app.photosCount) || 0;
+    if (validCount === 0 && app.photos_count) validCount = Number(app.photos_count) || 0;
 
     const payload = {
       id: String(app.id),
@@ -1948,8 +1964,14 @@ window.SupabaseSync = {
                 appObj.fileData = localApp.fileData || localApp.photos[0];
                 appObj.fileName = localApp.fileName || appObj.fileName;
               }
-              if (localApp.photosCount && !appObj.photosCount) {
-                appObj.photosCount = localApp.photosCount;
+              const existingLocalCount = Math.max(
+                Number(localApp.photosCount) || 0,
+                Number(localApp.photos_count) || 0,
+                (Array.isArray(localApp.photos) ? localApp.photos.length : 0),
+                (() => { try { const m = JSON.parse(localApp.memo || '{}'); return Number(m.photoCount) || 0; } catch(e) { return 0; } })()
+              );
+              if (existingLocalCount > (Number(appObj.photosCount) || 0)) {
+                appObj.photosCount = existingLocalCount;
                 appObj.hasPhoto = true;
               }
               if (localApp.constructionPhotos && localApp.constructionPhotos.length > 0 && (!appObj.constructionPhotos || appObj.constructionPhotos.length === 0)) {
