@@ -481,7 +481,7 @@ async function ensureApplicationPhotosLoaded(appOrId) {
 }
 window.ensureApplicationPhotosLoaded = ensureApplicationPhotosLoaded;
 
-// 4-1. 현장 사진 다운로드 (1장이면 이미지 단일 다운로드, 2장 이상이면 전용 팝업 모달 표시)
+// 4-1. 현장 사진 다운로드 (1장이든 N장이든 전용 팝업 모달을 표시하여 확인 및 개별/전체 다운로드 지원)
 async function downloadApplicationPhotos(appOrId) {
   let app = await ensureApplicationPhotosLoaded(appOrId);
   if (!app) {
@@ -489,7 +489,6 @@ async function downloadApplicationPhotos(appOrId) {
     return;
   }
 
-  const storeName = app.storeName || app.shopName || app.ownerName || '신청점포';
   let photos = extractValidPhotos(app);
 
   if (photos.length === 0) {
@@ -497,28 +496,7 @@ async function downloadApplicationPhotos(appOrId) {
     return;
   }
 
-  // A. 사진이 1장인 경우: 원본 이미지 파일 즉시 다운로드
-  if (photos.length === 1) {
-    const singleData = photos[0];
-    let ext = 'jpg';
-    if (singleData.startsWith('data:image/')) {
-      const m = singleData.match(/^data:image\/([a-zA-Z0-9]+);/);
-      if (m && m[1]) ext = (m[1] === 'jpeg') ? 'jpg' : m[1];
-    }
-    const fileName = (app.fileName && !app.fileName.includes(',') && !app.fileName.startsWith('data:') && app.fileName !== '현장사진' && app.fileName !== '업로드 파일 없음')
-      ? app.fileName
-      : `${storeName}_현장사진.${ext}`;
-
-    const a = document.createElement('a');
-    a.href = singleData;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    return;
-  }
-
-  // 2장 이상인 경우: 사진 다운로드 전용 팝업 모달 표시
+  // 1장이든 여러 장이든 사진 미리보기 및 개별/전체 다운로드 전용 팝업 모달 표시
   showPhotoDownloadModal(app);
 }
 window.downloadApplicationPhotos = downloadApplicationPhotos;
@@ -701,6 +679,185 @@ async function showPhotoDownloadModal(appOrId) {
   modal.style.display = 'flex';
 }
 window.showPhotoDownloadModal = showPhotoDownloadModal;
+
+// 4-3. 최고관리자 및 모바일 통합 사진 업로드 & 안전 보존 마스터 함수 (SSOT)
+async function handleApplicationPhotoUploadProcess(appId, options = {}) {
+  if (!appId) {
+    alert('신청서 ID가 유효하지 않습니다.');
+    return;
+  }
+
+  const inputId = options.isMobile ? 'mob-app-photo-upload-input' : 'pc-app-photo-upload-input';
+  let fileInput = document.getElementById(inputId);
+  if (!fileInput) {
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = inputId;
+    fileInput.accept = 'image/*';
+    fileInput.multiple = true; // 다중 사진 동시 선택 완벽 지원
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+  } else {
+    fileInput.multiple = true;
+  }
+
+  fileInput.onchange = async (e) => {
+    const rawFiles = Array.from(e.target.files || []);
+    if (rawFiles.length === 0) return;
+
+    try {
+      // 1. 신규 선택된 이미지 파일들 압축 및 Base64 변환
+      const newPhotos = [];
+      for (const file of rawFiles) {
+        let base64Data = '';
+        if (typeof compressImageToBase64 === 'function') {
+          base64Data = await compressImageToBase64(file, 300 * 1024);
+        } else {
+          base64Data = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => resolve(ev.target.result);
+            reader.readAsDataURL(file);
+          });
+        }
+        if (base64Data) newPhotos.push(base64Data);
+      }
+
+      if (newPhotos.length === 0) {
+        alert('유효한 이미지 파일을 처리하지 못했습니다.');
+        e.target.value = '';
+        return;
+      }
+
+      // 2. 기존 사진 안전 온디맨드 로드 (CacheStorage 또는 Supabase DB 원천 확인)
+      const loadedApp = await ensureApplicationPhotosLoaded(appId);
+      const existingPhotos = extractValidPhotos(loadedApp);
+
+      // 3. 기존 사진 유무에 따른 보존/추가/교체 분기
+      let finalPhotos = [];
+      if (existingPhotos.length > 0) {
+        const isAppend = confirm(
+          `현재 등록된 현장사진이 ${existingPhotos.length}장 있습니다.\n\n` +
+          `[확인] : 기존 사진 뒤에 추가하기 (총 ${existingPhotos.length + newPhotos.length}장)\n` +
+          `[취소] : 기존 사진을 모두 지우고 새로 선택한 ${newPhotos.length}장으로 전체 교체하기`
+        );
+        if (isAppend) {
+          finalPhotos = existingPhotos.concat(newPhotos);
+        } else {
+          const doReplace = confirm(
+            `⚠️ 주의: 기존 사진 ${existingPhotos.length}장을 삭제하고 새 사진 ${newPhotos.length}장으로 교체하시겠습니까?`
+          );
+          if (!doReplace) {
+            e.target.value = '';
+            return;
+          }
+          finalPhotos = newPhotos;
+        }
+      } else {
+        finalPhotos = newPhotos;
+      }
+
+      // 4. 로컬 applications 동기화 (원자적 갱신)
+      let curApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+        ? window.DataStore.getApplications()
+        : (JSON.parse(localStorage.getItem('applications')) || []);
+      const targetApp = curApps.find(a => String(a.id) === String(appId));
+      if (targetApp) {
+        targetApp.photos = finalPhotos;
+        targetApp.photosCount = finalPhotos.length;
+        targetApp.fileData = finalPhotos[0] || '';
+        targetApp.fileName = (rawFiles[0] && rawFiles[0].name) ? rawFiles[0].name : `현장사진_${appId}.jpg`;
+        targetApp.hasPhoto = finalPhotos.length > 0;
+
+        let memoObj = {};
+        try {
+          memoObj = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {});
+        } catch (eM) { memoObj = {}; }
+        memoObj.photoCount = finalPhotos.length;
+        targetApp.memo = JSON.stringify(memoObj);
+
+        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+          window.DataStore.saveApplications(curApps);
+        } else {
+          localStorage.setItem('applications', JSON.stringify(curApps));
+        }
+      }
+
+      // 5. 로컬 users items 영업물건 동기화
+      let usersList = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+        ? window.DataStore.getUsers()
+        : (JSON.parse(localStorage.getItem('users')) || []);
+      let itemUpdated = false;
+      usersList.forEach(u => {
+        if (u.items && Array.isArray(u.items)) {
+          u.items.forEach(item => {
+            if (String(item.id) === String(appId) || String(item.appRefId) === String(appId)) {
+              item.photos = finalPhotos;
+              item.photosCount = finalPhotos.length;
+              if (finalPhotos.length > 0) item.fileData = finalPhotos[0];
+              itemUpdated = true;
+            }
+          });
+        }
+      });
+      if (itemUpdated) {
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+          window.DataStore.saveUsers(usersList);
+        } else {
+          localStorage.setItem('users', JSON.stringify(usersList));
+        }
+      }
+
+      // 6. 브라우저 CacheStorage 동기화 (즉시 갱신)
+      if (window.PhotoCacheManager) {
+        try {
+          await window.PhotoCacheManager.set(appId, {
+            photos: finalPhotos,
+            fileData: finalPhotos[0] || ''
+          });
+        } catch (eCache) {}
+      }
+
+      // 7. Supabase DB 영구 동기화 (image_url 및 memo 비동기 백그라운드)
+      const photoJson = JSON.stringify(finalPhotos);
+      const photoMemo = targetApp ? targetApp.memo : JSON.stringify({ photoCount: finalPhotos.length });
+
+      if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
+        window.SupabaseSync.updateApplication(appId, {
+          image_url: photoJson,
+          memo: photoMemo
+        }).catch(e => console.warn('Supabase photo update err:', e));
+      } else if (window.supabaseClient) {
+        try {
+          await window.supabaseClient.from('applications').update({
+            image_url: photoJson,
+            memo: photoMemo
+          }).eq('id', appId);
+        } catch (dbErr) {
+          console.warn('Supabase direct photo update err:', dbErr);
+        }
+      }
+
+      // 8. 6대 화면 즉시 리렌더링
+      if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
+      if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob();
+      if (typeof window.renderBizItemsListMob === 'function') window.renderBizItemsListMob();
+      if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
+      if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
+      if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
+
+      e.target.value = ''; // 초기화
+      alert(`현장사진 총 ${finalPhotos.length}장이 안전하게 등록되었습니다.`);
+    } catch (err) {
+      console.error('handleApplicationPhotoUploadProcess error:', err);
+      alert('사진 등록 처리 중 오류가 발생했습니다: ' + err.message);
+      e.target.value = '';
+    }
+  };
+
+  // 파일 선택 다이얼로그 열기
+  fileInput.click();
+}
+window.handleApplicationPhotoUploadProcess = handleApplicationPhotoUploadProcess;
 
 // ========================================================
 // 5. 로그인 상태 유지 및 1시간 미사용 시 자동 로그아웃 관리
