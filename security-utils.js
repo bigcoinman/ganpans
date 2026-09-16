@@ -787,16 +787,21 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
         ? window.DataStore.getUsers()
         : (JSON.parse(localStorage.getItem('users')) || []);
       let itemUpdated = false;
+      let updatedUsers = [];
       usersList.forEach(u => {
         if (u.items && Array.isArray(u.items)) {
+          let userModified = false;
           u.items.forEach(item => {
             if (String(item.id) === String(appId) || String(item.appRefId) === String(appId)) {
               item.photos = finalPhotos;
               item.photosCount = finalPhotos.length;
               if (finalPhotos.length > 0) item.fileData = finalPhotos[0];
+              item.hasPhoto = finalPhotos.length > 0;
               itemUpdated = true;
+              userModified = true;
             }
           });
+          if (userModified) updatedUsers.push(u);
         }
       });
       if (itemUpdated) {
@@ -804,6 +809,11 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
           window.DataStore.saveUsers(usersList);
         } else {
           localStorage.setItem('users', JSON.stringify(usersList));
+        }
+
+        // Supabase DB users 테이블 클라우드 동기화 (영업자 물건에 사진 영구 보장)
+        if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
+          updatedUsers.forEach(u => window.SupabaseSync.upsertUser(u).catch(() => {}));
         }
       }
 
@@ -837,13 +847,27 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
         }
       }
 
-      // 8. 6대 화면 즉시 리렌더링
-      if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
-      if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob();
-      if (typeof window.renderBizItemsListMob === 'function') window.renderBizItemsListMob();
-      if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
-      if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
-      if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
+      // 8. 6대 화면 0초 동시 렌더링 및 전역 실시간 브로드캐스트 (SSOT)
+      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+        window.DataStore.notifyAll('all');
+      } else {
+        if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
+        if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+        if (typeof window.renderBizItemsListMob === 'function') window.renderBizItemsListMob();
+        if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
+        if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
+        if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
+        if (typeof window.renderBusinessDashboard === 'function') window.renderBusinessDashboard();
+        if (typeof window.renderBusinessDashboardMob === 'function') window.renderBusinessDashboardMob();
+        if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
+        if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
+      }
+
+      // 다른 브라우저 탭 및 창 실시간 0초 동기화 이벤트 강제 발화
+      try {
+        window.dispatchEvent(new CustomEvent('supabase-data-synced', { detail: { appId, photoCount: finalPhotos.length } }));
+        localStorage.setItem('ganpan_cross_tab_sync', String(Date.now()));
+      } catch (eEvt) {}
 
       e.target.value = ''; // 초기화
       alert(`현장사진 총 ${finalPhotos.length}장이 안전하게 등록되었습니다.`);
@@ -2305,10 +2329,21 @@ window.SupabaseSync = {
                     receiptStatus: fa.receiptStatus || '접수예정',
                     progressStatus: fa.progressStatus || '지원대기중',
                     status: fa.status || 'pending',
-                    registeredAt: fa.appliedAt || new Date().toISOString()
+                    registeredAt: fa.appliedAt || new Date().toISOString(),
+                    photos: fa.photos || [],
+                    photosCount: Number(fa.photosCount) || (Array.isArray(fa.photos) ? fa.photos.length : 0),
+                    hasPhoto: Boolean(fa.hasPhoto || (fa.photosCount > 0)),
+                    fileData: fa.fileData || (fa.photos && fa.photos[0]) || ''
                   };
                   if (existingIdx >= 0) {
-                    targetUser.items[existingIdx] = { ...targetUser.items[existingIdx], ...itemPayload };
+                    const prevItem = targetUser.items[existingIdx];
+                    if ((!itemPayload.photos || itemPayload.photos.length === 0) && prevItem.photos && prevItem.photos.length > 0) {
+                      itemPayload.photos = prevItem.photos;
+                      itemPayload.fileData = prevItem.fileData || prevItem.photos[0];
+                    }
+                    itemPayload.photosCount = Math.max(itemPayload.photosCount, Number(prevItem.photosCount) || 0);
+                    itemPayload.hasPhoto = Boolean(itemPayload.hasPhoto || prevItem.hasPhoto || (itemPayload.photosCount > 0));
+                    targetUser.items[existingIdx] = { ...prevItem, ...itemPayload };
                   } else {
                     targetUser.items.unshift(itemPayload);
                   }

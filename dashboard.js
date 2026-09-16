@@ -862,7 +862,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 다른 탭/창에서 데이터 변경 시 0초 즉각 갱신
   window.addEventListener('storage', (e) => {
-    if (e.key === 'applications' || e.key === 'users' || e.key === 'inquiries') {
+    if (e.key === 'applications' || e.key === 'users' || e.key === 'inquiries' || e.key === 'ganpan_cross_tab_sync') {
       users = JSON.parse(localStorage.getItem('users')) || [];
       applications = JSON.parse(localStorage.getItem('applications')) || [];
       if (activeUser) {
@@ -4882,6 +4882,27 @@ document.addEventListener('DOMContentLoaded', () => {
         <td style="padding: 12px 16px;">
           <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">${escapeHtml(item.storeName || '-')}</div>
           ${item.storeAddress ? `<div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.storeAddress)}</div>` : ''}
+          ${(() => {
+            const memoPhotoCount = (() => {
+              try {
+                const m = typeof item.memo === 'string' ? JSON.parse(item.memo) : (item.memo || {});
+                return (m && m.photoCount) ? Number(m.photoCount) : 0;
+              } catch(e) { return 0; }
+            })();
+            const pCount = Math.max(
+              (Array.isArray(item.photos) ? item.photos.length : 0),
+              Number(item.photosCount) || 0,
+              memoPhotoCount,
+              (item.hasPhoto ? 1 : 0)
+            );
+            return pCount > 0 ? `
+              <div style="margin-top: 4px;">
+                <button type="button" onclick="window.downloadApplicationPhotos('${item.id}'); return false;" style="padding: 3px 8px; font-size: 0.72rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="현장사진 확인 및 다운로드">
+                  <i class="fa-solid fa-camera" style="color: #2563eb;"></i> 현장사진 (${pCount}장)
+                </button>
+              </div>
+            ` : '';
+          })()}
         </td>
         <td style="padding: 12px 16px; white-space: nowrap;">
           <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
@@ -5351,11 +5372,33 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
       }
 
+      const memoPhotoCount = (() => {
+        try {
+          const m = typeof job.memo === 'string' ? JSON.parse(job.memo) : (job.memo || {});
+          return (m && m.photoCount) ? Number(m.photoCount) : 0;
+        } catch(e) { return 0; }
+      })();
+      const pCount = Math.max(
+        (Array.isArray(job.photos) ? job.photos.length : 0),
+        Number(job.photosCount) || 0,
+        memoPhotoCount,
+        (job.hasPhoto ? 1 : 0)
+      );
+
       tr.innerHTML = `
         <td style="padding: 12px 16px; color: var(--text-secondary); font-family: monospace;">${dateText}</td>
         <td style="padding: 12px 16px; font-weight: 600;">
           ${escapeHtml(job.storeName)}
           <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-phone"></i> ${escapeHtml(job.ownerPhone)}</div>
+          <div style="margin-top: 4px;">
+            ${pCount > 0 ? `
+              <button type="button" onclick="window.downloadApplicationPhotos('${job.id}'); return false;" style="padding: 3px 8px; font-size: 0.72rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="점주 현장사진 확인 및 다운로드">
+                <i class="fa-solid fa-camera" style="color: #2563eb;"></i> 현장사진 (${pCount}장)
+              </button>
+            ` : `
+              <span style="font-size: 0.7rem; color: #94a3b8;"><i class="fa-solid fa-image"></i> 현장사진 없음</span>
+            `}
+          </div>
         </td>
         <td style="padding: 12px 16px; color: var(--text-secondary);">${escapeHtml(job.storeAddress)}</td>
         <td style="padding: 12px 16px;"><span style="font-weight: 700; color: var(--accent-primary); border: 1px solid #bfdbfe; background: #eff6ff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">${escapeHtml(job.signType || '플렉스 간판')}</span></td>

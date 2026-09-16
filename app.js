@@ -1934,6 +1934,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const receiptBadge = getReceiptStatusBadgeHtmlMob(item.receiptStatus);
             const progressBadge = getProgressStatusBadgeHtmlMob(item.progressStatus);
 
+            const memoPhotoCount = (() => {
+              try {
+                const m = typeof item.memo === 'string' ? JSON.parse(item.memo) : (item.memo || {});
+                return (m && m.photoCount) ? Number(m.photoCount) : 0;
+              } catch(e) { return 0; }
+            })();
+            const pCount = Math.max(
+              (Array.isArray(item.photos) ? item.photos.length : 0),
+              Number(item.photosCount) || 0,
+              memoPhotoCount,
+              (item.hasPhoto ? 1 : 0)
+            );
+
             const card = document.createElement('div');
             card.className = 'biz-card-mob';
             card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
@@ -1954,9 +1967,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 5px 0;">
                     <strong style="color: #475569;">대표자:</strong> <span style="color: var(--text-primary); font-weight: 700;">${escapeHtml(item.ownerName || '-')}</span> <span style="color: var(--text-secondary); font-size: 0.98rem;">(${escapeHtml(item.ownerPhone || '-')})</span>
                 </p>
-                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 10px 0; line-height: 1.4;">
+                <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 8px 0; line-height: 1.4;">
                     <strong style="color: #475569;">주소:</strong> ${escapeHtml(item.storeAddress || '-')}
                 </p>
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.82rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 현장사진</span>
+                    ${pCount > 0 ? `
+                        <button type="button" onclick="window.downloadApplicationPhotos('${item.id}'); return false;" style="padding: 4px 10px; font-size: 0.74rem; background: #2563eb; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                            사진 확인 (${pCount}장)
+                        </button>
+                    ` : `
+                        <span style="font-size: 0.72rem; color: #94a3b8;">미등록</span>
+                    `}
+                </div>
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <span style="font-size: 0.9rem; font-weight: 700; color: #475569;"><i class="fa-solid fa-signal" style="color: #2563eb;"></i> 실시간 진행상황</span>
                     <div style="display: flex; gap: 6px; align-items: center;">
@@ -2736,12 +2759,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 다른 탭/창에서 데이터 변경 시 모바일 화면 0초 즉각 갱신
     window.addEventListener('storage', (e) => {
-        if (e.key === 'applications' || e.key === 'users' || e.key === 'inquiries') {
+        if (e.key === 'applications' || e.key === 'users' || e.key === 'inquiries' || e.key === 'ganpan_cross_tab_sync') {
             users = JSON.parse(localStorage.getItem('users')) || [];
             applications = JSON.parse(localStorage.getItem('applications')) || [];
+            activeUser = getActiveUser() || null;
             if (activeUser && activeUser.role === 'admin') {
                 renderAdminDashboardMob(true);
+            } else if (activeUser && activeUser.role === 'business') {
+                if (typeof renderBusinessDashboardMob === 'function') renderBusinessDashboardMob();
+                if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
+                if (typeof renderBizRegisteredItemsMob === 'function') renderBizRegisteredItemsMob();
+            } else if (activeUser && activeUser.role === 'constructor') {
+                if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
+            } else if (activeUser) {
+                if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
             }
+            if (typeof renderStatusTab === 'function') renderStatusTab();
+            if (typeof updateDrawerProfile === 'function') updateDrawerProfile();
+            if (typeof updateHeaderAuthButton === 'function') updateHeaderAuthButton();
         }
     });
 
@@ -4836,10 +4871,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
 
+            const memoPhotoCount = (() => {
+              try {
+                const m = typeof job.memo === 'string' ? JSON.parse(job.memo) : (job.memo || {});
+                return (m && m.photoCount) ? Number(m.photoCount) : 0;
+              } catch(e) { return 0; }
+            })();
+            const pCount = Math.max(
+              (Array.isArray(job.photos) ? job.photos.length : 0),
+              Number(job.photosCount) || 0,
+              memoPhotoCount,
+              (job.hasPhoto ? 1 : 0)
+            );
+
             card.innerHTML = `
                 <div class="app-card-header">
                     <span class="app-card-title">${escapeHtml(job.storeName)}</span>
                     <span class="app-card-date" style="font-size: 0.7rem;"><i class="fa-solid fa-phone"></i> ${escapeHtml(job.ownerPhone)}</span>
+                </div>
+                <div class="app-card-body-row" style="display: flex; justify-content: space-between; align-items: center; background: #eff6ff; padding: 6px 10px; border-radius: 6px; margin: 4px 0 6px 0; border: 1px solid #bfdbfe;">
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 점주 현장사진</span>
+                    ${pCount > 0 ? `
+                        <button type="button" onclick="window.downloadApplicationPhotos('${job.id}'); return false;" style="padding: 4px 10px; font-size: 0.74rem; background: #2563eb; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                            사진 확인 (${pCount}장)
+                        </button>
+                    ` : `
+                        <span style="font-size: 0.72rem; color: #94a3b8;">미등록</span>
+                    `}
                 </div>
                 <div class="app-card-body-row">설치주소: ${escapeHtml(job.storeAddress)}</div>
                 <div class="app-card-body-row">간판종류: <strong>${escapeHtml(job.signType || '플렉스 간판')}</strong></div>
@@ -6266,6 +6324,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const isFormActive = Boolean(window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'submit') || activeEl.tagName === 'TEXTAREA')));
         if (isFormActive) return; // 폼 조작 중에는 DOM 보호
         if (typeof renderStatusTab === 'function') renderStatusTab();
+        if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
+        if (typeof renderBizRegisteredItemsMob === 'function') renderBizRegisteredItemsMob();
+        if (typeof renderBusinessDashboardMob === 'function') renderBusinessDashboardMob();
+        if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
+        if (typeof renderAdminDashboardMob === 'function' && activeUser && activeUser.role === 'admin') renderAdminDashboardMob(true);
         if (typeof updateDrawerProfile === 'function') updateDrawerProfile();
         if (typeof updateHeaderAuthButton === 'function') updateHeaderAuthButton();
     };
