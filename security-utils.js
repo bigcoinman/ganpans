@@ -272,9 +272,10 @@ const PhotoCacheManager = {
   CACHE_NAME: 'ganpan-photo-cache-v1',
   memoryFallback: new Map(),
 
-  async get(appId) {
+  async get(appId, expectedCount = null) {
     if (!appId) return null;
     const key = `app_photo_${String(appId).trim()}`;
+    let result = null;
     if (typeof caches !== 'undefined') {
       try {
         const cache = await caches.open(this.CACHE_NAME);
@@ -283,15 +284,23 @@ const PhotoCacheManager = {
         if (res) {
           const json = await res.json();
           if (json && (Array.isArray(json.photos) || json.fileData)) {
-            return json;
+            result = json;
           }
         }
       } catch (e) {}
     }
-    if (this.memoryFallback.has(key)) {
-      return this.memoryFallback.get(key);
+    if (!result && this.memoryFallback.has(key)) {
+      result = this.memoryFallback.get(key);
     }
-    return null;
+    // 캐시 정밀 검증: 기대 사진 장수(expectedCount)가 주어졌는데 캐시된 장수가 미달하면 stale로 판단하여 null 반환 (DB 재조회 유도)
+    if (result && typeof expectedCount === 'number' && expectedCount > 0) {
+      const cachedCount = Array.isArray(result.photos) ? result.photos.length : (result.fileData ? 1 : 0);
+      if (cachedCount < expectedCount) {
+        console.log(`[PhotoCacheManager] 🔄 캐시 만료 감지 (${appId}): 캐시=${cachedCount}장 < 최신=${expectedCount}장 -> DB 실시간 재조회`);
+        return null;
+      }
+    }
+    return result;
   },
 
   async set(appId, photoData) {
@@ -326,10 +335,12 @@ const PhotoCacheManager = {
 window.PhotoCacheManager = PhotoCacheManager;
 
 // 4-0. 현장 사진 온디맨드 로딩 헬퍼 (대역폭 99% 절감을 위해 목록 조회 시 제외된 사진을 필요 시 1건만 Supabase에서 직접 로드)
-async function ensureApplicationPhotosLoaded(appOrId) {
+async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
   let app = appOrId;
   if (typeof appOrId === 'string' || typeof appOrId === 'number') {
-    const localApps = JSON.parse(localStorage.getItem('applications')) || [];
+    const localApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
     app = localApps.find(a => String(a.id) === String(appOrId));
     if (!app) {
       app = { id: String(appOrId) };
@@ -337,35 +348,54 @@ async function ensureApplicationPhotosLoaded(appOrId) {
   }
   if (!app || !app.id) return null;
 
-  // 1. 이미 메모리나 객체 내에 유효한 사진 데이터가 로드되어 있는 경우 즉시 반환
-  let existingPhotos = extractValidPhotos(app);
-  if (existingPhotos.length > 0) {
-    app.photos = existingPhotos;
-    app.photosCount = existingPhotos.length;
-    app.fileData = existingPhotos[0];
-    return app;
+  const forceReload = Boolean(options && options.forceReload);
+
+  // 최신 기대 사진 장수 계산 (메타데이터 기준)
+  let expectedCount = 0;
+  if (options && typeof options.expectedCount === 'number') {
+    expectedCount = options.expectedCount;
+  } else if (typeof app.photosCount === 'number') {
+    expectedCount = app.photosCount;
+  } else if (typeof app.photoCount === 'number') {
+    expectedCount = app.photoCount;
+  } else if (app.memo) {
+    try {
+      const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
+      if (m && typeof m.photoCount === 'number') expectedCount = m.photoCount;
+    } catch (eM) {}
   }
 
-  // 2. 브라우저 영구 CacheStorage 확인 (수파베이스 호출 0회, 0 Byte 초고속 로드)
-  try {
-    const cached = await PhotoCacheManager.get(app.id);
-    if (cached && Array.isArray(cached.photos) && cached.photos.length > 0) {
-      app.photos = cached.photos;
-      app.photosCount = cached.photos.length;
-      app.fileData = cached.fileData || cached.photos[0];
-      if (cached.constructionPhotos) app.constructionPhotos = cached.constructionPhotos;
-      if (cached.invoicePhotos) app.invoicePhotos = cached.invoicePhotos;
-      console.log(`[PhotoCacheManager] ⚡ CacheStorage 0 Byte 즉시 로드 성공: ${app.id} (${app.photos.length}장)`);
+  // forceReload가 아닌 경우에만 기존 메모리/캐시 확인
+  if (!forceReload) {
+    // 1. 이미 메모리나 객체 내에 유효한 사진 데이터가 로드되어 있는 경우
+    let existingPhotos = extractValidPhotos(app);
+    if (existingPhotos.length > 0 && (expectedCount === 0 || existingPhotos.length >= expectedCount)) {
+      app.photos = existingPhotos;
+      app.photosCount = existingPhotos.length;
+      app.fileData = existingPhotos[0];
       return app;
     }
-  } catch (eCacheGet) {}
 
-  // 3. Supabase 클라우드에서 해당 1건의 사진만 온디맨드 단일 조회
+    // 2. 브라우저 영구 CacheStorage 확인 (수파베이스 호출 0회, 0 Byte 초고속 로드)
+    try {
+      const cached = await PhotoCacheManager.get(app.id, expectedCount);
+      if (cached && Array.isArray(cached.photos) && cached.photos.length > 0 && (expectedCount === 0 || cached.photos.length >= expectedCount)) {
+        app.photos = cached.photos;
+        app.photosCount = cached.photos.length;
+        app.fileData = cached.fileData || cached.photos[0];
+        if (cached.constructionPhotos) app.constructionPhotos = cached.constructionPhotos;
+        if (cached.invoicePhotos) app.invoicePhotos = cached.invoicePhotos;
+        return app;
+      }
+    } catch (eCacheGet) {}
+  }
+
+  // 3. Supabase 클라우드에서 해당 1건의 사진만 온디맨드 단일 조회 (실서버 SSOT 원천 로드)
   if (window.supabaseClient) {
     try {
       const { data, error } = await window.supabaseClient
         .from('applications')
-        .select('id, image_url, construction_photos, construction_invoice')
+        .select('id, image_url, memo, construction_photos, construction_invoice')
         .eq('id', String(app.id))
         .maybeSingle();
 
@@ -399,7 +429,9 @@ async function ensureApplicationPhotosLoaded(appOrId) {
         // image_url에 사진이 없는 경우 users.items 로컬 및 원격 2중 fallback 복원
         if (photos.length === 0) {
           try {
-            const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+            const localUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+              ? window.DataStore.getUsers()
+              : (JSON.parse(localStorage.getItem('users')) || []);
             for (const u of localUsers) {
               if (u.items && Array.isArray(u.items)) {
                 const matchedItem = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
@@ -445,7 +477,7 @@ async function ensureApplicationPhotosLoaded(appOrId) {
         // 브라우저 영구 CacheStorage에 저장하여 차후 수파베이스 호출 0회 보장
         try {
           if (photos.length > 0) {
-            PhotoCacheManager.set(app.id, {
+            await PhotoCacheManager.set(app.id, {
               photos: app.photos,
               fileData: app.fileData,
               constructionPhotos: app.constructionPhotos || [],
@@ -482,8 +514,8 @@ async function ensureApplicationPhotosLoaded(appOrId) {
 window.ensureApplicationPhotosLoaded = ensureApplicationPhotosLoaded;
 
 // 4-1. 현장 사진 다운로드 (1장이든 N장이든 전용 팝업 모달을 표시하여 확인 및 개별/전체 다운로드 지원)
-async function downloadApplicationPhotos(appOrId) {
-  let app = await ensureApplicationPhotosLoaded(appOrId);
+async function downloadApplicationPhotos(appOrId, options = {}) {
+  let app = await ensureApplicationPhotosLoaded(appOrId, options);
   if (!app) {
     alert('신청서 정보를 찾을 수 없습니다.');
     return;
@@ -502,8 +534,8 @@ async function downloadApplicationPhotos(appOrId) {
 window.downloadApplicationPhotos = downloadApplicationPhotos;
 
 // ZIP 압축 파일 생성 다운로드 함수
-async function downloadZipFile(appOrId) {
-  let app = await ensureApplicationPhotosLoaded(appOrId);
+async function downloadZipFile(appOrId, options = {}) {
+  let app = await ensureApplicationPhotosLoaded(appOrId, options);
   if (!app) {
     alert('신청서 정보를 찾을 수 없습니다.');
     return;
@@ -576,8 +608,8 @@ async function downloadZipFile(appOrId) {
 window.downloadZipFile = downloadZipFile;
 
 // 압축 해제 없이 모든 사진을 브라우저에서 즉시 개별 다운로드하는 함수 (보안 경고 0%)
-async function downloadIndividualPhotos(appOrId) {
-  let app = await ensureApplicationPhotosLoaded(appOrId);
+async function downloadIndividualPhotos(appOrId, options = {}) {
+  let app = await ensureApplicationPhotosLoaded(appOrId, options);
   if (!app) {
     alert('신청서 정보를 찾을 수 없습니다.');
     return;
@@ -728,8 +760,8 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
         return;
       }
 
-      // 2. 기존 사진 안전 온디맨드 로드 (CacheStorage 또는 Supabase DB 원천 확인)
-      const loadedApp = await ensureApplicationPhotosLoaded(appId);
+      // 2. 기존 사진 안전 온디맨드 로드 (★반드시 forceReload: true로 실서버 DB 최신 원본을 실시간 조회하여 상대방 업로드분 100% 반영★)
+      const loadedApp = await ensureApplicationPhotosLoaded(appId, { forceReload: true });
       const existingPhotos = extractValidPhotos(loadedApp);
 
       // 3. 기존 사진 유무에 따른 보존/추가/교체 분기
