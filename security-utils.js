@@ -263,6 +263,68 @@ function extractValidPhotos(app) {
 }
 window.extractValidPhotos = extractValidPhotos;
 
+// =========================================================================
+// [초강력 대역폭 영구 방어] 브라우저 사진 CacheStorage 엔진 (PhotoCacheManager)
+// 1회 다운로드/조회된 사진은 브라우저 CacheStorage에 영구 보관하여
+// 재조회/재다운로드 시 수파베이스 네트워크 호출을 0회(0 Byte)로 원천 차단
+// =========================================================================
+const PhotoCacheManager = {
+  CACHE_NAME: 'ganpan-photo-cache-v1',
+  memoryFallback: new Map(),
+
+  async get(appId) {
+    if (!appId) return null;
+    const key = `app_photo_${String(appId).trim()}`;
+    if (typeof caches !== 'undefined') {
+      try {
+        const cache = await caches.open(this.CACHE_NAME);
+        const req = new Request(`https://cache.ganpans.local/photos/${encodeURIComponent(key)}`);
+        const res = await cache.match(req);
+        if (res) {
+          const json = await res.json();
+          if (json && (Array.isArray(json.photos) || json.fileData)) {
+            return json;
+          }
+        }
+      } catch (e) {}
+    }
+    if (this.memoryFallback.has(key)) {
+      return this.memoryFallback.get(key);
+    }
+    return null;
+  },
+
+  async set(appId, photoData) {
+    if (!appId || !photoData) return;
+    const key = `app_photo_${String(appId).trim()}`;
+    this.memoryFallback.set(key, photoData);
+    if (typeof caches !== 'undefined') {
+      try {
+        const cache = await caches.open(this.CACHE_NAME);
+        const req = new Request(`https://cache.ganpans.local/photos/${encodeURIComponent(key)}`);
+        const res = new Response(JSON.stringify(photoData), {
+          headers: { 'Content-Type': 'application/json', 'X-Cache-Date': new Date().toISOString() }
+        });
+        await cache.put(req, res);
+      } catch (e) {}
+    }
+  },
+
+  async invalidate(appId) {
+    if (!appId) return;
+    const key = `app_photo_${String(appId).trim()}`;
+    this.memoryFallback.delete(key);
+    if (typeof caches !== 'undefined') {
+      try {
+        const cache = await caches.open(this.CACHE_NAME);
+        const req = new Request(`https://cache.ganpans.local/photos/${encodeURIComponent(key)}`);
+        await cache.delete(req);
+      } catch (e) {}
+    }
+  }
+};
+window.PhotoCacheManager = PhotoCacheManager;
+
 // 4-0. 현장 사진 온디맨드 로딩 헬퍼 (대역폭 99% 절감을 위해 목록 조회 시 제외된 사진을 필요 시 1건만 Supabase에서 직접 로드)
 async function ensureApplicationPhotosLoaded(appOrId) {
   let app = appOrId;
@@ -275,7 +337,7 @@ async function ensureApplicationPhotosLoaded(appOrId) {
   }
   if (!app || !app.id) return null;
 
-  // 이미 메모리나 객체 내에 유효한 사진 데이터가 로드되어 있는 경우 즉시 반환
+  // 1. 이미 메모리나 객체 내에 유효한 사진 데이터가 로드되어 있는 경우 즉시 반환
   let existingPhotos = extractValidPhotos(app);
   if (existingPhotos.length > 0) {
     app.photos = existingPhotos;
@@ -284,7 +346,21 @@ async function ensureApplicationPhotosLoaded(appOrId) {
     return app;
   }
 
-  // Supabase 클라우드에서 해당 1건의 사진만 온디맨드 단일 조회
+  // 2. 브라우저 영구 CacheStorage 확인 (수파베이스 호출 0회, 0 Byte 초고속 로드)
+  try {
+    const cached = await PhotoCacheManager.get(app.id);
+    if (cached && Array.isArray(cached.photos) && cached.photos.length > 0) {
+      app.photos = cached.photos;
+      app.photosCount = cached.photos.length;
+      app.fileData = cached.fileData || cached.photos[0];
+      if (cached.constructionPhotos) app.constructionPhotos = cached.constructionPhotos;
+      if (cached.invoicePhotos) app.invoicePhotos = cached.invoicePhotos;
+      console.log(`[PhotoCacheManager] ⚡ CacheStorage 0 Byte 즉시 로드 성공: ${app.id} (${app.photos.length}장)`);
+      return app;
+    }
+  } catch (eCacheGet) {}
+
+  // 3. Supabase 클라우드에서 해당 1건의 사진만 온디맨드 단일 조회
   if (window.supabaseClient) {
     try {
       const { data, error } = await window.supabaseClient
@@ -365,6 +441,18 @@ async function ensureApplicationPhotosLoaded(appOrId) {
         if (data.construction_invoice) {
           app.invoicePhotos = [data.construction_invoice];
         }
+
+        // 브라우저 영구 CacheStorage에 저장하여 차후 수파베이스 호출 0회 보장
+        try {
+          if (photos.length > 0) {
+            PhotoCacheManager.set(app.id, {
+              photos: app.photos,
+              fileData: app.fileData,
+              constructionPhotos: app.constructionPhotos || [],
+              invoicePhotos: app.invoicePhotos || []
+            });
+          }
+        } catch (eCacheSet) {}
 
         // 로컬 스토리지 캐시에 저장하여 다음 번 클릭 시 0초 즉시 반응
         let localApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')

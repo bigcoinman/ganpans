@@ -4272,6 +4272,15 @@ document.addEventListener('DOMContentLoaded', () => {
           ? JSON.stringify({ ...targetApp.memo, photoCount: (targetApp.photos ? targetApp.photos.length : 1) })
           : (targetApp ? targetApp.memo : '');
 
+        try {
+          if (window.PhotoCacheManager && targetApp) {
+            window.PhotoCacheManager.set(appId, {
+              photos: targetApp.photos,
+              fileData: targetApp.fileData
+            });
+          }
+        } catch (eCache) {}
+
         if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
           window.SupabaseSync.updateApplication(appId, {
             image_url: photoJson,
