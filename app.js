@@ -508,7 +508,6 @@ document.addEventListener('DOMContentLoaded', () => {
     safeInitModule('Wizard', initWizard);
     safeInitModule('Checklist', initChecklist);
     safeInitModule('Popups', initPopups);
-    safeInitModule('ModalsAndSearch', initModalsAndSearch);
 
     // --- State Variables ---
 
@@ -1013,17 +1012,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-        });
-    }
-
-    // --- Simulator Apply Design Intercept ---
-    const applyDesignBtn = document.getElementById('apply-design-btn');
-    if (applyDesignBtn) {
-        applyDesignBtn.addEventListener('click', () => {
-            // Wait slightly for script.js fields assignment
-            setTimeout(() => {
-                switchTab('apply');
-            }, 100);
         });
     }
 
@@ -5104,18 +5092,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize display states
     updateDrawerProfile();
 
-    // --- Realtime synchronization via storage event ---
-    window.addEventListener('storage', (e) => {
-        if (['applications', 'users', 'popups', 'activeUser'].includes(e.key)) {
-            applications = JSON.parse(localStorage.getItem('applications')) || [];
-            users = JSON.parse(localStorage.getItem('users')) || [];
-            activeUser = getActiveUser();
-
-            updateDrawerProfile();
-            if (typeof renderStatusTab === 'function') renderStatusTab();
-        }
-    });
-
     // --- Initialize AI Assistant ---
     initAIAssistant();
 
@@ -5344,6 +5320,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const pcFooterBtnInquiry = document.getElementById('pc-footer-btn-inquiry');
+    if (pcFooterBtnInquiry) {
+        pcFooterBtnInquiry.addEventListener('click', window.openInquiryModal);
+    }
+
     if (inquiryModalClose) {
         inquiryModalClose.addEventListener('click', closeInquiryModal);
     }
@@ -5362,8 +5343,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (inquiryForm && !inquiryForm.dataset.inquiryBound) {
-        inquiryForm.dataset.inquiryBound = 'true';
+    if (inquiryForm) {
         inquiryForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const name = escapeHtml(document.getElementById('inquiry-name').value.trim());
@@ -5597,6 +5577,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    const linkPrivacy = document.getElementById('link-policy-privacy');
+    if (linkPrivacy) linkPrivacy.addEventListener('click', (e) => { e.preventDefault(); window.openPolicyModal('privacy'); });
+    const linkTerms = document.getElementById('link-policy-terms');
+    if (linkTerms) linkTerms.addEventListener('click', (e) => { e.preventDefault(); window.openPolicyModal('terms'); });
+    const linkConsent = document.getElementById('link-policy-consent');
+    if (linkConsent) linkConsent.addEventListener('click', (e) => { e.preventDefault(); window.openPolicyModal('consent'); });
 
     // --- 개인정보변경 모달 ---
     const profileEditModal = document.getElementById('profile-edit-modal');
@@ -5885,6 +5872,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target === globalSearchModal) closeGlobalSearchModal();
         });
     }
+
+    const navSearchBtn = document.getElementById('nav-search-btn');
+    if (navSearchBtn) navSearchBtn.addEventListener('click', (e) => { e.preventDefault(); openGlobalSearchModal(); });
+    const mNavSearch = document.getElementById('m-nav-search');
+    if (mNavSearch) mNavSearch.addEventListener('click', (e) => { e.preventDefault(); openGlobalSearchModal(); });
 
     document.querySelectorAll('.btn-search-go-auth').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -6691,11 +6683,14 @@ function initSimulator() {
   if (useSimulatedDesignBtn) {
     useSimulatedDesignBtn.addEventListener('click', () => {
       const shopNameField = document.getElementById('app-shop-name');
-      if (shopNameField) shopNameField.value = state.shopName;
-
-      const appSection = document.getElementById('apply-section');
-      if (appSection) {
-        appSection.scrollIntoView({ behavior: 'smooth' });
+      if (shopNameField && state && state.shopName) {
+        shopNameField.value = state.shopName;
+      }
+      if (typeof window.switchTab === 'function') {
+        window.switchTab('apply');
+      } else {
+        const appSection = document.getElementById('apply-section');
+        if (appSection) appSection.scrollIntoView({ behavior: 'smooth' });
       }
     });
   }
@@ -7296,41 +7291,6 @@ function initWizard() {
           await handlePhotoFiles(e.target.files);
         }
         uploadCameraInput.value = '';
-      });
-    }
-  }
-
-  if (photoChoiceOverlay) {
-    photoChoiceOverlay.addEventListener('click', (e) => {
-      if (e.target === photoChoiceOverlay) {
-        photoChoiceOverlay.classList.remove('active');
-      }
-    });
-
-    if (btnChoiceCancel) {
-      btnChoiceCancel.addEventListener('click', () => {
-        photoChoiceOverlay.classList.remove('active');
-      });
-    }
-
-    if (btnChoiceCamera) {
-      btnChoiceCamera.addEventListener('click', () => {
-        photoChoiceOverlay.classList.remove('active');
-        if (window.currentPhotoTarget === 'apply') {
-          const storeCam = document.getElementById('store-photo-camera');
-          if (storeCam) storeCam.click();
-          else if (uploadInput) uploadInput.click();
-        }
-      });
-    }
-
-    if (btnChoiceGallery) {
-      btnChoiceGallery.addEventListener('click', () => {
-        photoChoiceOverlay.classList.remove('active');
-        if (window.currentPhotoTarget === 'apply') {
-          const storeGal = document.getElementById('store-photo');
-          if (storeGal) storeGal.click();
-        }
       });
     }
   }
@@ -8182,535 +8142,3 @@ function initPopups() {
     if (closeBtn) closeBtn.addEventListener('click', closePopup);
   });
 }
-
-function initModalsAndSearch() {
-  const inquiryModal = document.getElementById('inquiry-modal');
-  const inquiryModalClose = document.getElementById('inquiry-modal-close');
-  const inquiryForm = document.getElementById('inquiry-form');
-
-  function closeInquiryModal() {
-    if (inquiryModal) {
-      inquiryModal.classList.remove('active');
-      if (inquiryForm) inquiryForm.reset();
-      const cnt = document.getElementById('inquiry-char-count');
-      if (cnt) cnt.textContent = '0';
-    }
-  }
-
-  window.openInquiryModal = function (e) {
-    if (e) e.preventDefault();
-    if (inquiryModal) {
-      inquiryModal.classList.add('active');
-    }
-  };
-
-  if (inquiryModalClose) {
-    inquiryModalClose.addEventListener('click', closeInquiryModal);
-  }
-
-  const extraInquiryCloseBtns = document.querySelectorAll('.inquiry-close-x-btn');
-  extraInquiryCloseBtns.forEach(btn => {
-    btn.addEventListener('click', closeInquiryModal);
-  });
-
-  if (inquiryModal) {
-    inquiryModal.addEventListener('click', (e) => {
-      if (e.target === inquiryModal) {
-        closeInquiryModal();
-      }
-    });
-  }
-
-  if (inquiryForm && !inquiryForm.dataset.inquiryBound) {
-    inquiryForm.dataset.inquiryBound = 'true';
-    inquiryForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const name = typeof escapeHtml === 'function' ? escapeHtml(document.getElementById('inquiry-name')?.value.trim()) : document.getElementById('inquiry-name')?.value.trim();
-      const phone = typeof escapeHtml === 'function' ? escapeHtml(document.getElementById('inquiry-phone')?.value.trim()) : document.getElementById('inquiry-phone')?.value.trim();
-      const type = document.getElementById('inquiry-type')?.value;
-      const message = typeof escapeHtml === 'function' ? escapeHtml(document.getElementById('inquiry-message')?.value.trim()) : document.getElementById('inquiry-message')?.value.trim();
-
-      if (!name || !phone || !type || !message) {
-        alert('필수 입력 항목을 모두 작성해 주세요.');
-        return;
-      }
-
-      if (name.length < 2 || name.length > 20) {
-        alert('성함은 최소 2자에서 최대 20자까지 입력해 주세요.');
-        return;
-      }
-
-      if (phone.length < 9 || phone.length > 15) {
-        alert('연락처는 최소 9자에서 최대 15자까지 입력해 주세요.');
-        return;
-      }
-
-      const phoneRegex = /^[0-9+\s-]+$/;
-      if (!phoneRegex.test(phone)) {
-        alert('연락처에는 숫자, 대시(-), 플러스(+) 및 공백만 입력할 수 있습니다.');
-        return;
-      }
-
-      if (message.length > 300) {
-        alert('문의 내용은 최대 300자까지 입력해 주세요.');
-        return;
-      }
-
-      const newInquiry = {
-        id: 'INQ-' + Date.now(),
-        name,
-        phone,
-        type,
-        message,
-        status: 'pending',
-        submittedAt: new Date().toISOString()
-      };
-
-      // 1) 로컬 DataStore에 즉시 저장 (낙관적 UI)
-      if (window.DataStore && typeof window.DataStore.upsertInquiry === 'function') {
-        window.DataStore.upsertInquiry(newInquiry);
-      } else {
-        const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
-        inquiries.unshift(newInquiry);
-        (typeof DataStore !== 'undefined' && DataStore.saveInquiries ? DataStore.saveInquiries(inquiries) : localStorage.setItem('inquiries', JSON.stringify(inquiries)));
-      }
-
-      // 2) Supabase REST API로 직접 저장 (supabaseClient 초기화 여부 무관, 100% 보장)
-      const _sbUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) || 'https://nosobuzwrxxtrgohufsp.supabase.co';
-      const _sbKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) || 'sb_publishable_2b3sZmB3zTAbTLx-pTh9uQ_rTqmRBmS';
-      const _dbPayload = {
-        id: newInquiry.id,
-        name: newInquiry.name,
-        phone: newInquiry.phone,
-        category: newInquiry.type || 'other',
-        region: newInquiry.message,
-        status: 'pending',
-        created_at: newInquiry.submittedAt
-      };
-      fetch(_sbUrl + '/rest/v1/inquiries?on_conflict=id', {
-        method: 'POST',
-        headers: {
-          'apikey': _sbKey,
-          'Authorization': 'Bearer ' + _sbKey,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal,resolution=merge-duplicates'
-        },
-        body: JSON.stringify(_dbPayload)
-      }).then(res => {
-        if (!res.ok) {
-          res.text().then(t => console.warn('[Inquiry] Supabase save failed:', res.status, t));
-        } else {
-          console.log('[Inquiry] Supabase save OK:', newInquiry.id);
-          // 관리자 화면 갱신 이벤트 발송
-          window.dispatchEvent(new CustomEvent('supabase-data-synced'));
-        }
-      }).catch(err => console.error('[Inquiry] Supabase fetch error:', err));
-
-      // 3) 카카오톡 알림
-      if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyInquiry === 'function') {
-        window.KakaoNotifier.notifyInquiry(newInquiry);
-      }
-
-      alert('간편 문의 접수가 정상 완료되었습니다.\n담당자가 확인 후 연락처로 신속히 연락드리겠습니다.');
-      closeInquiryModal();
-    });
-  }
-
-  const inquiryMessage = document.getElementById('inquiry-message');
-  const inquiryCharCount = document.getElementById('inquiry-char-count');
-  if (inquiryMessage && inquiryCharCount) {
-    inquiryMessage.addEventListener('input', function () {
-      const len = this.value.length;
-      inquiryCharCount.textContent = len;
-      if (len >= 300) {
-        inquiryCharCount.style.color = '#ef4444';
-      } else {
-        inquiryCharCount.style.color = '#64748b';
-      }
-    });
-  }
-
-  const pcFooterInquiryBtn = document.getElementById('pc-footer-btn-inquiry');
-  if (pcFooterInquiryBtn) {
-    pcFooterInquiryBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.openInquiryModal();
-    });
-  }
-
-  const LEGAL_POLICIES = {
-    terms: `제1조 (목적)
-본 약관은 주식회사 가야애드(이하 "회사")가 제공하는 온라인 서비스(이하 "서비스")의 이용조건, 절차 및 회원과 회사 간의 권리와 의무 등 필요한 사항을 규정함을 목적으로 합니다.
-
-제2조 (용어의 정의)
-1. "서비스"란 회사가 자체 웹/앱 플랫폼을 통해 제공하는 간판 디자인 시뮬레이터 툴, 경영환경개선 간판지원사업의 접수 시스템 및 관련 부가 서비스를 의미합니다.
-2. "회원"이란 본 약관에 동의하고 서비스에 회원등록을 완료하여 계정을 부여받은 자를 뜻하며, 이용 권한에 따라 '일반고객 회원', '영업자 회원', '시공업체 회원', '관리자'로 구분됩니다.
-
-제3조 (약관의 효력 및 개정)
-1. 본 약관은 서비스를 이용하고자 하는 모든 회원에 대하여 효력을 발생합니다.
-2. 회사는 관계법령을 위배하지 않는 범위 내에서 본 약관을 개정할 수 있으며, 개정 시 서비스 화면에 최소 7일 전부터 공지합니다.
-
-제4조 (회원가입 및 회원등급 승인)
-1. 이용자는 회사가 제시한 가입 양식에 실명 정보를 기입하고 본 약관에 동의함으로써 회원가입을 신청합니다.
-2. '영업자 회원' 및 '시공업체 회원' 등 특수 등급은 가입 후 마이페이지를 통해 사업자등록증 등 증빙 서류를 제출하여 관리자의 검토 및 승인을 거쳐 최종 전환 완료됩니다.
-
-제5조 (서비스의 제공 및 제한)
-1. 회사는 회원에게 간판 디자인 시뮬레이션 및 간편 간판교체 신청 서비스를 제공합니다.
-2. 회사는 설비 점검, 통신 장애 또는 천재지변 발생 시 서비스의 전부 또는 일부를 일시 중지할 수 있습니다.
-
-제6조 (회원의 의무 및 면책)
-1. 회원은 타인의 명의를 도용하거나 허위 사실을 기재하여 서비스를 이용하여서는 안 됩니다.
-2. 회사는 시뮬레이터를 통해 시각화된 시안과 실제 시공 결과물 간의 물리적 오차 및 시공 과정에서의 분쟁에 대해 책임을 지지 않습니다.`,
-
-    privacy: `주식회사 가야애드(이하 "회사")는 경기도 소상공인 간판지원단 플랫폼을 운영함에 있어 정보주체의 개인정보를 보호하고 이와 관련된 고충을 신속하게 처리할 수 있도록 다음과 같이 개인정보 처리방침을 수립·공개합니다.
-
-제1조 (개인정보의 수집 및 이용 목적)
-회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
-1. 회원 가입 및 관리: 회원 식별, 가입 의사 확인, 회원자격 유지·관리, 부정이용 방지
-2. 서비스 제공 및 민원 처리: 간판 디자인 시뮬레이터 이용, 비회원 3초 간편 접수 상담 서비스 제공, 경영환경개선사업 접수, 각종 고충 처리
-
-제2조 (수집하는 개인정보의 항목)
-회사는 서비스 제공을 위해 아래와 같은 필수 개인정보를 수집하고 있습니다.
-1. 회원가입 시: 아이디, 비밀번호, 성명, 주소, 이메일, 휴대폰 번호, (영업자/시공사 전환 신청 시) 상호명, 사업자등록번호
-2. 비회원 간편 문의 시: 성명, 연락처, 문의 유형, 문의 내용
-
-제3조 (개인정보의 보유 및 이용 기간)
-1. 회사는 회원 탈퇴 시 혹은 동의 철회 시까지 정보주체의 개인정보를 보유 및 이용합니다.
-2. 단, 관계 법령(전자상거래 등에서의 소비자보호에 관한 법령 등)의 규정에 의하여 보존할 필요가 있는 경우, 해당 법령에서 정한 일정 기간(예: 소비자의 불만 또는 분쟁처리에 관한 기록 3년) 동안 보존합니다.
-
-제4조 (개인정보의 파기절차 및 방법)
-회사는 개인정보 보유기간의 경과, 처리목적 달성 등 개인정보가 불필요하게 되었을 때에는 지체 없이 해당 개인정보를 파기합니다. 전자적 파일 형태는 기록을 재생할 수 없는 기술적 방법을 사용하며, 종이 문서는 분쇄기로 분쇄하여 파기합니다.
-
-제5조 (개인정보 보호책임자 및 고충 처리)
-* 개인정보 보호책임자: 주식회사 가야애드 대표이사
-* 연락처: 010-7266-2499 / nubine22@naver.com`,
-
-    consent: `주식회사 가야애드(이하 "회사")는 경기도 소상공인 간판지원단 플랫폼의 비회원 간편 문의 및 서비스 회원가입 단계에서 개인정보보호법에 의거하여 다음과 같이 개인정보를 수집·이용하고자 합니다.
-
-1. 개인정보를 수집하는 자: 주식회사 가야애드
-2. 수집 및 이용 목적:
-   - 비회원 3초 간편 문의 서비스 접수 및 본인 확인
-   - 문의 사항에 대한 상담 및 답변(해피콜 연락) 제공
-   - 경영환경개선 간판지원사업 신청 안내
-3. 수집하는 개인정보의 항목:
-   - 필수 항목: 성명(성함/이름), 연락처(휴대폰 번호/전화번호)
-4. 개인정보의 보유 및 이용 기간:
-   - 문의 접수 및 상담 처리가 완료된 날로부터 1년 보관 후 파기 (정보주체의 파기 요청 시 지체 없이 파기)
-5. 동의 거부 권리 및 불이익 고지:
-   - 귀하는 개인정보 수집 및 이용 동의를 거부할 권리가 있습니다.
-   - 단, 필수 항목 동의를 거부하실 경우 3초 간편 문의 접수 서비스 이용이 제한됩니다.`
-  };
-
-  const policyModal = document.getElementById('policy-modal');
-  const policyModalClose = document.getElementById('policy-modal-close');
-  const btnPolicyConfirm = document.getElementById('btn-policy-confirm');
-  const policyModalTitle = document.getElementById('policy-modal-title');
-  const policyModalBody = document.getElementById('policy-modal-body');
-
-  function closePolicyModal() {
-    if (policyModal) {
-      policyModal.classList.remove('active');
-    }
-  }
-
-  window.openPolicyModal = function (type) {
-    if (!policyModal || !policyModalTitle || !policyModalBody) return;
-
-    let title = '';
-    let content = '';
-
-    if (type === 'privacy') {
-      title = '개인정보 처리방침';
-      content = LEGAL_POLICIES.privacy;
-    } else if (type === 'terms') {
-      title = '서비스 이용약관';
-      content = LEGAL_POLICIES.terms;
-    } else if (type === 'consent') {
-      title = '개인정보 수집 및 이용 동의';
-      content = LEGAL_POLICIES.consent;
-    }
-
-    policyModalTitle.innerHTML = `<i class="fa-solid fa-file-shield"></i> ${title}`;
-    policyModalBody.textContent = content;
-    policyModal.classList.add('active');
-  };
-
-  if (policyModalClose) policyModalClose.addEventListener('click', closePolicyModal);
-  if (btnPolicyConfirm) btnPolicyConfirm.addEventListener('click', closePolicyModal);
-  if (policyModal) {
-    policyModal.addEventListener('click', (e) => {
-      if (e.target === policyModal) {
-        closePolicyModal();
-      }
-    });
-  }
-
-  const linkPrivacy = document.getElementById('link-policy-privacy');
-  const linkTerms = document.getElementById('link-policy-terms');
-  const linkConsent = document.getElementById('link-policy-consent');
-
-  if (linkPrivacy) linkPrivacy.addEventListener('click', (e) => { e.preventDefault(); window.openPolicyModal('privacy'); });
-  if (linkTerms) linkTerms.addEventListener('click', (e) => { e.preventDefault(); window.openPolicyModal('terms'); });
-  if (linkConsent) linkConsent.addEventListener('click', (e) => { e.preventDefault(); window.openPolicyModal('consent'); });
-
-  const globalSearchModal = document.getElementById('global-search-modal');
-  const searchModalClose = document.getElementById('search-modal-close');
-  const searchTabName = document.getElementById('search-tab-name');
-  const searchTabCode = document.getElementById('search-tab-code');
-  const globalSearchForm = document.getElementById('global-search-form');
-  const globalSearchInput = document.getElementById('global-search-input');
-  const searchGuideText = document.getElementById('search-guide-text');
-  const searchAuthBlock = document.getElementById('search-auth-block');
-  const searchContentArea = document.getElementById('search-content-area');
-  const searchResultsArea = document.getElementById('search-results-area');
-
-  let currentSearchMode = 'name';
-
-  function openGlobalSearchModal() {
-    if (!globalSearchModal) return;
-
-    const user = typeof getActiveUser === 'function' ? getActiveUser() : null;
-
-    if (!user) {
-      if (searchAuthBlock) searchAuthBlock.style.display = 'block';
-      if (searchContentArea) searchContentArea.style.display = 'none';
-    } else {
-      if (searchAuthBlock) searchAuthBlock.style.display = 'none';
-      if (searchContentArea) searchContentArea.style.display = 'block';
-      setSearchMode('name');
-      if (globalSearchInput) globalSearchInput.value = '';
-      if (searchResultsArea) searchResultsArea.innerHTML = '';
-      setTimeout(() => { if (globalSearchInput) globalSearchInput.focus(); }, 100);
-    }
-
-    globalSearchModal.classList.add('active');
-  }
-  window.openGlobalSearchModal = openGlobalSearchModal;
-
-  function closeGlobalSearchModal() {
-    if (globalSearchModal) {
-      globalSearchModal.classList.remove('active');
-      if (globalSearchInput) globalSearchInput.value = '';
-      if (searchResultsArea) searchResultsArea.innerHTML = '';
-    }
-  }
-
-  function setSearchMode(mode) {
-    currentSearchMode = mode;
-    if (mode === 'name') {
-      if (searchTabName) {
-        searchTabName.className = 'btn btn-primary';
-        searchTabName.style.background = 'var(--grad-primary)';
-        searchTabName.style.color = '#fff';
-      }
-      if (searchTabCode) {
-        searchTabCode.className = 'btn btn-secondary';
-        searchTabCode.style.background = 'transparent';
-        searchTabCode.style.color = 'var(--text-secondary)';
-      }
-      if (globalSearchInput) {
-        globalSearchInput.maxLength = 30;
-        globalSearchInput.placeholder = '상호명을 입력해 주세요 (최대 30자, 예: 초원식당)';
-      }
-      if (searchGuideText) {
-        searchGuideText.innerHTML = '조회하고자 하는 매장의 <strong>상호명(업체명, 최대 30자)</strong>을 입력해 주세요.';
-      }
-    } else {
-      if (searchTabCode) {
-        searchTabCode.className = 'btn btn-primary';
-        searchTabCode.style.background = 'var(--grad-primary)';
-        searchTabCode.style.color = '#fff';
-      }
-      if (searchTabName) {
-        searchTabName.className = 'btn btn-secondary';
-        searchTabName.style.background = 'transparent';
-        searchTabName.style.color = 'var(--text-secondary)';
-      }
-      if (globalSearchInput) {
-        globalSearchInput.maxLength = 30;
-        globalSearchInput.placeholder = '고유번호를 입력해 주세요 (최대 30자, 예: P-260816001)';
-      }
-      if (searchGuideText) {
-        searchGuideText.innerHTML = '발급받으신 <strong>고유 접수번호(최대 30자)</strong>(예: P-260816001, B-260801-0001)를 입력해 주세요.';
-      }
-    }
-    if (globalSearchInput) globalSearchInput.focus();
-  }
-
-  if (searchTabName) searchTabName.addEventListener('click', () => setSearchMode('name'));
-  if (searchTabCode) searchTabCode.addEventListener('click', () => setSearchMode('code'));
-
-  const navSearchBtn = document.getElementById('nav-search-btn');
-  if (navSearchBtn) {
-    navSearchBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      openGlobalSearchModal();
-    });
-  }
-
-  const mNavSearch = document.getElementById('m-nav-search');
-  if (mNavSearch) {
-    mNavSearch.addEventListener('click', (e) => {
-      e.preventDefault();
-      openGlobalSearchModal();
-    });
-  }
-
-  if (searchModalClose) searchModalClose.addEventListener('click', closeGlobalSearchModal);
-  document.querySelectorAll('.search-modal-close-btn').forEach(btn => {
-    btn.addEventListener('click', closeGlobalSearchModal);
-  });
-
-  if (globalSearchModal) {
-    globalSearchModal.addEventListener('click', (e) => {
-      if (e.target === globalSearchModal) closeGlobalSearchModal();
-    });
-  }
-
-  document.querySelectorAll('.btn-search-go-auth').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      closeGlobalSearchModal();
-      const authBtn = document.getElementById('auth-btn') || document.getElementById('drawer-login-link');
-      if (authBtn) {
-        authBtn.click();
-      } else {
-        const authModal = document.getElementById('auth-modal');
-        if (authModal) authModal.classList.add('active');
-      }
-    });
-  });
-
-  if (globalSearchForm) {
-    globalSearchForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const user = typeof getActiveUser === 'function' ? getActiveUser() : null;
-      if (!user) {
-        alert('검색 기능을 이용하시려면 먼저 회원가입 또는 로그인이 필요합니다.');
-        return;
-      }
-
-      const rawQuery = globalSearchInput ? globalSearchInput.value.trim() : '';
-      if (!rawQuery) {
-        alert('검색어를 입력해 주세요.');
-        return;
-      }
-
-      if (currentSearchMode === 'name' && rawQuery.length > 25) {
-        alert('상호명 검색은 최대 25자까지 입력 가능합니다.');
-        return;
-      }
-      if (currentSearchMode === 'code' && rawQuery.length > 15) {
-        alert('번호 검색은 최대 15자까지 입력 가능합니다.');
-        return;
-      }
-
-      const query = rawQuery.toLowerCase();
-      const apps = JSON.parse(localStorage.getItem('applications')) || [];
-      const users = JSON.parse(localStorage.getItem('users')) || [];
-
-      const allRecords = [];
-
-      apps.forEach(app => {
-        allRecords.push({
-          id: app.id,
-          storeName: app.storeName || '상호명 미등록',
-          ownerName: app.ownerName || '신청자',
-          ownerPhone: app.phone || app.ownerPhone || '',
-          storeAddress: app.storeAddress || '주소 미등록',
-          signType: app.signType || '플렉스',
-          status: app.status || 'pending',
-          constructionStatus: app.constructionStatus || '',
-          appliedAt: app.appliedAt || '',
-          type: '일반신청'
-        });
-      });
-
-      users.forEach(u => {
-        if (u.items && Array.isArray(u.items)) {
-          u.items.forEach(item => {
-            if (!allRecords.some(r => r.id === item.id)) {
-              allRecords.push({
-                id: item.id,
-                storeName: item.name || '상호명 미등록',
-                ownerName: u.name || '영업자',
-                ownerPhone: item.phone || u.phone || '',
-                storeAddress: item.address || '주소 미등록',
-                signType: '현장 실측 간판',
-                status: item.progressStatus || '심사대기중',
-                constructionStatus: '',
-                appliedAt: '',
-                type: '영업물건'
-              });
-            }
-          });
-        }
-      });
-
-      const matched = allRecords.filter(r => {
-        if (currentSearchMode === 'name') {
-          return r.storeName.toLowerCase().includes(query);
-        } else {
-          return String(r.id).toLowerCase().includes(query);
-        }
-      });
-
-      if (!searchResultsArea) return;
-      searchResultsArea.innerHTML = '';
-
-      if (matched.length === 0) {
-        searchResultsArea.innerHTML = `
-          <div style="text-align: center; padding: 30px 15px; color: var(--text-muted); font-size: 0.88rem;">
-            <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.8rem; margin-bottom: 8px; color: #f59e0b; display: block;"></i>
-            검색 결과가 없습니다.<br>
-            <span style="font-size: 0.78rem; color: #94a3b8;">입력하신 ${currentSearchMode === 'name' ? '상호명' : '고유번호'}을(를) 다시 한번 확인해 주세요.</span>
-          </div>
-        `;
-        return;
-      }
-
-      matched.forEach(item => {
-        let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;">심사대기중</span>';
-        if (item.status === 'approved' || item.status === '승인 완료') {
-          statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;"><i class="fa-solid fa-check"></i> 승인 완료</span>';
-        } else if (item.status === 'rejected' || item.status === '반려됨') {
-          statusBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;"><i class="fa-solid fa-xmark"></i> 반려됨</span>';
-        } else if (item.status) {
-          statusBadge = `<span style="background: #e0e7ff; color: #3730a3; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;">${typeof escapeHtml === 'function' ? escapeHtml(item.status) : item.status}</span>`;
-        }
-
-        const card = document.createElement('div');
-        card.style.background = '#f8fafc';
-        card.style.border = '1px solid var(--border-color)';
-        card.style.borderRadius = '10px';
-        card.style.padding = '14px 16px';
-        card.style.textAlign = 'left';
-
-        const maskedName = typeof maskName === 'function' ? maskName(item.ownerName) : item.ownerName;
-        const maskedPhone = typeof maskPhone === 'function' ? maskPhone(item.ownerPhone) : item.ownerPhone;
-
-        card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px;">
-            <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary);">
-              ${typeof escapeHtml === 'function' ? escapeHtml(item.storeName) : item.storeName}
-            </div>
-            <div>${statusBadge}</div>
-          </div>
-          <div style="margin-bottom: 8px;">
-            <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 3px 8px; border-radius: 6px; display: inline-block;">${typeof escapeHtml === 'function' ? escapeHtml(String(item.id)) : String(item.id)}</span>
-          </div>
-          <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6;">
-            <div><i class="fa-solid fa-location-dot" style="width: 16px; color: var(--accent-primary);"></i> ${typeof escapeHtml === 'function' ? escapeHtml(item.storeAddress) : item.storeAddress}</div>
-            <div style="display: flex; gap: 14px; margin-top: 5px; font-size: 0.90rem; color: #64748b;">
-              <span><i class="fa-solid fa-user-shield"></i> 신청인: ${typeof escapeHtml === 'function' ? escapeHtml(maskedName) : maskedName}</span>
-              ${maskedPhone ? `<span><i class="fa-solid fa-phone"></i> ${typeof escapeHtml === 'function' ? escapeHtml(maskedPhone) : maskedPhone}</span>` : ''}
-            </div>
-          </div>
-        `;
-        searchResultsArea.appendChild(card);
-      });
-    });
-  }
-}
-
-
