@@ -5068,7 +5068,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         jobsList.querySelectorAll('.const-draft-input-mob').forEach(input => {
+            input.addEventListener('click', () => {
+                window.isInteractingWithForm = true;
+                window._isConstUploading = true;
+            });
             input.addEventListener('change', async (e) => {
+                window.isInteractingWithForm = true;
+                window._isConstUploading = true;
                 const id = e.target.dataset.id;
                 const files = Array.from(e.target.files);
                 if (files.length > 0) {
@@ -5077,13 +5083,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         await handleJobDraftUploadMob(id, files);
                     }
-                    e.target.value = '';
                 }
+                e.target.value = '';
+                setTimeout(() => {
+                    window.isInteractingWithForm = false;
+                    window._isConstUploading = false;
+                }, 1000);
             });
         });
 
         jobsList.querySelectorAll('.const-photo-input-mob').forEach(input => {
+            input.addEventListener('click', () => {
+                window.isInteractingWithForm = true;
+                window._isConstUploading = true;
+            });
             input.addEventListener('change', async (e) => {
+                window.isInteractingWithForm = true;
+                window._isConstUploading = true;
                 const id = e.target.dataset.id;
                 const files = Array.from(e.target.files);
                 if (files.length > 0) {
@@ -5092,8 +5108,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         await handleJobPhotoUploadMob(id, files);
                     }
-                    e.target.value = '';
                 }
+                e.target.value = '';
+                setTimeout(() => {
+                    window.isInteractingWithForm = false;
+                    window._isConstUploading = false;
+                }, 1000);
             });
         });
     }

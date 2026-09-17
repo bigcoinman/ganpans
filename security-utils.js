@@ -2429,25 +2429,44 @@ window.SupabaseSync = {
                 appObj.photosCount = existingLocalCount;
                 appObj.hasPhoto = true;
               }
-              if (localApp.constructionPhotos && localApp.constructionPhotos.length > 0 && (!appObj.constructionPhotos || appObj.constructionPhotos.length === 0)) {
+              // 최신 시공사진 락 및 로컬 보존
+              const photoLock = (window.DataStore && window.DataStore._recentPhotoUpdates && (window.DataStore._recentPhotoUpdates[String(appObj.id)] || (normObjKey && window.DataStore._recentPhotoUpdates[normObjKey])));
+              const isPhotoLockActive = Boolean(photoLock && (Date.now() - (photoLock.timestamp || 0) < 10000));
+              if (isPhotoLockActive && Array.isArray(photoLock.constructionPhotos)) {
+                appObj.constructionPhotos = photoLock.constructionPhotos;
+              } else if (localApp.constructionPhotos && localApp.constructionPhotos.length > 0 && (!appObj.constructionPhotos || appObj.constructionPhotos.length === 0)) {
                 appObj.constructionPhotos = localApp.constructionPhotos;
               }
               if (localApp.invoicePhotos && localApp.invoicePhotos.length > 0 && (!appObj.invoicePhotos || appObj.invoicePhotos.length === 0)) {
                 appObj.invoicePhotos = localApp.invoicePhotos;
               }
-              // 간판 디자인 시안 및 시안 확정 상태 로컬 보존 및 서버 memo 최신 동기화
-              try {
-                const sMemo = typeof sa.memo === 'string' ? JSON.parse(sa.memo) : (sa.memo || {});
-                if (sMemo && sMemo.signDraftPhotos !== undefined) {
-                  appObj.signDraftPhotos = Array.isArray(sMemo.signDraftPhotos) ? sMemo.signDraftPhotos : [];
-                }
-                if (sMemo && sMemo.draftStatus) {
-                  appObj.draftStatus = sMemo.draftStatus;
-                }
-                if (sMemo && sMemo.draftApprovedAt) {
-                  appObj.draftApprovedAt = sMemo.draftApprovedAt;
-                }
-              } catch (eMemoSync) {}
+
+              // 간판 디자인 시안 최신 락 및 서버 memo 동기화 (레이스 컨디션 완벽 방어)
+              const draftLock = (window.DataStore && window.DataStore._recentDraftUpdates && (window.DataStore._recentDraftUpdates[String(appObj.id)] || (normObjKey && window.DataStore._recentDraftUpdates[normObjKey])));
+              const isDraftLockActive = Boolean(draftLock && (Date.now() - (draftLock.timestamp || 0) < 10000));
+              if (isDraftLockActive && Array.isArray(draftLock.signDraftPhotos)) {
+                appObj.signDraftPhotos = draftLock.signDraftPhotos;
+                if (draftLock.draftStatus) appObj.draftStatus = draftLock.draftStatus;
+              } else {
+                try {
+                  const sMemo = typeof sa.memo === 'string' ? JSON.parse(sa.memo) : (sa.memo || {});
+                  if (sMemo && sMemo.signDraftPhotos !== undefined) {
+                    const serverDraftList = Array.isArray(sMemo.signDraftPhotos) ? sMemo.signDraftPhotos : [];
+                    // 로컬 시안이 더 많으면(방금 추가 업로드됨) 로컬 시안 우선 보존
+                    if (localApp.signDraftPhotos && localApp.signDraftPhotos.length > serverDraftList.length) {
+                      appObj.signDraftPhotos = localApp.signDraftPhotos;
+                    } else {
+                      appObj.signDraftPhotos = serverDraftList;
+                    }
+                  }
+                  if (sMemo && sMemo.draftStatus) {
+                    appObj.draftStatus = sMemo.draftStatus;
+                  }
+                  if (sMemo && sMemo.draftApprovedAt) {
+                    appObj.draftApprovedAt = sMemo.draftApprovedAt;
+                  }
+                } catch (eMemoSync) {}
+              }
 
               if (appObj.signDraftPhotos === undefined && localApp.signDraftPhotos && localApp.signDraftPhotos.length > 0) {
                 appObj.signDraftPhotos = localApp.signDraftPhotos;

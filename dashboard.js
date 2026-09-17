@@ -5414,7 +5414,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 디자인 시안 업로드 (300KB 이하 자동 압축, 최대 5장)
     document.querySelectorAll('.const-draft-input').forEach(input => {
+      input.addEventListener('click', () => {
+        window.isInteractingWithForm = true;
+        window._isConstUploading = true;
+      });
       input.addEventListener('change', async (e) => {
+        window.isInteractingWithForm = true;
+        window._isConstUploading = true;
         const id = e.target.dataset.id;
         const files = Array.from(e.target.files);
         if (files.length > 0) {
@@ -5423,14 +5429,24 @@ document.addEventListener('DOMContentLoaded', () => {
           } else {
             await handleJobDraftUpload(id, files);
           }
-          e.target.value = '';
         }
+        e.target.value = '';
+        setTimeout(() => {
+          window.isInteractingWithForm = false;
+          window._isConstUploading = false;
+        }, 1000);
       });
     });
 
     // 시공 후 사진 업로드 (300KB 이하 자동 압축, 최대 5장)
     document.querySelectorAll('.const-photo-input').forEach(input => {
+      input.addEventListener('click', () => {
+        window.isInteractingWithForm = true;
+        window._isConstUploading = true;
+      });
       input.addEventListener('change', async (e) => {
+        window.isInteractingWithForm = true;
+        window._isConstUploading = true;
         const id = e.target.dataset.id;
         const files = Array.from(e.target.files);
         if (files.length > 0) {
@@ -5439,8 +5455,12 @@ document.addEventListener('DOMContentLoaded', () => {
           } else {
             await handleJobPhotoUpload(id, files);
           }
-          e.target.value = '';
         }
+        e.target.value = '';
+        setTimeout(() => {
+          window.isInteractingWithForm = false;
+          window._isConstUploading = false;
+        }, 1000);
       });
     });
   };

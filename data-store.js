@@ -969,6 +969,8 @@
     // --- 3-2. 영업물건 접수상태(receiptStatus) 및 진행상태(progressStatus) 통합 변경 (SSOT 보장) ---
     _recentStatusUpdates: {}, // [레이스 컨디션 완벽 방어] 최근 60초간 변경된 물건의 최신 상태 락 맵
     _recentUserUpdates: {},   // [레이스 컨디션 완벽 방어] 최근 10초간 변경된 회원의 전환/승인 상태 락 맵
+    _recentDraftUpdates: {},  // [시안 업로드 락] 최근 10초간 업로드된 간판 디자인 시안 락 맵 (syncAllData 덮어쓰기 방어)
+    _recentPhotoUpdates: {},  // [시공사진 업로드 락] 최근 10초간 업로드된 시공사진 락 맵 (syncAllData 덮어쓰기 방어)
 
     lockUserUpdate: function (uid, fields) {
       if (!uid) return;
@@ -1999,6 +2001,7 @@
         // 현재 조작 중인 폼이 속한 화면을 정밀 감지하여 해당 테이블만 안전하게 리렌더링 스킵 (In-place로 이미 갱신됨)
         const isAppSelectActive = isFormActive && activeEl && (activeEl.classList.contains('select-app-status-pc') || activeEl.classList.contains('select-app-status-mob') || (activeEl.closest && (activeEl.closest('#applications-table-body') || activeEl.closest('#admin-apps-list-mob') || activeEl.closest('#admin-apps-list-mobile'))));
         const isBizSelectActive = isFormActive && activeEl && (activeEl.classList.contains('select-receipt-status') || activeEl.classList.contains('select-progress-status') || activeEl.classList.contains('select-receipt-mob') || activeEl.classList.contains('select-progress-mob') || (activeEl.closest && (activeEl.closest('#manager-biz-tbody') || activeEl.closest('#biz-items-list-mobile') || activeEl.closest('#manager-items-list') || activeEl.closest('#manager-const-progress-tbody'))));
+        const isConstInputActive = isFormActive && (window._isConstUploading || (activeEl && (activeEl.classList.contains('const-draft-input') || activeEl.classList.contains('const-photo-input') || activeEl.classList.contains('const-draft-input-mob') || activeEl.classList.contains('const-photo-input-mob') || activeEl.classList.contains('select-const-status') || activeEl.classList.contains('select-const-status-mob') || (activeEl.closest && (activeEl.closest('#constructor-jobs-table-body') || activeEl.closest('#constructor-jobs-list-mob') || activeEl.closest('#const-jobs-list-mob'))))));
 
         // 1. 최고관리자 신청서 목록: 관리자가 신청서 드롭다운 조작 중일 때는 DOM 파괴 방지를 위해 스킵 (이미 In-place 갱신됨)
         if (!isAppSelectActive || force === 'all') {
@@ -2012,17 +2015,21 @@
           if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
         }
 
-        // 3. 영업자 / 시공사 / 점주 화면: 현재 관리자 폼과 무관하므로 항상 100% 즉시 실시간 리렌더링!
+        // 3. 영업자 / 점주 화면: 100% 즉시 실시간 리렌더링!
         if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
         if (typeof window.renderBusinessDashboard === 'function') window.renderBusinessDashboard();
         if (typeof window.renderBusinessDashboardMob === 'function') window.renderBusinessDashboardMob();
         if (typeof window.renderBizRegisteredItemsMob === 'function') window.renderBizRegisteredItemsMob();
         if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
         if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
-        if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
-        if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
 
-        // 4. 기타 회원 / 문의 목록
+        // 4. 시공사 화면: 파일 선택창 조작 중이거나 업로드 중일 때는 테이블 DOM 파괴 방지를 위해 안전 스킵 (In-place로 즉시 갱신됨)
+        if (!isConstInputActive || force === 'all') {
+          if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
+          if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
+        }
+
+        // 5. 기타 회원 / 문의 목록
         if (!isFormActive || force === 'all') {
           if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
           if (typeof window.renderInquiriesList === 'function') window.renderInquiriesList();
@@ -2474,146 +2481,227 @@
     return window.toggleDraftApproval(id, 'owner_approved');
   };
 
-  // --- 간판 디자인 시안 공통 업로드 핸들러 (최대 5장, 300KB 이하 강제 자동 압축) ---
-  window.handleJobDraftUploadCommon = async function (id, files) {
-    if (!files || files.length === 0) return;
-    const fileList = Array.from(files);
-
-    // 1. 현재 등록된 시안 개수 사전 확인 (최대 5장 제한)
-    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
-      ? window.DataStore.getApplications()
-      : (JSON.parse(localStorage.getItem('applications')) || []);
-    const targetApp = apps.find(a => String(a.id) === String(id));
-    let existingList = [];
-    if (targetApp) {
-      existingList = targetApp.signDraftPhotos || targetApp.designPhotos || [];
-      if (existingList.length === 0 && targetApp.memo) {
-        try {
-          const m = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {});
-          if (m && Array.isArray(m.signDraftPhotos)) existingList = m.signDraftPhotos;
-        } catch (e) {}
-      }
-    }
-
-    if (existingList.length >= 5) {
-      alert('간판 디자인 시안은 최대 5장까지만 등록 가능합니다.\n기존 시안을 삭제하신 후 다시 등록해 주세요.');
-      return;
-    }
-
-    const availableSlots = 5 - existingList.length;
-    const filesToUpload = fileList.slice(0, availableSlots);
-    if (fileList.length > availableSlots) {
-      alert(`간판 디자인 시안은 최대 5장까지 가능하여, 선택하신 사진 중 ${availableSlots}장만 등록됩니다.`);
-    }
-
-    // 2. 300KB 이하 강제 자동 압축
-    const uploadedBase64List = [];
-    for (let i = 0; i < filesToUpload.length; i++) {
-      const file = filesToUpload[i];
-      let base64 = null;
-      if (typeof compressImageToBase64 === 'function') {
-        try {
-          base64 = await compressImageToBase64(file, 300 * 1024);
-        } catch (eComp) {
-          console.warn('[handleJobDraftUploadCommon] compress error fallback:', eComp);
+  // --- In-place 간판 디자인 시안 UI 부분 갱신 (전체 DOM 파괴 없이 0초 즉시 반영) ---
+  window.updateJobDraftUIInPlace = function (id, draftList, draftStatus = 'pending') {
+    const draftCount = Array.isArray(draftList) ? draftList.length : 0;
+    const inputs = document.querySelectorAll(`.const-draft-input[data-id="${id}"], .const-draft-input-mob[data-id="${id}"]`);
+    inputs.forEach(input => {
+      input.value = '';
+      const box = input.closest('div');
+      if (box) {
+        // 1. 라벨 개수 갱신
+        const lbl = box.querySelector('label');
+        if (lbl) {
+          lbl.innerHTML = `<i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftCount}/5장)`;
+        }
+        // 2. 최대 등록 안내 배지
+        const headerDiv = box.querySelector('div') || box.firstElementChild;
+        let maxBadge = box.querySelector('.badge-draft-max');
+        if (draftCount >= 5) {
+          if (!maxBadge && headerDiv) {
+            const span = document.createElement('span');
+            span.className = 'badge-draft-max';
+            span.style.cssText = 'font-size: 0.82rem; color: #dc2626; font-weight: 700;';
+            span.innerText = '최대 등록됨';
+            headerDiv.appendChild(span);
+          }
+        } else if (maxBadge) {
+          maxBadge.remove();
+        }
+        // 3. 등록된 시안 확인 및 삭제 버튼 영역
+        let btnWrap = box.querySelector('.draft-btn-wrap');
+        if (draftCount > 0) {
+          if (!btnWrap) {
+            btnWrap = document.createElement('div');
+            btnWrap.className = 'draft-btn-wrap';
+            btnWrap.style.cssText = 'margin-top: 5px; display: flex; align-items: center; justify-content: space-between;';
+            input.insertAdjacentElement('afterend', btnWrap);
+          }
+          btnWrap.innerHTML = `
+            <button type="button" onclick="window.viewDraftModal('${id}')" style="padding: 5px 10px; font-size: 0.86rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;">
+              <i class="fa-solid fa-eye"></i> 등록된 시안 확인 및 삭제 (${draftCount}장)
+            </button>
+          `;
+        } else if (btnWrap) {
+          btnWrap.remove();
         }
       }
-      if (!base64) {
-        base64 = await new Promise((res) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => res(ev.target.result);
-          reader.readAsDataURL(file);
-        });
-      }
-      if (base64) uploadedBase64List.push(base64);
-    }
-
-    if (uploadedBase64List.length === 0) return;
-
-    const merged = existingList.concat(uploadedBase64List).slice(0, 5);
-    let targetMemoStr = '';
-
-    // 3. applications 갱신
-    apps = apps.map(app => {
-      if (String(app.id) === String(id)) {
-        let mObj = {};
-        try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch (e) {}
-        mObj.signDraftPhotos = merged;
-        mObj.draftStatus = 'pending';
-        mObj.draftCount = merged.length;
-        targetMemoStr = JSON.stringify(mObj);
-        return {
-          ...app,
-          signDraftPhotos: merged,
-          draftStatus: 'pending',
-          constructionStatus: app.constructionStatus === 'before_construction' ? 'design_draft' : app.constructionStatus,
-          memo: targetMemoStr
-        };
-      }
-      return app;
     });
-    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-      window.DataStore.saveApplications(apps);
-    } else {
-      localStorage.setItem('applications', JSON.stringify(apps));
-    }
+  };
 
-    // 4. users.items 갱신
-    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
-      ? window.DataStore.getUsers()
-      : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
-    curUsers = curUsers.map(u => {
-      if (u.items && Array.isArray(u.items)) {
-        const updatedItems = u.items.map(item => {
-          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-            updatedUid = u.id;
-            return {
-              ...item,
-              signDraftPhotos: merged,
-              draftStatus: 'pending',
-              constructionStatus: item.constructionStatus === 'before_construction' ? 'design_draft' : item.constructionStatus,
-              memo: targetMemoStr || item.memo
-            };
+  // --- 간판 디자인 시안 공통 업로드 핸들러 (최대 5장, 300KB 이하 강제 자동 압축 & 쾌속 병렬 업로드) ---
+  window.handleJobDraftUploadCommon = async function (id, files) {
+    if (!files || files.length === 0) return;
+    window._isConstUploading = true;
+    window.isInteractingWithForm = true;
+    const fileList = Array.from(files);
+
+    try {
+      // 1. 현재 등록된 시안 개수 사전 확인 (최대 5장 제한)
+      let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+        ? window.DataStore.getApplications()
+        : (JSON.parse(localStorage.getItem('applications')) || []);
+      const targetApp = apps.find(a => String(a.id) === String(id));
+      let existingList = [];
+      if (targetApp) {
+        existingList = targetApp.signDraftPhotos || targetApp.designPhotos || [];
+        if (existingList.length === 0 && targetApp.memo) {
+          try {
+            const m = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {});
+            if (m && Array.isArray(m.signDraftPhotos)) existingList = m.signDraftPhotos;
+          } catch (e) {}
+        }
+      }
+
+      if (existingList.length >= 5) {
+        if (typeof window.showToast === 'function') {
+          window.showToast('간판 디자인 시안은 최대 5장까지만 등록 가능합니다.', 'warning');
+        } else {
+          alert('간판 디자인 시안은 최대 5장까지만 등록 가능합니다.\n기존 시안을 삭제하신 후 다시 등록해 주세요.');
+        }
+        return;
+      }
+
+      const availableSlots = 5 - existingList.length;
+      const filesToUpload = fileList.slice(0, availableSlots);
+      if (fileList.length > availableSlots) {
+        if (typeof window.showToast === 'function') {
+          window.showToast(`간판 디자인 시안은 최대 5장까지 가능하여 ${availableSlots}장만 등록됩니다.`, 'info');
+        }
+      }
+
+      // 2. 300KB 이하 초고속 병렬(Promise.all) 자동 압축
+      const uploadedBase64List = (await Promise.all(filesToUpload.map(async (file) => {
+        let base64 = null;
+        if (typeof compressImageToBase64 === 'function') {
+          try {
+            base64 = await compressImageToBase64(file, 300 * 1024);
+          } catch (eComp) {
+            console.warn('[handleJobDraftUploadCommon] compress error fallback:', eComp);
           }
-          return item;
-        });
-        return { ...u, items: updatedItems };
-      }
-      return u;
-    });
-    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-      window.DataStore.saveUsers(curUsers);
-    } else {
-      localStorage.setItem('users', JSON.stringify(curUsers));
-    }
+        }
+        if (!base64) {
+          base64 = await new Promise((res) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => res(ev.target.result);
+            reader.onerror = () => res(null);
+            reader.readAsDataURL(file);
+          });
+        }
+        return base64;
+      }))).filter(Boolean);
 
-    // 5. Supabase 비동기 백그라운드 저장
-    if (window.SupabaseSync) {
-      if (typeof window.SupabaseSync.updateApplication === 'function') {
-        const app = apps.find(a => String(a.id) === String(id));
-        window.SupabaseSync.updateApplication(id, {
-          construction_status: app && app.constructionStatus === 'before_construction' ? 'design_draft' : (app ? app.constructionStatus : 'design_draft'),
-          memo: targetMemoStr
-        });
+      if (uploadedBase64List.length === 0) return;
+
+      const merged = existingList.concat(uploadedBase64List).slice(0, 5);
+      let targetMemoStr = '';
+
+      // [레이스 컨디션 방어] 최신 시안 락 등록 (10초간 syncAllData의 덮어쓰기 방어)
+      if (window.DataStore && window.DataStore._recentDraftUpdates) {
+        const normKey = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const lockObj = { signDraftPhotos: merged, draftStatus: 'pending', timestamp: Date.now() };
+        window.DataStore._recentDraftUpdates[String(id)] = lockObj;
+        if (normKey) window.DataStore._recentDraftUpdates[normKey] = lockObj;
+      }
+
+      // 3. applications 갱신
+      apps = apps.map(app => {
+        if (String(app.id) === String(id)) {
+          let mObj = {};
+          try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch (e) {}
+          mObj.signDraftPhotos = merged;
+          mObj.draftStatus = 'pending';
+          mObj.draftCount = merged.length;
+          targetMemoStr = JSON.stringify(mObj);
+          return {
+            ...app,
+            signDraftPhotos: merged,
+            draftStatus: 'pending',
+            constructionStatus: app.constructionStatus === 'before_construction' ? 'design_draft' : app.constructionStatus,
+            memo: targetMemoStr
+          };
+        }
+        return app;
+      });
+      if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+        window.DataStore.saveApplications(apps);
       } else {
-        const app = apps.find(a => String(a.id) === String(id));
-        if (app) window.SupabaseSync.upsertApplication(app);
+        localStorage.setItem('applications', JSON.stringify(apps));
       }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
-    }
 
-    alert('간판 디자인 시안이 300KB 이하로 자동 압축되어 업로드되었습니다.\n신청 점주 및 관리자 화면에 즉시 공유됩니다.');
-    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-      window.DataStore.notifyAll(true);
+      // 4. users.items 갱신
+      let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+        ? window.DataStore.getUsers()
+        : (JSON.parse(localStorage.getItem('users')) || []);
+      let updatedUid = null;
+      curUsers = curUsers.map(u => {
+        if (u.items && Array.isArray(u.items)) {
+          const updatedItems = u.items.map(item => {
+            if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
+              updatedUid = u.id;
+              return {
+                ...item,
+                signDraftPhotos: merged,
+                draftStatus: 'pending',
+                constructionStatus: item.constructionStatus === 'before_construction' ? 'design_draft' : item.constructionStatus,
+                memo: targetMemoStr || item.memo
+              };
+            }
+            return item;
+          });
+          return { ...u, items: updatedItems };
+        }
+        return u;
+      });
+      if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+        window.DataStore.saveUsers(curUsers);
+      } else {
+        localStorage.setItem('users', JSON.stringify(curUsers));
+      }
+
+      // 5. Supabase 비동기 백그라운드 저장
+      if (window.SupabaseSync) {
+        if (typeof window.SupabaseSync.updateApplication === 'function') {
+          const app = apps.find(a => String(a.id) === String(id));
+          window.SupabaseSync.updateApplication(id, {
+            construction_status: app && app.constructionStatus === 'before_construction' ? 'design_draft' : (app ? app.constructionStatus : 'design_draft'),
+            memo: targetMemoStr
+          });
+        } else {
+          const app = apps.find(a => String(a.id) === String(id));
+          if (app) window.SupabaseSync.upsertApplication(app);
+        }
+        if (updatedUid) {
+          const u = curUsers.find(usr => usr.id === updatedUid);
+          if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+        }
+      }
+
+      // 6. In-place 즉시 부분 갱신 (전체 DOM 파괴 없이 0초 만에 시안 개수 반영)
+      if (typeof window.updateJobDraftUIInPlace === 'function') {
+        window.updateJobDraftUIInPlace(id, merged, 'pending');
+      }
+
+      // 7. 넌블로킹 토스트 알림 (alert 프리징 제거)
+      if (typeof window.showToast === 'function') {
+        window.showToast(`간판 디자인 시안 ${uploadedBase64List.length}장이 쾌속 등록되었습니다. (${merged.length}/5장)`, 'success');
+      } else {
+        alert(`간판 디자인 시안 ${uploadedBase64List.length}장이 등록되었습니다. (${merged.length}/5장)`);
+      }
+
+      // 8. 관리자 및 점주 대시보드 백그라운드 동기화 (시공사 화면은 In-place 유지)
+      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+        window.DataStore.notifyAll();
+      }
+      if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+    } catch (err) {
+      console.error('[handleJobDraftUploadCommon] error:', err);
+    } finally {
+      setTimeout(() => {
+        window._isConstUploading = false;
+        window.isInteractingWithForm = false;
+      }, 1000);
     }
-    // 현재 화면 즉시 동기화 리렌더링
-    if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
-    if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
-    if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
   };
 
   // --- 간판 디자인 시안 개별 삭제 ---
@@ -2815,117 +2903,179 @@
     }
   };
 
-  // --- 시공 후 현장 사진 공통 업로드 핸들러 (최대 5장, 300KB 이하 강제 자동 압축) ---
-  window.handleJobPhotoUploadCommon = async function (id, files) {
-    if (!files || files.length === 0) return;
-    const fileList = Array.from(files);
-
-    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
-      ? window.DataStore.getApplications()
-      : (JSON.parse(localStorage.getItem('applications')) || []);
-    const targetApp = apps.find(a => String(a.id) === String(id));
-    let existingList = [];
-    if (targetApp) {
-      existingList = targetApp.constructionPhotos || targetApp.afterPhotos || [];
-    }
-
-    if (existingList.length >= 5) {
-      alert('시공 후 사진은 최대 5장까지만 등록 가능합니다.\n기존 사진을 삭제하신 후 다시 등록해 주세요.');
-      return;
-    }
-
-    const availableSlots = 5 - existingList.length;
-    const filesToUpload = fileList.slice(0, availableSlots);
-
-    const uploadedBase64List = [];
-    for (let i = 0; i < filesToUpload.length; i++) {
-      const file = filesToUpload[i];
-      let base64 = null;
-      if (typeof compressImageToBase64 === 'function') {
-        try {
-          base64 = await compressImageToBase64(file, 300 * 1024);
-        } catch (eComp) {
-          console.warn('[handleJobPhotoUploadCommon] compress error:', eComp);
+  // --- In-place 시공 후 사진 UI 부분 갱신 (전체 DOM 파괴 없이 0초 즉시 반영) ---
+  window.updateJobPhotoUIInPlace = function (id, photoList) {
+    const photoCount = Array.isArray(photoList) ? photoList.length : 0;
+    const inputs = document.querySelectorAll(`.const-photo-input[data-id="${id}"], .const-photo-input-mob[data-id="${id}"]`);
+    inputs.forEach(input => {
+      input.value = '';
+      const box = input.closest('div');
+      if (box) {
+        const lbl = box.querySelector('label');
+        if (lbl) {
+          lbl.innerHTML = `<i class="fa-solid fa-camera"></i> 시공 후 사진 증빙 (${photoCount}/5)`;
+        }
+        let btnWrap = box.querySelector('.photo-btn-wrap');
+        if (photoCount > 0) {
+          if (!btnWrap) {
+            btnWrap = document.createElement('div');
+            btnWrap.className = 'photo-btn-wrap';
+            btnWrap.style.cssText = 'margin-top: 5px; display: flex; align-items: center; justify-content: space-between;';
+            input.insertAdjacentElement('afterend', btnWrap);
+          }
+          btnWrap.innerHTML = `
+            <button type="button" onclick="window.viewConstructionPhotosModal('${id}')" style="padding: 5px 10px; font-size: 0.86rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;">
+              <i class="fa-solid fa-eye"></i> 시공 후 사진 확인 및 삭제 (${photoCount}장)
+            </button>
+          `;
+        } else if (btnWrap) {
+          btnWrap.remove();
         }
       }
-      if (!base64) {
-        base64 = await new Promise((res) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => res(ev.target.result);
-          reader.readAsDataURL(file);
-        });
-      }
-      if (base64) uploadedBase64List.push(base64);
-    }
-
-    if (uploadedBase64List.length === 0) return;
-
-    const merged = existingList.concat(uploadedBase64List).slice(0, 5);
-
-    apps = apps.map(app => {
-      if (String(app.id) === String(id)) {
-        let mObj = {};
-        try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch (e) {}
-        mObj.constPhotoCount = merged.length;
-        const targetMemoStr = JSON.stringify(mObj);
-        return { ...app, constructionPhotos: merged, memo: targetMemoStr };
-      }
-      return app;
     });
-    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-      window.DataStore.saveApplications(apps);
-    } else {
-      localStorage.setItem('applications', JSON.stringify(apps));
-    }
+  };
 
-    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
-      ? window.DataStore.getUsers()
-      : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
-    let targetMemoForUser = '';
-    curUsers = curUsers.map(u => {
-      if (u.items && Array.isArray(u.items)) {
-        const updatedItems = u.items.map(item => {
-          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-            updatedUid = u.id;
-            let mObj = {};
-            try { mObj = typeof item.memo === 'string' ? JSON.parse(item.memo) : (item.memo || {}); } catch (e) {}
-            mObj.constPhotoCount = merged.length;
-            targetMemoForUser = JSON.stringify(mObj);
-            return { ...item, constructionPhotos: merged, memo: targetMemoForUser };
+  // --- 시공 후 현장 사진 공통 업로드 핸들러 (최대 5장, 300KB 이하 강제 자동 압축 & 쾌속 병렬 업로드) ---
+  window.handleJobPhotoUploadCommon = async function (id, files) {
+    if (!files || files.length === 0) return;
+    window._isConstUploading = true;
+    window.isInteractingWithForm = true;
+    const fileList = Array.from(files);
+
+    try {
+      let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+        ? window.DataStore.getApplications()
+        : (JSON.parse(localStorage.getItem('applications')) || []);
+      const targetApp = apps.find(a => String(a.id) === String(id));
+      let existingList = [];
+      if (targetApp) {
+        existingList = targetApp.constructionPhotos || targetApp.afterPhotos || [];
+      }
+
+      if (existingList.length >= 5) {
+        if (typeof window.showToast === 'function') {
+          window.showToast('시공 후 사진은 최대 5장까지만 등록 가능합니다.', 'warning');
+        } else {
+          alert('시공 후 사진은 최대 5장까지만 등록 가능합니다.\n기존 사진을 삭제하신 후 다시 등록해 주세요.');
+        }
+        return;
+      }
+
+      const availableSlots = 5 - existingList.length;
+      const filesToUpload = fileList.slice(0, availableSlots);
+
+      // 초고속 병렬 압축
+      const uploadedBase64List = (await Promise.all(filesToUpload.map(async (file) => {
+        let base64 = null;
+        if (typeof compressImageToBase64 === 'function') {
+          try {
+            base64 = await compressImageToBase64(file, 300 * 1024);
+          } catch (eComp) {
+            console.warn('[handleJobPhotoUploadCommon] compress error:', eComp);
           }
-          return item;
-        });
-        return { ...u, items: updatedItems };
-      }
-      return u;
-    });
-    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-      window.DataStore.saveUsers(curUsers);
-    } else {
-      localStorage.setItem('users', JSON.stringify(curUsers));
-    }
+        }
+        if (!base64) {
+          base64 = await new Promise((res) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => res(ev.target.result);
+            reader.onerror = () => res(null);
+            reader.readAsDataURL(file);
+          });
+        }
+        return base64;
+      }))).filter(Boolean);
 
-    if (window.SupabaseSync) {
-      const app = apps.find(a => String(a.id) === String(id));
-      const memoToSend = (app && app.memo) ? app.memo : targetMemoForUser;
-      if (typeof window.SupabaseSync.updateApplication === 'function') {
-        window.SupabaseSync.updateApplication(id, { construction_photos: merged, memo: memoToSend });
-      }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
-    }
+      if (uploadedBase64List.length === 0) return;
 
-    alert('시공 후 현장 사진이 300KB 이하로 자동 압축되어 업로드되었습니다.');
-    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-      window.DataStore.notifyAll(true);
+      const merged = existingList.concat(uploadedBase64List).slice(0, 5);
+
+      // [레이스 컨디션 방어] 최신 시공사진 락 등록 (10초간 syncAllData의 덮어쓰기 방어)
+      if (window.DataStore && window.DataStore._recentPhotoUpdates) {
+        const normKey = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const lockObj = { constructionPhotos: merged, timestamp: Date.now() };
+        window.DataStore._recentPhotoUpdates[String(id)] = lockObj;
+        if (normKey) window.DataStore._recentPhotoUpdates[normKey] = lockObj;
+      }
+
+      apps = apps.map(app => {
+        if (String(app.id) === String(id)) {
+          let mObj = {};
+          try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch (e) {}
+          mObj.constPhotoCount = merged.length;
+          const targetMemoStr = JSON.stringify(mObj);
+          return { ...app, constructionPhotos: merged, memo: targetMemoStr };
+        }
+        return app;
+      });
+      if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+        window.DataStore.saveApplications(apps);
+      } else {
+        localStorage.setItem('applications', JSON.stringify(apps));
+      }
+
+      let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+        ? window.DataStore.getUsers()
+        : (JSON.parse(localStorage.getItem('users')) || []);
+      let updatedUid = null;
+      let targetMemoForUser = '';
+      curUsers = curUsers.map(u => {
+        if (u.items && Array.isArray(u.items)) {
+          const updatedItems = u.items.map(item => {
+            if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
+              updatedUid = u.id;
+              let mObj = {};
+              try { mObj = typeof item.memo === 'string' ? JSON.parse(item.memo) : (item.memo || {}); } catch (e) {}
+              mObj.constPhotoCount = merged.length;
+              targetMemoForUser = JSON.stringify(mObj);
+              return { ...item, constructionPhotos: merged, memo: targetMemoForUser };
+            }
+            return item;
+          });
+          return { ...u, items: updatedItems };
+        }
+        return u;
+      });
+      if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+        window.DataStore.saveUsers(curUsers);
+      } else {
+        localStorage.setItem('users', JSON.stringify(curUsers));
+      }
+
+      if (window.SupabaseSync) {
+        const app = apps.find(a => String(a.id) === String(id));
+        const memoToSend = (app && app.memo) ? app.memo : targetMemoForUser;
+        if (typeof window.SupabaseSync.updateApplication === 'function') {
+          window.SupabaseSync.updateApplication(id, { construction_photos: merged, memo: memoToSend });
+        }
+        if (updatedUid) {
+          const u = curUsers.find(usr => usr.id === updatedUid);
+          if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+        }
+      }
+
+      // In-place 즉시 부분 갱신
+      if (typeof window.updateJobPhotoUIInPlace === 'function') {
+        window.updateJobPhotoUIInPlace(id, merged);
+      }
+
+      if (typeof window.showToast === 'function') {
+        window.showToast(`시공 후 사진 ${uploadedBase64List.length}장이 쾌속 등록되었습니다. (${merged.length}/5장)`, 'success');
+      } else {
+        alert(`시공 후 사진 ${uploadedBase64List.length}장이 등록되었습니다. (${merged.length}/5장)`);
+      }
+
+      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+        window.DataStore.notifyAll();
+      }
+      if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+    } catch (err) {
+      console.error('[handleJobPhotoUploadCommon] error:', err);
+    } finally {
+      setTimeout(() => {
+        window._isConstUploading = false;
+        window.isInteractingWithForm = false;
+      }, 1000);
     }
-    if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
-    if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
-    if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
-    if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
   };
 
   // --- 시공 후 현장 사진 개별 삭제 ---
