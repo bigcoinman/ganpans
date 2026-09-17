@@ -1173,10 +1173,6 @@ body.mobile-app-body {
     width: 100% !important;
 }
 
-#status-business-container .biz-link-panel-mob {
-    margin: 0 0 20px 0 !important;
-}
-
 #status-normal-container .section-title,
 #status-business-container .section-title,
 #status-constructor-container .section-title {
