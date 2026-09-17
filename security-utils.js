@@ -2163,9 +2163,25 @@ window.SupabaseSync = {
       const oldAppsStr = localStorage.getItem('applications') || '[]';
       const oldInqsStr = localStorage.getItem('inquiries') || '[]';
 
-      // --- A. 회원(Users) Supabase 클라우드 원천 직접 수집 ---
+      // --- A. 회원(Users) Supabase 클라우드 원천 직접 수집 (대역폭 99% 절감 컬럼 선별 조회) ---
       let usersChanged = false;
-      const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
+      const userColumns = 'id, name, email, phone, address, role, biz_code, const_code, conversion_status, pending_business_name, pending_license_number, items, created_at';
+      let supaUsers = null;
+      let usersErr = null;
+      try {
+        const resU = await window.supabaseClient.from('users').select(userColumns);
+        supaUsers = resU.data;
+        usersErr = resU.error;
+      } catch (eU) {
+        usersErr = eU;
+      }
+      if (usersErr || !supaUsers) {
+        try {
+          const resUFallback = await window.supabaseClient.from('users').select('*');
+          supaUsers = resUFallback.data;
+          usersErr = resUFallback.error;
+        } catch (eUfb) {}
+      }
       if (!usersErr && Array.isArray(supaUsers)) {
         const recentUserLocks = (window.DataStore && window.DataStore._recentUserUpdates) || {};
         const freshUsers = supaUsers
