@@ -3855,50 +3855,7 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.style.display = 'flex';
   };
 
-  // 시공 후 사진 확인 모달
-  window.viewConstructionPhotosModal = (id) => {
-    const jobs = (window.DataStore && typeof window.DataStore.getConstructionJobs === 'function')
-      ? window.DataStore.getConstructionJobs()
-      : [];
-    const job = jobs.find(j => String(j.id) === String(id));
-    if (!job || !job.constructionPhotos || job.constructionPhotos.length === 0) {
-      alert('등록된 시공 후 사진 증빙이 없습니다.');
-      return;
-    }
-
-    const modalId = 'modal-view-const-photos-preview';
-    let modal = document.getElementById(modalId);
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = modalId;
-      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;';
-      document.body.appendChild(modal);
-    }
-
-    const photosHtml = job.constructionPhotos.map((src, idx) => `
-      <div style="text-align: center; margin-bottom: 20px;">
-        <div style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">시공 후 사진 #${idx + 1}</div>
-        <img src="${sanitizeUrl(src)}" alt="시공 후 사진 #${idx + 1}" style="max-width: 100%; max-height: 70vh; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); object-fit: contain;">
-      </div>
-    `).join('');
-
-    modal.innerHTML = `
-      <div style="background: white; border-radius: 14px; padding: 24px; max-width: 750px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
-          <div>
-            <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary);"><i class="fa-solid fa-camera" style="color: #10b981;"></i> 시공 후 사진 증빙 (${job.constructionPhotos.length}장)</h3>
-            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">상호명: <strong>${escapeHtml(job.storeName)}</strong> | 시공사: <strong>${escapeHtml(job.assignedConstructorName)}</strong></div>
-          </div>
-          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
-        </div>
-        <div>${photosHtml}</div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px;">
-          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="padding: 8px 16px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">닫기</button>
-        </div>
-      </div>
-    `;
-    modal.style.display = 'flex';
-  };
+  // 시공 후 사진 확인 모달은 data-store.js의 비동기 온디맨드 단일 SSOT 함수(window.viewConstructionPhotosModal)를 100% 단일 사용합니다.
 
   const renderManagerConstProgress = () => {
     const constTableBody = document.getElementById('manager-const-progress-table-body');
@@ -4077,7 +4034,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 4. 시공 증빙 (시공 후 사진 3~5컷 - 7번 컬럼)
       const afterPhotos = job.constructionPhotos || [];
-      const afterCount = afterPhotos.length;
+      let memoConstCount = 0;
+      if (job.memo) {
+        try {
+          const m = typeof job.memo === 'string' ? JSON.parse(job.memo) : (job.memo || {});
+          memoConstCount = Number(m.constPhotoCount || m.constructionPhotoCount) || 0;
+          if (Array.isArray(m.constructionPhotos)) memoConstCount = Math.max(memoConstCount, m.constructionPhotos.length);
+        } catch(e) {}
+      }
+      const afterCount = Math.max(
+        (Array.isArray(afterPhotos) ? afterPhotos.length : 0),
+        Number(job.constPhotoCount) || 0,
+        memoConstCount
+      );
       let proofBadge = '';
       if (afterCount > 0) {
         proofBadge = `
@@ -5452,325 +5421,26 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const updateJobConstructionStatus = (id, val) => {
-    // 1) Update applications
-    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-    apps = apps.map(app => {
-      if (String(app.id) === String(id)) {
-        return { ...app, constructionStatus: val };
-      }
-      return app;
-    });
-    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-      window.DataStore.saveApplications(apps);
-    } else {
-      (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
-    }
-
-    // 2) Update users.items
-    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
-    curUsers = curUsers.map(u => {
-      if (u.items && Array.isArray(u.items)) {
-        const updatedItems = u.items.map(item => {
-          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-            updatedUid = u.id;
-            return { ...item, constructionStatus: val };
-          }
-          return item;
-        });
-        return { ...u, items: updatedItems };
-      }
-      return u;
-    });
-    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-      window.DataStore.saveUsers(curUsers);
-    } else {
-      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
-    }
-
-    if (window.SupabaseSync) {
-      if (typeof window.SupabaseSync.updateApplication === 'function') {
-        window.SupabaseSync.updateApplication(id, { construction_status: val });
-      } else {
-        const app = apps.find(a => String(a.id) === String(id));
-        if (app) window.SupabaseSync.upsertApplication(app);
-      }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
-    }
-
-    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-      window.DataStore.notifyAll(true);
+    if (typeof window.updateJobConstructionStatusCommon === 'function') {
+      window.updateJobConstructionStatusCommon(id, val);
     }
   };
 
-  // 간판 디자인 시안 업로드 핸들러 (1MB 이하 강제 자동 압축)
   const handleJobDraftUpload = async (id, files) => {
-    const uploadedBase64List = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      let base64 = '';
-      if (typeof compressImageToBase64 === 'function') {
-        base64 = await compressImageToBase64(file, 300 * 1024);
-      } else {
-        base64 = await new Promise((res) => {
-          const reader = new FileReader();
-          reader.onload = (e) => res(e.target.result);
-          reader.readAsDataURL(file);
-        });
-      }
-      if (base64) uploadedBase64List.push(base64);
-    }
-
-    // 1) applications
-    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-    let targetMemoStr = '';
-    apps = apps.map(app => {
-      if (String(app.id) === String(id)) {
-        const existing = app.signDraftPhotos || app.designPhotos || [];
-        const merged = existing.concat(uploadedBase64List).slice(0, 10);
-        let mObj = {};
-        try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch(e) {}
-        mObj.signDraftPhotos = merged;
-        mObj.draftStatus = 'pending';
-        mObj.draftCount = merged.length;
-        targetMemoStr = JSON.stringify(mObj);
-        return { 
-          ...app, 
-          signDraftPhotos: merged, 
-          draftStatus: 'pending',
-          constructionStatus: 'design_draft', // 시안 업로드 시 자동으로 2단계 '시안 및 교정 중' 전환
-          memo: targetMemoStr
-        };
-      }
-      return app;
-    });
-    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-      window.DataStore.saveApplications(apps);
-    } else {
-      (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
-    }
-
-    // 2) users.items
-    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
-    curUsers = curUsers.map(u => {
-      if (u.items && Array.isArray(u.items)) {
-        const updatedItems = u.items.map(item => {
-          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-            updatedUid = u.id;
-            const existing = item.signDraftPhotos || item.designPhotos || [];
-            const merged = existing.concat(uploadedBase64List).slice(0, 10);
-            return { 
-              ...item, 
-              signDraftPhotos: merged, 
-              draftStatus: 'pending',
-              constructionStatus: 'design_draft',
-              memo: targetMemoStr || item.memo
-            };
-          }
-          return item;
-        });
-        return { ...u, items: updatedItems };
-      }
-      return u;
-    });
-    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-      window.DataStore.saveUsers(curUsers);
-    } else {
-      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
-    }
-
-    if (window.SupabaseSync) {
-      if (typeof window.SupabaseSync.updateApplication === 'function') {
-        window.SupabaseSync.updateApplication(id, {
-          construction_status: 'design_draft',
-          memo: targetMemoStr
-        });
-      } else {
-        const app = apps.find(a => String(a.id) === String(id));
-        if (app) window.SupabaseSync.upsertApplication(app);
-      }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
-    }
-
-    alert('간판 디자인 시안이 1MB 이하로 자동 최적화되어 등록되었습니다.\n점주 및 최고관리자 화면에 실시간으로 공유됩니다.');
-    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-      window.DataStore.notifyAll(true);
+    if (typeof window.handleJobDraftUploadCommon === 'function') {
+      await window.handleJobDraftUploadCommon(id, files);
     }
   };
 
-  // 시공 후 사진 업로드 핸들러 (1MB 이하 강제 자동 압축)
   const handleJobPhotoUpload = async (id, files) => {
-    const uploadedBase64List = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      let base64 = '';
-      if (typeof compressImageToBase64 === 'function') {
-        base64 = await compressImageToBase64(file, 300 * 1024);
-      } else {
-        base64 = await new Promise((res) => {
-          const reader = new FileReader();
-          reader.onload = (e) => res(e.target.result);
-          reader.readAsDataURL(file);
-        });
-      }
-      if (base64) uploadedBase64List.push(base64);
-    }
-
-    // 1) applications
-    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-    apps = apps.map(app => {
-      if (String(app.id) === String(id)) {
-        const existing = app.constructionPhotos || app.afterPhotos || [];
-        const merged = existing.concat(uploadedBase64List).slice(0, 5); // 3~5컷
-        return { ...app, constructionPhotos: merged };
-      }
-      return app;
-    });
-    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-      window.DataStore.saveApplications(apps);
-    } else {
-      (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
-    }
-
-    // 2) users.items
-    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
-    curUsers = curUsers.map(u => {
-      if (u.items && Array.isArray(u.items)) {
-        const updatedItems = u.items.map(item => {
-          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-            updatedUid = u.id;
-            const existing = item.constructionPhotos || item.afterPhotos || [];
-            const merged = existing.concat(uploadedBase64List).slice(0, 5);
-            return { ...item, constructionPhotos: merged };
-          }
-          return item;
-        });
-        return { ...u, items: updatedItems };
-      }
-      return u;
-    });
-    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-      window.DataStore.saveUsers(curUsers);
-    } else {
-      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
-    }
-
-    if (window.SupabaseSync) {
-      if (typeof window.SupabaseSync.updateApplication === 'function') {
-        const app = apps.find(a => String(a.id) === String(id));
-        window.SupabaseSync.updateApplication(id, {
-          construction_photos: app ? (app.constructionPhotos || app.afterPhotos) : uploadedBase64List
-        });
-      } else {
-        const app = apps.find(a => String(a.id) === String(id));
-        if (app) window.SupabaseSync.upsertApplication(app);
-      }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
-    }
-
-    alert('시공 후 사진이 2MB 이하로 자동 압축되어 등록되었습니다.');
-    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-      window.DataStore.notifyAll(true);
+    if (typeof window.handleJobPhotoUploadCommon === 'function') {
+      await window.handleJobPhotoUploadCommon(id, files);
     }
   };
 
   const reportJobCompletion = (id) => {
-    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
-    
-    let targetJob = apps.find(a => String(a.id) === String(id));
-    if (!targetJob) {
-      curUsers.forEach(u => {
-        if (u.items) {
-          const found = u.items.find(it => String(it.id) === String(id) || String(it.appRefId) === String(id));
-          if (found) targetJob = found;
-        }
-      });
-    }
-
-    if (!targetJob) return;
-
-    const photos = targetJob.constructionPhotos || targetJob.afterPhotos || [];
-    if (photos.length === 0) {
-      alert('시공 완료 보고를 위해 최소 1장 이상의 시공 후 사진(권장 3~5장)을 등록해 주세요.');
-      return;
-    }
-
-    // 1) applications update
-    apps = apps.map(a => {
-      if (String(a.id) === String(id)) {
-        return { 
-          ...a, 
-          constructionStatus: 'after_construction',
-          progressStatus: '간판시공완료',
-          constructionCompletedAt: Date.now()
-        };
-      }
-      return a;
-    });
-    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-      window.DataStore.saveApplications(apps);
-    } else {
-      (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
-    }
-
-    // 2) users.items update
-    let updatedUid = null;
-    curUsers = curUsers.map(u => {
-      if (u.items && Array.isArray(u.items)) {
-        const updatedItems = u.items.map(item => {
-          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-            updatedUid = u.id;
-            return { 
-              ...item, 
-              constructionStatus: 'after_construction',
-              progressStatus: '간판시공완료',
-              constructionCompletedAt: Date.now()
-            };
-          }
-          return item;
-        });
-        return { ...u, items: updatedItems };
-      }
-      return u;
-    });
-    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-      window.DataStore.saveUsers(curUsers);
-    } else {
-      (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
-    }
-
-    if (window.SupabaseSync) {
-      if (typeof window.SupabaseSync.updateApplication === 'function') {
-        window.SupabaseSync.updateApplication(id, {
-          construction_status: 'after_construction',
-          progress_status: '간판시공완료',
-          construction_completed_at: new Date().toISOString()
-        });
-      } else {
-        const app = apps.find(a => String(a.id) === String(id));
-        if (app) window.SupabaseSync.upsertApplication(app);
-      }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
-    }
-
-    alert('시공 완료 보고가 최고관리자에게 정상 제출되었습니다.');
-    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-      window.DataStore.notifyAll(true);
+    if (typeof window.reportJobCompletionCommon === 'function') {
+      window.reportJobCompletionCommon(id);
     }
   };
 

@@ -3615,7 +3615,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     else if (draftCount > 0) draftStatusText = '시안 검토중';
 
                     // 시공 후 사진 확인
-                    const pCount = job.constructionPhotos ? job.constructionPhotos.length : 0;
+                    let memoConstCount = 0;
+                    if (job.memo) {
+                        try {
+                            const m = typeof job.memo === 'string' ? JSON.parse(job.memo) : (job.memo || {});
+                            memoConstCount = Number(m.constPhotoCount || m.constructionPhotoCount) || 0;
+                            if (Array.isArray(m.constructionPhotos)) memoConstCount = Math.max(memoConstCount, m.constructionPhotos.length);
+                        } catch (e) {}
+                    }
+                    const pCount = Math.max(
+                        (job.constructionPhotos ? job.constructionPhotos.length : 0),
+                        Number(job.constPhotoCount) || 0,
+                        memoConstCount
+                    );
                     let proofHtml = '';
                     if (pCount > 0) {
                         proofHtml = `
@@ -4908,7 +4920,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const draftPhotos = job.signDraftPhotos || [];
-            const afterPhotos = job.constructionPhotos || [];
+            let memoConstCount = 0;
+            if (job.memo) {
+                try {
+                    const m = typeof job.memo === 'string' ? JSON.parse(job.memo) : (job.memo || {});
+                    memoConstCount = Number(m.constPhotoCount || m.constructionPhotoCount) || 0;
+                    if (Array.isArray(m.constructionPhotos)) memoConstCount = Math.max(memoConstCount, m.constructionPhotos.length);
+                } catch (e) {}
+            }
+            const afterCount = Math.max(
+                (Array.isArray(job.constructionPhotos) ? job.constructionPhotos.length : 0),
+                Number(job.constPhotoCount) || 0,
+                memoConstCount
+            );
 
             let draftStatusBadge = '';
             if (job.draftStatus === 'owner_approved') {
@@ -4937,9 +4961,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         <!-- 2. 시공 후 사진 업로드 (300KB 이하 자동 압축, 최대 5장) -->
                         <div class="phone-form-group" style="margin-bottom: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px;">
-                            <label style="font-size: 0.90rem; font-weight: 700; color: #15803d; display: block; margin-bottom: 6px;"><i class="fa-solid fa-camera"></i> 시공 후 사진 증빙 (${afterPhotos.length}/5장)</label>
+                            <label style="font-size: 0.90rem; font-weight: 700; color: #15803d; display: block; margin-bottom: 6px;"><i class="fa-solid fa-camera"></i> 시공 후 사진 증빙 (${afterCount}/5장)</label>
                             <input type="file" class="const-photo-input-mob" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.85rem; width: 100%;">
-                            ${afterPhotos.length > 0 ? `<button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="margin-top: 6px; padding: 6px 12px; font-size: 0.86rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;"><i class="fa-solid fa-eye"></i> 시공 후 사진 확인 및 삭제 (${afterPhotos.length}장)</button>` : ''}
+                            ${afterCount > 0 ? `<button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="margin-top: 6px; padding: 6px 12px; font-size: 0.86rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;"><i class="fa-solid fa-eye"></i> 시공 후 사진 확인 및 삭제 (${afterCount}장)</button>` : ''}
                         </div>
                         
                         <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 8px;">
@@ -5049,312 +5073,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateJobConstructionStatusMob(id, val) {
-        // 1) applications
-        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-        apps = apps.map(app => {
-            if (String(app.id) === String(id)) {
-                return { ...app, constructionStatus: val };
-            }
-            return app;
-        });
-        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-            window.DataStore.saveApplications(apps);
-        } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
-        }
-
-        // 2) users.items
-        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
-        let updatedUid = null;
-        curUsers = curUsers.map(u => {
-            if (u.items && Array.isArray(u.items)) {
-                const updatedItems = u.items.map(item => {
-                    if (String(item.id) === String(id)) {
-                        updatedUid = u.id;
-                        return { ...item, constructionStatus: val };
-                    }
-                    return item;
-                });
-                return { ...u, items: updatedItems };
-            }
-            return u;
-        });
-        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-            window.DataStore.saveUsers(curUsers);
-        } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
-        }
-
-        if (updatedUid && window.SupabaseSync) {
-            const u = curUsers.find(usr => usr.id === updatedUid);
-            if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-        }
-
-        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-            window.DataStore.notifyAll(true);
+        if (typeof window.updateJobConstructionStatusCommon === 'function') {
+            window.updateJobConstructionStatusCommon(id, val);
         }
     }
 
-    // 모바일 시공사 간판 디자인 시안 1MB 압축 업로드
     async function handleJobDraftUploadMob(id, files) {
-        const uploadedBase64List = [];
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            let base64 = null;
-            if (typeof compressImageToBase64 === 'function') {
-                base64 = await compressImageToBase64(file, 300 * 1024);
-            } else {
-                base64 = await new Promise((res) => {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => res(ev.target.result);
-                    reader.readAsDataURL(file);
-                });
-            }
-            if (base64) uploadedBase64List.push(base64);
+        if (typeof window.handleJobDraftUploadCommon === 'function') {
+            await window.handleJobDraftUploadCommon(id, files);
         }
-
-        if (uploadedBase64List.length === 0) return;
-
-        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-        let targetMemoStr = '';
-        apps = apps.map(app => {
-            if (String(app.id) === String(id)) {
-                const existing = app.signDraftPhotos || [];
-                const merged = existing.concat(uploadedBase64List).slice(0, 5);
-                let mObj = {};
-                try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch(e) {}
-                mObj.signDraftPhotos = merged;
-                mObj.draftStatus = 'pending';
-                mObj.draftCount = merged.length;
-                targetMemoStr = JSON.stringify(mObj);
-                return {
-                    ...app,
-                    signDraftPhotos: merged,
-                    draftStatus: 'pending',
-                    constructionStatus: app.constructionStatus === 'before_construction' ? 'design_draft' : app.constructionStatus,
-                    memo: targetMemoStr
-                };
-            }
-            return app;
-        });
-        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-            window.DataStore.saveApplications(apps);
-        } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
-        }
-
-        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
-        let updatedUid = null;
-        curUsers = curUsers.map(u => {
-            if (u.items && Array.isArray(u.items)) {
-                const updatedItems = u.items.map(item => {
-                    if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-                        updatedUid = u.id;
-                        const existing = item.signDraftPhotos || [];
-                        const merged = existing.concat(uploadedBase64List).slice(0, 5);
-                        return {
-                            ...item,
-                            signDraftPhotos: merged,
-                            draftStatus: 'pending',
-                            constructionStatus: item.constructionStatus === 'before_construction' ? 'design_draft' : item.constructionStatus,
-                            memo: targetMemoStr || item.memo
-                        };
-                    }
-                    return item;
-                });
-                return { ...u, items: updatedItems };
-            }
-            return u;
-        });
-        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-            window.DataStore.saveUsers(curUsers);
-        } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
-        }
-
-        if (window.SupabaseSync) {
-            if (typeof window.SupabaseSync.updateApplication === 'function') {
-                const app = apps.find(a => String(a.id) === String(id));
-                window.SupabaseSync.updateApplication(id, {
-                    construction_status: app && app.constructionStatus === 'before_construction' ? 'design_draft' : (app ? app.constructionStatus : 'design_draft'),
-                    memo: targetMemoStr
-                });
-            } else {
-                const app = apps.find(a => String(a.id) === String(id));
-                if (app) window.SupabaseSync.upsertApplication(app);
-            }
-            if (updatedUid) {
-                const u = curUsers.find(usr => usr.id === updatedUid);
-                if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-            }
-        }
-
-        alert('간판 디자인 시안이 300KB 이하로 자동 압축되어 업로드되었습니다.\n신청 점주 및 관리자 화면에 즉시 공유됩니다.');
-        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-            window.DataStore.notifyAll(true);
-        }
-        if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
     }
 
-    // 모바일 시공사 시공 후 사진 300KB 압축 업로드 (최대 5장)
     async function handleJobPhotoUploadMob(id, files) {
-        const uploadedBase64List = [];
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            let base64 = null;
-            if (typeof compressImageToBase64 === 'function') {
-                base64 = await compressImageToBase64(file, 300 * 1024);
-            } else {
-                base64 = await new Promise((res) => {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => res(ev.target.result);
-                    reader.readAsDataURL(file);
-                });
-            }
-            if (base64) uploadedBase64List.push(base64);
+        if (typeof window.handleJobPhotoUploadCommon === 'function') {
+            await window.handleJobPhotoUploadCommon(id, files);
         }
-
-        if (uploadedBase64List.length === 0) return;
-
-        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-        apps = apps.map(app => {
-            if (String(app.id) === String(id)) {
-                const existing = app.constructionPhotos || [];
-                const merged = existing.concat(uploadedBase64List).slice(0, 5);
-                return { ...app, constructionPhotos: merged };
-            }
-            return app;
-        });
-        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-            window.DataStore.saveApplications(apps);
-        } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
-        }
-
-        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
-        let updatedUid = null;
-        curUsers = curUsers.map(u => {
-            if (u.items && Array.isArray(u.items)) {
-                const updatedItems = u.items.map(item => {
-                    if (String(item.id) === String(id)) {
-                        updatedUid = u.id;
-                        const existing = item.constructionPhotos || [];
-                        const merged = existing.concat(uploadedBase64List).slice(0, 5);
-                        return { ...item, constructionPhotos: merged };
-                    }
-                    return item;
-                });
-                return { ...u, items: updatedItems };
-            }
-            return u;
-        });
-        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-            window.DataStore.saveUsers(curUsers);
-        } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
-        }
-
-        if (window.SupabaseSync) {
-            if (typeof window.SupabaseSync.updateApplication === 'function') {
-                const app = apps.find(a => String(a.id) === String(id));
-                window.SupabaseSync.updateApplication(id, {
-                    construction_photos: app ? (app.constructionPhotos || []) : uploadedBase64List
-                });
-            } else {
-                const app = apps.find(a => String(a.id) === String(id));
-                if (app) window.SupabaseSync.upsertApplication(app);
-            }
-            if (updatedUid) {
-                const u = curUsers.find(usr => usr.id === updatedUid);
-                if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-            }
-        }
-
-        alert('시공 후 현장 사진이 300KB 이하로 자동 압축되어 업로드되었습니다.');
-        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-            window.DataStore.notifyAll(true);
-        }
-        if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
     }
 
     function reportJobCompletionMob(id) {
-        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
-
-        let targetJob = apps.find(a => String(a.id) === String(id));
-        if (!targetJob) {
-            curUsers.forEach(u => {
-                if (u.items) {
-                    const found = u.items.find(it => String(it.id) === String(id));
-                    if (found) targetJob = found;
-                }
-            });
+        if (typeof window.reportJobCompletionCommon === 'function') {
+            window.reportJobCompletionCommon(id);
         }
-
-        if (!targetJob) return;
-
-        const photos = targetJob.constructionPhotos || [];
-        if (photos.length === 0) {
-            alert('최소 1장 이상의 시공 후 현장 사진을 등록해 주세요. (권장: 3~5컷)');
-            return;
-        }
-
-        apps = apps.map(a => {
-            if (String(a.id) === String(id)) {
-                return {
-                    ...a,
-                    constructionStatus: 'after_construction',
-                    constructionCompletedAt: new Date().toISOString()
-                };
-            }
-            return a;
-        });
-        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-            window.DataStore.saveApplications(apps);
-        } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
-        }
-
-        let updatedUid = null;
-        curUsers = curUsers.map(u => {
-            if (u.items && Array.isArray(u.items)) {
-                const updatedItems = u.items.map(item => {
-                    if (String(item.id) === String(id)) {
-                        updatedUid = u.id;
-                        return {
-                            ...item,
-                            constructionStatus: 'after_construction',
-                            constructionCompletedAt: new Date().toISOString()
-                        };
-                    }
-                    return item;
-                });
-                return { ...u, items: updatedItems };
-            }
-            return u;
-        });
-        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-            window.DataStore.saveUsers(curUsers);
-        } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
-        }
-
-        if (updatedUid && window.SupabaseSync) {
-            const u = curUsers.find(usr => usr.id === updatedUid);
-            if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-            if (typeof window.SupabaseSync.updateApplication === 'function') {
-                window.SupabaseSync.updateApplication(id, {
-                    construction_status: 'after_construction',
-                    construction_completed_at: new Date().toISOString()
-                });
-            } else {
-                const app = apps.find(a => String(a.id) === String(id));
-                if (app) window.SupabaseSync.upsertApplication(app);
-            }
-        }
-
-        alert('시공 완료 보고가 정상 접수되었습니다!\n최고관리자의 최종 시공 사진 검수 후 정산 종결 처리가 진행됩니다.');
-        renderConstructorDashboardMob();
     }
 
     // --- Helper Utilities ---

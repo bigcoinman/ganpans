@@ -589,6 +589,18 @@
               }
               return cList || [];
             })(),
+            constPhotoCount: (() => {
+              let cList = app.constructionPhotos || app.afterPhotos || [];
+              let cnt = Array.isArray(cList) ? cList.length : 0;
+              if (app.memo) {
+                try {
+                  const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+                  cnt = Math.max(cnt, Number(m.constPhotoCount || m.constructionPhotoCount) || 0);
+                  if (Array.isArray(m.constructionPhotos)) cnt = Math.max(cnt, m.constructionPhotos.length);
+                } catch(e) {}
+              }
+              return cnt;
+            })(),
             memo: app.memo || '',
             photos: app.photos || [],
             photosCount: Number(app.photosCount || (app.photos && app.photos.length) || (app.fileData ? 1 : 0)) || 0,
@@ -2788,7 +2800,11 @@
 
     apps = apps.map(app => {
       if (String(app.id) === String(id)) {
-        return { ...app, constructionPhotos: merged };
+        let mObj = {};
+        try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch (e) {}
+        mObj.constPhotoCount = merged.length;
+        const targetMemoStr = JSON.stringify(mObj);
+        return { ...app, constructionPhotos: merged, memo: targetMemoStr };
       }
       return app;
     });
@@ -2802,12 +2818,17 @@
       ? window.DataStore.getUsers()
       : (JSON.parse(localStorage.getItem('users')) || []);
     let updatedUid = null;
+    let targetMemoForUser = '';
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
         const updatedItems = u.items.map(item => {
           if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
             updatedUid = u.id;
-            return { ...item, constructionPhotos: merged };
+            let mObj = {};
+            try { mObj = typeof item.memo === 'string' ? JSON.parse(item.memo) : (item.memo || {}); } catch (e) {}
+            mObj.constPhotoCount = merged.length;
+            targetMemoForUser = JSON.stringify(mObj);
+            return { ...item, constructionPhotos: merged, memo: targetMemoForUser };
           }
           return item;
         });
@@ -2822,8 +2843,10 @@
     }
 
     if (window.SupabaseSync) {
+      const app = apps.find(a => String(a.id) === String(id));
+      const memoToSend = (app && app.memo) ? app.memo : targetMemoForUser;
       if (typeof window.SupabaseSync.updateApplication === 'function') {
-        window.SupabaseSync.updateApplication(id, { construction_photos: merged });
+        window.SupabaseSync.updateApplication(id, { construction_photos: merged, memo: memoToSend });
       }
       if (updatedUid) {
         const u = curUsers.find(usr => usr.id === updatedUid);
@@ -2838,6 +2861,7 @@
     if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
     if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
     if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+    if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
   };
 
   // --- 시공 후 현장 사진 개별 삭제 ---
@@ -2848,13 +2872,18 @@
       ? window.DataStore.getApplications()
       : (JSON.parse(localStorage.getItem('applications')) || []);
     let remainingCount = 0;
+    let targetMemoStr = '';
 
     apps = apps.map(app => {
       if (String(app.id) === String(id)) {
         let existing = app.constructionPhotos || app.afterPhotos || [];
         const updated = existing.filter((_, idx) => idx !== photoIndex);
         remainingCount = updated.length;
-        return { ...app, constructionPhotos: updated };
+        let mObj = {};
+        try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch (e) {}
+        mObj.constPhotoCount = remainingCount;
+        targetMemoStr = JSON.stringify(mObj);
+        return { ...app, constructionPhotos: updated, memo: targetMemoStr };
       }
       return app;
     });
@@ -2876,7 +2905,10 @@
             updatedUid = u.id;
             let existing = item.constructionPhotos || item.afterPhotos || [];
             const updated = existing.filter((_, idx) => idx !== photoIndex);
-            return { ...item, constructionPhotos: updated };
+            let mObj = {};
+            try { mObj = typeof item.memo === 'string' ? JSON.parse(item.memo) : (item.memo || {}); } catch (e) {}
+            mObj.constPhotoCount = remainingCount;
+            return { ...item, constructionPhotos: updated, memo: JSON.stringify(mObj) };
           }
           return item;
         });
@@ -2894,7 +2926,10 @@
     if (window.SupabaseSync) {
       const app = apps.find(a => String(a.id) === String(id));
       if (typeof window.SupabaseSync.updateApplication === 'function') {
-        window.SupabaseSync.updateApplication(id, { construction_photos: app ? (app.constructionPhotos || []) : [] });
+        window.SupabaseSync.updateApplication(id, {
+          construction_photos: app ? (app.constructionPhotos || []) : [],
+          memo: targetMemoStr
+        });
       }
       if (updatedUid) {
         const u = curUsers.find(usr => usr.id === updatedUid);
@@ -2908,6 +2943,7 @@
     if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
     if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
     if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+    if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
 
     if (remainingCount > 0) {
       window.viewConstructionPhotosModal(id);
@@ -3016,8 +3052,17 @@
     modal.style.display = 'flex';
   };
 
-  // --- 시공 후 사진 증빙 확인 & 관리 모달 (PC웹 & 모바일 공용) ---
-  window.viewConstructionPhotosModal = function (id) {
+  // --- 시공 후 사진 증빙 확인 & 관리 모달 (PC웹 & 모바일 공용 & 온디맨드 단일 조회 지원) ---
+  window.viewConstructionPhotosModal = async function (id) {
+    // 1) 온디맨드로 Supabase에서 최신 사진 단일 로드 (로컬에 없거나 적으면 서버에서 1건만 즉시 가져옴)
+    if (typeof window.ensureApplicationPhotosLoaded === 'function') {
+      try {
+        await window.ensureApplicationPhotosLoaded(id);
+      } catch (eEnsure) {
+        console.warn('ensureApplicationPhotosLoaded error in viewConstructionPhotosModal:', eEnsure);
+      }
+    }
+
     const jobs = (window.DataStore && typeof window.DataStore.getConstructionJobs === 'function')
       ? window.DataStore.getConstructionJobs()
       : [];
@@ -3036,7 +3081,21 @@
         };
       }
     }
-    if (!job || !job.constructionPhotos || job.constructionPhotos.length === 0) {
+
+    let cPhotos = (job && Array.isArray(job.constructionPhotos)) ? job.constructionPhotos : [];
+
+    // 만약 여전히 없으면 로컬 applications 재확인
+    if (cPhotos.length === 0) {
+      const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+        ? window.DataStore.getApplications()
+        : (JSON.parse(localStorage.getItem('applications')) || []);
+      const app = apps.find(a => String(a.id) === String(id));
+      if (app && Array.isArray(app.constructionPhotos) && app.constructionPhotos.length > 0) {
+        cPhotos = app.constructionPhotos;
+      }
+    }
+
+    if (cPhotos.length === 0) {
       alert('등록된 시공 후 사진 증빙이 없습니다.');
       return;
     }
@@ -3050,11 +3109,11 @@
       document.body.appendChild(modal);
     }
 
-    const photosHtml = job.constructionPhotos.map((src, idx) => `
+    const photosHtml = cPhotos.map((src, idx) => `
       <div style="text-align: center; margin-bottom: 24px; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <span style="font-size: 1.0rem; font-weight: 700; color: #047857;"><i class="fa-solid fa-camera"></i> 시공 후 사진 #${idx + 1}</span>
-          <button type="button" onclick="window.deleteJobConstructionPhoto('${job.id}', ${idx})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          <button type="button" onclick="window.deleteJobConstructionPhoto('${job ? job.id : id}', ${idx})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
             <i class="fa-solid fa-trash-can"></i> 이 사진 삭제
           </button>
         </div>
@@ -3062,14 +3121,14 @@
       </div>
     `).join('');
 
-    const safeStoreName = (typeof escapeHtml === 'function' ? escapeHtml(job.storeName) : job.storeName);
-    const safeConstName = (typeof escapeHtml === 'function' ? escapeHtml(job.assignedConstructorName) : job.assignedConstructorName);
+    const safeStoreName = (typeof escapeHtml === 'function' ? escapeHtml((job && job.storeName) || '') : ((job && job.storeName) || ''));
+    const safeConstName = (typeof escapeHtml === 'function' ? escapeHtml((job && job.assignedConstructorName) || '') : ((job && job.assignedConstructorName) || ''));
 
     modal.innerHTML = `
       <div style="background: white; border-radius: 14px; padding: 22px; max-width: 780px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
           <div>
-            <h3 style="margin: 0; font-size: 1.25rem; color: #1e293b;"><i class="fa-solid fa-camera" style="color: #10b981;"></i> 시공 후 사진 증빙 (${job.constructionPhotos.length}/5장)</h3>
+            <h3 style="margin: 0; font-size: 1.25rem; color: #1e293b;"><i class="fa-solid fa-camera" style="color: #10b981;"></i> 시공 후 사진 증빙 (${cPhotos.length}/5장)</h3>
             <div style="font-size: 0.92rem; color: #64748b; margin-top: 4px;">상호명: <strong>${safeStoreName}</strong> | 시공사: <strong>${safeConstName}</strong></div>
           </div>
           <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
@@ -3082,4 +3141,180 @@
     `;
     modal.style.display = 'flex';
   };
+
+  // --- 시공 진행 상태 변경 단일 SSOT 통합 핸들러 (최고관리자 & 시공사 PC/모바일 공용) ---
+  window.updateJobConstructionStatusCommon = function (id, val) {
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
+    apps = apps.map(app => {
+      if (String(app.id) === String(id)) {
+        return { ...app, constructionStatus: val };
+      }
+      return app;
+    });
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(apps);
+    } else {
+      localStorage.setItem('applications', JSON.stringify(apps));
+    }
+
+    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || []);
+    let updatedUid = null;
+    curUsers = curUsers.map(u => {
+      if (u.items && Array.isArray(u.items)) {
+        const updatedItems = u.items.map(item => {
+          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
+            updatedUid = u.id;
+            return { ...item, constructionStatus: val };
+          }
+          return item;
+        });
+        return { ...u, items: updatedItems };
+      }
+      return u;
+    });
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(curUsers);
+    } else {
+      localStorage.setItem('users', JSON.stringify(curUsers));
+    }
+
+    if (window.SupabaseSync) {
+      if (typeof window.SupabaseSync.updateApplication === 'function') {
+        window.SupabaseSync.updateApplication(id, { construction_status: val });
+      }
+      if (updatedUid) {
+        const u = curUsers.find(usr => usr.id === updatedUid);
+        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+      }
+    }
+
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
+    if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
+    if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
+    if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+    if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+  };
+  window.updateJobConstructionStatus = window.updateJobConstructionStatusCommon;
+  window.updateJobConstructionStatusMob = window.updateJobConstructionStatusCommon;
+
+  // --- 최종 시공 완료 보고 단일 SSOT 통합 핸들러 (최고관리자 & 시공사 PC/모바일 공용) ---
+  window.reportJobCompletionCommon = function (id) {
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
+    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || []);
+
+    let targetJob = apps.find(a => String(a.id) === String(id));
+    if (!targetJob) {
+      curUsers.forEach(u => {
+        if (u.items) {
+          const found = u.items.find(it => String(it.id) === String(id) || String(it.appRefId) === String(id));
+          if (found) targetJob = found;
+        }
+      });
+    }
+
+    if (!targetJob) return;
+
+    let cPhotos = targetJob.constructionPhotos || targetJob.afterPhotos || [];
+    let memoConstCount = 0;
+    if (targetJob.memo) {
+      try {
+        const m = typeof targetJob.memo === 'string' ? JSON.parse(targetJob.memo) : targetJob.memo;
+        memoConstCount = Number(m.constPhotoCount || m.constructionPhotoCount) || 0;
+      } catch (e) {}
+    }
+    const totalCount = Math.max(cPhotos.length, memoConstCount);
+
+    if (totalCount === 0) {
+      alert('시공 완료 보고를 위해 최소 1장 이상의 시공 후 현장 사진(권장 3~5장)을 등록해 주세요.');
+      return;
+    }
+
+    let targetMemoStr = '';
+    const nowIso = new Date().toISOString();
+
+    apps = apps.map(a => {
+      if (String(a.id) === String(id)) {
+        let mObj = {};
+        try { mObj = typeof a.memo === 'string' ? JSON.parse(a.memo) : (a.memo || {}); } catch (e) {}
+        mObj.progressStatus = '간판시공완료';
+        targetMemoStr = JSON.stringify(mObj);
+        return {
+          ...a,
+          constructionStatus: 'after_construction',
+          progressStatus: '간판시공완료',
+          constructionCompletedAt: nowIso,
+          memo: targetMemoStr
+        };
+      }
+      return a;
+    });
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(apps);
+    } else {
+      localStorage.setItem('applications', JSON.stringify(apps));
+    }
+
+    let updatedUid = null;
+    curUsers = curUsers.map(u => {
+      if (u.items && Array.isArray(u.items)) {
+        const updatedItems = u.items.map(item => {
+          if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
+            updatedUid = u.id;
+            return {
+              ...item,
+              constructionStatus: 'after_construction',
+              progressStatus: '간판시공완료',
+              constructionCompletedAt: nowIso,
+              memo: targetMemoStr || item.memo
+            };
+          }
+          return item;
+        });
+        return { ...u, items: updatedItems };
+      }
+      return u;
+    });
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(curUsers);
+    } else {
+      localStorage.setItem('users', JSON.stringify(curUsers));
+    }
+
+    if (window.SupabaseSync) {
+      if (typeof window.SupabaseSync.updateApplication === 'function') {
+        window.SupabaseSync.updateApplication(id, {
+          construction_status: 'after_construction',
+          progress_status: '간판시공완료',
+          construction_completed_at: nowIso,
+          memo: targetMemoStr
+        });
+      }
+      if (updatedUid) {
+        const u = curUsers.find(usr => usr.id === updatedUid);
+        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
+      }
+    }
+
+    alert('시공 완료 보고가 정상 접수되었습니다!\n최고관리자의 최종 시공 사진 검수 후 정산 종결 처리가 진행됩니다.');
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
+    if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
+    if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
+    if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+    if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+  };
+  window.reportJobCompletion = window.reportJobCompletionCommon;
+  window.reportJobCompletionMob = window.reportJobCompletionCommon;
 })();
+
