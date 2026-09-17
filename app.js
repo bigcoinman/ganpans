@@ -1132,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Dashboard Status Render Logic ---
-    function renderStatusTab() {
+    function renderStatusTab(skipAdminSync = false) {
         users = JSON.parse(localStorage.getItem('users')) || [];
         activeUser = getActiveUser() || null;
         applications = JSON.parse(localStorage.getItem('applications')) || [];
@@ -1176,7 +1176,7 @@ document.addEventListener('DOMContentLoaded', () => {
             roleBadge.textContent = '최고관리자';
             roleBadge.style.background = 'var(--grad-primary)';
             if (adminContainer) adminContainer.style.display = 'block';
-            renderAdminDashboardMob();
+            renderAdminDashboardMob(skipAdminSync);
         } else if (activeUser.role === 'business') {
             roleBadge.textContent = `영업자 코드: ${activeUser.bizCode || ''}`;
             roleBadge.style.background = 'var(--accent-secondary)';
@@ -2669,15 +2669,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         renderAdminDashboardMob(true);
+        if (tabName === 'users') {
+            syncAdminDataFromSupabaseMob(true);
+        }
     };
 
-    async function syncAdminDataFromSupabaseMob() {
+    async function syncAdminDataFromSupabaseMob(force = false) {
         if (window.SupabaseSync) {
-            await window.SupabaseSync.syncAllData();
+            await window.SupabaseSync.syncAllData(force);
             // 사용자가 검색창을 직접 입력 중일 때만 리렌더링 일시 방어, 그 외에는 0초 즉시 갱신
             const activeEl = document.activeElement;
             const isUserTypingSearch = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && activeEl.value && (activeEl.id === 'search-all-users-input-mob' || activeEl.id === 'search-apps-input-mob' || activeEl.id === 'search-items-input-mob');
-            if (isUserTypingSearch) {
+            if (isUserTypingSearch && !force) {
                 return;
             }
             renderAdminDashboardMob(true);
@@ -6050,20 +6053,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            // 1. Supabase 클라우드 최신 DB 전체 동기화
+            // 1. Supabase 클라우드 최신 DB 전체 강제 동기화 (force=true 로 락 해제 및 최신 DB 직통 조회)
             if (window.SupabaseSync && typeof window.SupabaseSync.syncAllData === 'function') {
-                await window.SupabaseSync.syncAllData();
+                await window.SupabaseSync.syncAllData(true);
             }
 
             // 2. 로컬 스토리지 최신 데이터 재로딩
-            users = JSON.parse(localStorage.getItem('users')) || [];
-            applications = JSON.parse(localStorage.getItem('applications')) || [];
+            users = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
+            applications = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
             activeUser = getActiveUser() || null;
 
             // 3. UI 컴포넌트 실시간 갱신
             updateDrawerProfile();
             updateHeaderAuthButton();
-            renderStatusTab();
+            renderStatusTab(true);
 
             // 역할별 대시보드 뷰 갱신
             if (activeUser) {
@@ -6133,7 +6136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
         const isUserTyping = Boolean(window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && activeEl.value));
         if (isUserTyping) return; // 텍스트 입력 중일 때만 일시 보호, 그 외에는 0초 즉시 리렌더링
-        if (typeof renderStatusTab === 'function') renderStatusTab();
+        if (typeof renderStatusTab === 'function') renderStatusTab(true);
         if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
         if (typeof renderBizRegisteredItemsMob === 'function') renderBizRegisteredItemsMob();
         if (typeof renderBusinessDashboardMob === 'function') renderBusinessDashboardMob();
@@ -6141,7 +6144,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ? window.DataStore.getActiveUser()
             : ((typeof getActiveUser === 'function') ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser'))));
         if (typeof renderAdminDashboardMob === 'function' && curAct && curAct.role === 'admin') renderAdminDashboardMob(true);
-        if (typeof renderAllUsersList === 'function' && curAct && curAct.role === 'admin') renderAllUsersList();
+        if (typeof renderConstructorDashboardMob === 'function' && curAct && curAct.role === 'constructor') renderConstructorDashboardMob(true);
         if (typeof updateDrawerProfile === 'function') updateDrawerProfile();
         if (typeof updateHeaderAuthButton === 'function') updateHeaderAuthButton();
     };
@@ -8708,26 +8711,6 @@ function initModalsAndSearch() {
       });
     });
   }
-
-  // --- 모바일 화면 실시간 6대 연동 리스너 (0초 즉시 동기화) ---
-  const handleMobileRealtimeSync = () => {
-    const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
-    const isFormActive = Boolean(window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'submit') || activeEl.tagName === 'TEXTAREA')));
-    if (isFormActive) return;
-
-    if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob(true);
-    if (typeof renderBizRegisteredItemsMob === 'function') renderBizRegisteredItemsMob();
-    if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
-    if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
-    if (typeof renderBusinessDashboardMob === 'function') renderBusinessDashboardMob();
-  };
-
-  window.addEventListener('supabase-data-synced', handleMobileRealtimeSync);
-  window.addEventListener('storage', (e) => {
-    if (!e.key || e.key === 'applications' || e.key === 'users' || e.key === 'site_stats' || e.key === 'inquiries' || e.key === 'ganpan_cross_tab_sync') {
-      handleMobileRealtimeSync();
-    }
-  });
 }
 
 

@@ -2152,11 +2152,12 @@ window.SupabaseSync = {
   },
 
   // 7. Supabase 클라우드 단일 진실의 원천(SSOT) 단방향 동기화
-  async syncAllData() {
+  async syncAllData(force = false) {
     if (!window.supabaseClient) {
       initGlobalSupabaseClient();
     }
-    if (!window.supabaseClient || this.isSyncing) return false;
+    if (!window.supabaseClient) return false;
+    if (this.isSyncing && !force) return false;
     this.isSyncing = true;
     try {
       const oldUsersStr = localStorage.getItem('users') || '[]';
@@ -2279,11 +2280,11 @@ window.SupabaseSync = {
         }
 
         const newUsersStr = JSON.stringify(freshUsers);
-        if (oldUsersStr !== newUsersStr) {
+        if (oldUsersStr !== newUsersStr || force) {
           if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
             window.DataStore.saveUsers(freshUsers);
           } else {
-            if (window.DataStore && typeof window.DataStore.saveUsers === 'function') { window.DataStore.saveUsers(freshUsers); } else { localStorage.setItem('users', newUsersStr); }
+            localStorage.setItem('users', newUsersStr);
           }
           usersChanged = true;
         }
@@ -2654,8 +2655,8 @@ window.SupabaseSync = {
         }
       }
 
-      // 실제 데이터가 변경되었을 때만 화면 갱신 이벤트를 발화하여 DOM 재생성 방지
-      if (usersChanged || appsChanged || inqsChanged) {
+      // 실제 데이터가 변경되었거나 강제 갱신(force)일 때 화면 갱신 이벤트 발화
+      if (usersChanged || appsChanged || inqsChanged || force) {
         window.dispatchEvent(new CustomEvent('supabase-data-synced', {
           detail: { timestamp: new Date().toISOString() }
         }));
