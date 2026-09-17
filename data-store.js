@@ -3284,6 +3284,125 @@
     modal.style.display = 'flex';
   };
 
+  // --- 시공 배정 취소 (최고관리자 권한: 시공 진행현황에서 제외 & 영업물건 미배정 상태 복귀) ---
+  window.cancelJobConstructorAssignment = function (id) {
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
+    const app = apps.find(a => String(a.id) === String(id) || String(a.appRefId) === String(id));
+    if (!app) {
+      alert('해당 시공 배정 물건을 찾을 수 없습니다: ' + id);
+      return;
+    }
+
+    const storeName = app.storeName || app.shopName || '해당 업체';
+    const constName = app.assignedConstructorName || '시공사';
+    const confirmMsg = `[${storeName}] 건의 시공업체(${constName}) 배정을 취소하시겠습니까?\n\n시공업체 진행현황에서 제외되며, 영업물건 진행상황(미배정) 상태로 되돌아갑니다.`;
+    if (!confirm(confirmMsg)) return;
+
+    // 1) applications 단일 원천 시공 정보 초기화
+    apps = apps.map(a => {
+      if (String(a.id) === String(id) || String(a.appRefId) === String(id)) {
+        return {
+          ...a,
+          assignedConstructorId: null,
+          assignedConstructorName: null,
+          assignedConstructorCode: null,
+          assignedConstructorPhone: null,
+          constructionStatus: 'before_construction',
+          assignedAt: null
+        };
+      }
+      return a;
+    });
+
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(apps);
+    } else {
+      localStorage.setItem('applications', JSON.stringify(apps));
+    }
+
+    // 2) users.items 동기화 (영업자 및 최고관리자)
+    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || []);
+    let usersToSync = [];
+    curUsers = curUsers.map(u => {
+      if (u.items && Array.isArray(u.items)) {
+        let changed = false;
+        const updatedItems = u.items.map(it => {
+          if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
+            changed = true;
+            return {
+              ...it,
+              assignedConstructorId: null,
+              assignedConstructorName: null,
+              assignedConstructorCode: null,
+              assignedConstructorPhone: null,
+              constructionStatus: 'before_construction',
+              assignedAt: null
+            };
+          }
+          return it;
+        });
+        if (changed) {
+          usersToSync.push({ id: u.id, items: updatedItems });
+          return { ...u, items: updatedItems };
+        }
+      }
+      return u;
+    });
+
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(curUsers);
+    } else {
+      localStorage.setItem('users', JSON.stringify(curUsers));
+    }
+
+    // 3) Supabase 클라우드 비동기 동기화
+    (async () => {
+      try {
+        if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
+          await window.SupabaseSync.updateApplication(app.id, {
+            assigned_constructor_id: null,
+            assigned_constructor_name: null,
+            construction_status: 'before_construction',
+            assigned_at: null
+          });
+          for (const uSync of usersToSync) {
+            await window.SupabaseSync.updateUser(uSync.id, { items: uSync.items });
+          }
+        } else if (window.supabaseClient) {
+          await window.supabaseClient.from('applications').update({
+            assigned_constructor_id: null,
+            assigned_constructor_name: null,
+            construction_status: 'before_construction',
+            assigned_at: null
+          }).eq('id', String(app.id));
+        }
+      } catch (err) {
+        console.warn('[cancelJobConstructorAssignment] Supabase update warning:', err);
+      }
+    })();
+
+    // 4) 0초 즉각 6대 화면 브로드캐스트
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
+    if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+    if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+    if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
+    if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
+    if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
+    if (typeof window.renderBizRegisteredItemsMob === 'function') window.renderBizRegisteredItemsMob(true);
+
+    if (typeof window.showToast === 'function') {
+      window.showToast(`[${storeName}] 건의 시공 배정이 취소되었습니다. 영업물건 진행상황(미배정)으로 되돌아갔습니다.`);
+    } else {
+      alert(`[${storeName}] 건의 시공 배정이 취소되었습니다.\n영업물건 진행상황(미배정)으로 되돌아갔습니다.`);
+    }
+  };
+
   // --- 시공 진행 상태 변경 단일 SSOT 통합 핸들러 (최고관리자 & 시공사 PC/모바일 공용) ---
   window.updateJobConstructionStatusCommon = function (id, val) {
     let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')

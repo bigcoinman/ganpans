@@ -3910,7 +3910,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const emptyMsg = searchKeyword ? `검색어 [${escapeHtml(searchKeyword)}] 에 일치하는 시공 진행건이 없습니다.` : '배정된 시공 진행 물건이 없습니다.';
       constTableBody.innerHTML = `
         <tr>
-          <td colspan="7" class="text-muted" style="text-align: center; padding: 40px 0;">${emptyMsg}</td>
+          <td colspan="8" class="text-muted" style="text-align: center; padding: 40px 0;">${emptyMsg}</td>
         </tr>
       `;
       if (paginationContainer) paginationContainer.innerHTML = '';
@@ -4111,6 +4111,11 @@ document.addEventListener('DOMContentLoaded', () => {
           </select>
         </td>
         <td style="padding: 14px 16px; text-align: center;">${proofBadge}</td>
+        <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">
+          <button type="button" onclick="window.cancelJobConstructorAssignment('${job.id}')" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 5px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="시공 배정 취소 (시공업체 진행현황에서 제외하고 미배정 상태로 복귀)">
+            <i class="fa-solid fa-xmark"></i> 배정 취소
+          </button>
+        </td>
       `;
       constTableBody.appendChild(tr);
     });

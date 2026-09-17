@@ -3712,16 +3712,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
 
-                        <!-- 5단계 상태 변경 -->
+                        <!-- 5단계 상태 변경 및 배정 취소 -->
                         <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                            <span style="font-size: 0.95rem; font-weight: 700; color: #475569;">시공 진행 상태:</span>
-                            <select class="status-select-mob select-admin-const-status-mob" data-id="${job.id}" style="padding: 7px 10px; font-size: 0.94rem; font-weight: 700; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; max-width: 190px; height: auto;">
-                                <option value="before_construction" ${st === 'before_construction' ? 'selected' : ''}>1. 시공 전</option>
-                                <option value="design_draft" ${st === 'design_draft' ? 'selected' : ''}>2. 시안/교정 중</option>
-                                <option value="in_construction" ${st === 'in_construction' ? 'selected' : ''}>3. 시공 진행 중</option>
-                                <option value="after_construction" ${st === 'after_construction' ? 'selected' : ''}>4. 완료 보고됨</option>
-                                <option value="completed" ${st === 'completed' ? 'selected' : ''}>5. 정산 종결</option>
-                            </select>
+                            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
+                                <span style="font-size: 0.95rem; font-weight: 700; color: #475569; white-space: nowrap;">시공 진행 상태:</span>
+                                <select class="status-select-mob select-admin-const-status-mob" data-id="${job.id}" style="padding: 7px 10px; font-size: 0.94rem; font-weight: 700; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; max-width: 190px; height: auto;">
+                                    <option value="before_construction" ${st === 'before_construction' ? 'selected' : ''}>1. 시공 전</option>
+                                    <option value="design_draft" ${st === 'design_draft' ? 'selected' : ''}>2. 시안/교정 중</option>
+                                    <option value="in_construction" ${st === 'in_construction' ? 'selected' : ''}>3. 시공 진행 중</option>
+                                    <option value="after_construction" ${st === 'after_construction' ? 'selected' : ''}>4. 완료 보고됨</option>
+                                    <option value="completed" ${st === 'completed' ? 'selected' : ''}>5. 정산 종결</option>
+                                </select>
+                            </div>
+                            <button type="button" onclick="window.cancelJobConstructorAssignment('${job.id}')" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 7px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;" title="시공 배정 취소 (시공업체 진행현황에서 제외하고 미배정 상태로 복귀)">
+                                <i class="fa-solid fa-xmark"></i> 배정 취소
+                            </button>
                         </div>
                     `;
                     constProgressListMob.appendChild(card);
