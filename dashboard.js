@@ -3920,7 +3920,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 1. 간판 종류 설정 (플렉스 간판, LED 채널 간판, 돌출 간판, 그외 기타)
       let currentSignType = String(job.signType || '').trim();
-      if (!currentSignType || currentSignType === '간판지원신청' || currentSignType === '간판' || currentSignType === '-' || currentSignType === 'undefined' || currentSignType === 'null') {
+      if (!currentSignType || currentSignType === '간판지원신청' || currentSignType === '간판' || currentSignType === '-' || currentSignType === 'undefined' || currentSignType === 'null' || currentSignType === '플랙스' || currentSignType === '플랙스 간판' || currentSignType === '플렉스' || currentSignType === '1. 플렉스 간판' || currentSignType === '1. 플랙스 간판') {
         currentSignType = '플렉스 간판';
       }
       const standardSignTypes = ['플렉스 간판', 'LED 채널 간판', '돌출 간판'];

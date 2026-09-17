@@ -560,7 +560,7 @@
             ownerName: app.ownerName || '-',
             ownerPhone: app.ownerPhone || app.phone || '-',
             storeAddress: app.storeAddress || '-',
-            signType: (!app.signType || app.signType === '간판지원신청' || app.signType === '간판' || app.signType === '-' || app.signType === 'undefined' || app.signType === 'null') ? '플렉스 간판' : app.signType,
+            signType: (!app.signType || app.signType === '간판지원신청' || app.signType === '간판' || app.signType === '-' || app.signType === 'undefined' || app.signType === 'null' || app.signType === '플랙스' || app.signType === '플랙스 간판' || app.signType === '플렉스' || app.signType === '1. 플렉스 간판' || app.signType === '1. 플랙스 간판') ? '플렉스 간판' : app.signType,
             assignedConstructorId: app.assignedConstructorId || '',
             assignedConstructorName: cName || '미배정',
             assignedConstructorCode: cCode,
