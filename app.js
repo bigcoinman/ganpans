@@ -6252,36 +6252,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             matched.forEach(item => {
-                let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">심사대기중</span>';
+                let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;">심사대기중</span>';
                 if (item.status === 'approved' || item.status === '승인 완료') {
-                    statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-check"></i> 승인 완료</span>';
+                    statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;"><i class="fa-solid fa-check"></i> 승인 완료</span>';
                 } else if (item.status === 'rejected' || item.status === '반려됨') {
-                    statusBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-xmark"></i> 반려됨</span>';
+                    statusBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;"><i class="fa-solid fa-xmark"></i> 반려됨</span>';
                 } else if (item.status) {
-                    statusBadge = `<span style="background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">${escapeHtml(item.status)}</span>`;
+                    statusBadge = `<span style="background: #e0e7ff; color: #3730a3; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;">${escapeHtml(item.status)}</span>`;
                 }
 
                 const card = document.createElement('div');
                 card.style.background = '#f8fafc';
                 card.style.border = '1px solid var(--border-color)';
-                card.style.borderRadius = '8px';
-                card.style.padding = '12px 14px';
+                card.style.borderRadius = '10px';
+                card.style.padding = '14px 16px';
                 card.style.textAlign = 'left';
 
                 const maskedName = typeof maskName === 'function' ? maskName(item.ownerName) : item.ownerName;
                 const maskedPhone = typeof maskPhone === 'function' ? maskPhone(item.ownerPhone) : item.ownerPhone;
 
                 card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
-                        <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                        <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary);">
                             ${escapeHtml(item.storeName)}
-                            <span style="font-size: 0.7rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 6px; border-radius: 4px; margin-left: 4px;">${escapeHtml(String(item.id))}</span>
+                            <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 3px 8px; border-radius: 6px; margin-left: 6px;">${escapeHtml(String(item.id))}</span>
                         </div>
                         <div>${statusBadge}</div>
                     </div>
-                    <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
-                        <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> ${escapeHtml(item.storeAddress)}</div>
-                        <div style="display: flex; gap: 12px; margin-top: 3px; font-size: 0.74rem; color: #64748b;">
+                    <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6;">
+                        <div><i class="fa-solid fa-location-dot" style="width: 16px; color: var(--accent-primary);"></i> ${escapeHtml(item.storeAddress)}</div>
+                        <div style="display: flex; gap: 14px; margin-top: 5px; font-size: 0.90rem; color: #64748b;">
                             <span><i class="fa-solid fa-user-shield"></i> 신청인: ${escapeHtml(maskedName)}</span>
                             ${maskedPhone ? `<span><i class="fa-solid fa-phone"></i> ${escapeHtml(maskedPhone)}</span>` : ''}
                         </div>
@@ -8932,36 +8932,36 @@ function initModalsAndSearch() {
       }
 
       matched.forEach(item => {
-        let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">심사대기중</span>';
+        let statusBadge = '<span style="background: #e2e8f0; color: #475569; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;">심사대기중</span>';
         if (item.status === 'approved' || item.status === '승인 완료') {
-          statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-check"></i> 승인 완료</span>';
+          statusBadge = '<span style="background: #dcfce7; color: #166534; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;"><i class="fa-solid fa-check"></i> 승인 완료</span>';
         } else if (item.status === 'rejected' || item.status === '반려됨') {
-          statusBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;"><i class="fa-solid fa-xmark"></i> 반려됨</span>';
+          statusBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;"><i class="fa-solid fa-xmark"></i> 반려됨</span>';
         } else if (item.status) {
-          statusBadge = `<span style="background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">${typeof escapeHtml === 'function' ? escapeHtml(item.status) : item.status}</span>`;
+          statusBadge = `<span style="background: #e0e7ff; color: #3730a3; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;">${typeof escapeHtml === 'function' ? escapeHtml(item.status) : item.status}</span>`;
         }
 
         const card = document.createElement('div');
         card.style.background = '#f8fafc';
         card.style.border = '1px solid var(--border-color)';
-        card.style.borderRadius = '8px';
-        card.style.padding = '12px 14px';
+        card.style.borderRadius = '10px';
+        card.style.padding = '14px 16px';
         card.style.textAlign = 'left';
 
         const maskedName = typeof maskName === 'function' ? maskName(item.ownerName) : item.ownerName;
         const maskedPhone = typeof maskPhone === 'function' ? maskPhone(item.ownerPhone) : item.ownerPhone;
 
         card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
-            <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary);">
               ${typeof escapeHtml === 'function' ? escapeHtml(item.storeName) : item.storeName}
-              <span style="font-size: 0.7rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 6px; border-radius: 4px; margin-left: 4px;">${typeof escapeHtml === 'function' ? escapeHtml(String(item.id)) : String(item.id)}</span>
+              <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 3px 8px; border-radius: 6px; margin-left: 6px;">${typeof escapeHtml === 'function' ? escapeHtml(String(item.id)) : String(item.id)}</span>
             </div>
             <div>${statusBadge}</div>
           </div>
-          <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
-            <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> ${typeof escapeHtml === 'function' ? escapeHtml(item.storeAddress) : item.storeAddress}</div>
-            <div style="display: flex; gap: 12px; margin-top: 3px; font-size: 0.74rem; color: #64748b;">
+          <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6;">
+            <div><i class="fa-solid fa-location-dot" style="width: 16px; color: var(--accent-primary);"></i> ${typeof escapeHtml === 'function' ? escapeHtml(item.storeAddress) : item.storeAddress}</div>
+            <div style="display: flex; gap: 14px; margin-top: 5px; font-size: 0.90rem; color: #64748b;">
               <span><i class="fa-solid fa-user-shield"></i> 신청인: ${typeof escapeHtml === 'function' ? escapeHtml(maskedName) : maskedName}</span>
               ${maskedPhone ? `<span><i class="fa-solid fa-phone"></i> ${typeof escapeHtml === 'function' ? escapeHtml(maskedPhone) : maskedPhone}</span>` : ''}
             </div>

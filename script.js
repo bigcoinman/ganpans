@@ -3560,15 +3560,15 @@ function initModalsAndSearch() {
         const rStatus = String(item.receiptStatus || '').trim();
         let pStatus = String(item.progressStatus || '').trim();
 
-        let statusBadge = '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;"><i class="fa-regular fa-clock"></i> 사업시행 전 사전등록업체</span>';
+        let statusBadge = '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;"><i class="fa-regular fa-clock"></i> 사업시행 전 사전등록업체</span>';
         if (s === 'approved' || s === '서류준비 & 접수대기' || s === '서류제출 & 접수예정' || s === '승인 완료') {
-          statusBadge = '<span style="background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>';
+          statusBadge = '<span style="background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>';
         } else if (s === 'unqualified' || s === '신청요건 미달업체' || s === '미달') {
-          statusBadge = '<span style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> 신청요건 미달업체</span>';
+          statusBadge = '<span style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> 신청요건 미달업체</span>';
         } else if (s === 'rejected' || s === '지원사업 탈락' || s === '반려됨') {
-          statusBadge = '<span style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>';
+          statusBadge = '<span style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>';
         } else if (s === 'giveup' || s === '지원사업 포기') {
-          statusBadge = '<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;"><i class="fa-solid fa-ban"></i> 지원사업 포기</span>';
+          statusBadge = '<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 4px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700;"><i class="fa-solid fa-ban"></i> 지원사업 포기</span>';
         }
 
         let bizBadge = '';
@@ -3587,9 +3587,9 @@ function initModalsAndSearch() {
           }
 
           bizBadge = `
-            <div style="margin-top: 4px; display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
-              <span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 1px 6px; border-radius: 3px; font-size: 0.68rem; font-weight: 700;"><i class="fa-solid fa-building-columns"></i> ${escapeHtml(rStatus || '접수완료')}</span>
-              <span style="background: ${pBg}; color: ${pColor}; border: 1px solid rgba(0,0,0,0.08); padding: 1px 6px; border-radius: 3px; font-size: 0.68rem; font-weight: 700;">${pText}</span>
+            <div style="margin-top: 5px; display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+              <span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 2px 7px; border-radius: 4px; font-size: 0.82rem; font-weight: 700;"><i class="fa-solid fa-building-columns"></i> ${escapeHtml(rStatus || '접수완료')}</span>
+              <span style="background: ${pBg}; color: ${pColor}; border: 1px solid rgba(0,0,0,0.08); padding: 2px 7px; border-radius: 4px; font-size: 0.82rem; font-weight: 700;">${pText}</span>
             </div>
           `;
         }
@@ -3597,27 +3597,27 @@ function initModalsAndSearch() {
         const card = document.createElement('div');
         card.style.background = '#f8fafc';
         card.style.border = '1px solid var(--border-color)';
-        card.style.borderRadius = '8px';
-        card.style.padding = '12px 14px';
+        card.style.borderRadius = '10px';
+        card.style.padding = '14px 16px';
         card.style.textAlign = 'left';
 
         const maskedName = typeof maskName === 'function' ? maskName(item.ownerName) : item.ownerName;
         const maskedPhone = typeof maskPhone === 'function' ? maskPhone(item.ownerPhone) : item.ownerPhone;
 
         card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
-            <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary);">
               ${typeof escapeHtml === 'function' ? escapeHtml(item.storeName) : item.storeName}
-              <span style="font-size: 0.7rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1px 6px; border-radius: 4px; margin-left: 4px;">${typeof escapeHtml === 'function' ? escapeHtml(String(item.id)) : String(item.id)}</span>
+              <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 3px 8px; border-radius: 6px; margin-left: 6px;">${typeof escapeHtml === 'function' ? escapeHtml(String(item.id)) : String(item.id)}</span>
             </div>
             <div style="text-align: right;">
               ${statusBadge}
               ${bizBadge}
             </div>
           </div>
-          <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
-            <div><i class="fa-solid fa-location-dot" style="width: 14px; color: var(--accent-primary);"></i> ${typeof escapeHtml === 'function' ? escapeHtml(item.storeAddress) : item.storeAddress}</div>
-            <div style="display: flex; gap: 12px; margin-top: 3px; font-size: 0.74rem; color: #64748b;">
+          <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6;">
+            <div><i class="fa-solid fa-location-dot" style="width: 16px; color: var(--accent-primary);"></i> ${typeof escapeHtml === 'function' ? escapeHtml(item.storeAddress) : item.storeAddress}</div>
+            <div style="display: flex; gap: 14px; margin-top: 5px; font-size: 0.90rem; color: #64748b;">
               <span><i class="fa-solid fa-user-shield"></i> 신청인: ${typeof escapeHtml === 'function' ? escapeHtml(maskedName) : maskedName}</span>
               ${maskedPhone ? `<span><i class="fa-solid fa-phone"></i> ${typeof escapeHtml === 'function' ? escapeHtml(maskedPhone) : maskedPhone}</span>` : ''}
             </div>
