@@ -1,6 +1,6 @@
 /* app.css - Mobile App Layout & Overrides for PC Content Parity */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Nanum+Pen+Script&family=Gowun+Batang&display=swap');
+/* Google Fonts loaded centrally from style.css */
 
 :root {
     --bg-primary: #f8f9fa;

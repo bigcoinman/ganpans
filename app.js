@@ -232,7 +232,7 @@ window.toggleInquiryStatusMob = function (id, e) {
         const isNowResolved = (curStatus !== 'resolved' && curStatus !== 'completed' && curStatus !== '확인완료' && curStatus !== '상담완료');
         const newStatus = isNowResolved ? 'resolved' : 'pending';
         target.status = newStatus;
-        (typeof DataStore !== 'undefined' && DataStore.saveInquiries ? DataStore.saveInquiries(currentInquiries) : localStorage.setItem('inquiries', JSON.stringify(currentInquiries)));
+        saveInquiriesSSOT(currentInquiries);
 
         if (btnEl && btnEl.style) {
             btnEl.style.background = isNowResolved ? '#f1f5f9' : '#15803d';
@@ -262,7 +262,7 @@ window.deleteInquiryAdminMob = function (id, e) {
     if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
     let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
     currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
-    (typeof DataStore !== 'undefined' && DataStore.saveInquiries ? DataStore.saveInquiries(currentInquiries) : localStorage.setItem('inquiries', JSON.stringify(currentInquiries)));
+    saveInquiriesSSOT(currentInquiries);
     if (window.SupabaseSync) {
         window.SupabaseSync.deleteInquiry(id);
     }
@@ -570,7 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
             window.DataStore.saveUsers(users);
         } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+            saveUsersSSOT(users);
         }
     }
 
@@ -621,7 +621,6 @@ document.addEventListener('DOMContentLoaded', () => {
     trackVisitorMob();
 
     // --- Drawer Menu Selectors ---
-    const menuTrigger = document.getElementById('app-menu-trigger');
     const drawerOverlay = document.getElementById('app-drawer-overlay');
     const drawer = document.getElementById('app-drawer');
     const drawerClose = document.getElementById('app-drawer-close');
@@ -635,9 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('.nav-item');
 
     // --- Initialize Drawer Event Listeners ---
-    if (menuTrigger) {
-        menuTrigger.addEventListener('click', openDrawer);
-    }
+
     if (drawerClose) {
         drawerClose.addEventListener('click', closeDrawer);
     }
@@ -920,28 +917,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 150);
     };
 
-    // 로그아웃 / 세션 전환 시 현장 접수 폼 완전 초기화
-    const clearBizUploadFormMob = () => {
-        const form = document.getElementById('mobile-upload-form-mob');
-        if (form) form.reset();
 
-        // 사진 미리보기 & 카운터 초기화
-        const previews = document.getElementById('mob-photo-previews-mob');
-        if (previews) previews.innerHTML = '';
-        const counter = document.getElementById('mob-photo-count-mob');
-        if (counter) counter.textContent = '선택된 사진: 0 / 20장';
-
-        // file input 값 초기화
-        const photosInput = document.getElementById('mob-photos-input-mob');
-        if (photosInput) photosInput.value = '';
-        const cameraInput = document.getElementById('mob-camera-input-mob');
-        if (cameraInput) cameraInput.value = '';
-
-        // 전역 선택 사진 배열 비우기 (selectedPhotosMob은 이 스코프 아래 선언되어 있으므로 직접 접근 가능)
-        // — 아래 selectedPhotosMob 선언 이후 실제 초기화가 이루어지도록 flag 방식 사용
-        window._clearBizPhotosMob = true;
-    };
-    window.clearBizUploadFormMob = clearBizUploadFormMob;
 
     // Handled directly via window.executeAppLogin and window.executeAppSignup
 
@@ -950,9 +926,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (drawerLogoutBtn) {
         drawerLogoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
-
-            // 현장 접수 폼 즉시 초기화 (로그아웃 전 데이터 잔류 방지)
-            clearBizUploadFormMob();
 
             // Core Session Clean First
             clearActiveUser();
@@ -990,7 +963,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
                             window.DataStore.saveUsers(users);
                         } else {
-                            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+                            saveUsersSSOT(users);
                         }
 
                         // 2) Supabase DB 영구 삭제
@@ -1304,7 +1277,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         let apps = JSON.parse(localStorage.getItem('applications')) || [];
                         apps = apps.filter(app => app.id !== appId);
-                        (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
+                        saveApplicationsSSOT(apps);
                     }
                     renderStatusTab();
                 }
@@ -1338,7 +1311,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
                 window.DataStore.saveUsers(users);
             } else {
-                (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+                saveUsersSSOT(users);
             }
             if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
                 window.DataStore.setActiveUser(curUser);
@@ -1407,6 +1380,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btnRequestConversion) btnRequestConversion.style.display = 'block';
             if (btnRequestConstructorMob) btnRequestConstructorMob.style.display = 'block';
         });
+    }
+
+    // --- SSOT Storage Helpers (간단하고 안전한 단일 저장) ---
+    function saveUsersSSOT(usersList) {
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            return window.DataStore.saveUsers(usersList);
+        }
+        localStorage.setItem('users', JSON.stringify(usersList));
+    }
+
+    function saveApplicationsSSOT(appsList) {
+        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+            return window.DataStore.saveApplications(appsList);
+        }
+        localStorage.setItem('applications', JSON.stringify(appsList));
+    }
+
+    function saveInquiriesSSOT(inquiriesList) {
+        if (window.DataStore && typeof window.DataStore.saveInquiries === 'function') {
+            return window.DataStore.saveInquiries(inquiriesList);
+        }
+        localStorage.setItem('inquiries', JSON.stringify(inquiriesList));
     }
 
     // --- Salesperson Dashboard & Common Utilities ---
@@ -1518,7 +1513,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
                 window.DataStore.saveUsers(users);
             } else {
-                (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+                saveUsersSSOT(users);
             }
             if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
                 window.DataStore.setActiveUser(activeUser);
@@ -2056,363 +2051,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.renderBizRegisteredItemsMob = renderBizRegisteredItemsMob;
     window.renderUserApplicationsMob = renderUserApplicationsMob;
 
-    // Photo uploads inside representative dashboard
-    const mobFileZoneMob = document.getElementById('mobile-file-zone-mob');
-    const mobPhotosInputMob = document.getElementById('mob-photos-input-mob');
-    const mobCameraInputMob = document.getElementById('mob-camera-input-mob');
-    const mobPhotoPreviewsMob = document.getElementById('mob-photo-previews-mob');
-    const mobPhotoCountMob = document.getElementById('mob-photo-count-mob');
-    const photoChoiceOverlay = document.getElementById('photo-choice-overlay');
-    const btnChoiceCamera = document.getElementById('btn-choice-camera');
-    const btnChoiceGallery = document.getElementById('btn-choice-gallery');
-    const btnChoiceCancel = document.getElementById('btn-choice-cancel');
-    let selectedPhotosMob = []; // Array of { name: string, dataUrl: string }
 
-    // 로그아웃 시 clearBizUploadFormMob()가 설정한 flag를 체크하여 배열 즉시 비우기
-    if (window._clearBizPhotosMob) {
-        selectedPhotosMob = [];
-        window._clearBizPhotosMob = false;
-    }
-
-    // clearBizUploadFormMob 함수가 배열도 비울 수 있도록 wrapper를 재정의
-    window.clearBizUploadFormMob = () => {
-        const form = document.getElementById('mobile-upload-form-mob');
-        if (form) form.reset();
-
-        const previews = document.getElementById('mob-photo-previews-mob');
-        if (previews) previews.innerHTML = '';
-        const counter = document.getElementById('mob-photo-count-mob');
-        if (counter) counter.textContent = '선택된 사진: 0 / 20장';
-
-        const photosInput = document.getElementById('mob-photos-input-mob');
-        if (photosInput) photosInput.value = '';
-        const cameraInput = document.getElementById('mob-camera-input-mob');
-        if (cameraInput) cameraInput.value = '';
-
-        // 클로저 스코프의 selectedPhotosMob 직접 초기화
-        selectedPhotosMob = [];
-    };
-
-    // 고화질 모바일 사진을 안전하고 가볍게(최대 1200px, 75% 품질, 300KB 미만) DataURL로 압축하는 유틸리티
-    const fileToCompressedDataUrl = (file, maxDimension = 1200, quality = 0.75) => {
-        return new Promise((resolve) => {
-            if (!file) {
-                resolve('');
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const rawUrl = e.target.result;
-                const img = new Image();
-                img.onload = () => {
-                    try {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > maxDimension || height > maxDimension) {
-                            if (width > height) {
-                                height = Math.round(height * (maxDimension / width));
-                                width = maxDimension;
-                            } else {
-                                width = Math.round(width * (maxDimension / height));
-                                height = maxDimension;
-                            }
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        const compressedUrl = canvas.toDataURL('image/jpeg', quality);
-                        resolve(compressedUrl || rawUrl);
-                    } catch (err) {
-                        console.warn('[사진 압축 Fallback] 원본 DataURL 사용', err);
-                        resolve(rawUrl);
-                    }
-                };
-                img.onerror = () => resolve(rawUrl);
-                img.src = rawUrl;
-            };
-            reader.onerror = () => resolve('');
-            reader.readAsDataURL(file);
-        });
-    };
-
-    const handleMobilePhotosSelectMob = async (files) => {
-        if (!files || !files.length) return;
-
-        if (selectedPhotosMob.length + files.length > 20) {
-            alert('영업 물건 현장 사진은 최대 20장 까지만 업로드 할 수 있습니다.');
-            return;
-        }
-
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const dataUrl = await fileToCompressedDataUrl(file, 1200, 0.75);
-            if (dataUrl) {
-                selectedPhotosMob.push({
-                    name: file.name || `현장사진_${selectedPhotosMob.length + 1}.jpg`,
-                    dataUrl: dataUrl
-                });
-            }
-        }
-        renderMobilePhotoPreviewsMob();
-    };
-
-    if (mobFileZoneMob) {
-        mobFileZoneMob.addEventListener('click', () => {
-            window.currentPhotoTarget = 'biz';
-            if (photoChoiceOverlay) {
-                photoChoiceOverlay.classList.add('active');
-            } else if (mobPhotosInputMob) {
-                mobPhotosInputMob.click();
-            }
-        });
-    }
-
-    if (photoChoiceOverlay) {
-        // Close bottom sheet when clicking overlay background
-        photoChoiceOverlay.addEventListener('click', (e) => {
-            if (e.target === photoChoiceOverlay) {
-                photoChoiceOverlay.classList.remove('active');
-            }
-        });
-
-        // Close button
-        if (btnChoiceCancel) {
-            btnChoiceCancel.addEventListener('click', () => {
-                photoChoiceOverlay.classList.remove('active');
-            });
-        }
-
-        // Camera option
-        if (btnChoiceCamera) {
-            btnChoiceCamera.addEventListener('click', () => {
-                photoChoiceOverlay.classList.remove('active');
-                if (window.currentPhotoTarget === 'apply') {
-                    const storeCamera = document.getElementById('store-photo-camera');
-                    if (storeCamera) storeCamera.click();
-                    else if (mobCameraInputMob) mobCameraInputMob.click();
-                } else if (mobCameraInputMob) {
-                    mobCameraInputMob.click();
-                }
-            });
-        }
-
-        // Gallery option
-        if (btnChoiceGallery) {
-            btnChoiceGallery.addEventListener('click', () => {
-                photoChoiceOverlay.classList.remove('active');
-                if (window.currentPhotoTarget === 'apply') {
-                    const storeGallery = document.getElementById('store-photo');
-                    if (storeGallery) storeGallery.click();
-                    else if (mobPhotosInputMob) mobPhotosInputMob.click();
-                } else if (mobPhotosInputMob) {
-                    mobPhotosInputMob.click();
-                }
-            });
-        }
-    }
-
-    if (mobPhotosInputMob) {
-        mobPhotosInputMob.addEventListener('change', async (e) => {
-            if (e.target.files && e.target.files.length > 0) {
-                const files = Array.from(e.target.files);
-                await handleMobilePhotosSelectMob(files);
-                mobPhotosInputMob.value = ''; // Reset value to trigger change on same file if needed
-            }
-        });
-    }
-
-    if (mobCameraInputMob) {
-        mobCameraInputMob.addEventListener('change', async (e) => {
-            if (e.target.files && e.target.files.length > 0) {
-                const files = Array.from(e.target.files);
-                await handleMobilePhotosSelectMob(files);
-                mobCameraInputMob.value = ''; // Reset value to trigger change on next capture
-            }
-        });
-    }
-
-    function renderMobilePhotoPreviewsMob() {
-        if (!mobPhotoPreviewsMob || !mobPhotoCountMob) return;
-        mobPhotoPreviewsMob.innerHTML = '';
-
-        selectedPhotosMob.forEach((photoItem, index) => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'mob-preview-wrapper';
-            wrapper.style.position = 'relative';
-            wrapper.style.display = 'inline-block';
-            wrapper.style.margin = '4px';
-
-            const img = document.createElement('img');
-            img.src = sanitizeUrl(photoItem.dataUrl);
-            img.style.width = '70px';
-            img.style.height = '70px';
-            img.style.objectFit = 'cover';
-            img.style.borderRadius = '8px';
-            img.style.display = 'block';
-            img.style.border = '1px solid #cbd5e1';
-
-            const delBtn = document.createElement('button');
-            delBtn.className = 'mob-preview-del';
-            delBtn.innerHTML = '&times;';
-            delBtn.style.position = 'absolute';
-            delBtn.style.top = '-6px';
-            delBtn.style.right = '-6px';
-            delBtn.style.width = '22px';
-            delBtn.style.height = '22px';
-            delBtn.style.borderRadius = '50%';
-            delBtn.style.backgroundColor = '#ef4444';
-            delBtn.style.color = '#ffffff';
-            delBtn.style.border = 'none';
-            delBtn.style.display = 'flex';
-            delBtn.style.alignItems = 'center';
-            delBtn.style.justifyContent = 'center';
-            delBtn.style.fontSize = '14px';
-            delBtn.style.fontWeight = 'bold';
-            delBtn.style.cursor = 'pointer';
-            delBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-            delBtn.style.zIndex = '10';
-
-            delBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                selectedPhotosMob.splice(index, 1);
-                renderMobilePhotoPreviewsMob();
-            });
-
-            wrapper.appendChild(img);
-            wrapper.appendChild(delBtn);
-            mobPhotoPreviewsMob.appendChild(wrapper);
-        });
-
-        mobPhotoCountMob.textContent = `선택된 사진: ${selectedPhotosMob.length} / 20장`;
-    }
-
-    const formBizUploadMob = document.getElementById('mobile-upload-form-mob');
-    const btnSubmitBizItemMob = document.getElementById('btn-submit-biz-item-mob');
-    if (formBizUploadMob) {
-        formBizUploadMob.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            // activeUser 세션 체크
-            activeUser = getActiveUser() || null;
-            if (!activeUser) {
-                alert('로그인이 필요합니다. 다시 로그인해 주세요.');
-                return;
-            }
-
-            const nameVal = document.getElementById('mob-item-name-mob')?.value.trim();
-            const phoneVal = document.getElementById('mob-item-phone-mob')?.value.trim() || '';
-            const addressVal = document.getElementById('mob-item-address-mob')?.value.trim();
-
-            if (!nameVal || !phoneVal || !addressVal) {
-                alert('상호명, 전화번호, 설치 주소를 모두 입력해 주세요.');
-                return;
-            }
-
-            // 사진 처리 완료 대기 중 체크
-            if (btnSubmitBizItemMob) {
-                if (btnSubmitBizItemMob.disabled) return; // 중복 제출 방지
-                btnSubmitBizItemMob.disabled = true;
-                btnSubmitBizItemMob.textContent = '등록 중...';
-            }
-
-            try {
-                const base64PhotosList = selectedPhotosMob.map(p => p.dataUrl).filter(Boolean);
-                const mainPhoto = base64PhotosList.length > 0 ? base64PhotosList[0] : '';
-                const firstFileName = selectedPhotosMob.length > 0 ? selectedPhotosMob[0].name : '현장촬영사진.jpg';
-
-                let apps = JSON.parse(localStorage.getItem('applications')) || [];
-                const itemId = typeof generateBizItemId === 'function'
-                    ? generateBizItemId(activeUser.bizCode, apps)
-                    : `${activeUser.bizCode || 'B-260801'}-${String(apps.length + 1).padStart(3, '0')}`;
-
-                // 1. 최고관리자 [신청서 목록(applications)]에 등록 (사진 데이터 포함)
-                const newApp = {
-                    id: itemId,
-                    userId: activeUser.id,
-                    ownerName: nameVal,
-                    ownerPhone: phoneVal,
-                    storeName: nameVal,
-                    shopName: nameVal,
-                    storeAddress: addressVal,
-                    signType: '현장 카메라 접수',
-                    fileName: firstFileName,
-                    fileData: mainPhoto,
-                    photos: base64PhotosList,
-                    photosCount: base64PhotosList.length,
-                    appliedAt: new Date().toISOString(),
-                    status: 'pending',
-                    isBizItem: false,
-                    referrerCode: activeUser.bizCode || ''
-                };
-
-                if (!apps.some(a => a.id === itemId)) {
-                    apps.unshift(newApp);
-                } else {
-                    apps = apps.map(a => a.id === itemId ? newApp : a);
-                }
-
-                if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-                    window.DataStore.saveApplications(apps);
-                } else {
-                    try {
-                        (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
-                    } catch (quotaErr) {
-                        console.warn('[저장 용량 초과] 사진 데이터를 제외하고 기본 정보만 저장합니다.', quotaErr);
-                        const appsLite = apps.map(a => a.id === itemId
-                            ? { ...a, photos: [], fileData: '', photosCount: 0 }
-                            : a
-                        );
-                        try {
-                            (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(appsLite) : localStorage.setItem('applications', JSON.stringify(appsLite)));
-                            alert('저장 공간이 부족하여 사진은 제외하고 기본 정보만 등록되었습니다.\n관리자에게 문의하거나 이전 데이터를 정리해 주세요.');
-                        } catch (e2) {
-                            alert('저장 공간이 부족합니다. 이전 데이터를 정리 후 다시 시도해 주세요.');
-                            return;
-                        }
-                    }
-                }
-
-                // [100% 순수 일원화] applications 단일 테이블에만 저장 (불필요한 users.items 이중 쓰기 전수 삭제)
-                // 3. Supabase 클라우드 DB 실시간 단일 원천 동기화
-                if (window.SupabaseSync) {
-                    try {
-                        window.SupabaseSync.upsertApplication(newApp);
-                    } catch (syncErr) {
-                        console.warn('[Supabase 동기화 오류]', syncErr);
-                    }
-                }
-
-                // 4. 카카오톡 관리자 실시간 알림 발송
-                if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
-                    try { window.KakaoNotifier.notifyApplication(newApp); } catch (kakaoErr) { }
-                }
-
-                alert(`현장 간판 신청 물건 [${nameVal}] 등록이 완료되었습니다!\n신청번호: [${itemId}]\n(현장 사진이 최고관리자 대시보드 및 영업물건 현황에 즉시 자동 업로드되었습니다.)`);
-                formBizUploadMob.reset();
-                selectedPhotosMob = [];
-                renderMobilePhotoPreviewsMob();
-                renderBusinessDashboardMob();
-                renderStatusTab();
-                window.scrollTo(0, 0);
-                document.documentElement.scrollTop = 0;
-                document.body.scrollTop = 0;
-                updateHeaderAuthButton();
-
-            } catch (err) {
-                console.error('[현장 물건 등록 오류]', err);
-                alert(`등록 중 오류가 발생했습니다.\n오류 내용: ${err.message || err}\n\n잠시 후 다시 시도해 주세요.`);
-            } finally {
-                if (btnSubmitBizItemMob) {
-                    btnSubmitBizItemMob.disabled = false;
-                    btnSubmitBizItemMob.textContent = '현장 물건으로 등록';
-                }
-            }
-        });
-    }
 
     // Mobile Business Dashboard Search & Toggle Event Listeners
     window.toggleUserAppsMob = function () {
@@ -3813,7 +3452,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
             window.DataStore.saveUsers(curUsers);
         } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+            saveUsersSSOT(curUsers);
         }
 
         if (activeUser && String(activeUser.id).toLowerCase() === String(uid).toLowerCase()) {
@@ -3886,7 +3525,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
             window.DataStore.saveUsers(curUsers);
         } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+            saveUsersSSOT(curUsers);
         }
 
         if (activeUser && String(activeUser.id).toLowerCase() === String(uid).toLowerCase()) {
@@ -3962,7 +3601,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
                 window.DataStore.saveUsers(curUsers);
             } else {
-                (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+                saveUsersSSOT(curUsers);
             }
             users = curUsers;
 
@@ -4005,7 +3644,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
                 window.DataStore.saveUsers(curUsers);
             } else {
-                (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+                saveUsersSSOT(curUsers);
             }
             users = curUsers;
 
@@ -4072,7 +3711,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
             window.DataStore.saveUsers(curUsers);
         } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+            saveUsersSSOT(curUsers);
         }
         users = curUsers;
 
@@ -4128,180 +3767,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     window.updateApplicationStatusMob = updateApplicationStatusMob;
 
-    // --- 신청서 세부 정보 직접 수정 모달 (최고관리자 모바일 & PC 공통) ---
-    const safeHtml = (s) => (s === null || s === undefined ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'));
 
-    const openEditApplicationModal = (appId) => {
-        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
-            ? window.DataStore.getApplications()
-            : (JSON.parse(localStorage.getItem('applications')) || []);
-        
-        const cleanAppId = String(appId || '').trim().toLowerCase();
-        const app = apps.find(a => {
-            const aId = String(a.id || a.appId || a.application_id || '').trim().toLowerCase();
-            if (aId && cleanAppId && aId === cleanAppId) return true;
-            if (a.storeName && cleanAppId && String(a.storeName).trim().toLowerCase() === cleanAppId) return true;
-            if (a.ownerPhone && cleanAppId && String(a.ownerPhone).replace(/[^0-9]/g, '') === cleanAppId.replace(/[^0-9]/g, '')) return true;
-            return false;
-        });
-
-        if (!app) {
-            alert('해당 신청서를 찾을 수 없습니다.');
-            return;
-        }
-
-        let modal = document.getElementById('modal-edit-application');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'modal-edit-application';
-            document.body.appendChild(modal);
-        }
-
-        modal.className = 'inquiry-modal-overlay active modal-edit-app-overlay';
-        modal.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: rgba(15, 23, 42, 0.75) !important; z-index: 9999999 !important; display: flex !important; opacity: 1 !important; pointer-events: auto !important; align-items: center !important; justify-content: center !important; backdrop-filter: blur(4px) !important; padding: 16px !important; box-sizing: border-box !important;';
-
-        const curStatus = app.status || 'pending';
-        const isApproved = (curStatus === 'approved' || curStatus === '서류준비 & 접수대기' || curStatus === '서류제출 & 접수예정' || curStatus === '승인 완료');
-        const isUnqualified = (curStatus === 'unqualified' || curStatus === '신청요건 미달업체' || curStatus === '미달');
-        const isRejected = (curStatus === 'rejected' || curStatus === '지원사업 탈락' || curStatus === '반려됨');
-        const isGiveup = (curStatus === 'giveup' || curStatus === '지원사업 포기');
-        const isPending = !isApproved && !isUnqualified && !isRejected && !isGiveup;
-
-        modal.innerHTML = `
-            <div style="background: #ffffff; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); border: 1px solid #cbd5e1; padding: 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position: relative; z-index: 10000000;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
-                    <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-pen-to-square" style="color: #2563eb;"></i> 신청서 상세 정보 수정
-                    </h3>
-                    <button type="button" onclick="window.closeEditApplicationModal()" style="background: none; border: none; font-size: 1.6rem; color: #64748b; cursor: pointer; line-height: 1; padding: 4px;">&times;</button>
-                </div>
-
-                <form id="form-edit-application" onsubmit="window.submitEditApplicationModal('${app.id}', event)" style="display: flex; flex-direction: column; gap: 12px;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px;">신청번호</label>
-                            <input type="text" value="${safeHtml(app.id)}" disabled style="width: 100%; padding: 8px 10px; font-size: 0.85rem; font-family: monospace; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; color: #64748b; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px;">진행 상태</label>
-                            <select id="edit-app-status" style="width: 100%; padding: 8px 10px; font-size: 0.85rem; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: #ffffff; cursor: pointer;">
-                                <option value="pending" ${isPending ? 'selected' : ''}>⏳ 사업시행 전 사전등록업체</option>
-                                <option value="approved" ${isApproved ? 'selected' : ''}>📑 서류준비 & 접수대기</option>
-                                <option value="unqualified" ${isUnqualified ? 'selected' : ''}>⚠️ 신청요건 미달업체</option>
-                                <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
-                                <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">상호명 (업체명) <span style="color: #ef4444;">*</span></label>
-                        <input type="text" id="edit-app-store-name" value="${safeHtml(app.storeName || app.shopName || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-weight: 600;">
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">대표자 성명 <span style="color: #ef4444;">*</span></label>
-                            <input type="text" id="edit-app-owner-name" value="${safeHtml(app.ownerName || app.name || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">대표자 연락처 <span style="color: #ef4444;">*</span></label>
-                            <input type="text" id="edit-app-owner-phone" value="${safeHtml(app.ownerPhone || app.phone || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">설치 매장 주소 <span style="color: #ef4444;">*</span></label>
-                        <input type="text" id="edit-app-store-address" value="${safeHtml(app.storeAddress || app.address || '')}" required style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">희망 간판 종류</label>
-                            <input type="text" id="edit-app-sign-type" value="${safeHtml(app.signType || '')}" placeholder="예: LED 채널 간판" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">담당 영업자 코드</label>
-                            <input type="text" id="edit-app-referrer-code" value="${safeHtml(app.referrerCode || '')}" placeholder="예: B-260903" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-family: monospace;">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">관리자 메모 / 비고</label>
-                        <textarea id="edit-app-memo" rows="2" placeholder="관리자 메모 입력" style="width: 100%; padding: 9px 12px; font-size: 0.9rem; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; resize: vertical;">${safeHtml(app.memo || app.notes || '')}</textarea>
-                    </div>
-
-                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; border-top: 1.5px solid #f1f5f9; padding-top: 14px;">
-                        <button type="button" onclick="window.closeEditApplicationModal()" style="padding: 9px 16px; font-size: 0.9rem; font-weight: 600; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer;">취소</button>
-                        <button type="submit" style="padding: 9px 20px; font-size: 0.9rem; font-weight: 700; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-check"></i> 수정사항 저장</button>
-                    </div>
-                </form>
-            </div>
-        `;
-
-        modal.onclick = (e) => {
-            if (e.target === modal) window.closeEditApplicationModal();
-        };
-    };
-
-    const closeEditApplicationModal = () => {
-        const modal = document.getElementById('modal-edit-application');
-        if (modal) {
-            modal.className = 'inquiry-modal-overlay modal-edit-app-overlay';
-            modal.style.setProperty('display', 'none', 'important');
-            modal.classList.remove('active');
-        }
-    };
-
-    const submitEditApplicationModal = (appId, event) => {
-        if (event) event.preventDefault();
-        const storeName = document.getElementById('edit-app-store-name').value.trim();
-        const ownerName = document.getElementById('edit-app-owner-name').value.trim();
-        const ownerPhone = document.getElementById('edit-app-owner-phone').value.trim();
-        const storeAddress = document.getElementById('edit-app-store-address').value.trim();
-        const signType = document.getElementById('edit-app-sign-type').value.trim();
-        const referrerCode = document.getElementById('edit-app-referrer-code').value.trim();
-        const status = document.getElementById('edit-app-status').value;
-        const memo = document.getElementById('edit-app-memo').value.trim();
-
-        if (!storeName || !ownerName || !ownerPhone || !storeAddress) {
-            alert('상호명, 대표자명, 연락처, 주소는 필수 입력 항목입니다.');
-            return;
-        }
-
-        if (window.DataStore && typeof window.DataStore.updateApplication === 'function') {
-            const res = window.DataStore.updateApplication(appId, {
-                storeName: storeName,
-                shopName: storeName,
-                ownerName: ownerName,
-                name: ownerName,
-                ownerPhone: ownerPhone,
-                phone: ownerPhone,
-                storeAddress: storeAddress,
-                address: storeAddress,
-                signType: signType,
-                referrerCode: referrerCode,
-                status: status,
-                memo: memo,
-                notes: memo
-            });
-
-            if (res && res.success) {
-                if (typeof window.showToast === 'function') {
-                    window.showToast(`[${storeName}] 신청서 정보가 성공적으로 수정되었습니다.`);
-                } else {
-                    alert(`[${storeName}] 신청서 정보가 성공적으로 수정되었습니다.`);
-                }
-                closeEditApplicationModal();
-            } else {
-                alert('수정 중 오류가 발생했습니다: ' + (res ? res.message : ''));
-            }
-        }
-    };
-
-    window.openEditApplicationModal = openEditApplicationModal;
-    window.closeEditApplicationModal = closeEditApplicationModal;
-    window.submitEditApplicationModal = submitEditApplicationModal;
 
     // 모바일 클릭 위임 리스너
     document.addEventListener('click', (e) => {
@@ -4367,7 +3833,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
             window.DataStore.saveUsers(curUsers);
         } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+            saveUsersSSOT(curUsers);
         }
 
         // 3) activeUser 세션 갱신
@@ -4393,7 +3859,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
             window.DataStore.saveApplications(curApps);
         } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(curApps) : localStorage.setItem('applications', JSON.stringify(curApps)));
+            saveApplicationsSSOT(curApps);
         }
 
         // 5) Supabase DB Sync
@@ -4455,7 +3921,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
                 window.DataStore.saveApplications(apps);
             } else {
-                (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
+                saveApplicationsSSOT(apps);
             }
 
             if (window.SupabaseSync) {
@@ -4496,7 +3962,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
             window.DataStore.saveUsers(curUsers);
         } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+            saveUsersSSOT(curUsers);
         }
 
         if (window.SupabaseSync) {
@@ -4533,7 +3999,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
                 window.DataStore.saveApplications(apps);
             } else {
-                (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(apps) : localStorage.setItem('applications', JSON.stringify(apps)));
+                saveApplicationsSSOT(apps);
             }
             if (window.SupabaseSync) {
                 if (typeof window.SupabaseSync.updateApplication === 'function') {
@@ -4571,7 +4037,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
             window.DataStore.saveUsers(curUsers);
         } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+            saveUsersSSOT(curUsers);
         }
         if (window.SupabaseSync) {
             const updatedUser = curUsers.find(u => String(u.id) === String(uid));
@@ -5199,10 +4665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const pcFooterBtnInquiry = document.getElementById('pc-footer-btn-inquiry');
-    if (pcFooterBtnInquiry) {
-        pcFooterBtnInquiry.addEventListener('click', window.openInquiryModal);
-    }
+
 
     if (inquiryModalClose) {
         inquiryModalClose.addEventListener('click', closeInquiryModal);
@@ -5276,7 +4739,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 const inquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
                 inquiries.unshift(newInquiry);
-                (typeof DataStore !== 'undefined' && DataStore.saveInquiries ? DataStore.saveInquiries(inquiries) : localStorage.setItem('inquiries', JSON.stringify(inquiries)));
+                saveInquiriesSSOT(inquiries);
             }
 
             // 2) Supabase REST API로 직접 저장 (supabaseClient 초기화 여부 무관, 100% 보장)
@@ -5752,10 +5215,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const navSearchBtn = document.getElementById('nav-search-btn');
-    if (navSearchBtn) navSearchBtn.addEventListener('click', (e) => { e.preventDefault(); openGlobalSearchModal(); });
-    const mNavSearch = document.getElementById('m-nav-search');
-    if (mNavSearch) mNavSearch.addEventListener('click', (e) => { e.preventDefault(); openGlobalSearchModal(); });
+
 
     document.querySelectorAll('.btn-search-go-auth').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -7841,20 +7301,7 @@ function initWizard() {
     if (completePane) completePane.classList.remove('active');
     if (wizardButtonsArea) wizardButtonsArea.style.display = 'flex';
 
-    // 미선언 변수 방어 처리 (Element 안전 참조)
-    const ownerSmsAuthGroup = document.getElementById('owner-sms-auth-group');
-    const btnOwnerSmsAuth = document.getElementById('btn-owner-sms-auth');
-    const ownerPhoneCheckMsg = document.getElementById('owner-phone-check-msg');
 
-    if (typeof ownerSmsTimerInterval !== 'undefined' && ownerSmsTimerInterval) {
-      clearInterval(ownerSmsTimerInterval);
-    }
-    if (ownerSmsAuthGroup) ownerSmsAuthGroup.style.display = 'none';
-    if (btnOwnerSmsAuth) btnOwnerSmsAuth.disabled = false;
-    if (ownerPhoneCheckMsg) {
-      ownerPhoneCheckMsg.textContent = '';
-      ownerPhoneCheckMsg.className = 'form-helper';
-    }
 
     renderWizard();
     scrollToActiveStep();
