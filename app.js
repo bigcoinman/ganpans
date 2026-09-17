@@ -4610,6 +4610,12 @@ document.addEventListener('DOMContentLoaded', () => {
         let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
         if (targetApp) {
             targetItemName = targetApp.storeName || targetApp.shopName || targetItemName;
+            targetApp.isBizItem = true;
+            let mObj = {};
+            try { mObj = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {}); } catch(e) {}
+            mObj.isBizItem = true;
+            targetApp.memo = JSON.stringify(mObj);
+
             targetApp.assignedConstructorId = constId;
             targetApp.assignedConstructorName = constName;
             targetApp.constructionStatus = targetApp.constructionStatus && targetApp.constructionStatus !== 'none' ? targetApp.constructionStatus : 'before_construction';

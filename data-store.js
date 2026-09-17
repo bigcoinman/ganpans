@@ -525,11 +525,21 @@
         const pStatus = String(app.progressStatus || app.constructionStatus || '').trim();
         const cStatus = String(app.constructionStatus || '').trim();
 
-        const isEligible = Boolean(
+        // [영구 방어 SSOT 규칙] 영업물건으로 승인(isBizItem: true)되지 않은 단순 미승인 신청서는 시공업체 진행현황에 절대 진입 불가
+        const isBizItem = Boolean(
+          app.isBizItem === true ||
+          String(app.isBizItem) === 'true' ||
+          (app.memo && (typeof app.memo === 'string' ? app.memo.includes('"isBizItem":true') : app.memo.isBizItem === true))
+        );
+
+        const hasConstructorOrProgress = Boolean(
           app.assignedConstructorId ||
+          (app.assignedConstructorName && app.assignedConstructorName !== '미배정' && app.assignedConstructorName !== '-') ||
           pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-          cStatus === 'before_construction' || cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
-        ) && (
+          cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
+        );
+
+        const isEligible = isBizItem && hasConstructorOrProgress && (
           pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
         );
 
@@ -691,6 +701,36 @@
       let curUsers = this.getUsers();
 
       const isCurrentlyBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
+
+      // [방안 A 안전 방어 검증] 이미 시공사가 배정되어 진행 중인 물건 해제 시도 시 관리자 사전 확인
+      if (isCurrentlyBizItem) {
+        const hasAssignedConstructor = Boolean(
+          app.assignedConstructorId ||
+          (app.assignedConstructorName && app.assignedConstructorName !== '미배정' && app.assignedConstructorName !== '-')
+        );
+        const isInProgress = (app.constructionStatus && app.constructionStatus !== 'before_construction') ||
+          (app.progressStatus && (app.progressStatus === '간판시공 준비중' || app.progressStatus === '간판시공완료' || app.progressStatus === '대상자선정'));
+
+        if (hasAssignedConstructor || isInProgress) {
+          const constName = app.assignedConstructorName || '시공업체';
+          const confirmMsg = `[${app.storeName || '해당 업체'}] 건은 현재 시공업체(${constName})가 배정되어 진행 중인 물건입니다.\n\n시공업체 배정을 취소하고 영업물건 등록을 해제하시겠습니까?`;
+          if (!confirm(confirmMsg)) {
+            return { success: false, cancelled: true, message: '관리자 취소' };
+          }
+
+          // 관리자가 확인한 경우: 시공사 배정 및 시공 상태 초기화
+          app.assignedConstructorId = null;
+          app.assignedConstructorName = null;
+          app.assignedConstructorCode = null;
+          app.assignedConstructorPhone = null;
+          app.constructionStatus = 'before_construction';
+          app.assignedAt = null;
+          if (app.progressStatus === '간판시공 준비중' || app.progressStatus === '간판시공완료' || app.progressStatus === '대상자선정') {
+            app.progressStatus = '지원대기중';
+          }
+        }
+      }
+
       const isNowBizItem = !isCurrentlyBizItem;
       app.isBizItem = isNowBizItem;
       app.updatedAt = new Date().toISOString();
@@ -819,7 +859,15 @@
           return u;
         });
       } else {
-        // 영업물건 해제: users.items에서 해당 appId 및 appRefId 완전 제거
+        // 영업물건 해제: 시공사 배정 정보 및 시공 상태도 확실하게 초기화
+        app.assignedConstructorId = null;
+        app.assignedConstructorName = null;
+        app.assignedConstructorCode = null;
+        app.assignedConstructorPhone = null;
+        app.constructionStatus = 'before_construction';
+        app.assignedAt = null;
+
+        // users.items에서 해당 appId 및 appRefId 완전 제거
         let memoObj = {};
         try {
           memoObj = typeof app.memo === 'object' ? (app.memo || {}) : JSON.parse(app.memo || '{}');
@@ -868,6 +916,10 @@
 
       // 3) 전체 대시보드 화면 0초 즉각 강제 브로드캐스트 (force=true)
       this.notifyAll(true);
+      if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+      if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+      if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
+      if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
 
       // 4) Supabase DB 완전 비동기 백그라운드 저장 (Non-blocking & 실존 컬럼만 전송)
       (async () => {
@@ -876,7 +928,10 @@
             await window.SupabaseSync.updateApplication(app.id, {
               memo: app.memo,
               referrer_code: app.referrerCode || '',
-              status: app.status || 'pending'
+              status: app.status || 'pending',
+              assigned_constructor_id: app.assignedConstructorId || null,
+              assigned_constructor_name: app.assignedConstructorName || null,
+              construction_status: app.constructionStatus || 'before_construction'
             });
             for (const itemUser of usersToSync) {
               await window.SupabaseSync.updateUser(itemUser.id, { items: itemUser.items });
@@ -885,7 +940,10 @@
             await window.supabaseClient.from('applications').update({
               memo: app.memo,
               referrer_code: app.referrerCode || '',
-              status: app.status || 'pending'
+              status: app.status || 'pending',
+              assigned_constructor_id: app.assignedConstructorId || null,
+              assigned_constructor_name: app.assignedConstructorName || null,
+              construction_status: app.constructionStatus || 'before_construction'
             }).eq('id', String(app.id));
           }
         } catch (err) {
@@ -1313,6 +1371,12 @@
       let apps = this.getApplications();
       let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
       if (targetApp) {
+        targetApp.isBizItem = true;
+        let mObj = {};
+        try { mObj = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {}); } catch(e) {}
+        mObj.isBizItem = true;
+        targetApp.memo = JSON.stringify(mObj);
+
         targetApp.assignedConstructorId = String(constId);
         targetApp.assignedConstructorName = constName;
         targetApp.constructionStatus = targetApp.constructionStatus && targetApp.constructionStatus !== 'none' ? targetApp.constructionStatus : 'before_construction';
