@@ -380,22 +380,44 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
         window.PhotoCacheManager.invalidate(app.id).catch(() => {});
       }
     } else if (existingPhotos.length > 0 && (expectedCount === 0 || existingPhotos.length >= expectedCount)) {
-      app.photos = existingPhotos;
-      app.photosCount = existingPhotos.length;
-      app.fileData = existingPhotos[0];
-      return app;
+      let needConstPhotos = Boolean(options && options.needConstructionPhotos);
+      if (!needConstPhotos && app.memo) {
+        try {
+          const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
+          if (Number(m.constPhotoCount) > 0 && (!app.constructionPhotos || app.constructionPhotos.length === 0)) {
+            needConstPhotos = true;
+          }
+        } catch(e) {}
+      }
+      if (!needConstPhotos) {
+        app.photos = existingPhotos;
+        app.photosCount = existingPhotos.length;
+        app.fileData = existingPhotos[0];
+        return app;
+      }
     }
 
     // 2. 브라우저 영구 CacheStorage 확인 (수파베이스 호출 0회, 0 Byte 초고속 로드)
     try {
       const cached = await PhotoCacheManager.get(app.id, expectedCount);
       if (cached && Array.isArray(cached.photos) && cached.photos.length > 0 && (expectedCount === 0 || cached.photos.length >= expectedCount)) {
-        app.photos = cached.photos;
-        app.photosCount = cached.photos.length;
-        app.fileData = cached.fileData || cached.photos[0];
-        if (cached.constructionPhotos) app.constructionPhotos = cached.constructionPhotos;
-        if (cached.invoicePhotos) app.invoicePhotos = cached.invoicePhotos;
-        return app;
+        let needConstPhotos = Boolean(options && options.needConstructionPhotos);
+        if (!needConstPhotos && app.memo) {
+          try {
+            const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
+            if (Number(m.constPhotoCount) > 0 && (!cached.constructionPhotos || cached.constructionPhotos.length === 0)) {
+              needConstPhotos = true;
+            }
+          } catch(e) {}
+        }
+        if (!needConstPhotos || (cached.constructionPhotos && cached.constructionPhotos.length > 0)) {
+          app.photos = cached.photos;
+          app.photosCount = cached.photos.length;
+          app.fileData = cached.fileData || cached.photos[0];
+          if (cached.constructionPhotos) app.constructionPhotos = cached.constructionPhotos;
+          if (cached.invoicePhotos) app.invoicePhotos = cached.invoicePhotos;
+          return app;
+        }
       }
     } catch (eCacheGet) {}
   }
@@ -494,7 +516,7 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
 
         // 브라우저 영구 CacheStorage에 저장하여 차후 수파베이스 호출 0회 보장
         try {
-          if (photos.length > 0) {
+          if (photos.length > 0 || (app.constructionPhotos && app.constructionPhotos.length > 0)) {
             await PhotoCacheManager.set(app.id, {
               photos: app.photos,
               fileData: app.fileData,

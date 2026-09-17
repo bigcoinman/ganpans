@@ -3054,44 +3054,116 @@
 
   // --- 시공 후 사진 증빙 확인 & 관리 모달 (PC웹 & 모바일 공용 & 온디맨드 단일 조회 지원) ---
   window.viewConstructionPhotosModal = async function (id) {
-    // 1) 온디맨드로 Supabase에서 최신 사진 단일 로드 (로컬에 없거나 적으면 서버에서 1건만 즉시 가져옴)
-    if (typeof window.ensureApplicationPhotosLoaded === 'function') {
-      try {
-        await window.ensureApplicationPhotosLoaded(id);
-      } catch (eEnsure) {
-        console.warn('ensureApplicationPhotosLoaded error in viewConstructionPhotosModal:', eEnsure);
-      }
-    }
+    let targetStoreName = '';
+    let targetConstName = '';
 
+    // 1) 로컬 데이터 우선 확인
     const jobs = (window.DataStore && typeof window.DataStore.getConstructionJobs === 'function')
       ? window.DataStore.getConstructionJobs()
       : [];
     let job = jobs.find(j => String(j.id) === String(id));
-    if (!job) {
-      const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
-        ? window.DataStore.getApplications()
-        : (JSON.parse(localStorage.getItem('applications')) || []);
-      const app = apps.find(a => String(a.id) === String(id));
-      if (app) {
-        job = {
-          id: app.id,
-          storeName: app.storeName || app.shopName || '-',
-          assignedConstructorName: app.assignedConstructorName || '시공업체',
-          constructionPhotos: app.constructionPhotos || []
-        };
-      }
+    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+      ? window.DataStore.getApplications()
+      : (JSON.parse(localStorage.getItem('applications')) || []);
+    let app = apps.find(a => String(a.id) === String(id));
+
+    if (job) {
+      targetStoreName = job.storeName || '';
+      targetConstName = job.assignedConstructorName || '';
+    } else if (app) {
+      targetStoreName = app.storeName || app.shopName || '';
+      targetConstName = app.assignedConstructorName || '';
     }
 
-    let cPhotos = (job && Array.isArray(job.constructionPhotos)) ? job.constructionPhotos : [];
+    let cPhotos = (job && Array.isArray(job.constructionPhotos) && job.constructionPhotos.length > 0)
+      ? job.constructionPhotos
+      : (app && Array.isArray(app.constructionPhotos) && app.constructionPhotos.length > 0 ? app.constructionPhotos : []);
 
-    // 만약 여전히 없으면 로컬 applications 재확인
+    // 2) 로컬에 시공 후 사진이 없으면 Supabase 클라우드에서 해당 건의 최신 construction_photos를 직접 온디맨드 단일 조회
     if (cPhotos.length === 0) {
-      const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
-        ? window.DataStore.getApplications()
-        : (JSON.parse(localStorage.getItem('applications')) || []);
-      const app = apps.find(a => String(a.id) === String(id));
-      if (app && Array.isArray(app.constructionPhotos) && app.constructionPhotos.length > 0) {
-        cPhotos = app.constructionPhotos;
+      try {
+        let remoteRow = null;
+        if (window.supabaseClient) {
+          const { data, error } = await window.supabaseClient
+            .from('applications')
+            .select('id, store_name, assigned_constructor_name, construction_photos, memo')
+            .eq('id', String(id))
+            .maybeSingle();
+          if (!error && data) remoteRow = data;
+        }
+
+        // supabaseClient 미설정 또는 실패 시 REST API 직접 fetch 폴백
+        if (!remoteRow && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
+          const resp = await fetch(`${SUPABASE_URL}/rest/v1/applications?select=id,store_name,assigned_constructor_name,construction_photos,memo&id=eq.${encodeURIComponent(id)}`, {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (resp.ok) {
+            const arr = await resp.json();
+            if (arr && arr.length > 0) remoteRow = arr[0];
+          }
+        }
+
+        if (remoteRow) {
+          if (!targetStoreName) targetStoreName = remoteRow.store_name || '';
+          if (!targetConstName) targetConstName = remoteRow.assigned_constructor_name || '';
+          if (Array.isArray(remoteRow.construction_photos) && remoteRow.construction_photos.length > 0) {
+            cPhotos = remoteRow.construction_photos;
+          }
+          if (cPhotos.length === 0 && remoteRow.memo) {
+            try {
+              const m = typeof remoteRow.memo === 'string' ? JSON.parse(remoteRow.memo) : remoteRow.memo;
+              if (Array.isArray(m.constructionPhotos) && m.constructionPhotos.length > 0) {
+                cPhotos = m.constructionPhotos;
+              }
+            } catch (eM) {}
+          }
+
+          // 로컬 스토어 캐시 갱신 (다음 클릭 시 0초 즉시 로드)
+          if (cPhotos.length > 0) {
+            apps = apps.map(a => {
+              if (String(a.id) === String(id)) {
+                return { ...a, constructionPhotos: cPhotos };
+              }
+              return a;
+            });
+            if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+              window.DataStore.saveApplications(apps);
+            } else {
+              localStorage.setItem('applications', JSON.stringify(apps));
+            }
+
+            let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+              ? window.DataStore.getUsers()
+              : (JSON.parse(localStorage.getItem('users')) || []);
+            let userChanged = false;
+            curUsers = curUsers.map(u => {
+              if (u.items && Array.isArray(u.items)) {
+                const newItems = u.items.map(it => {
+                  if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
+                    userChanged = true;
+                    return { ...it, constructionPhotos: cPhotos };
+                  }
+                  return it;
+                });
+                return { ...u, items: newItems };
+              }
+              return u;
+            });
+            if (userChanged) {
+              if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+                window.DataStore.saveUsers(curUsers);
+              } else {
+                localStorage.setItem('users', JSON.stringify(curUsers));
+              }
+            }
+          }
+        }
+      } catch (eFetchDirect) {
+        console.warn('[viewConstructionPhotosModal] direct fetch error:', eFetchDirect);
       }
     }
 
@@ -3121,8 +3193,8 @@
       </div>
     `).join('');
 
-    const safeStoreName = (typeof escapeHtml === 'function' ? escapeHtml((job && job.storeName) || '') : ((job && job.storeName) || ''));
-    const safeConstName = (typeof escapeHtml === 'function' ? escapeHtml((job && job.assignedConstructorName) || '') : ((job && job.assignedConstructorName) || ''));
+    const safeStoreName = (typeof escapeHtml === 'function' ? escapeHtml(targetStoreName || (job && job.storeName) || '') : (targetStoreName || (job && job.storeName) || ''));
+    const safeConstName = (typeof escapeHtml === 'function' ? escapeHtml(targetConstName || (job && job.assignedConstructorName) || '시공업체') : (targetConstName || (job && job.assignedConstructorName) || '시공업체'));
 
     modal.innerHTML = `
       <div style="background: white; border-radius: 14px; padding: 22px; max-width: 780px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
