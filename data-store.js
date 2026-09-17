@@ -90,7 +90,7 @@
         }
         if (user && user.id) {
           const freshUsers = this.getUsers();
-          const fresh = freshUsers.find(u => String(u.id) === String(user.id));
+          const fresh = freshUsers.find(u => String(u.id).toLowerCase() === String(user.id).toLowerCase());
           if (fresh) {
             user = { ...user, ...fresh };
           }

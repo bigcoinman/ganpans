@@ -2013,7 +2013,7 @@ function initAuthAndDashboard() {
 
   let users = JSON.parse(localStorage.getItem('users')) || [];
 
-  if (users && !users.some(u => u.id === 'admin')) {
+  if (users && !users.some(u => String(u.id).toLowerCase() === 'admin')) {
     users.push({
       id: 'admin',
       pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',

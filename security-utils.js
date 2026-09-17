@@ -2122,8 +2122,13 @@ window.SupabaseSync = {
           }
         });
 
-        // 최고관리자(admin) 계정만 필수 존재 보장 (다른 데모 계정은 사용자가 삭제 시 절대 강제 부활/재생성 금지)
-        const adminUser = {
+        // 최고관리자(admin) 계정 필수 존재 보장 (기존 수정된 개인정보 100% 보존 승계)
+        const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+        const existingLocalAdmin = localUsers.find(u => String(u.id).toLowerCase() === 'admin');
+        const adminUser = existingLocalAdmin ? {
+          ...existingLocalAdmin,
+          role: 'admin'
+        } : {
           id: 'admin',
           pw: '5c06eb3d5a05a19f49476d694ca81a36344660e9d5b98e3d6a6630f31c2422e7',
           name: '최고관리자',
@@ -2139,6 +2144,18 @@ window.SupabaseSync = {
         if (!freshUsers.some(u => String(u.id).toLowerCase() === 'admin')) {
           freshUsers.unshift(adminUser);
           this.upsertUser(adminUser).catch(() => {});
+        } else {
+          // freshUsers에 admin이 이미 존재하는 경우, 로컬에서 수정된 관리자 정보가 있으면 승계 후 Supabase 동기화
+          const freshAdminIdx = freshUsers.findIndex(u => String(u.id).toLowerCase() === 'admin');
+          if (freshAdminIdx !== -1 && existingLocalAdmin) {
+            if (existingLocalAdmin.phone && existingLocalAdmin.phone !== '010-0000-0000' && freshUsers[freshAdminIdx].phone === '010-0000-0000') {
+              freshUsers[freshAdminIdx].phone = existingLocalAdmin.phone;
+              freshUsers[freshAdminIdx].name = existingLocalAdmin.name || freshUsers[freshAdminIdx].name;
+              freshUsers[freshAdminIdx].email = existingLocalAdmin.email !== undefined ? existingLocalAdmin.email : freshUsers[freshAdminIdx].email;
+              freshUsers[freshAdminIdx].address = existingLocalAdmin.address !== undefined ? existingLocalAdmin.address : freshUsers[freshAdminIdx].address;
+              this.upsertUser(freshUsers[freshAdminIdx]).catch(() => {});
+            }
+          }
         }
 
         const newUsersStr = JSON.stringify(freshUsers);
@@ -2795,7 +2812,30 @@ if (typeof window !== 'undefined') {
       }
     }
 
-    // 시스템 기본 계정(robinhood, bizuser, bugsman2026, constuser) 및 로컬 캐시 검증
+    // A. 로컬 캐시(DataStore / localStorage)에서 사용자 최우선 정밀 검증 (개인정보 변경 내역 100% 보존)
+    if (!user) {
+      const localUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+        ? window.DataStore.getUsers()
+        : (JSON.parse(localStorage.getItem('users')) || []);
+      const localUser = localUsers.find(u => {
+        const uId = String(u.id || '').toLowerCase();
+        const uPhoneDigits = String(u.phone || '').replace(/[^0-9]/g, '');
+        const uIdDigits = uId.replace(/[^0-9]/g, '');
+        const isMatchUser = (uId === idValLower) ||
+          (cleanDigits && uId === cleanDigits.toLowerCase()) ||
+          (cleanDigits && uPhoneDigits === cleanDigits) ||
+          (cleanDigits && uIdDigits === cleanDigits);
+        const isDemoPw = (idValLower === 'robinhood' || idValLower === 'bizuser' || idValLower === 'bugsman2026') &&
+          (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'bugs1234!' || pwVal === idValLower) ||
+          (idValLower === 'constuser') && (pwVal === 'const1234!' || pwVal === 'const1234' || pwVal === '1234' || pwVal === 'constuser');
+        return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal || isDemoPw);
+      });
+      if (localUser) {
+        user = typeof sanitizeUser === 'function' ? sanitizeUser(localUser) : localUser;
+      }
+    }
+
+    // B. 최초 진입 데모 계정 초기화 (DB 및 로컬스토리지 모두에 전혀 존재하지 않을 때만 1회 안전 생성)
     if (!user) {
       if (idValLower === 'robinhood' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'robinhood')) {
         user = {
@@ -2860,23 +2900,6 @@ if (typeof window !== 'undefined') {
           items: []
         };
         if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
-      }
-    }
-
-    if (!user) {
-      const localUsers = JSON.parse(localStorage.getItem('users')) || [];
-      const localUser = localUsers.find(u => {
-        const uId = String(u.id || '').toLowerCase();
-        const uPhoneDigits = String(u.phone || '').replace(/[^0-9]/g, '');
-        const uIdDigits = uId.replace(/[^0-9]/g, '');
-        const isMatchUser = (uId === idVal.toLowerCase()) ||
-          (cleanDigits && uId === cleanDigits.toLowerCase()) ||
-          (cleanDigits && uPhoneDigits === cleanDigits) ||
-          (cleanDigits && uIdDigits === cleanDigits);
-        return isMatchUser && (u.pw === hashedPassword || u.pw === pwVal);
-      });
-      if (localUser) {
-        user = typeof sanitizeUser === 'function' ? sanitizeUser(localUser) : localUser;
       }
     }
 

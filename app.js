@@ -5878,26 +5878,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (newPw !== newPwConf) { alert('새 비밀번호가 일치하지 않습니다.'); return; }
             }
 
-            // users 배열에서 찾아 수정
+            // users 배열에서 찾아 수정 (DataStore SSOT)
             const users = (window.DataStore && typeof window.DataStore.getUsers === 'function')
                 ? window.DataStore.getUsers()
                 : (JSON.parse(localStorage.getItem('users')) || []);
-            const idx = users.findIndex(u => u.id === user.id);
+            const idx = users.findIndex(u => String(u.id).toLowerCase() === String(user.id).toLowerCase());
 
             if (idx !== -1) {
                 if (nameVal) users[idx].name = nameVal;
-                if (emailVal) users[idx].email = emailVal;
+                users[idx].email = emailVal; // 빈 문자열 삭제 허용
                 if (phoneVal) users[idx].phone = phoneVal;
-                if (addressVal !== undefined) users[idx].address = addressVal;
+                users[idx].address = addressVal; // 빈 문자열 삭제 허용
                 if (newPw) users[idx].pw = sha256(newPw);
+
+                const updatedUser = { ...users[idx] };
+
                 if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
                     window.DataStore.saveUsers(users);
                 } else {
-                    (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+                    localStorage.setItem('users', JSON.stringify(users));
                 }
 
                 // activeUser 세션 갱신
-                const updatedUser = users[idx];
                 if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
                     window.DataStore.setActiveUser(updatedUser);
                 } else {
@@ -5909,25 +5911,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? window.DataStore.getActiveUser()
                     : getActiveUser();
 
-                // Supabase Sync (주소 및 모든 변경 필드 포함)
-                if (window.supabaseClient) {
+                // Supabase DB 클라우드 영구 저장 (upsertUser 기반 - 신규/기존 회원 100% 안전 보장)
+                if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
+                    window.SupabaseSync.upsertUser(updatedUser).catch(err => {
+                        console.warn('[App] Supabase upsertUser profile err:', err);
+                    });
+                } else if (window.supabaseClient) {
                     const updatePayload = {
-                        name: nameVal || users[idx].name,
-                        email: emailVal !== undefined ? emailVal : users[idx].email,
-                        phone: phoneVal || users[idx].phone,
-                        address: addressVal !== undefined ? addressVal : (users[idx].address || '')
+                        id: updatedUser.id,
+                        name: updatedUser.name,
+                        email: updatedUser.email || '',
+                        phone: updatedUser.phone || '',
+                        address: updatedUser.address || ''
                     };
                     if (newPw) {
                         updatePayload.password_hash = sha256(newPw);
                     }
-                    window.supabaseClient.from('users').update(updatePayload).eq('id', user.id).then(({ error }) => {
-                        if (error) {
-                            console.error('Supabase Profile Update Error:', error.message);
-                        } else {
-                            if (window.SupabaseSync && typeof window.SupabaseSync.syncAllData === 'function') {
-                                window.SupabaseSync.syncAllData();
-                            }
-                        }
+                    window.supabaseClient.from('users').upsert([updatePayload], { onConflict: 'id' }).then(({ error }) => {
+                        if (error) console.error('Supabase Profile Upsert Error:', error.message);
                     });
                 }
             }
@@ -5938,6 +5939,9 @@ document.addEventListener('DOMContentLoaded', () => {
             updateHeaderAuthButton();
             if (typeof handleSessionRefresh === 'function') {
                 handleSessionRefresh();
+            }
+            if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+                window.DataStore.notifyAll();
             }
         });
     }
