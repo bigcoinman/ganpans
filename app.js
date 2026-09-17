@@ -796,6 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             btnConst.style.opacity = '0.7';
                             btnConst.style.pointerEvents = 'none';
                         }
+                    } else {
                         if (btnConv) {
                             btnConv.innerHTML = '<i class="fa-solid fa-arrows-spin"></i> 영업자 회원으로 전환 신청';
                             btnConv.style.opacity = '1';
