@@ -2638,12 +2638,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.exportAllApplicationsToExcel = exportAllApplicationsToExcel;
 
     // --- Admin Dashboard ---
-    let adminActiveTab = 'requests';
+    let adminActiveTab = 'users';
     window.switchAdminTab = function (tabName) {
         adminActiveTab = tabName;
         const btns = document.querySelectorAll('.admin-tab-btn-mob');
         btns.forEach(btn => {
-            if (btn.getAttribute('onclick').includes(tabName)) {
+            if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabName)) {
                 btn.classList.add('active');
             } else {
                 btn.classList.remove('active');
@@ -2670,62 +2670,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderAdminDashboardMob(true);
     };
-
-    // --- Supabase 실시간 양방향 데이터 동기화 리스너 (모바일) ---
-    window.isInteractingWithForm = false;
-    window.addEventListener('supabase-data-synced', (e) => {
-        users = JSON.parse(localStorage.getItem('users')) || [];
-        applications = JSON.parse(localStorage.getItem('applications')) || [];
-        activeUser = getActiveUser() || null;
-        updateDrawerProfile();
-        updateHeaderAuthButton();
-        if (typeof window.updateReferrerField === 'function') {
-            window.updateReferrerField();
-        }
-
-        // 사용자가 드롭다운(SELECT)이나 텍스트입력(INPUT)을 조작 중일 때는 전체 DOM 재생성을 스킵하여 깜빡임/닫힘 완벽 방지
-        const activeEl = document.activeElement;
-        const isFormActive = window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA'));
-        if (isFormActive) {
-            return;
-        }
-
-        renderStatusTab();
-
-        // 역할별 모바일 대시보드 화면 실시간 즉시 갱신
-        if (activeUser && activeUser.role === 'admin') {
-            renderAdminDashboardMob(true);
-        } else if (activeUser && activeUser.role === 'business') {
-            if (typeof renderBusinessDashboardMob === 'function') renderBusinessDashboardMob();
-            if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
-            if (typeof renderBizRegisteredItemsMob === 'function') renderBizRegisteredItemsMob();
-        } else if (activeUser && activeUser.role === 'constructor') {
-            if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
-        }
-    });
-
-    // 다른 탭/창에서 데이터 변경 시 모바일 화면 0초 즉각 갱신
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'applications' || e.key === 'users' || e.key === 'inquiries' || e.key === 'ganpan_cross_tab_sync') {
-            users = JSON.parse(localStorage.getItem('users')) || [];
-            applications = JSON.parse(localStorage.getItem('applications')) || [];
-            activeUser = getActiveUser() || null;
-            if (activeUser && activeUser.role === 'admin') {
-                renderAdminDashboardMob(true);
-            } else if (activeUser && activeUser.role === 'business') {
-                if (typeof renderBusinessDashboardMob === 'function') renderBusinessDashboardMob();
-                if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
-                if (typeof renderBizRegisteredItemsMob === 'function') renderBizRegisteredItemsMob();
-            } else if (activeUser && activeUser.role === 'constructor') {
-                if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
-            } else if (activeUser) {
-                if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
-            }
-            if (typeof renderStatusTab === 'function') renderStatusTab();
-            if (typeof updateDrawerProfile === 'function') updateDrawerProfile();
-            if (typeof updateHeaderAuthButton === 'function') updateHeaderAuthButton();
-        }
-    });
 
     async function syncAdminDataFromSupabaseMob() {
         if (window.SupabaseSync) {
@@ -6187,8 +6131,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 실시간 6대 화면 0초 동시 연동 리스너 (모바일 앱 대시보드 자동 리렌더링) ---
     const handleRealtimeSyncMob = () => {
         const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
-        const isFormActive = Boolean(window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'submit') || activeEl.tagName === 'TEXTAREA')));
-        if (isFormActive) return; // 폼 조작 중에는 DOM 보호
+        const isUserTyping = Boolean(window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && activeEl.value));
+        if (isUserTyping) return; // 텍스트 입력 중일 때만 일시 보호, 그 외에는 0초 즉시 리렌더링
         if (typeof renderStatusTab === 'function') renderStatusTab();
         if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
         if (typeof renderBizRegisteredItemsMob === 'function') renderBizRegisteredItemsMob();
