@@ -3520,7 +3520,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   <i class="fa-solid fa-camera" style="font-size: 0.76rem;"></i> 사진 등록
                 </button>
                 ${hasPhoto ? `
-                  <button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.74rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; width: 92px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="${finalCount > 1 ? `현장사진 ${finalCount}장 개별 다운로드` : '현장사진 다운로드'}">
+                  <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${finalCount} }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; font-size: 0.74rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; width: 92px; height: 28px; box-sizing: border-box; transition: all 0.2s ease;" title="${finalCount > 1 ? `현장사진 ${finalCount}장 개별 다운로드` : '현장사진 다운로드'}">
                     <i class="fa-solid ${finalCount > 1 ? 'fa-images' : 'fa-download'}" style="font-size: 0.72rem; color: #2563eb;"></i> ${finalCount > 1 ? `사진 (${finalCount}장)` : '다운로드'}
                   </button>
                 ` : `
@@ -4593,7 +4593,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!count && hasPhoto) count = 1;
 
             const downloadBtn = hasPhoto
-              ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}'); return false;" style="padding: 4px 8px; font-size: 0.74rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; width: 100%; box-sizing: border-box; text-align: center; box-shadow: 0 1px 2px rgba(37,99,235,0.1); transition: background 0.15s;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}"><i class="fa-solid ${count > 1 ? 'fa-images' : 'fa-download'}" style="color: #2563eb;"></i> ${count > 1 ? `사진 (${count}장)` : '다운로드'}</button>`
+              ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${count} }); return false;" style="padding: 4px 8px; font-size: 0.74rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; width: 100%; box-sizing: border-box; text-align: center; box-shadow: 0 1px 2px rgba(37,99,235,0.1); transition: background 0.15s;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}"><i class="fa-solid ${count > 1 ? 'fa-images' : 'fa-download'}" style="color: #2563eb;"></i> ${count > 1 ? `사진 (${count}장)` : '다운로드'}</button>`
               : `<button type="button" disabled style="padding: 4px 8px; font-size: 0.74rem; background: #e2e8f0; color: #94a3b8; border: 1px solid #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; box-sizing: border-box; cursor: not-allowed;"><i class="fa-solid fa-download"></i> 다운로드</button>`;
 
             return `
@@ -4806,7 +4806,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
             return pCount > 0 ? `
               <div style="margin-top: 4px;">
-                <button type="button" onclick="window.downloadApplicationPhotos('${item.id}'); return false;" style="padding: 3px 8px; font-size: 0.72rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="현장사진 확인 및 다운로드">
+                <button type="button" onclick="window.downloadApplicationPhotos('${item.id}', { expectedCount: ${pCount} }); return false;" style="padding: 3px 8px; font-size: 0.72rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="현장사진 확인 및 다운로드">
                   <i class="fa-solid fa-camera" style="color: #2563eb;"></i> 현장사진 (${pCount}장)
                 </button>
               </div>
@@ -5301,7 +5301,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-top: 2px;"><i class="fa-solid fa-phone"></i> ${escapeHtml(job.ownerPhone)}</div>
           <div style="margin-top: 4px;">
             ${pCount > 0 ? `
-              <button type="button" onclick="window.downloadApplicationPhotos('${job.id}'); return false;" style="padding: 3px 8px; font-size: 0.72rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="점주 현장사진 확인 및 다운로드">
+              <button type="button" onclick="window.downloadApplicationPhotos('${job.id}', { expectedCount: ${pCount} }); return false;" style="padding: 3px 8px; font-size: 0.72rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="점주 현장사진 확인 및 다운로드">
                 <i class="fa-solid fa-camera" style="color: #2563eb;"></i> 현장사진 (${pCount}장)
               </button>
             ` : `

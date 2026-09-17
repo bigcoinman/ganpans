@@ -351,25 +351,35 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
   const forceReload = Boolean(options && options.forceReload);
 
   // 최신 기대 사진 장수 계산 (메타데이터 기준)
-  let expectedCount = 0;
-  if (options && typeof options.expectedCount === 'number') {
-    expectedCount = options.expectedCount;
-  } else if (typeof app.photosCount === 'number') {
-    expectedCount = app.photosCount;
-  } else if (typeof app.photoCount === 'number') {
-    expectedCount = app.photoCount;
-  } else if (app.memo) {
+  let memoCount = 0;
+  if (app.memo) {
     try {
       const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
-      if (m && typeof m.photoCount === 'number') expectedCount = m.photoCount;
+      if (m && typeof m.photoCount === 'number') memoCount = Number(m.photoCount);
+      else if (m && typeof m.photo_count === 'number') memoCount = Number(m.photo_count);
     } catch (eM) {}
   }
+  let expectedCount = Math.max(
+    (options && typeof options.expectedCount === 'number') ? options.expectedCount : 0,
+    Number(app.photosCount) || 0,
+    Number(app.photos_count) || 0,
+    Number(app.photoCount) || 0,
+    memoCount
+  );
 
   // forceReload가 아닌 경우에만 기존 메모리/캐시 확인
   if (!forceReload) {
     // 1. 이미 메모리나 객체 내에 유효한 사진 데이터가 로드되어 있는 경우
     let existingPhotos = extractValidPhotos(app);
-    if (existingPhotos.length > 0 && (expectedCount === 0 || existingPhotos.length >= expectedCount)) {
+    // 만약 기대 장수가 있고, 기존 로드된 사진이 기대 장수보다 적다면(stale) 기존 사진을 폐기하고 실서버 재조회!
+    if (expectedCount > 0 && existingPhotos.length < expectedCount) {
+      console.log(`[PhotoCache] 🔄 사진 개수 불일치 감지 (${app.id}): 로컬=${existingPhotos.length}장 < 기대=${expectedCount}장 -> 실서버 DB 최신 원본 재조회`);
+      existingPhotos = [];
+      app.photos = [];
+      if (window.PhotoCacheManager) {
+        window.PhotoCacheManager.invalidate(app.id).catch(() => {});
+      }
+    } else if (existingPhotos.length > 0 && (expectedCount === 0 || existingPhotos.length >= expectedCount)) {
       app.photos = existingPhotos;
       app.photosCount = existingPhotos.length;
       app.fileData = existingPhotos[0];
@@ -2276,8 +2286,25 @@ window.SupabaseSync = {
                 if (localApp.assignedConstructorName !== undefined) appObj.assignedConstructorName = localApp.assignedConstructorName;
                 appObj.updatedAt = new Date().toISOString();
               }
-              // 로컬 캐시된 고용량 사진이 있으면 유실되지 않도록 보존
-              if (localApp.photos && localApp.photos.length > 0 && (!appObj.photos || appObj.photos.length === 0)) {
+              // 로컬 캐시된 고용량 사진 보존 vs 실서버 최신 변경 감지
+              const serverPhotoCount = (() => {
+                try {
+                  const m = typeof sa.memo === 'string' ? JSON.parse(sa.memo) : (sa.memo || {});
+                  return Number(m.photoCount || m.photo_count) || 0;
+                } catch (e) { return 0; }
+              })();
+              const localPhotosCount = Array.isArray(localApp.photos) ? localApp.photos.length : 0;
+
+              // 만약 서버의 photoCount가 로컬 사진 장수보다 많다면(상대방이 새로 등록/추가한 경우),
+              // 구형 로컬 캐시를 폐기하고 캐시스토리지를 무효화하여 온디맨드 최신 조회를 유도
+              if (serverPhotoCount > localPhotosCount) {
+                appObj.photos = [];
+                appObj.photosCount = serverPhotoCount;
+                appObj.hasPhoto = serverPhotoCount > 0;
+                if (window.PhotoCacheManager) {
+                  window.PhotoCacheManager.invalidate(appObj.id).catch(() => {});
+                }
+              } else if (localApp.photos && localApp.photos.length > 0 && (!appObj.photos || appObj.photos.length === 0)) {
                 appObj.photos = localApp.photos;
                 appObj.fileData = localApp.fileData || localApp.photos[0];
                 appObj.fileName = localApp.fileName || appObj.fileName;
@@ -2286,7 +2313,7 @@ window.SupabaseSync = {
                 Number(localApp.photosCount) || 0,
                 Number(localApp.photos_count) || 0,
                 (Array.isArray(localApp.photos) ? localApp.photos.length : 0),
-                (() => { try { const m = JSON.parse(localApp.memo || '{}'); return Number(m.photoCount) || 0; } catch(e) { return 0; } })()
+                serverPhotoCount
               );
               if (existingLocalCount > (Number(appObj.photosCount) || 0)) {
                 appObj.photosCount = existingLocalCount;
