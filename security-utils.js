@@ -2835,71 +2835,78 @@ if (typeof window !== 'undefined') {
       }
     }
 
-    // B. 최초 진입 데모 계정 초기화 (DB 및 로컬스토리지 모두에 전혀 존재하지 않을 때만 1회 안전 생성)
+    // B. 최초 진입 데모 계정 초기화 (DB 및 로컬스토리지 모두에 계정이 아예 없을 때만 안전 1회 생성)
     if (!user) {
-      if (idValLower === 'robinhood' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'robinhood')) {
-        user = {
-          id: 'robinhood',
-          pw: '8a093c7195aba1fe3777e36d64e199771f7028e0462068301e95c932a31c6ac8',
-          name: '김로빈',
-          address: '경기도 수원시 권선구 효원로 266',
-          email: '',
-          phone: '010-9084-3778',
-          role: 'business',
-          isSNS: false,
-          bizCode: 'B-260901',
-          conversionStatus: 'approved',
-          items: []
-        };
-        if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
-      } else if (idValLower === 'bizuser' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === 'bizuser' || pwVal === '1234')) {
-        user = {
-          id: 'bizuser',
-          pw: '8a093c7195aba1fe3777e36d64e199771f7028e0462068301e95c932a31c6ac8',
-          name: '김영업',
-          address: '경기도 성남시 분당구 판교역로 235',
-          email: 'kim@naver.com',
-          phone: '010-9876-5432',
-          role: 'business',
-          isSNS: false,
-          bizCode: 'B-260712',
-          conversionStatus: 'approved',
-          items: []
-        };
-        if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
-      } else if (idValLower === 'bugsman2026' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'bugs1234!' || pwVal === 'bugsman2026')) {
-        user = {
-          id: 'bugsman2026',
-          pw: '8a093c7195aba1fe3777e36d64e199771f7028e0462068301e95c932a31c6ac8',
-          name: '김나완',
-          address: '서울특별시 송파구 올림픽로 300',
-          email: 'bugsman@naver.com',
-          phone: '010-9999-8888',
-          role: 'business',
-          isSNS: false,
-          bizCode: 'B-260901',
-          conversionStatus: 'approved',
-          items: []
-        };
-        if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
-      } else if (idValLower === 'constuser' && (pwVal === 'const1234!' || pwVal === 'const1234' || pwVal === 'constuser' || pwVal === '1234')) {
-        user = {
-          id: 'constuser',
-          pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
-          name: '박시공',
-          address: '인천광역시 부평구 부평대로 50',
-          email: 'const@naver.com',
-          phone: '010-3333-4444',
-          role: 'constructor',
-          isSNS: false,
-          bizCode: null,
-          constCode: 'C-260801',
-          conversionStatus: 'approved',
-          pendingBusinessName: '(주)우주간판시공',
-          pendingLicenseNumber: '123-45-67890',
-          items: []
-        };
-        if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
+      const localUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+        ? window.DataStore.getUsers()
+        : (JSON.parse(localStorage.getItem('users')) || []);
+      const userExistsLocally = localUsers.some(u => String(u.id).toLowerCase() === idValLower);
+
+      if (!userExistsLocally) {
+        if (idValLower === 'robinhood' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'robinhood')) {
+          user = {
+            id: 'robinhood',
+            pw: '8a093c7195aba1fe3777e36d64e199771f7028e0462068301e95c932a31c6ac8',
+            name: '김로빈',
+            address: '경기도 수원시 권선구 효원로 266',
+            email: '',
+            phone: '010-9084-3778',
+            role: 'business',
+            isSNS: false,
+            bizCode: 'B-260901',
+            conversionStatus: 'approved',
+            items: []
+          };
+          if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
+        } else if (idValLower === 'bizuser' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === 'bizuser' || pwVal === '1234')) {
+          user = {
+            id: 'bizuser',
+            pw: '8a093c7195aba1fe3777e36d64e199771f7028e0462068301e95c932a31c6ac8',
+            name: '김영업',
+            address: '경기도 성남시 분당구 판교역로 235',
+            email: 'kim@naver.com',
+            phone: '010-9876-5432',
+            role: 'business',
+            isSNS: false,
+            bizCode: 'B-260712',
+            conversionStatus: 'approved',
+            items: []
+          };
+          if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
+        } else if (idValLower === 'bugsman2026' && (pwVal === 'biz1234!' || pwVal === 'biz1234' || pwVal === '1234' || pwVal === 'bugs1234!' || pwVal === 'bugsman2026')) {
+          user = {
+            id: 'bugsman2026',
+            pw: '8a093c7195aba1fe3777e36d64e199771f7028e0462068301e95c932a31c6ac8',
+            name: '김나완',
+            address: '서울특별시 송파구 올림픽로 300',
+            email: 'bugsman@naver.com',
+            phone: '010-9999-8888',
+            role: 'business',
+            isSNS: false,
+            bizCode: 'B-260901',
+            conversionStatus: 'approved',
+            items: []
+          };
+          if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
+        } else if (idValLower === 'constuser' && (pwVal === 'const1234!' || pwVal === 'const1234' || pwVal === 'constuser' || pwVal === '1234')) {
+          user = {
+            id: 'constuser',
+            pw: 'ba92d00dc62e58f05eeefc94e20846bdce6aa6490c18cf3cb72c55ea84f40756',
+            name: '박시공',
+            address: '인천광역시 부평구 부평대로 50',
+            email: 'const@naver.com',
+            phone: '010-3333-4444',
+            role: 'constructor',
+            isSNS: false,
+            bizCode: null,
+            constCode: 'C-260801',
+            conversionStatus: 'approved',
+            pendingBusinessName: '(주)우주간판시공',
+            pendingLicenseNumber: '123-45-67890',
+            items: []
+          };
+          if (window.SupabaseSync) window.SupabaseSync.upsertUser(user).catch(() => {});
+        }
       }
     }
 
