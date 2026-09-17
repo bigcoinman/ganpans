@@ -3206,8 +3206,14 @@
           <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
         </div>
         <div>${photosHtml}</div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px;">
-          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="padding: 9px 18px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.95rem; cursor: pointer;">닫기</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px; flex-wrap: wrap; gap: 8px;">
+          ${cPhotos.length < 5 ? `
+            <label style="background: #10b981; color: #ffffff; border: 1px solid #059669; padding: 7px 14px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="시공 후 사진 추가 등록 (최대 5장, 300KB 자동 압축)">
+              <i class="fa-solid fa-cloud-arrow-up"></i> 시공 후 사진 추가 등록 (${cPhotos.length}/5)
+              <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobPhotoUploadCommon('${id}', this.files); this.value='';">
+            </label>
+          ` : '<div></div>'}
+          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="padding: 8px 18px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.95rem; cursor: pointer;">닫기</button>
         </div>
       </div>
     `;

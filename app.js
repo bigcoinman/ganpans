@@ -3628,16 +3628,30 @@ document.addEventListener('DOMContentLoaded', () => {
                         Number(job.constPhotoCount) || 0,
                         memoConstCount
                     );
-                    let proofHtml = '';
+                    const uploadConstBtnMob = (pCount < 5) ? `
+                        <label style="background: #10b981; color: #ffffff; border: 1px solid #059669; padding: 4px 8px; border-radius: 4px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="시공 후 사진 등록 (최대 5장, 300KB 자동 압축)">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> 시공 후 사진등록
+                            <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobPhotoUploadCommon('${job.id}', this.files); this.value='';">
+                        </label>
+                    ` : '';
+
+                    let viewConstBtnMob = '';
                     if (pCount > 0) {
-                        proofHtml = `
+                        viewConstBtnMob = `
                             <button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="font-size: 0.76rem; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 4px 8px; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
                                 <i class="fa-solid fa-camera"></i> 시공 후 사진 (${pCount}장)
                             </button>
                         `;
                     } else {
-                        proofHtml = `<span style="font-size: 0.75rem; color: #94a3b8;">증빙 미등록</span>`;
+                        viewConstBtnMob = `<span style="font-size: 0.75rem; color: #94a3b8;">(미등록)</span>`;
                     }
+
+                    const proofHtml = `
+                        <div style="display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                            ${uploadConstBtnMob}
+                            ${viewConstBtnMob}
+                        </div>
+                    `;
 
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
