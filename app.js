@@ -6272,12 +6272,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const maskedPhone = typeof maskPhone === 'function' ? maskPhone(item.ownerPhone) : item.ownerPhone;
 
                 card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px;">
                         <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary);">
                             ${escapeHtml(item.storeName)}
-                            <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 3px 8px; border-radius: 6px; margin-left: 6px;">${escapeHtml(String(item.id))}</span>
                         </div>
                         <div>${statusBadge}</div>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 3px 8px; border-radius: 6px; display: inline-block;">${escapeHtml(String(item.id))}</span>
                     </div>
                     <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6;">
                         <div><i class="fa-solid fa-location-dot" style="width: 16px; color: var(--accent-primary);"></i> ${escapeHtml(item.storeAddress)}</div>
@@ -8952,12 +8954,14 @@ function initModalsAndSearch() {
         const maskedPhone = typeof maskPhone === 'function' ? maskPhone(item.ownerPhone) : item.ownerPhone;
 
         card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px;">
             <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary);">
               ${typeof escapeHtml === 'function' ? escapeHtml(item.storeName) : item.storeName}
-              <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 3px 8px; border-radius: 6px; margin-left: 6px;">${typeof escapeHtml === 'function' ? escapeHtml(String(item.id)) : String(item.id)}</span>
             </div>
             <div>${statusBadge}</div>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 3px 8px; border-radius: 6px; display: inline-block;">${typeof escapeHtml === 'function' ? escapeHtml(String(item.id)) : String(item.id)}</span>
           </div>
           <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6;">
             <div><i class="fa-solid fa-location-dot" style="width: 16px; color: var(--accent-primary);"></i> ${typeof escapeHtml === 'function' ? escapeHtml(item.storeAddress) : item.storeAddress}</div>
