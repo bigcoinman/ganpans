@@ -2730,10 +2730,10 @@ document.addEventListener('DOMContentLoaded', () => {
     async function syncAdminDataFromSupabaseMob() {
         if (window.SupabaseSync) {
             await window.SupabaseSync.syncAllData();
-            // 사용자가 드롭다운(SELECT)이나 텍스트입력(INPUT) 조작 중일 때는 DOM 재생성으로 인한 닫힘 방지
+            // 사용자가 검색창을 직접 입력 중일 때만 리렌더링 일시 방어, 그 외에는 0초 즉시 갱신
             const activeEl = document.activeElement;
-            const isFormActive = window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA'));
-            if (isFormActive) {
+            const isUserTypingSearch = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && activeEl.value && (activeEl.id === 'search-all-users-input-mob' || activeEl.id === 'search-apps-input-mob' || activeEl.id === 'search-items-input-mob');
+            if (isUserTypingSearch) {
                 return;
             }
             renderAdminDashboardMob(true);
@@ -2899,7 +2899,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');
         if (allUsersListMob) {
             let displayUsers = allStoreUsers.filter(u => u && u.id && u.role !== 'deleted');
-            displayUsers = typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst(displayUsers) : displayUsers;
+            const sortFn = (typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst : (typeof window !== 'undefined' && typeof window.sortUsersLatestFirst === 'function' ? window.sortUsersLatestFirst : null));
+            displayUsers = sortFn ? sortFn(displayUsers) : displayUsers;
             const searchInput = document.getElementById('search-all-users-input-mob');
             const q = searchInput && searchInput.value ? searchInput.value.trim().slice(0, 30).toLowerCase() : '';
 

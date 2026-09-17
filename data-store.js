@@ -2003,14 +2003,16 @@
         const isBizSelectActive = isFormActive && activeEl && (activeEl.classList.contains('select-receipt-status') || activeEl.classList.contains('select-progress-status') || activeEl.classList.contains('select-receipt-mob') || activeEl.classList.contains('select-progress-mob') || (activeEl.closest && (activeEl.closest('#manager-biz-tbody') || activeEl.closest('#biz-items-list-mobile') || activeEl.closest('#manager-items-list') || activeEl.closest('#manager-const-progress-tbody'))));
         const isConstInputActive = isFormActive && (window._isConstUploading || (activeEl && (activeEl.classList.contains('const-draft-input') || activeEl.classList.contains('const-photo-input') || activeEl.classList.contains('const-draft-input-mob') || activeEl.classList.contains('const-photo-input-mob') || activeEl.classList.contains('select-const-status') || activeEl.classList.contains('select-const-status-mob') || (activeEl.closest && (activeEl.closest('#constructor-jobs-table-body') || activeEl.closest('#constructor-jobs-list-mob') || activeEl.closest('#const-jobs-list-mob'))))));
 
+        const isForced = Boolean(force === 'all' || force === true);
+
         // 1. 최고관리자 신청서 목록: 관리자가 신청서 드롭다운 조작 중일 때는 DOM 파괴 방지를 위해 스킵 (이미 In-place 갱신됨)
-        if (!isAppSelectActive || force === 'all') {
+        if (!isAppSelectActive || isForced) {
           if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
           if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
         }
 
         // 2. 최고관리자 영업물건 목록: 관리자가 영업물건 드롭다운 조작 중일 때는 DOM 파괴 방지를 위해 스킵 (이미 In-place 갱신됨)
-        if (!isBizSelectActive || force === 'all') {
+        if (!isBizSelectActive || isForced) {
           if (typeof window.renderManagerPanel === 'function') window.renderManagerPanel();
           if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
         }
@@ -2024,15 +2026,16 @@
         if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
 
         // 4. 시공사 화면: 파일 선택창 조작 중이거나 업로드 중일 때는 테이블 DOM 파괴 방지를 위해 안전 스킵 (In-place로 즉시 갱신됨)
-        if (!isConstInputActive || force === 'all') {
+        if (!isConstInputActive || isForced) {
           if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
           if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
         }
 
         // 5. 기타 회원 / 문의 목록 (회원 검색 중일 때만 회원 목록 스킵, 그 외에는 0초 실시간 즉시 갱신)
         const isUserSearchActive = isFormActive && activeEl && (activeEl.id === 'search-all-users-input' || activeEl.id === 'search-all-users-input-mob' || (activeEl.closest && (activeEl.closest('#sec-container-all-users') || activeEl.closest('#admin-all-users-list-mob'))));
-        if (!isUserSearchActive || force === 'all' || force === true) {
+        if (!isUserSearchActive || isForced) {
           if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
+          if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
         }
         if (typeof window.renderInquiriesList === 'function') window.renderInquiriesList();
 
