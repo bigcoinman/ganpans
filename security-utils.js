@@ -2387,8 +2387,8 @@ window.SupabaseSync = {
               // 간판 디자인 시안 및 시안 확정 상태 로컬 보존 및 서버 memo 최신 동기화
               try {
                 const sMemo = typeof sa.memo === 'string' ? JSON.parse(sa.memo) : (sa.memo || {});
-                if (sMemo && Array.isArray(sMemo.signDraftPhotos) && sMemo.signDraftPhotos.length > 0) {
-                  appObj.signDraftPhotos = sMemo.signDraftPhotos;
+                if (sMemo && sMemo.signDraftPhotos !== undefined) {
+                  appObj.signDraftPhotos = Array.isArray(sMemo.signDraftPhotos) ? sMemo.signDraftPhotos : [];
                 }
                 if (sMemo && sMemo.draftStatus) {
                   appObj.draftStatus = sMemo.draftStatus;
@@ -2398,7 +2398,7 @@ window.SupabaseSync = {
                 }
               } catch (eMemoSync) {}
 
-              if (localApp.signDraftPhotos && localApp.signDraftPhotos.length > 0 && (!appObj.signDraftPhotos || appObj.signDraftPhotos.length === 0)) {
+              if (appObj.signDraftPhotos === undefined && localApp.signDraftPhotos && localApp.signDraftPhotos.length > 0) {
                 appObj.signDraftPhotos = localApp.signDraftPhotos;
               }
               if (localApp.draftStatus && (!appObj.draftStatus || appObj.draftStatus === 'pending')) {

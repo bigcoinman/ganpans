@@ -3971,9 +3971,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         draftBadge = `
           <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
-            <button type="button" onclick="window.viewDraftModal('${job.id}')" style="background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="디자인 시안 보기">
-              <i class="fa-solid fa-palette"></i> 시안 (${draftCount}장)
-            </button>
+            <div style="display: flex; gap: 4px; align-items: center;">
+              <button type="button" onclick="window.viewDraftModal('${job.id}')" style="background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; padding: 4px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="디자인 시안 보기 및 삭제">
+                <i class="fa-solid fa-palette"></i> 시안 (${draftCount}/5장)
+              </button>
+              ${draftCount < 5 ? `
+                <label style="background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 4px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="시안 추가 업로드 (최대 5장, 300KB 자동 압축)">
+                  <i class="fa-solid fa-plus"></i> 추가
+                  <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobDraftUploadCommon('${job.id}', this.files); this.value='';">
+                </label>
+              ` : ''}
+            </div>
             ${draftStatusHtml}
           </div>
         `;
@@ -3981,6 +3989,10 @@ document.addEventListener('DOMContentLoaded', () => {
         draftBadge = `
           <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
             <span style="color: #94a3b8; font-size: 0.75rem;"><i class="fa-solid fa-hourglass-start"></i> 시안 미등록</span>
+            <label style="background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="시안 신규 등록 (최대 5장, 300KB 자동 압축)">
+              <i class="fa-solid fa-cloud-arrow-up"></i> 시안 등록
+              <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobDraftUploadCommon('${job.id}', this.files); this.value='';">
+            </label>
           </div>
         `;
       }
@@ -5250,28 +5262,40 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         actionsHtml = `
           <div style="display: flex; flex-direction: column; gap: 8px; align-items: stretch; padding: 8px;">
-            <!-- 1. 간판 디자인 시안 업로드 (2MB 자동 압축) -->
+            <!-- 1. 간판 디자인 시안 업로드 (300KB 이하 자동 압축, 최대 5장) -->
             <div style="background: #fdf4ff; border: 1px solid #f5d0fe; padding: 6px 10px; border-radius: 6px; text-align: left;">
-              <label style="font-size: 0.72rem; font-weight: 700; color: #86198f; display: block; margin-bottom: 3px;">
-                <i class="fa-solid fa-palette"></i> 간판 디자인 시안 등록 (${draftCount}장)
-              </label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                <label style="font-size: 0.72rem; font-weight: 700; color: #86198f;">
+                  <i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftCount}/5장)
+                </label>
+                ${draftCount >= 5 ? '<span style="font-size: 0.68rem; color: #dc2626; font-weight: 700;">최대 등록됨</span>' : ''}
+              </div>
               <input type="file" class="const-draft-input" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.72rem; width: 100%;">
               ${draftCount > 0 ? `
                 <div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between;">
-                  <button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 2px 6px; font-size: 0.7rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; font-weight: 700;">
-                    <i class="fa-solid fa-eye"></i> 등록된 시안 확인 (${draftCount}장)
+                  <button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 3px 8px; font-size: 0.7rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; font-weight: 700;">
+                    <i class="fa-solid fa-eye"></i> 등록된 시안 확인 및 삭제 (${draftCount}장)
                   </button>
                 </div>
               ` : ''}
               ${draftNoticeHtml}
             </div>
 
-            <!-- 2. 시공 후 사진 업로드 (3~5컷, 2MB 자동 압축) -->
+            <!-- 2. 시공 후 사진 업로드 (300KB 이하 자동 압축, 최대 5장) -->
             <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 10px; border-radius: 6px; text-align: left;">
-              <label style="font-size: 0.72rem; font-weight: 700; color: #166534; display: block; margin-bottom: 3px;">
-                <i class="fa-solid fa-camera"></i> 시공 후 사진 등록 (${job.constructionPhotos ? job.constructionPhotos.length : 0}/5)
-              </label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                <label style="font-size: 0.72rem; font-weight: 700; color: #166534;">
+                  <i class="fa-solid fa-camera"></i> 시공 후 사진 증빙 (${job.constructionPhotos ? job.constructionPhotos.length : 0}/5)
+                </label>
+              </div>
               <input type="file" class="const-photo-input" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.72rem; width: 100%;">
+              ${(job.constructionPhotos && job.constructionPhotos.length > 0) ? `
+                <div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between;">
+                  <button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="padding: 3px 8px; font-size: 0.7rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; font-weight: 700;">
+                    <i class="fa-solid fa-eye"></i> 시공 후 사진 확인 및 삭제 (${job.constructionPhotos.length}장)
+                  </button>
+                </div>
+              ` : ''}
             </div>
             
             <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center; margin-top: 4px;">
@@ -5340,24 +5364,34 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // 디자인 시안 업로드 (2MB 자동 압축)
+    // 디자인 시안 업로드 (300KB 이하 자동 압축, 최대 5장)
     document.querySelectorAll('.const-draft-input').forEach(input => {
       input.addEventListener('change', async (e) => {
         const id = e.target.dataset.id;
         const files = Array.from(e.target.files);
         if (files.length > 0) {
-          await handleJobDraftUpload(id, files);
+          if (typeof window.handleJobDraftUploadCommon === 'function') {
+            await window.handleJobDraftUploadCommon(id, files);
+          } else {
+            await handleJobDraftUpload(id, files);
+          }
+          e.target.value = '';
         }
       });
     });
 
-    // 시공 후 사진 업로드 (2MB 자동 압축)
+    // 시공 후 사진 업로드 (300KB 이하 자동 압축, 최대 5장)
     document.querySelectorAll('.const-photo-input').forEach(input => {
       input.addEventListener('change', async (e) => {
         const id = e.target.dataset.id;
         const files = Array.from(e.target.files);
         if (files.length > 0) {
-          await handleJobPhotoUpload(id, files);
+          if (typeof window.handleJobPhotoUploadCommon === 'function') {
+            await window.handleJobPhotoUploadCommon(id, files);
+          } else {
+            await handleJobPhotoUpload(id, files);
+          }
+          e.target.value = '';
         }
       });
     });

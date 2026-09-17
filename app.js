@@ -3643,17 +3643,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         <!-- 간판 디자인 시안 확인 & 시공 후 증빙 -->
                         <div style="margin-top: 8px; padding: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; flex-direction: column; gap: 6px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
-                                <span style="font-size: 0.78rem; font-weight: 700; color: #7c3aed;"><i class="fa-solid fa-palette"></i> 디자인 시안 (${draftCount}장):</span>
-                                ${draftCount > 0 ? `
-                                    <div style="display: flex; gap: 4px; align-items: center;">
-                                        <button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 3px 8px; font-size: 0.72rem; font-weight: 700; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; border-radius: 4px; cursor: pointer;">시안 보기</button>
+                                <span style="font-size: 0.78rem; font-weight: 700; color: #7c3aed;"><i class="fa-solid fa-palette"></i> 디자인 시안 (${draftCount}/5장):</span>
+                                <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                                    ${draftCount > 0 ? `
+                                        <button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 3px 8px; font-size: 0.72rem; font-weight: 700; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; border-radius: 4px; cursor: pointer;">시안 확인 및 삭제</button>
                                         ${(job.draftStatus !== 'owner_approved' && job.draftStatus !== 'admin_approved') ? `
                                             <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved')" style="padding: 3px 6px; font-size: 0.7rem; font-weight: 700; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">직권확정</button>
                                         ` : `
                                             <span style="font-size: 0.72rem; color: #166534; font-weight: 700;">(${draftStatusText})</span>
                                         `}
-                                    </div>
-                                ` : `<span style="font-size: 0.72rem; color: #94a3b8;">시안 미등록</span>`}
+                                    ` : `<span style="font-size: 0.72rem; color: #94a3b8;">미등록</span>`}
+                                    ${draftCount < 5 ? `
+                                        <label style="background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 3px 7px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 2px;" title="시안 등록 (최대 5장, 300KB 자동 압축)">
+                                            <i class="fa-solid fa-plus"></i> ${draftCount > 0 ? '추가' : '등록'}
+                                            <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobDraftUploadCommon('${job.id}', this.files); this.value='';">
+                                        </label>
+                                    ` : ''}
+                                </div>
                             </div>
                             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
                                 <span style="font-size: 0.78rem; font-weight: 700; color: #047857;"><i class="fa-solid fa-camera"></i> 시공 후 증빙:</span>
@@ -4762,21 +4768,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (job.constructionStatus !== 'completed') {
                 uploadSectionHtml = `
                     <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px; text-align: left;">
-                        <!-- 1. 간판 디자인 시안 업로드 (2MB 자동 압축) -->
+                        <!-- 1. 간판 디자인 시안 업로드 (300KB 이하 자동 압축, 최대 5장) -->
                         <div class="phone-form-group" style="margin-bottom: 8px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 8px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <label style="font-size: 0.75rem; font-weight: 700; color: #7e22ce;"><i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftPhotos.length}장)</label>
+                                <label style="font-size: 0.75rem; font-weight: 700; color: #7e22ce;"><i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftPhotos.length}/5장)</label>
                                 ${draftStatusBadge}
                             </div>
                             <input type="file" class="const-draft-input-mob" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.7rem; width: 100%;">
-                            ${draftPhotos.length > 0 ? `<button type="button" onclick="window.viewDraftModal('${job.id}')" style="margin-top: 4px; padding: 3px 8px; font-size: 0.72rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 4px; cursor: pointer;"><i class="fa-solid fa-eye"></i> 등록된 시안 확인</button>` : ''}
+                            ${draftPhotos.length > 0 ? `<button type="button" onclick="window.viewDraftModal('${job.id}')" style="margin-top: 4px; padding: 4px 10px; font-size: 0.72rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 4px; cursor: pointer; font-weight: 700;"><i class="fa-solid fa-eye"></i> 등록된 시안 확인 및 삭제 (${draftPhotos.length}장)</button>` : ''}
                         </div>
 
-                        <!-- 2. 시공 후 사진 업로드 (2MB 자동 압축, 3~5컷) -->
+                        <!-- 2. 시공 후 사진 업로드 (300KB 이하 자동 압축, 최대 5장) -->
                         <div class="phone-form-group" style="margin-bottom: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px;">
-                            <label style="font-size: 0.75rem; font-weight: 700; color: #15803d; display: block; margin-bottom: 4px;"><i class="fa-solid fa-camera"></i> 시공 후 사진 증빙 (3~5컷, 현재 ${afterPhotos.length}장)</label>
+                            <label style="font-size: 0.75rem; font-weight: 700; color: #15803d; display: block; margin-bottom: 4px;"><i class="fa-solid fa-camera"></i> 시공 후 사진 증빙 (${afterPhotos.length}/5장)</label>
                             <input type="file" class="const-photo-input-mob" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.7rem; width: 100%;">
-                            ${afterPhotos.length > 0 ? `<button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="margin-top: 4px; padding: 3px 8px; font-size: 0.72rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 4px; cursor: pointer;"><i class="fa-solid fa-eye"></i> 시공 후 사진 확인</button>` : ''}
+                            ${afterPhotos.length > 0 ? `<button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="margin-top: 4px; padding: 4px 10px; font-size: 0.72rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 4px; cursor: pointer; font-weight: 700;"><i class="fa-solid fa-eye"></i> 시공 후 사진 확인 및 삭제 (${afterPhotos.length}장)</button>` : ''}
                         </div>
                         
                         <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
@@ -4859,7 +4865,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const id = e.target.dataset.id;
                 const files = Array.from(e.target.files);
                 if (files.length > 0) {
-                    await handleJobDraftUploadMob(id, files);
+                    if (typeof window.handleJobDraftUploadCommon === 'function') {
+                        await window.handleJobDraftUploadCommon(id, files);
+                    } else {
+                        await handleJobDraftUploadMob(id, files);
+                    }
+                    e.target.value = '';
                 }
             });
         });
@@ -4869,7 +4880,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const id = e.target.dataset.id;
                 const files = Array.from(e.target.files);
                 if (files.length > 0) {
-                    await handleJobPhotoUploadMob(id, files);
+                    if (typeof window.handleJobPhotoUploadCommon === 'function') {
+                        await window.handleJobPhotoUploadCommon(id, files);
+                    } else {
+                        await handleJobPhotoUploadMob(id, files);
+                    }
+                    e.target.value = '';
                 }
             });
         });
@@ -4947,7 +4963,7 @@ document.addEventListener('DOMContentLoaded', () => {
         apps = apps.map(app => {
             if (String(app.id) === String(id)) {
                 const existing = app.signDraftPhotos || [];
-                const merged = existing.concat(uploadedBase64List).slice(0, 10);
+                const merged = existing.concat(uploadedBase64List).slice(0, 5);
                 let mObj = {};
                 try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch(e) {}
                 mObj.signDraftPhotos = merged;
@@ -4978,7 +4994,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
                         updatedUid = u.id;
                         const existing = item.signDraftPhotos || [];
-                        const merged = existing.concat(uploadedBase64List).slice(0, 10);
+                        const merged = existing.concat(uploadedBase64List).slice(0, 5);
                         return {
                             ...item,
                             signDraftPhotos: merged,
@@ -5016,13 +5032,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        alert('간판 디자인 시안이 1MB 이하로 자동 압축되어 업로드되었습니다.\n신청 점주 및 관리자 화면에 즉시 공유됩니다.');
+        alert('간판 디자인 시안이 300KB 이하로 자동 압축되어 업로드되었습니다.\n신청 점주 및 관리자 화면에 즉시 공유됩니다.');
         if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
             window.DataStore.notifyAll(true);
         }
+        if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
     }
 
-    // 모바일 시공사 시공 후 사진 1MB 압축 업로드 (3~5컷)
+    // 모바일 시공사 시공 후 사진 300KB 압축 업로드 (최대 5장)
     async function handleJobPhotoUploadMob(id, files) {
         const uploadedBase64List = [];
         for (let i = 0; i < files.length; i++) {
@@ -5096,10 +5113,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        alert('시공 후 현장 사진이 2MB 이하로 자동 압축되어 업로드되었습니다.');
+        alert('시공 후 현장 사진이 300KB 이하로 자동 압축되어 업로드되었습니다.');
         if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
             window.DataStore.notifyAll(true);
         }
+        if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
     }
 
     function reportJobCompletionMob(id) {
