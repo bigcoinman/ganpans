@@ -1,2 +1,4 @@
-/app          /index.html   200
-/app.html     /index.html   200
+/dashboard        /index.html#status  301
+/dashboard.html   /index.html#status  301
+/app              /index.html         301
+/app.html         /index.html         301

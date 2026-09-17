@@ -2,13 +2,13 @@ const fs = require('fs');
 const path = require('path');
 
 console.log('========================================');
-console.log('🔍 [정밀 전수 코드 무결성 검증 시작]');
+console.log('🔍 [단일 반응형 웹 SSOT 무결성 전수 검증 시작]');
 console.log('========================================\n');
 
 let allPass = true;
 
-// 1. HTML 태그 및 따옴표, 속성 문법 무결성 검사
-const htmlFiles = ['index.html', 'app.html', 'dashboard.html'];
+// 1. HTML 태그 및 따옴표, 속성 문법 무결성 검사 (단일 웹 SSOT: index.html)
+const htmlFiles = ['index.html'];
 htmlFiles.forEach(file => {
     const content = fs.readFileSync(path.join(__dirname, file), 'utf8');
     
@@ -33,9 +33,8 @@ htmlFiles.forEach(file => {
             } else {
                 const top = stack.pop();
                 if (top !== tagName && !voidTags.has(top)) {
-                    // Check if mismatched tag is significant
                     if (['div', 'form', 'section', 'button', 'select', 'main', 'body', 'html'].includes(tagName)) {
-                        // console.log(`[${file}] Mismatched tag: expected </${top}>, found </${tagName}>`);
+                        // Mismatched major tag
                     }
                 }
             }
@@ -48,7 +47,6 @@ htmlFiles.forEach(file => {
     const lines = content.split('\n');
     lines.forEach((line, idx) => {
         const doubleQuotes = (line.match(/"/g) || []).length;
-        // Check inline style quotes in line
         if (line.includes('style="') && doubleQuotes % 2 !== 0 && !line.includes('`')) {
             console.warn(`[${file}:${idx+1}] Potential unclosed double quote in style attribute: ${line.trim()}`);
             errors++;
@@ -74,8 +72,8 @@ cssFiles.forEach(file => {
     }
 });
 
-// 3. JavaScript 문법 및 Node 구문 검증
-const jsFiles = ['security-utils.js', 'data-store.js', 'kakao-notify.js', 'script.js', 'dashboard.js', 'app.js'];
+// 3. JavaScript 문법 및 Node 구문 검증 (단일 반응형 웹 5대 핵심 스크립트)
+const jsFiles = ['supabase-config.js', 'data-store.js', 'security-utils.js', 'kakao-notify.js', 'app.js'];
 jsFiles.forEach(file => {
     const content = fs.readFileSync(path.join(__dirname, file), 'utf8');
     try {
@@ -91,40 +89,30 @@ jsFiles.forEach(file => {
 console.log('\n--- [4. 세부 기능 및 대역폭/트래픽 방어 무결성 검증] ---');
 
 const secUtilsContent = fs.readFileSync(path.join(__dirname, 'security-utils.js'), 'utf8');
-const scriptContent = fs.readFileSync(path.join(__dirname, 'script.js'), 'utf8');
 const appContent = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
-const dashboardContent = fs.readFileSync(path.join(__dirname, 'dashboard.js'), 'utf8');
 const indexHtmlContent = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-const appHtmlContent = fs.readFileSync(path.join(__dirname, 'app.html'), 'utf8');
 
 // 1) apply-photo-count 요소 존재 여부
 const indexHasCount = indexHtmlContent.includes('id="apply-photo-count"');
-const appHasCount = appHtmlContent.includes('id="apply-photo-count"');
-const scriptHasCountUpdate = scriptContent.includes("document.getElementById('apply-photo-count')");
-
 console.log(`- index.html apply-photo-count 요소 존재: ${indexHasCount ? '정상 ✅' : '누락 ❌'}`);
-console.log(`- app.html apply-photo-count 요소 존재: ${appHasCount ? '정상 ✅' : '누락 ❌'}`);
-console.log(`- script.js 사진 개수 실시간 갱신 로직: ${scriptHasCountUpdate ? '정상 ✅' : '누락 ❌'}`);
 
 // 2) 300KB 고효율 압축 파이프라인 적용 여부
 const secUtils300KB = secUtilsContent.includes('300 * 1024');
-const script300KB = scriptContent.includes('300 * 1024');
 const app300KB = appContent.includes('300 * 1024');
-const dash300KB = dashboardContent.includes('300 * 1024');
 
 console.log(`- security-utils.js 300KB 압축 기준 적용: ${secUtils300KB ? '정상 ✅' : '누락 ❌'}`);
-console.log(`- script.js 300KB 압축 파이프라인 적용: ${script300KB ? '정상 ✅' : '누락 ❌'}`);
 console.log(`- app.js 300KB 압축 파이프라인 적용: ${app300KB ? '정상 ✅' : '누락 ❌'}`);
-console.log(`- dashboard.js 300KB 압축 파이프라인 적용: ${dash300KB ? '정상 ✅' : '누락 ❌'}`);
 
 // 3) 대역폭 99% 절감 컬럼 선별 조회(Column Selection) 적용 여부
 const bandwidthOptimized = secUtilsContent.includes("select('id, user_id, owner_name, phone, store_name, store_address, sign_type, referrer_code, status, assigned_constructor_id, assigned_constructor_name, construction_status, memo, applied_at, created_at')");
 console.log(`- security-utils.js 목록 동기화 시 대역폭 99% 절감 선별 조회 적용: ${bandwidthOptimized ? '정상 ✅' : '누락 ❌'}`);
 
-if (!secUtils300KB || !script300KB || !app300KB || !dash300KB || !bandwidthOptimized) {
+if (!indexHasCount || !secUtils300KB || !app300KB || !bandwidthOptimized) {
     allPass = false;
 }
 
 console.log('\n========================================');
 console.log(`[최종 무결성 전수 검증 결과]: ${allPass ? '100% ALL PASS (결함 0건) 🚀' : 'FAIL ❌'}`);
-console.log('========================================');
+console.log('========================================\n');
+
+process.exit(allPass ? 0 : 1);
