@@ -571,6 +571,12 @@
             draftStatus: app.draftStatus || 'pending',
             draftApprovedAt: app.draftApprovedAt || null,
             constructionPhotos: app.constructionPhotos || app.afterPhotos || [],
+            memo: app.memo || '',
+            photos: app.photos || [],
+            photosCount: Number(app.photosCount || (app.photos && app.photos.length) || (app.fileData ? 1 : 0)) || 0,
+            hasPhoto: Boolean(app.hasPhoto || (app.photos && app.photos.length > 0) || app.fileData),
+            fileData: app.fileData || '',
+            fileName: app.fileName || '',
             createdAt: app.appliedAt || app.createdAt || new Date().toISOString()
           };
 
@@ -2293,11 +2299,18 @@
       ? window.DataStore.getUsers()
       : (JSON.parse(localStorage.getItem('users')) || []);
     let updatedUid = null;
+    let targetMemoStr = '';
     const approvedTime = (newDraftStatus === 'admin_approved' || newDraftStatus === 'owner_approved') ? new Date().toISOString() : null;
 
     apps = apps.map(a => {
       if (String(a.id) === String(id)) {
-        return { ...a, draftStatus: newDraftStatus, draftApprovedAt: approvedTime };
+        let mObj = {};
+        try { mObj = typeof a.memo === 'string' ? JSON.parse(a.memo) : (a.memo || {}); } catch(e) {}
+        mObj.draftStatus = newDraftStatus;
+        mObj.draftApprovedAt = approvedTime;
+        if (a.signDraftPhotos && Array.isArray(a.signDraftPhotos)) mObj.signDraftPhotos = a.signDraftPhotos;
+        targetMemoStr = JSON.stringify(mObj);
+        return { ...a, draftStatus: newDraftStatus, draftApprovedAt: approvedTime, memo: targetMemoStr };
       }
       return a;
     });
@@ -2312,7 +2325,7 @@
         const updatedItems = u.items.map(it => {
           if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
             updatedUid = u.id;
-            return { ...it, draftStatus: newDraftStatus, draftApprovedAt: approvedTime };
+            return { ...it, draftStatus: newDraftStatus, draftApprovedAt: approvedTime, memo: targetMemoStr || it.memo };
           }
           return it;
         });
@@ -2328,7 +2341,10 @@
 
     if (window.SupabaseSync) {
       if (typeof window.SupabaseSync.updateApplication === 'function') {
-        window.SupabaseSync.updateApplication(id, { draft_status: newDraftStatus, draft_approved_at: approvedTime });
+        window.SupabaseSync.updateApplication(id, {
+          construction_status: (newDraftStatus === 'admin_approved' || newDraftStatus === 'owner_approved') ? 'in_construction' : undefined,
+          memo: targetMemoStr
+        });
       } else {
         const app = apps.find(a => String(a.id) === String(id));
         if (app) window.SupabaseSync.upsertApplication(app);
@@ -2351,65 +2367,7 @@
 
   // --- 점주 전용 간판 디자인 시안 승인 핸들러 ---
   window.approveDraftByOwner = function (id) {
-    let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
-      ? window.DataStore.getApplications()
-      : (JSON.parse(localStorage.getItem('applications')) || []);
-    let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
-      ? window.DataStore.getUsers()
-      : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
-    const approvedTime = new Date().toISOString();
-
-    apps = apps.map(a => {
-      if (String(a.id) === String(id)) {
-        return { ...a, draftStatus: 'owner_approved', draftApprovedAt: approvedTime };
-      }
-      return a;
-    });
-    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-      window.DataStore.saveApplications(apps);
-    } else {
-      localStorage.setItem('applications', JSON.stringify(apps));
-    }
-
-    curUsers = curUsers.map(u => {
-      if (u.items && Array.isArray(u.items)) {
-        const updatedItems = u.items.map(it => {
-          if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
-            updatedUid = u.id;
-            return { ...it, draftStatus: 'owner_approved', draftApprovedAt: approvedTime };
-          }
-          return it;
-        });
-        return { ...u, items: updatedItems };
-      }
-      return u;
-    });
-    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-      window.DataStore.saveUsers(curUsers);
-    } else {
-      localStorage.setItem('users', JSON.stringify(curUsers));
-    }
-
-    if (window.SupabaseSync) {
-      if (typeof window.SupabaseSync.updateApplication === 'function') {
-        window.SupabaseSync.updateApplication(id, {
-          draft_status: 'owner_approved',
-          draft_approved_at: approvedTime
-        });
-      } else {
-        const app = apps.find(a => String(a.id) === String(id));
-        if (app) window.SupabaseSync.upsertApplication(app);
-      }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
-    }
-
-    alert('간판 디자인 시안을 최종 승인하셨습니다!\n시공사와 최고관리자 화면에 즉시 공유되어 간판 제작 및 시공이 진행됩니다.');
-    if (window.DataStore) window.DataStore.notifyAll();
-    return true;
+    return window.toggleDraftApproval(id, 'owner_approved');
   };
 
   // --- 간판 디자인 시안 크게보기 모달 (PC웹 & 모바일 공용) ---
@@ -2418,18 +2376,29 @@
       ? window.DataStore.getConstructionJobs()
       : [];
     let job = jobs.find(j => String(j.id) === String(id));
-    if (!job) {
+    if (!job || !job.signDraftPhotos || job.signDraftPhotos.length === 0) {
       const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
         ? window.DataStore.getApplications()
         : (JSON.parse(localStorage.getItem('applications')) || []);
       const app = apps.find(a => String(a.id) === String(id));
       if (app) {
+        let draftList = app.signDraftPhotos || app.designPhotos || [];
+        let dStatus = app.draftStatus || 'pending';
+        if (draftList.length === 0 && app.memo) {
+          try {
+            const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
+            if (m && Array.isArray(m.signDraftPhotos) && m.signDraftPhotos.length > 0) {
+              draftList = m.signDraftPhotos;
+              dStatus = m.draftStatus || dStatus;
+            }
+          } catch(e) {}
+        }
         job = {
           id: app.id,
           storeName: app.storeName || app.shopName || '-',
           signType: app.signType || '간판',
-          signDraftPhotos: app.signDraftPhotos || app.designPhotos || [],
-          draftStatus: app.draftStatus || 'pending'
+          signDraftPhotos: draftList,
+          draftStatus: dStatus
         };
       }
     }

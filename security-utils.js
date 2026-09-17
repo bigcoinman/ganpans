@@ -483,6 +483,14 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
         if (data.construction_invoice) {
           app.invoicePhotos = [data.construction_invoice];
         }
+        if (data.memo) {
+          try {
+            const m = typeof data.memo === 'string' ? JSON.parse(data.memo) : data.memo;
+            if (m && Array.isArray(m.signDraftPhotos) && m.signDraftPhotos.length > 0) app.signDraftPhotos = m.signDraftPhotos;
+            if (m && m.draftStatus) app.draftStatus = m.draftStatus;
+            if (m && m.draftApprovedAt) app.draftApprovedAt = m.draftApprovedAt;
+          } catch (eM) {}
+        }
 
         // 브라우저 영구 CacheStorage에 저장하여 차후 수파베이스 호출 0회 보장
         try {
@@ -507,6 +515,9 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
           localApps[idx].photosCount = app.photosCount;
           if (app.constructionPhotos) localApps[idx].constructionPhotos = app.constructionPhotos;
           if (app.invoicePhotos) localApps[idx].invoicePhotos = app.invoicePhotos;
+          if (app.signDraftPhotos) localApps[idx].signDraftPhotos = app.signDraftPhotos;
+          if (app.draftStatus) localApps[idx].draftStatus = app.draftStatus;
+          if (app.draftApprovedAt) localApps[idx].draftApprovedAt = app.draftApprovedAt;
           if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
             window.DataStore.saveApplications(localApps);
           } else {
@@ -1484,6 +1495,31 @@ window.SupabaseSync = {
     if (validCount === 0 && app.photosCount) validCount = Number(app.photosCount) || 0;
     if (validCount === 0 && app.photos_count) validCount = Number(app.photos_count) || 0;
 
+    let existingMemo = {};
+    try {
+      if (typeof app.memo === 'string') existingMemo = JSON.parse(app.memo) || {};
+      else if (typeof app.memo === 'object' && app.memo) existingMemo = app.memo;
+    } catch (e) {}
+
+    const memoPayload = {
+      ...existingMemo,
+      isBizItem: Boolean(app.isBizItem === true || String(app.isBizItem) === 'true'),
+      receiptStatus: app.receiptStatus || existingMemo.receiptStatus || '접수예정',
+      progressStatus: app.progressStatus || existingMemo.progressStatus || '지원대기중',
+      salespersonId: app.salespersonId !== undefined ? app.salespersonId : (existingMemo.salespersonId || ''),
+      salespersonName: app.salespersonName !== undefined ? app.salespersonName : (existingMemo.salespersonName || ''),
+      photoCount: validCount
+    };
+    if (app.signDraftPhotos && Array.isArray(app.signDraftPhotos) && app.signDraftPhotos.length > 0) {
+      memoPayload.signDraftPhotos = app.signDraftPhotos;
+    }
+    if (app.draftStatus) {
+      memoPayload.draftStatus = app.draftStatus;
+    }
+    if (app.draftApprovedAt) {
+      memoPayload.draftApprovedAt = app.draftApprovedAt;
+    }
+
     const payload = {
       id: String(app.id),
       user_id: safeUserId,
@@ -1497,14 +1533,7 @@ window.SupabaseSync = {
       assigned_constructor_id: app.assignedConstructorId || app.assigned_constructor_id || null,
       assigned_constructor_name: app.assignedConstructorName || app.assigned_constructor_name || null,
       construction_status: app.constructionStatus || app.construction_status || 'none',
-      memo: JSON.stringify({
-        isBizItem: Boolean(app.isBizItem === true || String(app.isBizItem) === 'true'),
-        receiptStatus: app.receiptStatus || '접수예정',
-        progressStatus: app.progressStatus || '지원대기중',
-        salespersonId: app.salespersonId || '',
-        salespersonName: app.salespersonName || '',
-        photoCount: validCount
-      }),
+      memo: JSON.stringify(memoPayload),
       applied_at: app.appliedAt || app.created_at || new Date().toISOString()
     };
 
@@ -1555,6 +1584,31 @@ window.SupabaseSync = {
     if (validCount === 0 && app.photosCount) validCount = Number(app.photosCount) || 0;
     if (validCount === 0 && app.photos_count) validCount = Number(app.photos_count) || 0;
 
+    let existingMemo = {};
+    try {
+      if (typeof app.memo === 'string') existingMemo = JSON.parse(app.memo) || {};
+      else if (typeof app.memo === 'object' && app.memo) existingMemo = app.memo;
+    } catch (e) {}
+
+    const memoPayload = {
+      ...existingMemo,
+      isBizItem: Boolean(app.isBizItem === true || String(app.isBizItem) === 'true'),
+      receiptStatus: app.receiptStatus || existingMemo.receiptStatus || '접수예정',
+      progressStatus: app.progressStatus || existingMemo.progressStatus || '지원대기중',
+      salespersonId: app.salespersonId !== undefined ? app.salespersonId : (existingMemo.salespersonId || ''),
+      salespersonName: app.salespersonName !== undefined ? app.salespersonName : (existingMemo.salespersonName || ''),
+      photoCount: validCount
+    };
+    if (app.signDraftPhotos && Array.isArray(app.signDraftPhotos) && app.signDraftPhotos.length > 0) {
+      memoPayload.signDraftPhotos = app.signDraftPhotos;
+    }
+    if (app.draftStatus) {
+      memoPayload.draftStatus = app.draftStatus;
+    }
+    if (app.draftApprovedAt) {
+      memoPayload.draftApprovedAt = app.draftApprovedAt;
+    }
+
     const payload = {
       id: String(app.id),
       user_id: safeUserId,
@@ -1565,14 +1619,10 @@ window.SupabaseSync = {
       sign_type: app.signType || app.sign_type || '간판지원신청',
       referrer_code: app.referrerCode || app.referrer_code || '',
       status: app.status || 'pending',
-      memo: JSON.stringify({
-        isBizItem: Boolean(app.isBizItem === true || String(app.isBizItem) === 'true'),
-        receiptStatus: app.receiptStatus || '접수예정',
-        progressStatus: app.progressStatus || '지원대기중',
-        salespersonId: app.salespersonId || '',
-        salespersonName: app.salespersonName || '',
-        photoCount: validCount
-      })
+      assigned_constructor_id: app.assignedConstructorId || '',
+      assigned_constructor_name: app.assignedConstructorName || '',
+      construction_status: app.constructionStatus || 'none',
+      memo: JSON.stringify(memoPayload)
     };
 
     if (photoData) {
@@ -1594,6 +1644,9 @@ window.SupabaseSync = {
     let salespersonId = '';
     let salespersonName = '';
     let photoCount = 0;
+    let signDraftPhotos = [];
+    let draftStatus = 'pending';
+    let draftApprovedAt = null;
 
     // memo JSON 파싱하여 영업물건 여부, 접수/진행상태, 담당영업자 복원
     let isDirectHeadquarters = false;
@@ -1615,6 +1668,9 @@ window.SupabaseSync = {
             isDirectHeadquarters = true;
           }
           if (parsedMemo.photoCount !== undefined) photoCount = Number(parsedMemo.photoCount) || 0;
+          if (parsedMemo.signDraftPhotos && Array.isArray(parsedMemo.signDraftPhotos)) signDraftPhotos = parsedMemo.signDraftPhotos;
+          if (parsedMemo.draftStatus) draftStatus = parsedMemo.draftStatus;
+          if (parsedMemo.draftApprovedAt) draftApprovedAt = parsedMemo.draftApprovedAt;
         }
       } catch (eMemo) {}
     }
@@ -1724,6 +1780,9 @@ window.SupabaseSync = {
       assignedConstructorId: dbApp.assigned_constructor_id || '',
       assignedConstructorName: dbApp.assigned_constructor_name || '',
       constructionStatus: dbApp.construction_status || 'none',
+      signDraftPhotos: signDraftPhotos || [],
+      draftStatus: draftStatus || 'pending',
+      draftApprovedAt: draftApprovedAt || null,
       constructionPhotos: Array.isArray(dbApp.construction_photos) ? dbApp.construction_photos : [],
       invoicePhotos: dbApp.construction_invoice ? [dbApp.construction_invoice] : []
     };
@@ -2325,6 +2384,29 @@ window.SupabaseSync = {
               if (localApp.invoicePhotos && localApp.invoicePhotos.length > 0 && (!appObj.invoicePhotos || appObj.invoicePhotos.length === 0)) {
                 appObj.invoicePhotos = localApp.invoicePhotos;
               }
+              // 간판 디자인 시안 및 시안 확정 상태 로컬 보존 및 서버 memo 최신 동기화
+              try {
+                const sMemo = typeof sa.memo === 'string' ? JSON.parse(sa.memo) : (sa.memo || {});
+                if (sMemo && Array.isArray(sMemo.signDraftPhotos) && sMemo.signDraftPhotos.length > 0) {
+                  appObj.signDraftPhotos = sMemo.signDraftPhotos;
+                }
+                if (sMemo && sMemo.draftStatus) {
+                  appObj.draftStatus = sMemo.draftStatus;
+                }
+                if (sMemo && sMemo.draftApprovedAt) {
+                  appObj.draftApprovedAt = sMemo.draftApprovedAt;
+                }
+              } catch (eMemoSync) {}
+
+              if (localApp.signDraftPhotos && localApp.signDraftPhotos.length > 0 && (!appObj.signDraftPhotos || appObj.signDraftPhotos.length === 0)) {
+                appObj.signDraftPhotos = localApp.signDraftPhotos;
+              }
+              if (localApp.draftStatus && (!appObj.draftStatus || appObj.draftStatus === 'pending')) {
+                appObj.draftStatus = localApp.draftStatus;
+              }
+              if (localApp.draftApprovedAt && !appObj.draftApprovedAt) {
+                appObj.draftApprovedAt = localApp.draftApprovedAt;
+              }
             }
             return appObj;
           })
@@ -2409,7 +2491,12 @@ window.SupabaseSync = {
                     photos: fa.photos || [],
                     photosCount: Number(fa.photosCount) || (Array.isArray(fa.photos) ? fa.photos.length : 0),
                     hasPhoto: Boolean(fa.hasPhoto || (fa.photosCount > 0)),
-                    fileData: fa.fileData || (fa.photos && fa.photos[0]) || ''
+                    fileData: fa.fileData || (fa.photos && fa.photos[0]) || '',
+                    signDraftPhotos: fa.signDraftPhotos || [],
+                    draftStatus: fa.draftStatus || 'pending',
+                    draftApprovedAt: fa.draftApprovedAt || null,
+                    constructionStatus: fa.constructionStatus || 'none',
+                    memo: fa.memo || ''
                   };
                   if (existingIdx >= 0) {
                     const prevItem = targetUser.items[existingIdx];
@@ -2419,6 +2506,11 @@ window.SupabaseSync = {
                     }
                     itemPayload.photosCount = Math.max(itemPayload.photosCount, Number(prevItem.photosCount) || 0);
                     itemPayload.hasPhoto = Boolean(itemPayload.hasPhoto || prevItem.hasPhoto || (itemPayload.photosCount > 0));
+                    if ((!itemPayload.signDraftPhotos || itemPayload.signDraftPhotos.length === 0) && prevItem.signDraftPhotos && prevItem.signDraftPhotos.length > 0) {
+                      itemPayload.signDraftPhotos = prevItem.signDraftPhotos;
+                    }
+                    if (!itemPayload.draftStatus && prevItem.draftStatus) itemPayload.draftStatus = prevItem.draftStatus;
+                    if (!itemPayload.draftApprovedAt && prevItem.draftApprovedAt) itemPayload.draftApprovedAt = prevItem.draftApprovedAt;
                     targetUser.items[existingIdx] = { ...prevItem, ...itemPayload };
                   } else {
                     targetUser.items.unshift(itemPayload);

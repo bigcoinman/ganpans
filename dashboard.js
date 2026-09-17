@@ -5256,6 +5256,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <i class="fa-solid fa-palette"></i> 간판 디자인 시안 등록 (${draftCount}장)
               </label>
               <input type="file" class="const-draft-input" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.72rem; width: 100%;">
+              ${draftCount > 0 ? `
+                <div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between;">
+                  <button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 2px 6px; font-size: 0.7rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; font-weight: 700;">
+                    <i class="fa-solid fa-eye"></i> 등록된 시안 확인 (${draftCount}장)
+                  </button>
+                </div>
+              ` : ''}
               ${draftNoticeHtml}
             </div>
 
@@ -5431,15 +5438,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1) applications
     let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
+    let targetMemoStr = '';
     apps = apps.map(app => {
       if (String(app.id) === String(id)) {
         const existing = app.signDraftPhotos || app.designPhotos || [];
         const merged = existing.concat(uploadedBase64List).slice(0, 10);
+        let mObj = {};
+        try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch(e) {}
+        mObj.signDraftPhotos = merged;
+        mObj.draftStatus = 'pending';
+        mObj.draftCount = merged.length;
+        targetMemoStr = JSON.stringify(mObj);
         return { 
           ...app, 
           signDraftPhotos: merged, 
           draftStatus: 'pending',
-          constructionStatus: 'design_draft' // 시안 업로드 시 자동으로 2단계 '시안 및 교정 중' 전환
+          constructionStatus: 'design_draft', // 시안 업로드 시 자동으로 2단계 '시안 및 교정 중' 전환
+          memo: targetMemoStr
         };
       }
       return app;
@@ -5464,7 +5479,8 @@ document.addEventListener('DOMContentLoaded', () => {
               ...item, 
               signDraftPhotos: merged, 
               draftStatus: 'pending',
-              constructionStatus: 'design_draft'
+              constructionStatus: 'design_draft',
+              memo: targetMemoStr || item.memo
             };
           }
           return item;
@@ -5481,11 +5497,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (window.SupabaseSync) {
       if (typeof window.SupabaseSync.updateApplication === 'function') {
-        const app = apps.find(a => String(a.id) === String(id));
         window.SupabaseSync.updateApplication(id, {
-          sign_draft_photos: app ? (app.signDraftPhotos || app.designPhotos) : uploadedBase64List,
-          draft_status: 'pending',
-          construction_status: 'design_draft'
+          construction_status: 'design_draft',
+          memo: targetMemoStr
         });
       } else {
         const app = apps.find(a => String(a.id) === String(id));

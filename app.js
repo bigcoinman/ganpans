@@ -4943,14 +4943,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (uploadedBase64List.length === 0) return;
 
         let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
+        let targetMemoStr = '';
         apps = apps.map(app => {
             if (String(app.id) === String(id)) {
                 const existing = app.signDraftPhotos || [];
                 const merged = existing.concat(uploadedBase64List).slice(0, 10);
+                let mObj = {};
+                try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch(e) {}
+                mObj.signDraftPhotos = merged;
+                mObj.draftStatus = 'pending';
+                mObj.draftCount = merged.length;
+                targetMemoStr = JSON.stringify(mObj);
                 return {
                     ...app,
                     signDraftPhotos: merged,
-                    constructionStatus: app.constructionStatus === 'before_construction' ? 'design_draft' : app.constructionStatus
+                    draftStatus: 'pending',
+                    constructionStatus: app.constructionStatus === 'before_construction' ? 'design_draft' : app.constructionStatus,
+                    memo: targetMemoStr
                 };
             }
             return app;
@@ -4966,14 +4975,16 @@ document.addEventListener('DOMContentLoaded', () => {
         curUsers = curUsers.map(u => {
             if (u.items && Array.isArray(u.items)) {
                 const updatedItems = u.items.map(item => {
-                    if (String(item.id) === String(id)) {
+                    if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
                         updatedUid = u.id;
                         const existing = item.signDraftPhotos || [];
                         const merged = existing.concat(uploadedBase64List).slice(0, 10);
                         return {
                             ...item,
                             signDraftPhotos: merged,
-                            constructionStatus: item.constructionStatus === 'before_construction' ? 'design_draft' : item.constructionStatus
+                            draftStatus: 'pending',
+                            constructionStatus: item.constructionStatus === 'before_construction' ? 'design_draft' : item.constructionStatus,
+                            memo: targetMemoStr || item.memo
                         };
                     }
                     return item;
@@ -4992,8 +5003,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof window.SupabaseSync.updateApplication === 'function') {
                 const app = apps.find(a => String(a.id) === String(id));
                 window.SupabaseSync.updateApplication(id, {
-                    sign_draft_photos: app ? (app.signDraftPhotos || []) : uploadedBase64List,
-                    construction_status: app && app.constructionStatus === 'before_construction' ? 'design_draft' : (app ? app.constructionStatus : 'design_draft')
+                    construction_status: app && app.constructionStatus === 'before_construction' ? 'design_draft' : (app ? app.constructionStatus : 'design_draft'),
+                    memo: targetMemoStr
                 });
             } else {
                 const app = apps.find(a => String(a.id) === String(id));
