@@ -1409,6 +1409,83 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Salesperson Dashboard & Common Utilities ---
+    function formatDateOnly(dateString, sep = '.') {
+        if (!dateString) return '-';
+        try {
+            const d = new Date(dateString);
+            if (isNaN(d.getTime())) {
+                const raw = String(dateString).split('T')[0] || '-';
+                return sep === '-' ? raw.replace(/\./g, '-') : raw.replace(/-/g, '.');
+            }
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}${sep}${m}${sep}${day}`;
+        } catch (e) {
+            const raw = String(dateString).split('T')[0] || '-';
+            return sep === '-' ? raw.replace(/\./g, '-') : raw.replace(/-/g, '.');
+        }
+    }
+
+    function escapeCsv(str) {
+        if (str === null || str === undefined) return '""';
+        const s = String(str).replace(/"/g, '""');
+        return `"${s}"`;
+    }
+
+    function getAppPhotoInfo(app) {
+        if (!app || typeof app !== 'object') {
+            return { count: 0, hasPhoto: false, photos: [], firstPhoto: '' };
+        }
+        let photoList = [];
+        if (Array.isArray(app.photos) && app.photos.length > 0) {
+            photoList = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+        }
+        if (photoList.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
+            photoList = [app.fileData];
+        }
+        if (photoList.length === 0 && app.image_url && typeof app.image_url === 'string') {
+            if (app.image_url.startsWith('[') && app.image_url.includes('data:')) {
+                try {
+                    const parsed = JSON.parse(app.image_url);
+                    if (Array.isArray(parsed)) {
+                        photoList = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
+                    }
+                } catch (e) {}
+            } else if (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) {
+                photoList = [app.image_url];
+            }
+        }
+        const memoPhotoCount = (() => {
+            try {
+                const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+                return (m && m.photoCount) ? Number(m.photoCount) : 0;
+            } catch(e) { return 0; }
+        })();
+        const explicitCount = Math.max(
+            photoList.length,
+            Number(app.photosCount) || 0,
+            Number(app.photos_count) || 0,
+            memoPhotoCount
+        );
+        const firstPhoto = (photoList.length > 0) ? photoList[0] : (app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : ''));
+        const hasPhoto = Boolean(
+            explicitCount > 0 ||
+            app.hasPhoto ||
+            (firstPhoto && firstPhoto !== '업로드 파일 없음' && (firstPhoto.startsWith('data:') || firstPhoto.startsWith('[') || firstPhoto.startsWith('http') || firstPhoto.startsWith('blob:'))) ||
+            (app.fileName && app.fileName !== '업로드 파일 없음' && String(app.fileName).trim() !== '') ||
+            (app.file_name && app.file_name !== '업로드 파일 없음' && String(app.file_name).trim() !== '')
+        );
+        const finalCount = explicitCount > 0 ? explicitCount : (hasPhoto ? 1 : 0);
+        return {
+            count: finalCount,
+            hasPhoto: hasPhoto,
+            photos: photoList,
+            firstPhoto: firstPhoto
+        };
+    }
+
     if (constructorRequestFormMob) {
         constructorRequestFormMob.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -1756,43 +1833,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userAppsContainer.innerHTML = '';
         displayApps.forEach(app => {
             const statusBadge = getAppStatusBadgeHtmlMob(app);
-            let photoList = [];
-            if (Array.isArray(app.photos) && app.photos.length > 0) {
-                photoList = app.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
-            }
-            if (photoList.length === 0 && app.fileData && typeof app.fileData === 'string' && (app.fileData.startsWith('data:') || app.fileData.startsWith('http') || app.fileData.startsWith('blob:'))) {
-                photoList = [app.fileData];
-            }
-            if (photoList.length === 0 && app.image_url && typeof app.image_url === 'string') {
-                if (app.image_url.startsWith('[') && app.image_url.includes('data:')) {
-                    try {
-                        const parsed = JSON.parse(app.image_url);
-                        if (Array.isArray(parsed)) {
-                            photoList = parsed.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:')));
-                        }
-                    } catch (e) {}
-                } else if (app.image_url.startsWith('data:') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) {
-                    photoList = [app.image_url];
-                }
-            }
-            const memoPhotoCount = (() => {
-              try {
-                const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
-                return (m && m.photoCount) ? Number(m.photoCount) : 0;
-              } catch(e) { return 0; }
-            })();
-            let count = Math.max(
-              photoList.length,
-              Number(app.photosCount) || 0,
-              Number(app.photos_count) || 0,
-              memoPhotoCount
-            );
-            let hasPhoto = count > 0 || Boolean(
-              app.hasPhoto || 
-              (app.fileName && app.fileName !== '업로드 파일 없음' && String(app.fileName).trim() !== '') ||
-              (app.file_name && app.file_name !== '업로드 파일 없음' && String(app.file_name).trim() !== '')
-            );
-            if (!count && hasPhoto) count = 1;
+            const { count, hasPhoto } = getAppPhotoInfo(app);
 
             const downloadBtn = hasPhoto
                 ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${count} }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}">
@@ -1942,18 +1983,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const receiptBadge = getReceiptStatusBadgeHtmlMob(item.receiptStatus);
             const progressBadge = getProgressStatusBadgeHtmlMob(item.progressStatus);
 
-            const memoPhotoCount = (() => {
-              try {
-                const m = typeof item.memo === 'string' ? JSON.parse(item.memo) : (item.memo || {});
-                return (m && m.photoCount) ? Number(m.photoCount) : 0;
-              } catch(e) { return 0; }
-            })();
-            const pCount = Math.max(
-              (Array.isArray(item.photos) ? item.photos.length : 0),
-              Number(item.photosCount) || 0,
-              memoPhotoCount,
-              (item.hasPhoto ? 1 : 0)
-            );
+            const { count: pCount } = getAppPhotoInfo(item);
 
             const card = document.createElement('div');
             card.className = 'biz-card-mob';
@@ -2466,12 +2496,6 @@ document.addEventListener('DOMContentLoaded', () => {
             '진행상태'
         ];
 
-        const escapeCsv = (str) => {
-            if (str === null || str === undefined) return '""';
-            const s = String(str).replace(/"/g, '""');
-            return `"${s}"`;
-        };
-
         const getProgressStatusLabel = (statusObj) => {
             if (!statusObj) return '심사대기중';
             const status = statusObj.status || statusObj.receiptStatus || '';
@@ -2563,12 +2587,6 @@ document.addEventListener('DOMContentLoaded', () => {
             '현장사진유무',
             '배정시공사'
         ];
-
-        const escapeCsv = (str) => {
-            if (str === null || str === undefined) return '""';
-            const s = String(str).replace(/"/g, '""');
-            return `"${s}"`;
-        };
 
         const sortedApps = [...apps].sort((a, b) => {
             const timeA = new Date(a.appliedAt || a.createdAt || a.created_at || 0).getTime();
@@ -2675,9 +2693,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderAdminSubPanels() {
-        renderAdminDashboardMob(true);
-    }
+
 
     // 모바일 회원 검색창 이벤트
     const searchAllUsersInputMob = document.getElementById('search-all-users-input-mob');
@@ -3100,28 +3116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // 현장사진 UI (PC 대시보드와 동일한 상하/좌우 2단 버튼 구조)
                     let fileAttachmentHtml = '';
-                    const photosArr = (Array.isArray(app.photos) && app.photos.length > 0) ? app.photos.filter(p => p && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:'))) : [];
-                    const photoSrc = (photosArr.length > 0) ? photosArr[0] : (app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : ''));
-                    const memoPhotoCount = (() => {
-                      try {
-                        const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
-                        return (m && m.photoCount) ? Number(m.photoCount) : 0;
-                      } catch(e) { return 0; }
-                    })();
-                    const count = Math.max(
-                      photosArr.length,
-                      Number(app.photosCount) || 0,
-                      Number(app.photos_count) || 0,
-                      memoPhotoCount
-                    );
-                    const hasPhoto = Boolean(
-                      count > 0 ||
-                      (photoSrc && photoSrc !== '업로드 파일 없음' && (photoSrc.startsWith('data:') || photoSrc.startsWith('[') || photoSrc.startsWith('http') || photoSrc.startsWith('blob:'))) ||
-                      app.hasPhoto ||
-                      (app.fileName && app.fileName !== '업로드 파일 없음' && String(app.fileName).trim() !== '') ||
-                      (app.file_name && app.file_name !== '업로드 파일 없음' && String(app.file_name).trim() !== '')
-                    );
-                    const finalCount = count > 0 ? count : (hasPhoto ? 1 : 0);
+                    const { count: finalCount, hasPhoto } = getAppPhotoInfo(app);
 
                     fileAttachmentHtml = `
                         <div style="margin-top: 10px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -3172,16 +3167,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     const rawAppDate = app.appliedAt || app.createdAt || '';
-                    let appDateText = '-';
-                    if (rawAppDate) {
-                        const d = new Date(rawAppDate);
-                        if (!isNaN(d.getTime())) {
-                            const padZero = (n) => String(n).padStart(2, '0');
-                            appDateText = `${d.getFullYear()}-${padZero(d.getMonth() + 1)}-${padZero(d.getDate())}`;
-                        } else {
-                            appDateText = String(rawAppDate).slice(0, 10).replace(/\./g, '-');
-                        }
-                    }
+                    const appDateText = formatDateOnly(rawAppDate, '-');
 
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
@@ -3214,12 +3200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 });
                 // Action buttons are handled directly by inline onclick/onchange for instant single response
-                appsList.querySelectorAll('.btn-approve-settlement-mob').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const id = e.target.closest('button').dataset.id;
-                        approveSettlementMob(id);
-                    });
-                });
+
             }
         }
 
@@ -3313,16 +3294,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const appsMob = JSON.parse(localStorage.getItem('applications')) || [];
                     const matchingApp = appsMob.find(a => String(a.id) === String(item.id) || (item.appRefId && String(a.id) === String(item.appRefId)));
                     const rawDate = item.createdAt || item.registeredAt || item.appliedAt || item.date || (matchingApp ? (matchingApp.appliedAt || matchingApp.createdAt) : '') || '';
-                    let itemDateText = '-';
-                    if (rawDate) {
-                        const d = new Date(rawDate);
-                        if (!isNaN(d.getTime())) {
-                            const padZero = (n) => String(n).padStart(2, '0');
-                            itemDateText = `${d.getFullYear()}-${padZero(d.getMonth() + 1)}-${padZero(d.getDate())}`;
-                        } else {
-                            itemDateText = String(rawDate).slice(0, 10).replace(/\./g, '-');
-                        }
-                    }
+                    const itemDateText = formatDateOnly(rawDate, '-');
                     let curReceipt = String(item.receiptStatus || '접수예정').trim();
                     let curProgress = String(item.progressStatus || '지원대기중').trim();
 
@@ -4122,74 +4094,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     }
 
-    function assignConstructorMob(appId, constructorId) {
-        const constUser = users.find(u => u.id === constructorId);
-        if (!constUser) return;
 
-        applications = applications.map(app => {
-            if (app.id === appId) {
-                return {
-                    ...app,
-                    assignedConstructorId: constructorId,
-                    assignedConstructorName: constUser.businessName,
-                    constructionStatus: 'before_construction'
-                };
-            }
-            return app;
-        });
 
-        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-            window.DataStore.saveApplications(applications);
-        } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(applications) : localStorage.setItem('applications', JSON.stringify(applications)));
-        }
 
-        if (window.SupabaseSync) {
-            window.SupabaseSync.updateApplication(appId, {
-                assigned_constructor_id: constructorId,
-                assigned_constructor_name: constUser.businessName,
-                construction_status: 'before_construction'
-            });
-        }
-
-        alert(`시공업체 [${constUser.businessName}]가 성공적으로 배정되었습니다.`);
-        renderStatusTab();
-    }
-
-    function approveSettlementMob(id) {
-        const app = applications.find(a => a.id === id);
-        if (!app) return;
-
-        let proofText = `[시공 완료 보고 증빙 검수 (모바일)]\n\n`;
-        proofText += `상호명: ${app.storeName}\n`;
-        proofText += `시공사: ${app.assignedConstructorName}\n`;
-        proofText += `업로드된 시공 사진 수: ${app.constructionPhotos ? app.constructionPhotos.length : 0}장\n`;
-        proofText += `업로드된 세금계산서 수: ${app.invoicePhotos ? app.invoicePhotos.length : 0}장\n\n`;
-        proofText += `해당 시공 증빙을 검수하고 최종 정산을 종결하시겠습니까?`;
-
-        if (confirm(proofText)) {
-            applications = applications.map(a => {
-                if (a.id === id) {
-                    return { ...a, constructionStatus: 'completed' };
-                }
-                return a;
-            });
-            if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-                window.DataStore.saveApplications(applications);
-            } else {
-                (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(applications) : localStorage.setItem('applications', JSON.stringify(applications)));
-            }
-
-            if (window.SupabaseSync) {
-                window.SupabaseSync.updateApplication(id, {
-                    construction_status: 'completed'
-                });
-            }
-
-            alert('공사 증빙 검수가 통과되어 최종 정산 종결 처리되었습니다.');
-            renderStatusTab();
-        }
-    }
 
     window.renderAdminDashboardMob = renderAdminDashboardMob;
     window.renderStatusTab = renderStatusTab;
@@ -4200,24 +4107,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    function deleteApplicationMob(id) {
-        if (!id) return;
-        if (!confirm(`[주의] 지원 신청 접수 건 [${id}]을(를) 정말로 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
 
-        applications = applications.filter(app => String(app.id) !== String(id));
-        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-            window.DataStore.saveApplications(applications);
-        } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveApplications ? DataStore.saveApplications(applications) : localStorage.setItem('applications', JSON.stringify(applications)));
-        }
-
-        if (window.SupabaseSync) {
-            window.SupabaseSync.deleteApplication(id);
-        }
-
-        alert(`지원 신청 접수 건 [${id}]이(가) 정상적으로 삭제되었습니다.`);
-        renderStatusTab();
-    }
 
     const updateApplicationStatusMob = (id, newStatus, selectEl) => {
         if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
@@ -4947,18 +4837,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
 
-            const memoPhotoCount = (() => {
-              try {
-                const m = typeof job.memo === 'string' ? JSON.parse(job.memo) : (job.memo || {});
-                return (m && m.photoCount) ? Number(m.photoCount) : 0;
-              } catch(e) { return 0; }
-            })();
-            const pCount = Math.max(
-              (Array.isArray(job.photos) ? job.photos.length : 0),
-              Number(job.photosCount) || 0,
-              memoPhotoCount,
-              (job.hasPhoto ? 1 : 0)
-            );
+            const { count: pCount } = getAppPhotoInfo(job);
 
             card.innerHTML = `
                 <div class="app-card-header">
