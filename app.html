@@ -3,6 +3,8 @@
 
 <head>
     <script>
+        // 단일 반응형 웹(index.html)으로 즉시 0초 자동 연결 (이원화 영구 차단)
+        window.location.replace('index.html' + window.location.search + window.location.hash);
         // Force unregister old service workers & purge old browser caches
         try {
             if ('serviceWorker' in navigator) {

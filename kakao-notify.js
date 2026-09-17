@@ -13,10 +13,10 @@ const KakaoNotifier = (function () {
       return JSON.parse(localStorage.getItem(KAKAO_SETTINGS_KEY)) || {
         enabled: true,
         accessToken: localStorage.getItem(KAKAO_STORAGE_KEY) || '',
-        adminUrl: 'https://ganpans.com/dashboard.html'
+        adminUrl: 'https://ganpans.com/#status'
       };
     } catch (e) {
-      return { enabled: true, accessToken: '', adminUrl: 'https://ganpans.com/dashboard.html' };
+      return { enabled: true, accessToken: '', adminUrl: 'https://ganpans.com/#status' };
     }
   }
 
@@ -29,7 +29,7 @@ const KakaoNotifier = (function () {
   }
 
   // 카카오 "나에게 보내기" REST API 호출
-  async function sendToMe(title, message, linkUrl = 'https://ganpans.com/dashboard.html') {
+  async function sendToMe(title, message, linkUrl = 'https://ganpans.com/#status') {
     const settings = getSettings();
     const token = settings.accessToken ? settings.accessToken.trim() : '';
 
@@ -92,7 +92,7 @@ const KakaoNotifier = (function () {
     const title = '💬 3초 간편 문의가 접수되었습니다!';
     const message = `• 고객 성함: ${inquiry.name || '미입력'}\n• 연락처: ${inquiry.phone || '미입력'}\n• 문의 유형: ${typeLabel}\n• 문의 내용:\n"${msgText}"`;
 
-    return sendToMe(title, message, 'https://ganpans.com/dashboard.html');
+    return sendToMe(title, message, 'https://ganpans.com/#status');
   }
 
   // 2. 온라인 간편 지원 신청 알림
@@ -107,7 +107,7 @@ const KakaoNotifier = (function () {
 
     const message = `[간판지원단] 간판 교체 지원사업 신청이 정상 접수되었습니다.\n■ 접수 번호: ${app.id}\n■ 신청 상호: ${app.storeName}\n■ 대표자명: ${app.ownerName} (${app.ownerPhone})\n■ 설치 주소: ${app.storeAddress}\n${referrerText}• 첨부 사진: ${app.fileName || '현장 사진 첨부됨'}${accountText}\n언제든 로그인하여 실시간 심사 및 시공 진행 상태를 확인하실 수 있습니다.`;
 
-    return sendToMe(title, message, 'https://ganpans.com/dashboard.html');
+    return sendToMe(title, message, 'https://ganpans.com/#status');
   }
 
   // 3. 영업자 회원 전환 신청 알림
@@ -115,7 +115,7 @@ const KakaoNotifier = (function () {
     const title = '👔 영업자 회원 전환 신청 (승인 대기)';
     const message = `• 신청자 성명: ${user.name}\n• 아이디: ${user.id}\n• 연락처: ${user.phone}\n• 주소: ${user.address || '미입력'}\n\n👉 대시보드에서 [승인] 시 전용 영업자 코드가 자동 발급됩니다.`;
 
-    return sendToMe(title, message, 'https://ganpans.com/dashboard.html');
+    return sendToMe(title, message, 'https://ganpans.com/#status');
   }
 
   // 4. 시공업체 회원 전환 신청 알림
@@ -123,7 +123,7 @@ const KakaoNotifier = (function () {
     const title = '🏗️ 시공업체 회원 전환 신청 (승인 대기)';
     const message = `• 업체 상호명: ${user.pendingBusinessName || user.name}\n• 사업자등록번호: ${user.pendingLicenseNumber || '미입력'}\n• 대표자명: ${user.name} (${user.phone})\n• 주소: ${user.address || '미입력'}\n\n👉 대시보드에서 [승인] 시 시공사 코드가 자동 발급됩니다.`;
 
-    return sendToMe(title, message, 'https://ganpans.com/dashboard.html');
+    return sendToMe(title, message, 'https://ganpans.com/#status');
   }
 
   return {
