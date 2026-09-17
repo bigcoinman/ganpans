@@ -3414,6 +3414,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     window.renderAdminDashboardMob = renderAdminDashboardMob;
+    window.renderAllUsersList = function () {
+        if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob(true);
+    };
+
 
     function approveConstructorConversionMob(uid) {
         let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
