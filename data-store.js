@@ -2029,11 +2029,12 @@
           if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
         }
 
-        // 5. 기타 회원 / 문의 목록
-        if (!isFormActive || force === 'all') {
+        // 5. 기타 회원 / 문의 목록 (회원 검색 중일 때만 회원 목록 스킵, 그 외에는 0초 실시간 즉시 갱신)
+        const isUserSearchActive = isFormActive && activeEl && (activeEl.id === 'search-all-users-input' || activeEl.id === 'search-all-users-input-mob' || (activeEl.closest && (activeEl.closest('#sec-container-all-users') || activeEl.closest('#admin-all-users-list-mob'))));
+        if (!isUserSearchActive || force === 'all' || force === true) {
           if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
-          if (typeof window.renderInquiriesList === 'function') window.renderInquiriesList();
         }
+        if (typeof window.renderInquiriesList === 'function') window.renderInquiriesList();
 
         // 5. 전역 및 다른 브라우저 탭 실시간 브로드캐스트 발화 (0초 즉시 동기화)
         if (typeof window !== 'undefined') {

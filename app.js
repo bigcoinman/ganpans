@@ -6192,8 +6192,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof renderUserApplicationsMob === 'function') renderUserApplicationsMob();
         if (typeof renderBizRegisteredItemsMob === 'function') renderBizRegisteredItemsMob();
         if (typeof renderBusinessDashboardMob === 'function') renderBusinessDashboardMob();
-        if (typeof renderConstructorDashboardMob === 'function') renderConstructorDashboardMob(true);
-        if (typeof renderAdminDashboardMob === 'function' && activeUser && activeUser.role === 'admin') renderAdminDashboardMob(true);
+        const curAct = (window.DataStore && typeof window.DataStore.getActiveUser === 'function')
+            ? window.DataStore.getActiveUser()
+            : ((typeof getActiveUser === 'function') ? getActiveUser() : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser'))));
+        if (typeof renderAdminDashboardMob === 'function' && curAct && curAct.role === 'admin') renderAdminDashboardMob(true);
+        if (typeof renderAllUsersList === 'function' && curAct && curAct.role === 'admin') renderAllUsersList();
         if (typeof updateDrawerProfile === 'function') updateDrawerProfile();
         if (typeof updateHeaderAuthButton === 'function') updateHeaderAuthButton();
     };

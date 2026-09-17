@@ -6292,10 +6292,13 @@ function initAIAssistant() {
     const isFormActive = Boolean(window.isInteractingWithForm || (activeEl && (activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'submit') || activeEl.tagName === 'TEXTAREA')));
     if (isFormActive) return; // 폼 입력/선택 중에는 DOM 보호
     if (typeof updateSessionUI === 'function') updateSessionUI();
+    if (typeof renderAdminStats === 'function') renderAdminStats();
+    if (typeof renderAllUsersList === 'function') renderAllUsersList();
     if (typeof renderApplicationsList === 'function') renderApplicationsList();
     if (typeof renderBizRegisteredTable === 'function') renderBizRegisteredTable();
     if (typeof renderConstructorPanel === 'function') renderConstructorPanel();
     if (typeof renderManagerPanel === 'function') renderManagerPanel();
+    if (typeof renderInquiriesList === 'function') renderInquiriesList();
   };
 
   window.addEventListener('supabase-data-synced', handleRealtimeSync);

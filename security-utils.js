@@ -2661,7 +2661,7 @@ window.SupabaseSync = {
         }));
 
         if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-          window.DataStore.notifyAll();
+          window.DataStore.notifyAll(true);
         }
       }
 
