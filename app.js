@@ -1855,19 +1855,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     const approvedLabel = app.draftStatus === 'owner_approved' ? '점주 시안 확정 완료' : '관리자 시안 확정 완료';
                     
                     return `
-                        <div style="background: #fdf4ff; border: 1px solid #f5d0fe; border-radius: 8px; padding: 10px 12px; text-align: left; margin-bottom: 6px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <span style="font-size: 0.92rem; font-weight: 700; color: #86198f;"><i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftCount}장)</span>
-                                <button type="button" onclick="window.viewDraftModal('${app.id}')" style="padding: 4px 10px; font-size: 0.76rem; font-weight: 700; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; border-radius: 6px; cursor: pointer;">시안 크게보기</button>
+                        <div style="background: #fdf4ff; border: 1px solid #f5d0fe; border-radius: 8px; padding: 12px 14px; text-align: left; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 1.05rem; font-weight: 700; color: #86198f;"><i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftCount}장)</span>
+                                <button type="button" onclick="window.viewDraftModal('${app.id}')" style="padding: 5px 12px; font-size: 0.90rem; font-weight: 700; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-eye"></i> 시안 크게보기</button>
                             </div>
                             ${isApproved ? `
-                                <div style="font-size: 0.82rem; color: #166534; font-weight: 700; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 4px;">
+                                <div style="font-size: 0.94rem; color: #166534; font-weight: 700; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; gap: 6px;">
                                     <i class="fa-solid fa-circle-check"></i> ${approvedLabel}
                                 </div>
                             ` : `
-                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
-                                    <span style="font-size: 0.76rem; color: #92400e; font-weight: 600;"><i class="fa-solid fa-clock"></i> 시안 검토 후 승인해주세요</span>
-                                    <button type="button" onclick="window.approveDraftByOwner('${app.id}')" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(22,163,74,0.3);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
+                                    <span style="font-size: 0.90rem; color: #92400e; font-weight: 600;"><i class="fa-solid fa-clock"></i> 시안 검토 후 승인해주세요</span>
+                                    <button type="button" onclick="window.approveDraftByOwner('${app.id}')" style="padding: 8px 14px; font-size: 0.94rem; font-weight: 700; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(22,163,74,0.3);">
                                         <i class="fa-solid fa-check"></i> 시안 승인 / 마음에 듭니다
                                     </button>
                                 </div>
@@ -3646,9 +3646,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         
                         <!-- 간판 종류 -->
-                        <div style="margin-top: 6px; font-size: 0.82rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                        <div style="margin-top: 6px; font-size: 0.92rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                             <span style="color: #475569; font-weight: 600;">간판종류:</span>
-                            <select class="select-job-signtype-mob" data-id="${job.id}" style="padding: 3px 6px; font-size: 0.74rem; font-weight: 700; border-radius: 4px; border: 1px solid #93c5fd; color: #1e40af; background: #eff6ff;">
+                            <select class="select-job-signtype-mob" data-id="${job.id}" style="padding: 5px 8px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; border: 1px solid #93c5fd; color: #1e40af; background: #eff6ff;">
                                 <option value="플렉스 간판" ${selectedDropdownVal === '플렉스 간판' ? 'selected' : ''}>1. 플렉스 간판</option>
                                 <option value="LED 채널 간판" ${selectedDropdownVal === 'LED 채널 간판' ? 'selected' : ''}>2. LED 채널 간판</option>
                                 <option value="돌출 간판" ${selectedDropdownVal === '돌출 간판' ? 'selected' : ''}>3. 돌출 간판</option>
@@ -3656,40 +3656,40 @@ document.addEventListener('DOMContentLoaded', () => {
                             </select>
                         </div>
                         <div id="custom-signtype-wrap-mob-${job.id}" style="display: ${selectedDropdownVal === 'custom' ? 'flex' : 'none'}; margin-top: 4px; gap: 4px;">
-                            <input type="text" value="${isCustomSignType ? escapeHtml(currentSignType) : ''}" placeholder="기타 간판종류 입력" style="padding: 3px 6px; font-size: 0.74rem; border-radius: 4px; border: 1px solid #cbd5e1; width: 130px;" onchange="window.updateJobSignType('${job.id}', this.value)">
+                            <input type="text" value="${isCustomSignType ? escapeHtml(currentSignType) : ''}" placeholder="기타 간판종류 입력" style="padding: 4px 8px; font-size: 0.86rem; border-radius: 4px; border: 1px solid #cbd5e1; width: 140px;" onchange="window.updateJobSignType('${job.id}', this.value)">
                         </div>
 
                         <!-- 간판 디자인 시안 확인 & 시공 후 증빙 -->
-                        <div style="margin-top: 8px; padding: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; flex-direction: column; gap: 6px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
-                                <span style="font-size: 0.78rem; font-weight: 700; color: #7c3aed;"><i class="fa-solid fa-palette"></i> 디자인 시안 (${draftCount}/5장):</span>
-                                <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                        <div style="margin-top: 10px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                                <span style="font-size: 0.92rem; font-weight: 700; color: #7c3aed;"><i class="fa-solid fa-palette"></i> 디자인 시안 (${draftCount}/5장):</span>
+                                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
                                     ${draftCount > 0 ? `
-                                        <button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 3px 8px; font-size: 0.72rem; font-weight: 700; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; border-radius: 4px; cursor: pointer;">시안 확인 및 삭제</button>
+                                        <button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 5px 10px; font-size: 0.86rem; font-weight: 700; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-eye"></i> 시안 확인 및 삭제</button>
                                         ${(job.draftStatus !== 'owner_approved' && job.draftStatus !== 'admin_approved') ? `
-                                            <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved')" style="padding: 3px 6px; font-size: 0.7rem; font-weight: 700; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">직권확정</button>
+                                            <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved')" style="padding: 5px 9px; font-size: 0.85rem; font-weight: 700; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-check"></i> 직권확정</button>
                                         ` : `
-                                            <span style="font-size: 0.72rem; color: #166534; font-weight: 700;">(${draftStatusText})</span>
+                                            <span style="font-size: 0.86rem; color: #166534; font-weight: 700;">(${draftStatusText})</span>
                                         `}
-                                    ` : `<span style="font-size: 0.72rem; color: #94a3b8;">미등록</span>`}
+                                    ` : `<span style="font-size: 0.86rem; color: #94a3b8;">미등록</span>`}
                                     ${draftCount < 5 ? `
-                                        <label style="background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 3px 7px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 2px;" title="시안 등록 (최대 5장, 300KB 자동 압축)">
+                                        <label style="background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 5px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="시안 등록 (최대 5장, 300KB 자동 압축)">
                                             <i class="fa-solid fa-plus"></i> ${draftCount > 0 ? '추가' : '등록'}
                                             <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobDraftUploadCommon('${job.id}', this.files); this.value='';">
                                         </label>
                                     ` : ''}
                                 </div>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
-                                <span style="font-size: 0.78rem; font-weight: 700; color: #047857;"><i class="fa-solid fa-camera"></i> 시공 후 증빙:</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                                <span style="font-size: 0.92rem; font-weight: 700; color: #047857;"><i class="fa-solid fa-camera"></i> 시공 후 증빙:</span>
                                 ${proofHtml}
                             </div>
                         </div>
 
                         <!-- 5단계 상태 변경 -->
                         <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                            <span style="font-size: 0.82rem; font-weight: 700; color: #475569;">시공 진행 상태:</span>
-                            <select class="status-select-mob select-admin-const-status-mob" data-id="${job.id}" style="padding: 5px 8px; font-size: 0.8rem; font-weight: 700; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; max-width: 180px; height: auto;">
+                            <span style="font-size: 0.95rem; font-weight: 700; color: #475569;">시공 진행 상태:</span>
+                            <select class="status-select-mob select-admin-const-status-mob" data-id="${job.id}" style="padding: 7px 10px; font-size: 0.94rem; font-weight: 700; border-radius: 6px; border: 1px solid var(--border-color); background: white; flex: 1; max-width: 190px; height: auto;">
                                 <option value="before_construction" ${st === 'before_construction' ? 'selected' : ''}>1. 시공 전</option>
                                 <option value="design_draft" ${st === 'design_draft' ? 'selected' : ''}>2. 시안/교정 중</option>
                                 <option value="in_construction" ${st === 'in_construction' ? 'selected' : ''}>3. 시공 진행 중</option>
@@ -4912,13 +4912,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let draftStatusBadge = '';
             if (job.draftStatus === 'owner_approved') {
-                draftStatusBadge = '<span style="color: #166534; font-weight: 700; font-size: 0.72rem;"><i class="fa-solid fa-circle-check"></i> 점주 시안확정</span>';
+                draftStatusBadge = '<span style="color: #166534; font-weight: 700; font-size: 0.86rem;"><i class="fa-solid fa-circle-check"></i> 점주 시안확정</span>';
             } else if (job.draftStatus === 'admin_approved') {
-                draftStatusBadge = '<span style="color: #1e40af; font-weight: 700; font-size: 0.72rem;"><i class="fa-solid fa-user-shield"></i> 관리자 직권확정</span>';
+                draftStatusBadge = '<span style="color: #1e40af; font-weight: 700; font-size: 0.86rem;"><i class="fa-solid fa-user-shield"></i> 관리자 직권확정</span>';
             } else if (draftPhotos.length > 0) {
-                draftStatusBadge = '<span style="color: #92400e; font-weight: 700; font-size: 0.72rem;"><i class="fa-solid fa-clock"></i> 시안 검토중</span>';
+                draftStatusBadge = '<span style="color: #92400e; font-weight: 700; font-size: 0.86rem;"><i class="fa-solid fa-clock"></i> 시안 검토중</span>';
             } else {
-                draftStatusBadge = '<span style="color: #94a3b8; font-size: 0.72rem;">시안 미등록</span>';
+                draftStatusBadge = '<span style="color: #94a3b8; font-size: 0.86rem;">시안 미등록</span>';
             }
 
             let uploadSectionHtml = '';
@@ -4926,36 +4926,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 uploadSectionHtml = `
                     <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px; text-align: left;">
                         <!-- 1. 간판 디자인 시안 업로드 (300KB 이하 자동 압축, 최대 5장) -->
-                        <div class="phone-form-group" style="margin-bottom: 8px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <label style="font-size: 0.75rem; font-weight: 700; color: #7e22ce;"><i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftPhotos.length}/5장)</label>
+                        <div class="phone-form-group" style="margin-bottom: 8px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label style="font-size: 0.90rem; font-weight: 700; color: #7e22ce;"><i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftPhotos.length}/5장)</label>
                                 ${draftStatusBadge}
                             </div>
-                            <input type="file" class="const-draft-input-mob" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.7rem; width: 100%;">
-                            ${draftPhotos.length > 0 ? `<button type="button" onclick="window.viewDraftModal('${job.id}')" style="margin-top: 4px; padding: 4px 10px; font-size: 0.72rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 4px; cursor: pointer; font-weight: 700;"><i class="fa-solid fa-eye"></i> 등록된 시안 확인 및 삭제 (${draftPhotos.length}장)</button>` : ''}
+                            <input type="file" class="const-draft-input-mob" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.85rem; width: 100%;">
+                            ${draftPhotos.length > 0 ? `<button type="button" onclick="window.viewDraftModal('${job.id}')" style="margin-top: 6px; padding: 6px 12px; font-size: 0.86rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;"><i class="fa-solid fa-eye"></i> 등록된 시안 확인 및 삭제 (${draftPhotos.length}장)</button>` : ''}
                         </div>
 
                         <!-- 2. 시공 후 사진 업로드 (300KB 이하 자동 압축, 최대 5장) -->
-                        <div class="phone-form-group" style="margin-bottom: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px;">
-                            <label style="font-size: 0.75rem; font-weight: 700; color: #15803d; display: block; margin-bottom: 4px;"><i class="fa-solid fa-camera"></i> 시공 후 사진 증빙 (${afterPhotos.length}/5장)</label>
-                            <input type="file" class="const-photo-input-mob" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.7rem; width: 100%;">
-                            ${afterPhotos.length > 0 ? `<button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="margin-top: 4px; padding: 4px 10px; font-size: 0.72rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 4px; cursor: pointer; font-weight: 700;"><i class="fa-solid fa-eye"></i> 시공 후 사진 확인 및 삭제 (${afterPhotos.length}장)</button>` : ''}
+                        <div class="phone-form-group" style="margin-bottom: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px;">
+                            <label style="font-size: 0.90rem; font-weight: 700; color: #15803d; display: block; margin-bottom: 6px;"><i class="fa-solid fa-camera"></i> 시공 후 사진 증빙 (${afterPhotos.length}/5장)</label>
+                            <input type="file" class="const-photo-input-mob" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.85rem; width: 100%;">
+                            ${afterPhotos.length > 0 ? `<button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="margin-top: 6px; padding: 6px 12px; font-size: 0.86rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;"><i class="fa-solid fa-eye"></i> 시공 후 사진 확인 및 삭제 (${afterPhotos.length}장)</button>` : ''}
                         </div>
                         
-                        <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-                            <select class="status-select-mob select-const-status-mob" data-id="${job.id}" style="padding: 5px; font-size: 0.74rem; font-weight: 700; border-radius: 4px; border: 1px solid var(--border-color); background: white; height: auto; min-height: auto; width: auto;">
+                        <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 8px;">
+                            <select class="status-select-mob select-const-status-mob" data-id="${job.id}" style="padding: 7px 10px; font-size: 0.90rem; font-weight: 700; border-radius: 6px; border: 1px solid var(--border-color); background: white; height: auto; min-height: auto; width: auto;">
                                 <option value="before_construction" ${job.constructionStatus === 'before_construction' ? 'selected' : ''}>1. 시공 전</option>
                                 <option value="design_draft" ${job.constructionStatus === 'design_draft' ? 'selected' : ''}>2. 시안/교정 중</option>
                                 <option value="in_construction" ${job.constructionStatus === 'in_construction' ? 'selected' : ''}>3. 시공 중</option>
                                 <option value="after_construction" ${job.constructionStatus === 'after_construction' ? 'selected' : ''}>4. 완료 보고</option>
                             </select>
-                            <button class="btn btn-primary btn-sm btn-report-job-complete-mob" data-id="${job.id}" style="padding: 6px 12px; font-size: 0.75rem; font-weight: 700; background: var(--accent-success); border: none; border-radius: 6px; cursor: pointer; color: white;"><i class="fa-solid fa-paper-plane"></i> 최종 시공 완료 보고</button>
+                            <button class="btn btn-primary btn-sm btn-report-job-complete-mob" data-id="${job.id}" style="padding: 8px 16px; font-size: 0.90rem; font-weight: 700; background: var(--accent-success); border: none; border-radius: 6px; cursor: pointer; color: white; display: inline-flex; align-items: center; gap: 5px;"><i class="fa-solid fa-paper-plane"></i> 최종 시공 완료 보고</button>
                         </div>
                     </div>
                 `;
             } else {
                 uploadSectionHtml = `
-                    <div style="border-top: 1px dashed var(--border-color); padding-top: 8px; margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary); text-align: left;">
+                    <div style="border-top: 1px dashed var(--border-color); padding-top: 8px; margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary); text-align: left;">
                         <i class="fa-solid fa-circle-check" style="color: var(--accent-success);"></i> 공사 검수가 완료되어 최종 정산 처리가 종료되었습니다.
                     </div>
                 `;
@@ -4977,23 +4977,23 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <div class="app-card-header">
                     <span class="app-card-title">${escapeHtml(job.storeName)}</span>
-                    <span class="app-card-date" style="font-size: 0.7rem;"><i class="fa-solid fa-phone"></i> ${escapeHtml(job.ownerPhone)}</span>
+                    <span class="app-card-date" style="font-size: 0.82rem;"><i class="fa-solid fa-phone"></i> ${escapeHtml(job.ownerPhone)}</span>
                 </div>
                 <div class="app-card-body-row" style="display: flex; justify-content: space-between; align-items: center; background: #eff6ff; padding: 6px 10px; border-radius: 6px; margin: 4px 0 6px 0; border: 1px solid #bfdbfe;">
-                    <span style="font-size: 0.78rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 점주 현장사진</span>
+                    <span style="font-size: 0.88rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 점주 현장사진</span>
                     ${pCount > 0 ? `
-                        <button type="button" onclick="window.downloadApplicationPhotos('${job.id}', { expectedCount: ${pCount} }); return false;" style="padding: 4px 10px; font-size: 0.74rem; background: #2563eb; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                        <button type="button" onclick="window.downloadApplicationPhotos('${job.id}', { expectedCount: ${pCount} }); return false;" style="padding: 5px 12px; font-size: 0.86rem; background: #2563eb; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
                             사진 확인 (${pCount}장)
                         </button>
                     ` : `
-                        <span style="font-size: 0.72rem; color: #94a3b8;">미등록</span>
+                        <span style="font-size: 0.82rem; color: #94a3b8;">미등록</span>
                     `}
                 </div>
                 <div class="app-card-body-row">설치주소: ${escapeHtml(job.storeAddress)}</div>
                 <div class="app-card-body-row">간판종류: <strong>${escapeHtml(job.signType || '플렉스 간판')}</strong></div>
                 <div class="app-card-footer" style="flex-direction: column; align-items: stretch; gap: 8px; margin-top: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="badge-status ${statusClass}" style="padding: 3px 8px; font-size: 0.7rem;">${statusLabel}</span>
+                        <span class="badge-status ${statusClass}" style="padding: 5px 12px; font-size: 0.86rem; font-weight: 700;">${statusLabel}</span>
                     </div>
                     ${uploadSectionHtml}
                 </div>

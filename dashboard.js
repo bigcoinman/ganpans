@@ -4004,19 +4004,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (draftCount > 0) {
         let draftStatusHtml = '';
         if (job.draftStatus === 'owner_approved') {
-          draftStatusHtml = `<span style="background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 9999px; font-weight: 700; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-circle-check"></i> 점주 시안확정</span>`;
+          draftStatusHtml = `<span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.86rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 점주 시안확정</span>`;
         } else if (job.draftStatus === 'admin_approved') {
           draftStatusHtml = `
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
-              <span style="background: #dbeafe; color: #1e40af; padding: 3px 8px; border-radius: 9999px; font-weight: 700; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-user-shield"></i> 관리자 직권확정</span>
-              <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'pending')" style="background: none; border: none; color: #94a3b8; text-decoration: underline; font-size: 0.7rem; cursor: pointer;">확정 취소</button>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <span style="background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.86rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-user-shield"></i> 관리자 직권확정</span>
+              <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'pending')" style="background: none; border: none; color: #94a3b8; text-decoration: underline; font-size: 0.82rem; cursor: pointer;">확정 취소</button>
             </div>
           `;
         } else {
           draftStatusHtml = `
             <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-              <span style="background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 9999px; font-weight: 700; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-clock"></i> 시안 검토중</span>
-              <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved')" style="padding: 3px 8px; font-size: 0.72rem; font-weight: 700; background: #2563eb; color: white; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+              <span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 9999px; font-weight: 700; font-size: 0.86rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-clock"></i> 시안 검토중</span>
+              <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved')" style="padding: 4px 10px; font-size: 0.86rem; font-weight: 700; background: #2563eb; color: white; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
                 <i class="fa-solid fa-check"></i> 관리자 직권확정
               </button>
             </div>
@@ -4024,13 +4024,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draftBadge = `
-          <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
-            <div style="display: flex; gap: 4px; align-items: center;">
-              <button type="button" onclick="window.viewDraftModal('${job.id}')" style="background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; padding: 4px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="디자인 시안 보기 및 삭제">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+            <div style="display: flex; gap: 5px; align-items: center;">
+              <button type="button" onclick="window.viewDraftModal('${job.id}')" style="background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; padding: 5px 10px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="디자인 시안 보기 및 삭제">
                 <i class="fa-solid fa-palette"></i> 시안 (${draftCount}/5장)
               </button>
               ${draftCount < 5 ? `
-                <label style="background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 4px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="시안 추가 업로드 (최대 5장, 300KB 자동 압축)">
+                <label style="background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 5px 9px; border-radius: 6px; font-size: 0.86rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="시안 추가 업로드 (최대 5장, 300KB 자동 압축)">
                   <i class="fa-solid fa-plus"></i> 추가
                   <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobDraftUploadCommon('${job.id}', this.files); this.value='';">
                 </label>
@@ -4041,9 +4041,9 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
       } else {
         draftBadge = `
-          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-            <span style="color: #94a3b8; font-size: 0.75rem;"><i class="fa-solid fa-hourglass-start"></i> 시안 미등록</span>
-            <label style="background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="시안 신규 등록 (최대 5장, 300KB 자동 압축)">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+            <span style="color: #94a3b8; font-size: 0.88rem;"><i class="fa-solid fa-hourglass-start"></i> 시안 미등록</span>
+            <label style="background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 5px 10px; border-radius: 6px; font-size: 0.86rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="시안 신규 등록 (최대 5장, 300KB 자동 압축)">
               <i class="fa-solid fa-cloud-arrow-up"></i> 시안 등록
               <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobDraftUploadCommon('${job.id}', this.files); this.value='';">
             </label>
@@ -4113,7 +4113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
         <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">${draftBadge}</td>
         <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">
-          <select class="status-select select-admin-const-status" data-id="${job.id}" style="padding: 5px 8px; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: ${statusBg}; cursor: pointer;">
+          <select class="status-select select-admin-const-status" data-id="${job.id}" style="padding: 6px 10px; font-size: 0.90rem; font-weight: 700; border-radius: 6px; border: 1.5px solid ${statusBorder}; color: ${statusColor}; background: ${statusBg}; cursor: pointer;">
             <option value="before_construction" ${st === 'before_construction' ? 'selected' : ''}>1. 시공 전</option>
             <option value="design_draft" ${st === 'design_draft' ? 'selected' : ''}>2. 간판 디자인 시안 및 교정 중</option>
             <option value="in_construction" ${st === 'in_construction' ? 'selected' : ''}>3. 시공 진행 중</option>
@@ -5317,17 +5317,17 @@ document.addEventListener('DOMContentLoaded', () => {
         actionsHtml = `
           <div style="display: flex; flex-direction: column; gap: 8px; align-items: stretch; padding: 8px;">
             <!-- 1. 간판 디자인 시안 업로드 (300KB 이하 자동 압축, 최대 5장) -->
-            <div style="background: #fdf4ff; border: 1px solid #f5d0fe; padding: 6px 10px; border-radius: 6px; text-align: left;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
-                <label style="font-size: 0.72rem; font-weight: 700; color: #86198f;">
+            <div style="background: #fdf4ff; border: 1px solid #f5d0fe; padding: 8px 12px; border-radius: 6px; text-align: left;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label style="font-size: 0.88rem; font-weight: 700; color: #86198f;">
                   <i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftCount}/5장)
                 </label>
-                ${draftCount >= 5 ? '<span style="font-size: 0.68rem; color: #dc2626; font-weight: 700;">최대 등록됨</span>' : ''}
+                ${draftCount >= 5 ? '<span style="font-size: 0.82rem; color: #dc2626; font-weight: 700;">최대 등록됨</span>' : ''}
               </div>
-              <input type="file" class="const-draft-input" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.72rem; width: 100%;">
+              <input type="file" class="const-draft-input" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.86rem; width: 100%;">
               ${draftCount > 0 ? `
-                <div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between;">
-                  <button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 3px 8px; font-size: 0.7rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; font-weight: 700;">
+                <div style="margin-top: 5px; display: flex; align-items: center; justify-content: space-between;">
+                  <button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 5px 10px; font-size: 0.86rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;">
                     <i class="fa-solid fa-eye"></i> 등록된 시안 확인 및 삭제 (${draftCount}장)
                   </button>
                 </div>
@@ -5336,30 +5336,30 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
 
             <!-- 2. 시공 후 사진 업로드 (300KB 이하 자동 압축, 최대 5장) -->
-            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 10px; border-radius: 6px; text-align: left;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
-                <label style="font-size: 0.72rem; font-weight: 700; color: #166534;">
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 12px; border-radius: 6px; text-align: left;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label style="font-size: 0.88rem; font-weight: 700; color: #166534;">
                   <i class="fa-solid fa-camera"></i> 시공 후 사진 증빙 (${job.constructionPhotos ? job.constructionPhotos.length : 0}/5)
                 </label>
               </div>
-              <input type="file" class="const-photo-input" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.72rem; width: 100%;">
+              <input type="file" class="const-photo-input" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.86rem; width: 100%;">
               ${(job.constructionPhotos && job.constructionPhotos.length > 0) ? `
-                <div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between;">
-                  <button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="padding: 3px 8px; font-size: 0.7rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; font-weight: 700;">
+                <div style="margin-top: 5px; display: flex; align-items: center; justify-content: space-between;">
+                  <button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="padding: 5px 10px; font-size: 0.86rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;">
                     <i class="fa-solid fa-eye"></i> 시공 후 사진 확인 및 삭제 (${job.constructionPhotos.length}장)
                   </button>
                 </div>
               ` : ''}
             </div>
             
-            <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center; margin-top: 4px;">
-              <select class="status-select select-const-status" data-id="${job.id}" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; border: 1px solid #cbd5e1; background: white;">
+            <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 6px;">
+              <select class="status-select select-const-status" data-id="${job.id}" style="padding: 6px 10px; font-size: 0.90rem; font-weight: 700; border-radius: 6px; border: 1px solid #cbd5e1; background: white;">
                 <option value="before_construction" ${job.constructionStatus === 'before_construction' ? 'selected' : ''}>1. 시공 전</option>
                 <option value="design_draft" ${job.constructionStatus === 'design_draft' ? 'selected' : ''}>2. 시안/교정 중</option>
                 <option value="in_construction" ${job.constructionStatus === 'in_construction' ? 'selected' : ''}>3. 시공 진행 중</option>
               </select>
-              <button class="btn btn-primary btn-sm btn-report-job-complete" data-id="${job.id}" style="padding: 5px 10px; font-size: 0.74rem; background: #16a34a; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-                <i class="fa-solid fa-paper-plane"></i> 시공 완료 보고
+              <button class="btn btn-primary btn-sm btn-report-job-complete" data-id="${job.id}" style="padding: 7px 14px; font-size: 0.90rem; background: #16a34a; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                <i class="fa-solid fa-paper-plane"></i> 최종 시공 완료 보고
               </button>
             </div>
           </div>
