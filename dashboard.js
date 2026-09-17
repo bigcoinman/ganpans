@@ -1058,15 +1058,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      const updatedFields = {
+        conversionStatus: 'pending_constructor',
+        pendingBusinessName: bName,
+        pendingLicenseNumber: lNum
+      };
+
       activeUser.conversionStatus = 'pending_constructor';
       activeUser.pendingBusinessName = bName;
       activeUser.pendingLicenseNumber = lNum;
 
+      if (window.DataStore && typeof window.DataStore.lockUserUpdate === 'function') {
+        window.DataStore.lockUserUpdate(activeUser.id, updatedFields);
+      }
+
       users = users.map(u => u.id === activeUser.id ? { 
         ...u, 
-        conversionStatus: 'pending_constructor',
-        pendingBusinessName: bName,
-        pendingLicenseNumber: lNum
+        ...updatedFields
       } : u);
 
       if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
@@ -1081,11 +1089,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
       }
-
-      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-        window.DataStore.notifyAll();
-      }
-      window.dispatchEvent(new CustomEvent('supabase-data-synced'));
 
       // Supabase Sync
       if (window.SupabaseSync) {
@@ -1102,8 +1105,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       constructorModal.style.display = 'none';
+      constBusinessNameInput.value = '';
+      constLicenseNumberInput.value = '';
+
       alert('시공업체 회원 전환 신청이 접수되었습니다. 하단 [매니저 승인 콘솔]에서 즉시 승인 테스트를 하실 수 있습니다.');
       updateSessionUI();
+      if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+        window.DataStore.notifyAll(true);
+      }
+      window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     });
   }
 
@@ -2729,15 +2739,23 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (targetUser.conversionStatus === 'pending_constructor' || targetUser.pendingRole === 'constructor') {
       const code = (typeof generateConstCode === 'function') ? generateConstCode(curUsers) : ('C-' + Math.floor(1000 + Math.random() * 9000));
+      const updatedFields = {
+        role: 'constructor',
+        constCode: code,
+        businessName: targetUser.pendingBusinessName || targetUser.bizName || '(주)새로운시공',
+        licenseNumber: targetUser.pendingLicenseNumber || targetUser.bizNumber || '000-00-00000',
+        conversionStatus: 'approved'
+      };
+
+      if (window.DataStore && typeof window.DataStore.lockUserUpdate === 'function') {
+        window.DataStore.lockUserUpdate(targetUser.id, updatedFields);
+      }
+
       curUsers = curUsers.map(u => {
         if (String(u.id).toLowerCase() === String(uid).toLowerCase()) {
           return {
             ...u,
-            role: 'constructor',
-            constCode: code,
-            businessName: u.pendingBusinessName || u.bizName || '(주)새로운시공',
-            licenseNumber: u.pendingLicenseNumber || u.bizNumber || '000-00-00000',
-            conversionStatus: 'approved'
+            ...updatedFields
           };
         }
         return u;
@@ -2748,6 +2766,13 @@ document.addEventListener('DOMContentLoaded', () => {
         (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
       }
       users = curUsers;
+
+      if (activeUser && String(activeUser.id).toLowerCase() === String(uid).toLowerCase()) {
+        Object.assign(activeUser, updatedFields);
+        if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+          window.DataStore.setActiveUser(activeUser);
+        }
+      }
 
       // Supabase Sync
       if (window.SupabaseSync) {
@@ -2763,13 +2788,21 @@ document.addEventListener('DOMContentLoaded', () => {
       alert(`시공업체 전환 신청이 승인되었습니다!\n\n발급된 시공업체 코드: [${code}]`);
     } else {
       const code = (typeof generateBizCode === 'function') ? generateBizCode(curUsers) : ('B-' + Math.floor(1000 + Math.random() * 9000));
+      const updatedFields = {
+        role: 'business',
+        bizCode: code,
+        conversionStatus: 'approved'
+      };
+
+      if (window.DataStore && typeof window.DataStore.lockUserUpdate === 'function') {
+        window.DataStore.lockUserUpdate(targetUser.id, updatedFields);
+      }
+
       curUsers = curUsers.map(u => {
         if (String(u.id).toLowerCase() === String(uid).toLowerCase()) {
           return {
             ...u,
-            role: 'business',
-            bizCode: code,
-            conversionStatus: 'approved'
+            ...updatedFields
           };
         }
         return u;
@@ -2780,6 +2813,13 @@ document.addEventListener('DOMContentLoaded', () => {
         (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
       }
       users = curUsers;
+
+      if (activeUser && String(activeUser.id).toLowerCase() === String(uid).toLowerCase()) {
+        Object.assign(activeUser, updatedFields);
+        if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+          window.DataStore.setActiveUser(activeUser);
+        }
+      }
 
       // Supabase Sync
       if (window.SupabaseSync) {
@@ -2795,7 +2835,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (typeof updateSessionUI === 'function') updateSessionUI();
     if (typeof renderManagerPanel === 'function') renderManagerPanel();
-    if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob();
+    if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob(true);
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
     window.dispatchEvent(new CustomEvent('supabase-data-synced'));
   };
   window.approveUserConversion = approveUserConversion;
@@ -2813,9 +2856,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const targetUser = curUsers.find(u => u && String(u.id).toLowerCase() === String(uid).toLowerCase());
     if (!targetUser) return;
 
+    const updatedFields = {
+      conversionStatus: 'rejected'
+    };
+
+    if (window.DataStore && typeof window.DataStore.lockUserUpdate === 'function') {
+      window.DataStore.lockUserUpdate(targetUser.id, updatedFields);
+    }
+
     curUsers = curUsers.map(u => {
       if (String(u.id).toLowerCase() === String(uid).toLowerCase()) {
-        const cleanUser = { ...u, conversionStatus: 'rejected' };
+        const cleanUser = { ...u, ...updatedFields };
         if ('pendingBusinessName' in cleanUser) delete cleanUser.pendingBusinessName;
         if ('pendingLicenseNumber' in cleanUser) delete cleanUser.pendingLicenseNumber;
         return cleanUser;
@@ -2839,7 +2890,10 @@ document.addEventListener('DOMContentLoaded', () => {
     alert('전환 신청이 반려되었습니다.');
     if (typeof updateSessionUI === 'function') updateSessionUI();
     if (typeof renderManagerPanel === 'function') renderManagerPanel();
-    if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob();
+    if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob(true);
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
     window.dispatchEvent(new CustomEvent('supabase-data-synced'));
   };
   window.rejectUserConversion = rejectUserConversion;

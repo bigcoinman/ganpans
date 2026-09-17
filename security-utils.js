@@ -2145,10 +2145,23 @@ window.SupabaseSync = {
       let usersChanged = false;
       const { data: supaUsers, error: usersErr } = await window.supabaseClient.from('users').select('*');
       if (!usersErr && Array.isArray(supaUsers)) {
+        const recentUserLocks = (window.DataStore && window.DataStore._recentUserUpdates) || {};
         const freshUsers = supaUsers
           .map(su => this.mapDbToUser(su))
           .filter(u => u && u.id && u.role !== 'deleted')
           .map(u => {
+            const uId = String(u.id).trim().toLowerCase();
+            const uLock = recentUserLocks[uId];
+            if (uLock && (Date.now() - (uLock.timestamp || 0) < 6000)) {
+              if (uLock.role !== undefined) u.role = uLock.role;
+              if (uLock.conversionStatus !== undefined) u.conversionStatus = uLock.conversionStatus;
+              if (uLock.constCode !== undefined) u.constCode = uLock.constCode;
+              if (uLock.bizCode !== undefined) u.bizCode = uLock.bizCode;
+              if (uLock.pendingBusinessName !== undefined) u.pendingBusinessName = uLock.pendingBusinessName;
+              if (uLock.pendingLicenseNumber !== undefined) u.pendingLicenseNumber = uLock.pendingLicenseNumber;
+              if (uLock.businessName !== undefined) u.businessName = uLock.businessName;
+              if (uLock.licenseNumber !== undefined) u.licenseNumber = uLock.licenseNumber;
+            }
             if (u.role !== 'admin' && u.email && u.email.endsWith('@ganpan.go.kr')) {
               u.email = '';
             }

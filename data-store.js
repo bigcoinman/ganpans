@@ -898,6 +898,16 @@
 
     // --- 3-2. 영업물건 접수상태(receiptStatus) 및 진행상태(progressStatus) 통합 변경 (SSOT 보장) ---
     _recentStatusUpdates: {}, // [레이스 컨디션 완벽 방어] 최근 60초간 변경된 물건의 최신 상태 락 맵
+    _recentUserUpdates: {},   // [레이스 컨디션 완벽 방어] 최근 10초간 변경된 회원의 전환/승인 상태 락 맵
+
+    lockUserUpdate: function (uid, fields) {
+      if (!uid) return;
+      const targetId = String(uid).trim().toLowerCase();
+      this._recentUserUpdates[targetId] = {
+        ...fields,
+        timestamp: Date.now()
+      };
+    },
 
     updateItemStatus: function (uid, itemId, type, value) {
       let apps = this.getApplications();

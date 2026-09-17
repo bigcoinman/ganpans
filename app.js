@@ -1434,6 +1434,14 @@ document.addEventListener('DOMContentLoaded', () => {
             activeUser.pendingBusinessName = bName;
             activeUser.pendingLicenseNumber = lNum;
 
+            if (window.DataStore && typeof window.DataStore.lockUserUpdate === 'function') {
+                window.DataStore.lockUserUpdate(activeUser.id, {
+                    conversionStatus: 'pending_constructor',
+                    pendingBusinessName: bName,
+                    pendingLicenseNumber: lNum
+                });
+            }
+
             users = users.map(u => u.id === activeUser.id ? {
                 ...u,
                 conversionStatus: 'pending_constructor',
@@ -1467,10 +1475,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.KakaoNotifier.notifyConstructorConversion(activeUser);
             }
 
+            // 폼 카드 즉시 닫기 및 입력값 초기화 (원클릭 종결)
+            if (constructorFormCard) constructorFormCard.style.display = 'none';
+            if (btnRequestConstructorMob) btnRequestConstructorMob.style.display = 'none';
+            constBusinessNameMob.value = '';
+            constLicenseNumberMob.value = '';
+
             alert('시공업체 가입 신청이 정상 완료되었습니다.\n최고관리자 승인 시 정식 코드가 부여됩니다.');
             renderStatusTab();
             updateDrawerProfile();
             updateHeaderAuthButton();
+
+            if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+                window.DataStore.notifyAll(true);
+            }
+            window.dispatchEvent(new CustomEvent('supabase-data-synced'));
         });
     }
 
@@ -3818,31 +3837,122 @@ document.addEventListener('DOMContentLoaded', () => {
     window.renderAdminDashboardMob = renderAdminDashboardMob;
 
     function approveConstructorConversionMob(uid) {
-        const targetUser = users.find(u => u.id === uid);
-        const code = generateConstCode(users);
-        users = users.map(u => {
-            if (u.id === uid) {
+        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+            ? window.DataStore.getUsers()
+            : (users || JSON.parse(localStorage.getItem('users')) || []);
+        const targetUser = curUsers.find(u => u && String(u.id).toLowerCase() === String(uid).toLowerCase());
+        if (!targetUser) {
+            alert('승인 대상 회원을 찾을 수 없습니다.');
+            return;
+        }
+
+        const code = (typeof generateConstCode === 'function') ? generateConstCode(curUsers) : ('C-' + Math.floor(1000 + Math.random() * 9000));
+        const updatedFields = {
+            role: 'constructor',
+            constCode: code,
+            businessName: targetUser.pendingBusinessName || targetUser.bizName || '(주)새로운시공',
+            licenseNumber: targetUser.pendingLicenseNumber || targetUser.bizNumber || '000-00-00000',
+            conversionStatus: 'approved'
+        };
+
+        if (window.DataStore && typeof window.DataStore.lockUserUpdate === 'function') {
+            window.DataStore.lockUserUpdate(targetUser.id, updatedFields);
+        }
+
+        curUsers = curUsers.map(u => {
+            if (String(u.id).toLowerCase() === String(uid).toLowerCase()) {
                 return {
                     ...u,
-                    role: 'constructor',
-                    constCode: code,
-                    businessName: u.pendingBusinessName || '(주)새로운시공',
-                    licenseNumber: u.pendingLicenseNumber || '000-00-00000',
-                    conversionStatus: 'approved'
+                    ...updatedFields
                 };
             }
             return u;
         });
+        users = curUsers;
+
         if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-            window.DataStore.saveUsers(users);
+            window.DataStore.saveUsers(curUsers);
         } else {
-            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
+            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
         }
 
         if (activeUser && String(activeUser.id).toLowerCase() === String(uid).toLowerCase()) {
-            activeUser.role = 'constructor';
-            activeUser.constCode = code;
-            activeUser.conversionStatus = 'approved';
+            Object.assign(activeUser, updatedFields);
+            if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+                window.DataStore.setActiveUser(activeUser);
+            } else {
+                sessionStorage.setItem('activeUser', JSON.stringify(activeUser));
+                if (localStorage.getItem('activeUser')) {
+                    localStorage.setItem('activeUser', JSON.stringify(activeUser));
+                }
+            }
+        }
+
+        // Supabase Sync (비동기 백그라운드)
+        if (window.SupabaseSync) {
+            window.SupabaseSync.updateUser(targetUser.id, {
+                role: 'constructor',
+                const_code: code,
+                pending_business_name: targetUser.pendingBusinessName || targetUser.bizName || '(주)새로운시공',
+                pending_license_number: targetUser.pendingLicenseNumber || targetUser.bizNumber || '000-00-00000',
+                conversion_status: 'approved'
+            });
+        }
+
+        alert(`시공업체 회원 승인이 정상 완료되었습니다!\n(발급된 시공코드: [${code}])`);
+        renderAdminDashboardMob(true);
+        renderStatusTab();
+        updateDrawerProfile();
+        updateHeaderAuthButton();
+        if (typeof renderManagerPanel === 'function') renderManagerPanel();
+        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+            window.DataStore.notifyAll(true);
+        }
+        window.dispatchEvent(new CustomEvent('supabase-data-synced'));
+    }
+    window.approveConstructorConversionMob = approveConstructorConversionMob;
+
+    function rejectConstructorConversionMob(uid) {
+        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+            ? window.DataStore.getUsers()
+            : (users || JSON.parse(localStorage.getItem('users')) || []);
+        const targetUser = curUsers.find(u => u && String(u.id).toLowerCase() === String(uid).toLowerCase());
+        if (!targetUser) {
+            alert('반려 대상 회원을 찾을 수 없습니다.');
+            return;
+        }
+
+        const updatedFields = {
+            conversionStatus: 'none',
+            pendingBusinessName: '',
+            pendingLicenseNumber: ''
+        };
+
+        if (window.DataStore && typeof window.DataStore.lockUserUpdate === 'function') {
+            window.DataStore.lockUserUpdate(targetUser.id, updatedFields);
+        }
+
+        curUsers = curUsers.map(u => {
+            if (String(u.id).toLowerCase() === String(uid).toLowerCase()) {
+                const cleanUser = { ...u, ...updatedFields };
+                delete cleanUser.pendingBusinessName;
+                delete cleanUser.pendingLicenseNumber;
+                return cleanUser;
+            }
+            return u;
+        });
+        users = curUsers;
+
+        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(curUsers);
+        } else {
+            (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
+        }
+
+        if (activeUser && String(activeUser.id).toLowerCase() === String(uid).toLowerCase()) {
+            Object.assign(activeUser, updatedFields);
+            delete activeUser.pendingBusinessName;
+            delete activeUser.pendingLicenseNumber;
             if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
                 window.DataStore.setActiveUser(activeUser);
             } else {
@@ -3855,21 +3965,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Supabase Sync
         if (window.SupabaseSync) {
-            window.SupabaseSync.updateUser(uid, {
-                role: 'constructor',
-                const_code: code,
-                pending_business_name: targetUser?.pendingBusinessName || '(주)새로운시공',
-                pending_license_number: targetUser?.pendingLicenseNumber || '000-00-00000',
-                conversion_status: 'approved'
+            window.SupabaseSync.updateUser(targetUser.id, {
+                conversion_status: 'none',
+                pending_business_name: '',
+                pending_license_number: ''
             });
         }
 
-        alert(`시공업체 회원 승인이 정상 완료되었습니다! (발급된 시공코드: [${code}])`);
+        alert('시공업체 신청이 반려되었습니다.');
+        renderAdminDashboardMob(true);
         renderStatusTab();
         updateDrawerProfile();
         updateHeaderAuthButton();
+        if (typeof renderManagerPanel === 'function') renderManagerPanel();
+        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+            window.DataStore.notifyAll(true);
+        }
         window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     }
+    window.rejectConstructorConversionMob = rejectConstructorConversionMob;
 
     function approveUserConversionMob(uid) {
         let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
@@ -3884,15 +3998,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (targetUser.conversionStatus === 'pending_constructor' || targetUser.pendingRole === 'constructor') {
             const code = (typeof generateConstCode === 'function') ? generateConstCode(curUsers) : ('C-' + Math.floor(1000 + Math.random() * 9000));
+            const updatedFields = {
+                role: 'constructor',
+                constCode: code,
+                businessName: targetUser.pendingBusinessName || targetUser.bizName || '(주)새로운시공',
+                licenseNumber: targetUser.pendingLicenseNumber || targetUser.bizNumber || '000-00-00000',
+                conversionStatus: 'approved'
+            };
+
+            if (window.DataStore && typeof window.DataStore.lockUserUpdate === 'function') {
+                window.DataStore.lockUserUpdate(targetUser.id, updatedFields);
+            }
+
             curUsers = curUsers.map(u => {
                 if (String(u.id).toLowerCase() === String(uid).toLowerCase()) {
                     return {
                         ...u,
-                        role: 'constructor',
-                        constCode: code,
-                        businessName: u.pendingBusinessName || u.bizName || '(주)새로운시공',
-                        licenseNumber: u.pendingLicenseNumber || u.bizNumber || '000-00-00000',
-                        conversionStatus: 'approved'
+                        ...updatedFields
                     };
                 }
                 return u;
@@ -3903,6 +4025,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(curUsers) : localStorage.setItem('users', JSON.stringify(curUsers)));
             }
             users = curUsers;
+
+            if (activeUser && String(activeUser.id).toLowerCase() === String(uid).toLowerCase()) {
+                Object.assign(activeUser, updatedFields);
+                if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
+                    window.DataStore.setActiveUser(activeUser);
+                }
+            }
 
             if (window.SupabaseSync) {
                 window.SupabaseSync.updateUser(targetUser.id, {
@@ -3917,9 +4046,19 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(`시공업체 전환 신청이 승인되었습니다!\n\n발급된 시공업체 코드: [${code}]`);
         } else {
             const code = (typeof generateBizCode === 'function') ? generateBizCode(curUsers) : ('B-' + Math.floor(1000 + Math.random() * 9000));
+            const updatedFields = {
+                role: 'business',
+                bizCode: code,
+                conversionStatus: 'approved'
+            };
+
+            if (window.DataStore && typeof window.DataStore.lockUserUpdate === 'function') {
+                window.DataStore.lockUserUpdate(targetUser.id, updatedFields);
+            }
+
             curUsers = curUsers.map(u => {
                 if (String(u.id).toLowerCase() === String(uid).toLowerCase()) {
-                    return { ...u, role: 'business', bizCode: code, conversionStatus: 'approved' };
+                    return { ...u, ...updatedFields };
                 }
                 return u;
             });
@@ -3931,9 +4070,7 @@ document.addEventListener('DOMContentLoaded', () => {
             users = curUsers;
 
             if (activeUser && String(activeUser.id).toLowerCase() === String(uid).toLowerCase()) {
-                activeUser.role = 'business';
-                activeUser.bizCode = code;
-                activeUser.conversionStatus = 'approved';
+                Object.assign(activeUser, updatedFields);
                 if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
                     window.DataStore.setActiveUser(activeUser);
                 } else {
@@ -3956,9 +4093,14 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(`영업자 회원 승인이 정상 완료되었습니다! (발급된 영업코드: ${code})`);
         }
 
+        renderAdminDashboardMob(true);
         renderStatusTab();
         updateDrawerProfile();
         updateHeaderAuthButton();
+        if (typeof renderManagerPanel === 'function') renderManagerPanel();
+        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+            window.DataStore.notifyAll(true);
+        }
         window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     }
 
@@ -3970,9 +4112,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetUser = curUsers.find(u => u && String(u.id).toLowerCase() === String(uid).toLowerCase());
         if (!targetUser) return;
 
+        const updatedFields = {
+            conversionStatus: 'rejected'
+        };
+
+        if (window.DataStore && typeof window.DataStore.lockUserUpdate === 'function') {
+            window.DataStore.lockUserUpdate(targetUser.id, updatedFields);
+        }
+
         curUsers = curUsers.map(u => {
             if (String(u.id).toLowerCase() === String(uid).toLowerCase()) {
-                const cleanUser = { ...u, conversionStatus: 'rejected' };
+                const cleanUser = { ...u, ...updatedFields };
                 if ('pendingBusinessName' in cleanUser) delete cleanUser.pendingBusinessName;
                 if ('pendingLicenseNumber' in cleanUser) delete cleanUser.pendingLicenseNumber;
                 return cleanUser;
@@ -3993,7 +4143,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         alert('신청이 반려되었습니다.');
+        renderAdminDashboardMob(true);
         renderStatusTab();
+        updateDrawerProfile();
+        updateHeaderAuthButton();
+        if (typeof renderManagerPanel === 'function') renderManagerPanel();
+        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+            window.DataStore.notifyAll(true);
+        }
         window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     }
 
@@ -5422,53 +5579,14 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 const pcBtn = document.getElementById('btn-request-constructor-mob');
                 const formCard = document.getElementById('mobile-constructor-form-card');
-                if (pcBtn && pcBtn.style.display !== 'none' && document.getElementById('status-normal-container').style.display !== 'none') {
-                    pcBtn.click();
-                } else {
-                    const bName = prompt('시공업체 상호명을 입력해 주세요:');
-                    if (!bName) return;
-                    const lNum = prompt('사업자등록번호를 입력해 주세요:');
-                    if (!lNum) return;
-
-                    activeUser.conversionStatus = 'pending_constructor';
-                    activeUser.pendingBusinessName = bName;
-                    activeUser.pendingLicenseNumber = lNum;
-
-                    users = users.map(u => u.id === activeUser.id ? {
-                        ...u,
-                        conversionStatus: 'pending_constructor',
-                        pendingBusinessName: bName,
-                        pendingLicenseNumber: lNum
-                    } : u);
-
-                    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-                        window.DataStore.saveUsers(users);
-                    } else {
-                        (typeof DataStore !== 'undefined' && DataStore.saveUsers ? DataStore.saveUsers(users) : localStorage.setItem('users', JSON.stringify(users)));
-                    }
-                    if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
-                        window.DataStore.setActiveUser(activeUser);
-                    } else {
-                        localStorage.setItem('activeUser', JSON.stringify(activeUser));
-                    }
-
-                    if (window.SupabaseSync) {
-                        window.SupabaseSync.updateUser(activeUser.id, {
-                            conversion_status: 'pending_constructor',
-                            pending_business_name: bName,
-                            pending_license_number: lNum
-                        });
-                    }
-
-                    if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyConstructorConversion === 'function') {
-                        window.KakaoNotifier.notifyConstructorConversion(activeUser);
-                    }
-
-                    alert('시공업체 가입 신청이 정상 완료되었습니다.\n최고관리자 승인 시 정식 코드가 부여됩니다.');
-                    renderStatusTab();
-                    updateDrawerProfile();
+                if (formCard) {
+                    formCard.style.display = 'block';
+                    if (pcBtn) pcBtn.style.display = 'none';
+                    const btnConv = document.getElementById('btn-request-conversion-mob');
+                    if (btnConv) btnConv.style.display = 'none';
+                    formCard.scrollIntoView({ behavior: 'smooth' });
                 }
-            }, 150);
+            }, 100);
         });
     }
 
