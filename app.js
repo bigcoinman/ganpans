@@ -2489,7 +2489,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');
         if (allUsersListMob) {
             let displayUsers = allStoreUsers.filter(u => u && u.id && u.role !== 'deleted');
-            const sortFn = (typeof sortUsersLatestFirst === 'function' ? sortUsersLatestFirst : (typeof window !== 'undefined' && typeof window.sortUsersLatestFirst === 'function' ? window.sortUsersLatestFirst : null));
+            const sortFn = (typeof window.sortUsersLatestFirst === 'function' ? window.sortUsersLatestFirst : null);
             displayUsers = sortFn ? sortFn(displayUsers) : displayUsers;
             const searchInput = document.getElementById('search-all-users-input-mob');
             const q = searchInput && searchInput.value ? searchInput.value.trim().slice(0, 30).toLowerCase() : '';
@@ -3746,29 +3746,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-
-    const updateApplicationStatusMob = (id, newStatus, selectEl) => {
-        if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
-            const res = window.DataStore.updateApplicationStatus(id, newStatus);
-            const targetApp = res && res.app;
-            let statusLabel = '사업시행 전 사전등록업체';
-            if (newStatus === 'approved' || newStatus === '서류준비 & 접수대기' || newStatus === '서류제출 & 접수예정') statusLabel = '서류준비 & 접수대기';
-            else if (newStatus === 'unqualified' || newStatus === '신청요건 미달업체') statusLabel = '신청요건 미달업체';
-            else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') statusLabel = '지원사업 탈락';
-            else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') statusLabel = '지원사업 포기';
-
-            const msg = `[${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`;
-            if (typeof window.showToast === 'function') {
-                window.showToast(msg);
-            }
-            return res;
-        }
-    };
-    window.updateApplicationStatusMob = updateApplicationStatusMob;
-
-
-
     // 모바일 클릭 위임 리스너
     document.addEventListener('click', (e) => {
         const editBtn = e.target && e.target.closest ? e.target.closest('.btn-edit-app, .btn-edit-app-mob') : null;
@@ -3780,15 +3757,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-
-    
-
-    function updateItemStatusMob(uid, itemId, type, value) {
-        if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
-            return window.DataStore.updateItemStatus(uid, itemId, type, value);
-        }
-    }
-    window.updateItemStatusMob = updateItemStatusMob;
 
     function deleteManagerItemMob(uid, itemId) {
         let targetItemName = '해당 영업 물건';

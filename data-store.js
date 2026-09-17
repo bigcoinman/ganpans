@@ -2100,37 +2100,6 @@
     alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
     return res;
   };
-  window.clearAllInquiriesAdmin = function () {
-    if (!confirm('정말로 모든 3초 간편 문의 접수 내역을 영구 삭제하고 초기화하시겠습니까?\n삭제 후 복구할 수 없습니다.')) return;
-    const res = window.DataStore.clearAllInquiries();
-    alert('모든 간편 문의 내역이 성공적으로 초기화되었습니다.');
-    return res;
-  };
-
-  // 영업물건 접수/진행상태 변경 전역 브릿지
-  window.updateItemStatus = function (uid, itemId, type, value) {
-    if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
-      return window.DataStore.updateItemStatus(uid, itemId, type, value);
-    }
-  };
-  window.updateItemStatusMob = function (uid, itemId, type, value) {
-    if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
-      return window.DataStore.updateItemStatus(uid, itemId, type, value);
-    }
-  };
-
-  // 신청서 상태 변경 전역 브릿지
-  window.updateApplicationStatus = function (id, newStatus, selectEl) {
-    if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
-      return window.DataStore.updateApplicationStatus(id, newStatus);
-    }
-  };
-  window.updateApplicationStatusMob = function (id, newStatus, selectEl) {
-    if (window.DataStore && typeof window.DataStore.updateApplicationStatus === 'function') {
-      return window.DataStore.updateApplicationStatus(id, newStatus);
-    }
-  };
-
   // --- 신청서 담당 영업자 수정/변경 모달 전역 브릿지 (PC웹 & 모바일 공용) ---
   window.openAssignBizUserModal = function (appId, event) {
     if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
