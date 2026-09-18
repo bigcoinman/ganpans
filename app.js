@@ -2560,7 +2560,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // 0) Render All Users list (회원정보관리)
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');
         if (allUsersListMob) {
+            // [PC/모바일 공통 100% 직통 최신 조회] skipSync 여부와 무관하게 최신 회원 목록 클라우드 직통 조회
+            if (typeof fetchAndRenderAdminUsersFresh === 'function' && !window._isFetchingUsersFresh) {
+                window._isFetchingUsersFresh = true;
+                fetchAndRenderAdminUsersFresh().finally(() => {
+                    setTimeout(() => { window._isFetchingUsersFresh = false; }, 1500);
+                });
+            }
+
             let displayUsers = allStoreUsers.filter(u => u && u.id && u.role !== 'deleted');
+
             const sortFn = (typeof window.sortUsersLatestFirst === 'function' ? window.sortUsersLatestFirst : null);
             displayUsers = sortFn ? sortFn(displayUsers) : displayUsers;
             const searchInput = document.getElementById('search-all-users-input-mob');

@@ -1,17 +1,28 @@
 /*
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
 
 /*.html
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache
   Expires: 0
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
 
 /*.js
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache
   Expires: 0
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
 
 /*.css
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache
   Expires: 0
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+
