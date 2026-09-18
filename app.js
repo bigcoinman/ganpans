@@ -166,7 +166,15 @@ window.submitEditApplicationModal = function(appId, event) {
     const ownerPhone = document.getElementById('edit-app-owner-phone').value.trim();
     const storeAddress = document.getElementById('edit-app-store-address').value.trim();
     const signType = document.getElementById('edit-app-sign-type').value.trim();
-    const referrerCode = document.getElementById('edit-app-referrer-code').value.trim();
+    let referrerCode = document.getElementById('edit-app-referrer-code').value.trim();
+    if (referrerCode) {
+        const cleanRef = referrerCode.replace(/[^a-zA-Z0-9]/g, '');
+        if (/^b\d{6}$/i.test(cleanRef)) {
+            referrerCode = `B-${cleanRef.slice(1)}`;
+        } else if (/^b-/i.test(referrerCode)) {
+            referrerCode = 'B-' + referrerCode.slice(2);
+        }
+    }
     const status = document.getElementById('edit-app-status').value;
     const memo = document.getElementById('edit-app-memo').value.trim();
 
@@ -6630,6 +6638,13 @@ function initWizard() {
   window.updateReferrerField = updateReferrerField;
   updateReferrerField();
 
+  const referrerInputEl = document.getElementById('referrer-code');
+  if (referrerInputEl) {
+    referrerInputEl.addEventListener('input', () => {
+      referrerInputEl.value = referrerInputEl.value.toUpperCase();
+    });
+  }
+
   let currentStep = 0;
   let uploadedPhotos = [];
   const photosPreviewContainer = document.getElementById('uploaded-photos-preview');
@@ -7187,6 +7202,48 @@ function initWizard() {
         finalReferrerCode = String(loggedUser.bizCode).trim();
       }
 
+      // 대소문자 무관 표준화: 소문자 'b' 입력도 대문자 'B' 표준 영업자 코드로 자동 변환 및 하이픈 누락 자동 보정
+      if (finalReferrerCode) {
+        const cleanRef = finalReferrerCode.replace(/[^a-zA-Z0-9]/g, '');
+        if (/^b\d{6}$/i.test(cleanRef)) {
+          finalReferrerCode = `B-${cleanRef.slice(1)}`;
+        } else if (/^b-/i.test(finalReferrerCode)) {
+          finalReferrerCode = 'B-' + finalReferrerCode.slice(2);
+        }
+      }
+
+      let assignedSalespersonId = '';
+      let assignedSalespersonName = '';
+      if (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin')) {
+        assignedSalespersonId = loggedUser.id;
+        assignedSalespersonName = loggedUser.name;
+        if (loggedUser.bizCode) finalReferrerCode = loggedUser.bizCode;
+      } else if (finalReferrerCode) {
+        const normRef = finalReferrerCode.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const numRef = normRef.replace(/^b/i, '');
+        const matchedSales = users.find(u => {
+          if (u.role !== 'business' && u.role !== 'admin') return false;
+          const uBiz = String(u.bizCode || '').trim().toLowerCase();
+          const normUBiz = uBiz.replace(/[^a-zA-Z0-9]/g, '');
+          const numUBiz = normUBiz.replace(/^b/i, '');
+          const uId = String(u.id || '').trim().toLowerCase();
+          const normUId = uId.replace(/[^a-zA-Z0-9]/g, '');
+          const uName = String(u.name || '').trim().toLowerCase();
+          return (
+            (uBiz && (uBiz === finalReferrerCode.toLowerCase() || normUBiz === normRef || (numRef && numUBiz === numRef))) ||
+            (uId && (uId === finalReferrerCode.toLowerCase() || normUId === normRef)) ||
+            (uName && (uName === finalReferrerCode.toLowerCase() || uName === normRef))
+          );
+        });
+        if (matchedSales) {
+          assignedSalespersonId = matchedSales.id;
+          assignedSalespersonName = matchedSales.name;
+          if (matchedSales.bizCode) {
+            finalReferrerCode = matchedSales.bizCode; // 매칭된 영업자의 공식 대문자 코드로 100% 확정
+          }
+        }
+      }
+
       let customId = '';
       const dateTag = String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
 
@@ -7198,24 +7255,6 @@ function initWizard() {
         customId = typeof generateApplicationId === 'function' 
           ? generateApplicationId(apps) 
           : `P-${dateTag}-001`;
-      }
-
-      let assignedSalespersonId = '';
-      let assignedSalespersonName = '';
-      if (loggedUser && (loggedUser.role === 'business' || loggedUser.role === 'admin')) {
-        assignedSalespersonId = loggedUser.id;
-        assignedSalespersonName = loggedUser.name;
-      } else if (finalReferrerCode) {
-        const matchedSales = users.find(u =>
-          (u.role === 'business' || u.role === 'admin') &&
-          ((u.bizCode && String(u.bizCode).trim().toLowerCase() === String(finalReferrerCode).trim().toLowerCase()) ||
-           (u.id && String(u.id).trim().toLowerCase() === String(finalReferrerCode).trim().toLowerCase()) ||
-           (u.name && String(u.name).trim().toLowerCase() === String(finalReferrerCode).trim().toLowerCase()))
-        );
-        if (matchedSales) {
-          assignedSalespersonId = matchedSales.id;
-          assignedSalespersonName = matchedSales.name;
-        }
       }
 
       const ownerEmailVal = document.getElementById('owner-email')?.value.trim() || '';
