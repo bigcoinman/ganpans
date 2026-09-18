@@ -1517,9 +1517,10 @@
                     <div id="admin-panel-users-mob" class="admin-panel-view-mob" style="display: block;">
                         <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
                             <input type="text" id="search-all-users-input-mob" placeholder="아이디 / 이름 / 연락처 검색" maxlength="30" style="padding: 10px 14px; font-size: 0.95rem; border-radius: 8px; border: 1px solid #cbd5e1; flex: 1; box-sizing: border-box;">
-                            <button type="button" id="btn-force-sync-users" onclick="if(window.SupabaseSync){if(window.SupabaseSync.isSyncing)window.SupabaseSync.isSyncing=false;window.SupabaseSync.syncAllData(true).then(()=>{if(typeof renderAdminDashboardMob==='function')renderAdminDashboardMob(true);});this.innerHTML='<i class=\'fa-solid fa-check\'></i>';setTimeout(()=>{this.innerHTML='<i class=\'fa-solid fa-rotate\'></i>';},1500);}" style="padding: 10px 14px; background: #1e40af; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer; flex-shrink: 0; touch-action: manipulation;" title="Supabase에서 최신 회원 목록 강제 재동기화">
+                            <button type="button" id="btn-force-sync-users" onclick="if(window.fetchAndRenderAdminUsersFresh){window.fetchAndRenderAdminUsersFresh();}if(window.SupabaseSync){window.SupabaseSync.isSyncing=false;window.SupabaseSync.syncAllData(true);}this.innerHTML='<i class=\'fa-solid fa-check\'></i>';setTimeout(()=>{this.innerHTML='<i class=\'fa-solid fa-rotate\'></i>';},1500);" style="padding: 10px 14px; background: #1e40af; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer; flex-shrink: 0; touch-action: manipulation;" title="Supabase에서 최신 회원 목록 강제 재동기화">
                                 <i class="fa-solid fa-rotate"></i>
                             </button>
+
                         </div>
                         <div id="admin-all-users-list-mob" style="display: flex; flex-direction: column; gap: 10px;">
                             <!-- Users populate dynamically -->

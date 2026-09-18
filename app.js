@@ -2316,10 +2316,13 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAdminDashboardMob(true);
         if (tabName === 'users') {
             syncAdminDataFromSupabaseMob(true);
+            if (typeof fetchAndRenderAdminUsersFresh === 'function') {
+                fetchAndRenderAdminUsersFresh();
+            }
         }
     };
 
-    async function syncAdminDataFromSupabaseMob(force = false) {
+    async function syncAdminDataFromSupabaseMob(force = true) {
         if (window.SupabaseSync) {
             await window.SupabaseSync.syncAllData(force);
             // 사용자가 검색창을 직접 입력 중일 때만 리렌더링 일시 방어, 그 외에는 0초 즉시 갱신
@@ -2331,6 +2334,71 @@ document.addEventListener('DOMContentLoaded', () => {
             renderAdminDashboardMob(true);
         }
     }
+
+    // [최고관리자 회원정보관리 직통 클라우드 최신 조회] 캐시 지연 없이 Supabase users 테이블에서 실시간 0초 직통 로드
+    async function fetchAndRenderAdminUsersFresh() {
+        const allUsersListMob = document.getElementById('admin-all-users-list-mob');
+        if (!allUsersListMob) return false;
+
+        let client = window.supabaseClient;
+        if (!client && typeof initGlobalSupabaseClient === 'function') {
+            client = initGlobalSupabaseClient();
+        }
+        if (!client && typeof window !== 'undefined' && window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+            try {
+                client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+                window.supabaseClient = client;
+            } catch (e) {}
+        }
+        if (!client) return false;
+
+        try {
+            const userColumns = 'id, name, email, phone, address, role, biz_code, const_code, conversion_status, pending_business_name, pending_license_number, items, created_at';
+            const { data: supaUsers, error } = await client.from('users').select(userColumns);
+            if (error || !Array.isArray(supaUsers) || supaUsers.length === 0) return false;
+
+            const mapper = (window.SupabaseSync && typeof window.SupabaseSync.mapDbToUser === 'function')
+                ? (su) => window.SupabaseSync.mapDbToUser(su)
+                : (su) => ({
+                    id: su.id,
+                    name: su.name || '',
+                    phone: su.phone || '',
+                    email: su.email || '',
+                    address: su.address || '',
+                    role: su.role || 'normal',
+                    bizCode: su.biz_code || null,
+                    constCode: su.const_code || null,
+                    conversionStatus: su.conversion_status || 'none',
+                    pendingBusinessName: su.pending_business_name || '',
+                    pendingLicenseNumber: su.pending_license_number || '',
+                    createdAt: su.created_at || new Date().toISOString(),
+                    items: Array.isArray(su.items) ? su.items : []
+                });
+
+            const freshUsers = supaUsers.map(mapper).filter(u => u && u.id && u.role !== 'deleted');
+
+            // admin 계정 보존
+            if (!freshUsers.some(u => String(u.id).toLowerCase() === 'admin')) {
+                const localUsers = JSON.parse(localStorage.getItem('users')) || [];
+                const localAdmin = localUsers.find(u => String(u.id).toLowerCase() === 'admin');
+                freshUsers.unshift(localAdmin || { id: 'admin', name: '최고관리자', role: 'admin', phone: '010-0000-0000' });
+            }
+
+            if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+                window.DataStore.saveUsers(freshUsers);
+            } else {
+                localStorage.setItem('users', JSON.stringify(freshUsers));
+            }
+
+            renderAdminDashboardMob(true);
+            return true;
+        } catch (err) {
+            console.warn('[fetchAndRenderAdminUsersFresh] error:', err);
+            return false;
+        }
+    }
+    window.fetchAndRenderAdminUsersFresh = fetchAndRenderAdminUsersFresh;
+
 
 
 
@@ -2477,8 +2545,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!skipSync) {
-            syncAdminDataFromSupabaseMob();
+            syncAdminDataFromSupabaseMob(true);
+            if (adminActiveTab === 'users' && typeof fetchAndRenderAdminUsersFresh === 'function') {
+                fetchAndRenderAdminUsersFresh();
+            }
         }
+
 
         // SSOT 유저 목록을 최상단에서 일괄 로드
         let allStoreUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')

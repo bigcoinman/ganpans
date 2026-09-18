@@ -2157,8 +2157,16 @@ window.SupabaseSync = {
       initGlobalSupabaseClient();
     }
     if (!window.supabaseClient) return false;
-    if (this.isSyncing && !force) return false;
+    if (this.isSyncing && !force) {
+      if (Date.now() - (this._syncStartTime || 0) > 8000) {
+        this.isSyncing = false;
+      } else {
+        return false;
+      }
+    }
     this.isSyncing = true;
+    this._syncStartTime = Date.now();
+
     try {
       const oldUsersStr = localStorage.getItem('users') || '[]';
       const oldAppsStr = localStorage.getItem('applications') || '[]';
