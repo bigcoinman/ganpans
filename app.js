@@ -2110,15 +2110,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Mobile Business Dashboard Search & Toggle Event Listeners
-    window.toggleUserAppsMob = function () {
-        userAppsMobExpanded = !userAppsMobExpanded;
-        renderUserApplicationsMob();
-    };
-
-    window.toggleBizItemsMob = function () {
-        bizItemsMobExpanded = !bizItemsMobExpanded;
-        renderBizRegisteredItemsMob();
-    };
 
     const searchUserAppsMobInput = document.getElementById('search-user-apps-mob');
     if (searchUserAppsMobInput) {
