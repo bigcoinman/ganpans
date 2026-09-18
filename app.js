@@ -7316,11 +7316,8 @@ function initWizard() {
 
       const ownerEmailVal = document.getElementById('owner-email')?.value.trim() || '';
 
-      const isExistingAccount = Boolean(
-        (loggedUser && (loggedUser.role === 'normal' || !loggedUser.role || loggedUser.role === 'user' || loggedUser.id)) ||
-        !isNewAccount ||
-        !loginNoticePw
-      );
+      // [단일 원칙] 점주 본인이 로그인한 경우이거나, 이미 비밀번호가 있는 기존 계정인 경우에만 기존 계정으로 안내
+      const isExistingAccount = Boolean(isOwnerSelf || !isNewAccount || !loginNoticePw);
 
       if (isExistingAccount) {
         loginNoticePw = '';

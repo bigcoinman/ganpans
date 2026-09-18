@@ -91,7 +91,20 @@ assertRule(
   '일반 점주가 시안을 승인할 수 있는 녹색 버튼이 훼손되었습니다!'
 );
 
-// 3-3. 공용 모달 단일화 (이원화 절대 금지)
+// 3-3. 신규 점주 임시 비밀번호 및 계정 보호 헌법 검사
+assertRule(
+  '영업자 대리 신청 시 영업자 계정 덮어쓰기 방어 (isOwnerSelf)',
+  appCode.includes('const isOwnerSelf = Boolean') && !appCode.includes('loggedUser.role === \'user\' || loggedUser.id'),
+  '영업자 대리 신청 시 영업자 본인 계정이 덮어써질 위험이 있는 찌꺼기 코드가 발견되었습니다!'
+);
+
+assertRule(
+  '신규 점주 임시 비밀번호 정상 노출 보존 (isExistingAccount 엄격 분리)',
+  appCode.includes('const isExistingAccount = Boolean(isOwnerSelf || !isNewAccount || !loginNoticePw);'),
+  '영업자 로그인 시 신규 점주 임시 비밀번호가 증발하는 찌꺼기 코드가 남아있습니다!'
+);
+
+// 3-4. 공용 모달 단일화 (이원화 절대 금지)
 assertRule(
   '시안 크게보기 단일 공용 함수(viewDraftModal) 호출 준수',
   appCode.includes('window.viewDraftModal'),
