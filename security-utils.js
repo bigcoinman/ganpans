@@ -1117,8 +1117,8 @@ if (typeof window !== 'undefined') {
 }
 
 // 6. Supabase 클라이언트 초기화 (전역 설정 파일 supabase-config.js 및 내장 Fallback 지원)
-const defaultDbUrl = "https://nosobuzwrxxtrgohufsp.supabase.co";
-const defaultDbKey = "sb_publishable_2b3sZmB3zTAbTLx-pTh9uQ_rTqmRBmS";
+const defaultDbUrl = "https://bscgxtolcqyvrqtshtbc.supabase.co";
+const defaultDbKey = "sb_publishable_ZP1DPYvqNYsDY4WLrq2xww_-0i7FwtC";
 const dbUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) ? window.SUPABASE_URL : defaultDbUrl;
 const dbKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) ? window.SUPABASE_ANON_KEY : defaultDbKey;
 window.SUPABASE_URL = dbUrl;
@@ -1870,8 +1870,8 @@ window.SupabaseSync = {
   // 3. 회원 영구 삭제 (외래키 제약조건 23503 사전 방어 및 삭제 캐시 영구 관리)
   async deleteUser(uid, phone) {
     if (!uid) return;
-    const _sbUrl = (window.SUPABASE_URL) || 'https://nosobuzwrxxtrgohufsp.supabase.co';
-    const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_2b3sZmB3zTAbTLx-pTh9uQ_rTqmRBmS';
+    const _sbUrl = (window.SUPABASE_URL) || 'https://bscgxtolcqyvrqtshtbc.supabase.co';
+    const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_ZP1DPYvqNYsDY4WLrq2xww_-0i7FwtC';
 
     const targetId = String(uid).trim();
     const targetLower = targetId.toLowerCase();
