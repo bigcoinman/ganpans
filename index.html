@@ -3,19 +3,12 @@
 
 <head>
     <script>
-        // Force unregister old service workers & purge old browser caches
-        try {
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                    for (let r of registrations) r.unregister();
-                }).catch(function(e){});
-            }
-            if ('caches' in window) {
-                caches.keys().then(function(names) {
-                    for (let n of names) caches.delete(n);
-                }).catch(function(e){});
-            }
-        } catch(e) {}
+        // PWA Service Worker Registration (Zero-Cache Pass-Through)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js?v=20260919').catch(function (e) {});
+            });
+        }
     </script>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">

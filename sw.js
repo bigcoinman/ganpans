@@ -1,32 +1,13 @@
-// Self-destructing Service Worker: Unregisters itself and purges all phone cache
+// 간판지원단 PWA Pass-Through Service Worker (캐시 0, 100% 네트워크 직접 호출)
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          console.log('[SW Purge] Deleting old cache:', cacheName);
-          return caches.delete(cacheName);
-        })
-      );
-    }).then(() => {
-      return self.registration.unregister();
-    }).then(() => {
-      return self.clients.matchAll({ type: 'window' });
-    }).then((clients) => {
-      clients.forEach((client) => {
-        if (client.url && 'navigate' in client) {
-          client.navigate(client.url);
-        }
-      });
-    })
-  );
+  event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
-  // Always fetch directly from network without caching
+  // 캐시 없이 100% 실시간 네트워크 직접 전송 (캐시 충돌 영구 방지 및 PWA 원클릭 설치 지원)
   event.respondWith(fetch(event.request));
 });

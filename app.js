@@ -455,12 +455,21 @@ window.handleAppShare = function () {
 };
 
 window.handleAppShortcut = function () {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (isStandalone) {
+        alert("🎉 이미 간판지원단 앱이 홈 화면에 추가되어 있습니다!\n스마트폰 바탕화면에서 간판지원단 아이콘으로 편리하게 이용하세요.");
+        return;
+    }
+
     const promptEvent = window.deferredPrompt || deferredPrompt;
     if (promptEvent) {
+        const mobileInstallModal = document.getElementById('install-modal');
+        if (mobileInstallModal) mobileInstallModal.classList.remove('active');
+
         promptEvent.prompt();
         promptEvent.userChoice.then((choiceResult) => {
             if (choiceResult && choiceResult.outcome === 'accepted') {
-                alert('🎉 간판지원단 홈 화면 바로가기 버튼이 추가되었습니다!');
+                // User accepted install, created on home screen
             }
             window.deferredPrompt = null;
             deferredPrompt = null;
@@ -480,15 +489,15 @@ window.handleAppShortcut = function () {
             location.href = 'intent://ganpans.com#Intent;scheme=https;package=com.android.chrome;end';
             return;
         } else {
-            alert("📲 카카오톡 내부에서는 바로가기 생성이 지원되지 않습니다.\n\n오른쪽 하단 점 3개(…) 메뉴 ➡️ [다른 브라우저로 열기(Safari)]를 누르신 후 홈 화면에 추가해 주세요!");
+            alert("📲 카카오톡 내부에서는 바로가기 생성이 지원되지 않습니다.\n\n오른쪽 하단 점 3개(…) ➔ [다른 브라우저로 열기] 선택 후 바로가기를 만들어 주세요!");
             return;
         }
     }
 
     if (isIOS) {
-        alert("📲 [아이폰 홈 화면 바로가기 생성 방법]\n\n1. 사파리 브라우저 하단 중앙의 [공유 버튼(네모+화살표 ⎋)] 터치\n2. 메뉴를 올려 [홈 화면에 추가 (+)] 선택\n3. 오른쪽 상단 [추가]를 누르면 바탕화면에 바로가기 아이콘이 생성됩니다!");
+        alert("📲 [아이폰 홈 화면 바로가기 생성]\n\n사파리 브라우저 하단 중앙 [공유 버튼(⎋)] ➔ [홈 화면에 추가 (+)]를 누르시면 바탕화면에 바로 생성됩니다!");
     } else {
-        alert("📲 [스마트폰 홈 화면 바로가기 생성 방법]\n\n1. 브라우저 오른쪽 상단 점 3개(⋮) 메뉴 터치\n2. [홈 화면에 추가] 또는 [앱 설치] 선택\n3. [추가]를 누르면 바탕화면에 바로가기 아이콘이 생성됩니다!");
+        alert("📲 [간판지원단 바로가기 생성]\n\n화면 오른쪽 위 점 3개(⋮) 메뉴 ➔ [홈 화면에 추가] 또는 [앱 설치]를 누르시면 바탕화면에 바로 생성됩니다!");
     }
 };
 
