@@ -12,6 +12,7 @@
 * **`[설계도-04] BP-CONSTRUCTOR-FLOW`**: 시공사 배정, 시안 업로드(1~5장) 및 시공 완료 증빙 설계도
 * **`[설계도-05] BP-ADMIN-SSOT`**: 최고관리자 대시보드 절대 단일 원천(SSOT) 및 실시간 동시 연동 설계도
 * **`[설계도-06] BP-APP-SHARE-INSTALL`**: 모바일 앱 공유(Web Share) 및 원클릭 홈 화면 바로가기(PWA) 설치 설계도 *(공식 확정)*
+* **`[설계도-07] BP-AUTH-RECOVERY`**: 로그인 팝업 내 아이디 찾기 및 비밀번호 재설정 단일 연동 설계도 *(공식 확정)*
 
 ---
 
@@ -114,6 +115,42 @@ graph TD
    - 구형 `/app` 리다이렉트나 임시 파라미터를 배제하고 공식 단일 도메인만 참조.
 3. **이벤트 단일 바인딩 의무 (Rule #4)**:
    - 인라인 `onclick`과 자바스크립트 `addEventListener` 중복 바인딩을 영구 엄격 금지하며, 단일 이벤트 발화로 충돌 방어.
+
+---
+
+## 📐 [설계도-07] BP-AUTH-RECOVERY: 로그인 팝업 내 아이디 찾기 및 비밀번호 재설정 단일 연동 설계도
+
+### 1. 4대 화면 상태 전환 규격 (`window.switchAuthTab`)
+* **단일 모달 내 4대 상태 통일**: 로그인(`login`), 회원가입(`signup`), 아이디 찾기(`find-id`), 비밀번호 찾기(`find-pw`).
+* **탭 및 헤더 제어**:
+  - `login` / `signup`: 상단 탭(`.auth-tabs`) 정상 노출, 이전 찾기 폼 입력값 및 결과 박스 자동 리셋.
+  - `find-id` / `find-pw`: 상단 탭 숨김 처리(`display='none'`), 상단 좌측 `[← 뒤로가기]` 버튼 탑재(클릭 시 `login` 탭 원복).
+  - 모달 진입 시 첫 번째 입력 필드 자동 포커스(50ms 디바운스).
+
+### 2. [기능 1] 아이디 찾기 엔진 (`window.executeFindId`)
+* **3선 포괄 정밀 매칭 (Comprehensive Matching)**:
+  1. `DataStore` / `localStorage.users` 정밀 대조
+  2. Supabase 클라우드 `users` 테이블 비동기 대조
+  3. 온라인 간편 신청서(`applications`)에 등록된 점주 자동 계정 대조 (휴대폰 번호 뒷 8자리 정규화)
+* **결과 표출 및 원클릭 로그인 연동**:
+  - 일치 시 아이디 앞 3자리 노출 후 마스킹(예: `hon*****`) 안내.
+  - `[로그인하러 가기]` 원클릭 버튼을 누르면 로그인 화면으로 0초 전환되며 아이디 자동 기입 및 비밀번호란 포커스 이동.
+
+### 3. [기능 2] 비밀번호 찾기 및 재설정 엔진 (`window.executeFindPw`, `window.executeResetPw`)
+* **1단계 본인 확인**: 아이디 + 휴대폰 번호 일치 시에만 새 비밀번호 입력 그룹(`#find-pw-reset-group`) 활성화.
+* **2단계 실시간 유효성 검사 (`window.checkFindPwNew`)**: 영문, 숫자, 특수문자 조합 8~20자 정규식 실시간 검증 및 초록/빨강 상태 메시지 표출, 비밀번호 보기/숨기기(눈 아이콘) 완벽 연동.
+* **3단계 보안 암호화 및 클라우드 DB 단일 갱신**:
+  - `sha256(newPw)` 단방향 암호화 수행.
+  - `window.SupabaseSync.upsertUser`로 Supabase `users` 테이블의 **`password_hash`** 컬럼에 즉시 직통 갱신.
+  - 신청서 비회원 점주 건의 경우 `applications.autoAccount.pw` 동시 최신화.
+  - `SupabaseSync.upsertRecord` 범용 안전 래퍼 기본 탑재로 예외 상황 원천 차단.
+* **4단계 자동 이동**: 비밀번호 변경 완료 후 1.2초 뒤 자동으로 로그인 화면 복귀(아이디 자동 기입, 비밀번호란 포커스).
+
+### 4. 기술 인프라 4대 불변 원칙 (Absolute Rules)
+1. **단일 탭 전환 엔진 SSOT 준수**: 팝업 내 4개 화면 전환은 오직 `window.switchAuthTab` 단 하나의 함수로만 통일 제어한다.
+2. **Supabase `password_hash` 단일 컬럼 규격 준수**: 비밀번호는 `password_hash` 표준 컬럼으로만 저장되며, 독자 컬럼 파편화를 엄격히 금지한다.
+3. **단일 이벤트 바인딩 준수 (Rule #4)**: 인라인 핸들러와 `addEventListener`의 중복 바인딩을 금지하여 2회 연속 충돌 발화를 방어한다.
+4. **비회원 점주 및 기회원 통합 포괄 매칭 (Rule #5)**: `users`와 `applications`를 아우르는 다각도 매칭으로 데이터 누락을 원천 차단한다.
 
 ---
 

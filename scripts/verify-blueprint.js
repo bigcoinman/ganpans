@@ -13,7 +13,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 console.log('========================================================');
-console.log('🛡️ [간판지원단] 5대 공식 설계도 자동 검문소 가동');
+console.log('🛡️ [간판지원단] 7대 공식 설계도 자동 검문소 가동');
 console.log('========================================================\n');
 
 let passed = true;
@@ -46,13 +46,14 @@ const blueprintCode = fs.readFileSync('SYSTEM_BLUEPRINT.md', 'utf8');
 
 console.log('\n--- [설계도 등록 확인] SYSTEM_BLUEPRINT.md 체계 검사 ---');
 assertRule(
-  'SYSTEM_BLUEPRINT.md 공식 6대 설계도 목차 등록',
+  'SYSTEM_BLUEPRINT.md 공식 7대 설계도 목차 등록',
   blueprintCode.includes('BP-SALES-DASHBOARD') && 
   blueprintCode.includes('BP-APPLY-ACCOUNT') && 
   blueprintCode.includes('BP-APP-LIFECYCLE') && 
   blueprintCode.includes('BP-CONSTRUCTOR-FLOW') && 
   blueprintCode.includes('BP-ADMIN-SSOT') &&
-  blueprintCode.includes('BP-APP-SHARE-INSTALL'),
+  blueprintCode.includes('BP-APP-SHARE-INSTALL') &&
+  blueprintCode.includes('BP-AUTH-RECOVERY'),
   '설계도 공식 목차가 누락되었습니다.'
 );
 
@@ -145,24 +146,60 @@ assertRule(
   'pwa 버튼에 중복 addEventListener가 존재합니다. Rule #4를 준수하세요.'
 );
 
+console.log('\n--- [설계도-07 검증] BP-AUTH-RECOVERY (아이디 찾기 및 비밀번호 재설정) ---');
+const secUtilsCode = fs.readFileSync('security-utils.js', 'utf8');
+const indexHtmlCode = fs.readFileSync('index.html', 'utf8');
+
+assertRule(
+  '[BP-07] 4대 인증 상태 전환 단일 엔진(switchAuthTab) find-id/find-pw 지원',
+  secUtilsCode.includes("tab === 'find-id'") && secUtilsCode.includes("tab === 'find-pw'"),
+  'switchAuthTab에 find-id 또는 find-pw 상태 전환 분기가 누락되었습니다.'
+);
+
+assertRule(
+  '[BP-07] 아이디 찾기(executeFindId) 및 비밀번호 찾기(executeFindPw, executeResetPw) 함수 구비',
+  secUtilsCode.includes('window.executeFindId =') &&
+  secUtilsCode.includes('window.executeFindPw =') &&
+  secUtilsCode.includes('window.executeResetPw ='),
+  '인증 복구 핵심 실행 함수가 security-utils.js에 누락되었습니다.'
+);
+
+assertRule(
+  '[BP-07] Supabase password_hash 컬럼 및 upsertUser 단일 연동 준수',
+  secUtilsCode.includes('window.SupabaseSync.upsertUser') &&
+  secUtilsCode.includes('password_hash: hashedPw'),
+  'Supabase 연동 시 password_hash 또는 upsertUser 규격이 훼손되었습니다.'
+);
+
+assertRule(
+  '[BP-07] index.html 내 찾기 버튼 및 폼 단일 이벤트 바인딩 준수',
+  indexHtmlCode.includes("onclick=\"window.switchAuthTab('find-id'") &&
+  indexHtmlCode.includes("onclick=\"window.switchAuthTab('find-pw'") &&
+  indexHtmlCode.includes("onsubmit=\"if (window.executeFindId)") &&
+  indexHtmlCode.includes("onsubmit=\"if (window.executeFindPw)"),
+  'index.html 내 찾기 UI의 단일 이벤트 바인딩이 누락되었습니다.'
+);
+
 console.log('\n--- [이원화 금지 검사] 유령 코드 및 찌꺼기 패턴 검사 ---');
 const ghostPatterns = [
   'viewDraftModalForSales',
   'viewDraftModalMob',
   'getBizItemsForSalesOnly',
-  'sales_draft_cache'
+  'sales_draft_cache',
+  'find_id_cache',
+  'find_pw_cache'
 ];
 for (const pattern of ghostPatterns) {
   assertRule(
     `유령/이원화 코드 부존재 검사: [${pattern}]`,
-    !appCode.includes(pattern) && !dataStoreCode.includes(pattern),
+    !appCode.includes(pattern) && !dataStoreCode.includes(pattern) && !secUtilsCode.includes(pattern),
     `금지된 이원화 코드 [${pattern}]가 발견되었습니다!`
   );
 }
 
 console.log('\n========================================================');
 if (passed) {
-  console.log('🎉 [검증 완료] 6대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
+  console.log('🎉 [검증 완료] 7대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
   console.log('   기존 기능 훼손 0건, 이원화 찌꺼기 0건 확인 완료.');
   console.log('========================================================\n');
   process.exit(0);
