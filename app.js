@@ -425,6 +425,73 @@ if (document.readyState === 'loading') {
     setTimeout(window.handleAppHashRouting, 0);
 }
 
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    window.deferredPrompt = e;
+});
+
+window.handleAppShare = function () {
+    const shareData = {
+        title: '간판지원단 - 경기도 소상공인 간판 지원사업',
+        text: '간판지원단 스마트폰 웹앱으로 언제 어디서든 간판 시뮬레이터와 간편 지원금 신청을 이용해 보세요.',
+        url: 'https://ganpans.com'
+    };
+
+    if (navigator.share) {
+        navigator.share(shareData).catch(() => {});
+    } else if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText('https://ganpans.com')
+            .then(() => {
+                alert('간판지원단 모바일 앱 링크(https://ganpans.com)가 복사되었습니다.\n카카오톡이나 문자메시지에 붙여넣어 공유하세요!');
+            })
+            .catch(() => {
+                prompt('아래 링크를 복사하여 공유하세요:', 'https://ganpans.com');
+            });
+    } else {
+        prompt('아래 링크를 복사하여 공유하세요:', 'https://ganpans.com');
+    }
+};
+
+window.handleAppShortcut = function () {
+    const promptEvent = window.deferredPrompt || deferredPrompt;
+    if (promptEvent) {
+        promptEvent.prompt();
+        promptEvent.userChoice.then((choiceResult) => {
+            if (choiceResult && choiceResult.outcome === 'accepted') {
+                alert('🎉 간판지원단 홈 화면 바로가기 버튼이 추가되었습니다!');
+            }
+            window.deferredPrompt = null;
+            deferredPrompt = null;
+        }).catch(() => {
+            window.deferredPrompt = null;
+            deferredPrompt = null;
+        });
+        return;
+    }
+
+    const userAgent = navigator.userAgent || '';
+    const isKakao = /KAKAOTALK/i.test(userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+
+    if (isKakao) {
+        if (/Android/i.test(userAgent)) {
+            location.href = 'intent://ganpans.com#Intent;scheme=https;package=com.android.chrome;end';
+            return;
+        } else {
+            alert("📲 카카오톡 내부에서는 바로가기 생성이 지원되지 않습니다.\n\n오른쪽 하단 점 3개(…) 메뉴 ➡️ [다른 브라우저로 열기(Safari)]를 누르신 후 홈 화면에 추가해 주세요!");
+            return;
+        }
+    }
+
+    if (isIOS) {
+        alert("📲 [아이폰 홈 화면 바로가기 생성 방법]\n\n1. 사파리 브라우저 하단 중앙의 [공유 버튼(네모+화살표 ⎋)] 터치\n2. 메뉴를 올려 [홈 화면에 추가 (+)] 선택\n3. 오른쪽 상단 [추가]를 누르면 바탕화면에 바로가기 아이콘이 생성됩니다!");
+    } else {
+        alert("📲 [스마트폰 홈 화면 바로가기 생성 방법]\n\n1. 브라우저 오른쪽 상단 점 3개(⋮) 메뉴 터치\n2. [홈 화면에 추가] 또는 [앱 설치] 선택\n3. [추가]를 누르면 바탕화면에 바로가기 아이콘이 생성됩니다!");
+    }
+};
+
 window.openInstallModalMob = function (e) {
     if (e) {
         if (typeof e.preventDefault === 'function') e.preventDefault();
@@ -435,7 +502,7 @@ window.openInstallModalMob = function (e) {
         const qrImg = document.getElementById('install-qr-img');
         if (qrImg) {
             qrImg.onerror = () => {
-                qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com%2Fapp';
+                qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com';
             };
             qrImg.src = './ganpan-app-qr.png?v=20260817';
         }
@@ -1026,7 +1093,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Mobile Header App Install Trigger ---
+    // --- Mobile Header App Install Trigger & Action Handlers ---
     const mobileHeaderInstallBtn = document.getElementById('mobile-header-install-btn');
     const mobileInstallModal = document.getElementById('install-modal');
     if (mobileHeaderInstallBtn && mobileInstallModal) {
@@ -1037,7 +1104,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const qrImg = document.getElementById('install-qr-img');
             if (qrImg) {
                 qrImg.onerror = () => {
-                    qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com%2Fapp';
+                    qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com';
                 };
                 qrImg.src = './ganpan-app-qr.png?v=20260817';
             }
@@ -1048,6 +1115,34 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             mobileInstallModal.classList.add('active');
+        });
+    }
+
+    if (mobileInstallModal) {
+        mobileInstallModal.addEventListener('click', (e) => {
+            if (e.target === mobileInstallModal) {
+                mobileInstallModal.classList.remove('active');
+            }
+        });
+    }
+
+    const pwaShareBtn = document.getElementById('pwa-share-btn');
+    if (pwaShareBtn) {
+        pwaShareBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (typeof window.handleAppShare === 'function') {
+                window.handleAppShare();
+            }
+        });
+    }
+
+    const pwaShortcutBtn = document.getElementById('pwa-shortcut-btn');
+    if (pwaShortcutBtn) {
+        pwaShortcutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (typeof window.handleAppShortcut === 'function') {
+                window.handleAppShortcut();
+            }
         });
     }
 

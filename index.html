@@ -2180,7 +2180,7 @@
             <!-- QR Code Section -->
             <div class="install-qr-section" id="install-qr-section">
                 <div class="install-qr-frame">
-                    <img id="install-qr-img" src="./ganpan-app-qr.png?v=20260817" alt="설치 QR 코드" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com%2Fapp'">
+                    <img id="install-qr-img" src="./ganpan-app-qr.png?v=20260817" alt="설치 QR 코드" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com'">
                 </div>
                 <div class="install-qr-text">
                     <i class="fa-solid fa-qrcode"></i> 스마트폰 카메라로 QR 코드를 스캔하여 앱 열기
@@ -2189,10 +2189,10 @@
 
             <!-- Action Buttons -->
             <div class="install-actions">
-                <button id="pwa-share-btn" class="install-secondary-btn">
+                <button id="pwa-share-btn" class="install-secondary-btn" onclick="if(window.handleAppShare) window.handleAppShare(); return false;">
                     <i class="fa-solid fa-share-nodes"></i> 모바일 앱 공유하기
                 </button>
-                <button id="pwa-shortcut-btn" class="install-secondary-btn">
+                <button id="pwa-shortcut-btn" class="install-secondary-btn" onclick="if(window.handleAppShortcut) window.handleAppShortcut(); return false;">
                     <i class="fa-solid fa-qrcode"></i> 홈 화면 바로가기 버튼 만들기
                 </button>
             </div>
