@@ -7136,8 +7136,16 @@ function initWizard() {
       let loginNoticePw = '';
       let isNewAccount = false;
 
-      // 1. 현재 로그인한 사용자가 일반회원(점주)인 경우: 본인 계정 정보 그대로 사용 (비밀번호 절대 덮어쓰기 금지)
-      if (loggedUser && (loggedUser.role === 'normal' || !loggedUser.role || loggedUser.role === 'user' || loggedUser.id)) {
+      // 1. 현재 로그인한 사용자가 일반회원(점주) 본인인 경우에만 본인 프로필 정보 보강
+      const isOwnerSelf = Boolean(
+        loggedUser && 
+        (loggedUser.role === 'normal' || loggedUser.role === 'user' || !loggedUser.role) &&
+        loggedUser.role !== 'business' && 
+        loggedUser.role !== 'admin' && 
+        loggedUser.role !== 'constructor'
+      );
+
+      if (isOwnerSelf) {
         userId = loggedUser.id;
         loginNoticeId = loggedUser.id;
         loginNoticePw = ''; // 기존 비밀번호 유지
@@ -7168,8 +7176,11 @@ function initWizard() {
           }
         }
       } else {
-        // 2. 비회원 신청이거나 영업자/관리자 대리 신청: 전화번호/아이디 기준 기존 회원 여부 다각도 확인
+        // 2. 비회원 신청이거나 영업자/관리자 대리 신청:
+        // [영구 절대 헌법: 로그인된 영업자/관리자 계정은 1%도 건드리지 않고 100% 완벽 보존]
+        // 신청서에 입력된 점주 전화번호 기준으로 점주 계정을 매칭 또는 신규 생성한다.
         const existingIdx = users.findIndex(u => {
+          if (u.role === 'business' || u.role === 'admin' || u.role === 'constructor') return false; // 영업자/관리자/시공사 계정 매칭 원천 차단
           const uPhoneDigits = (u.phone || '').replace(/[^0-9]/g, '');
           const uId = String(u.id || '').toLowerCase();
           return (uPhoneDigits && uPhoneDigits === phoneDigits) || (uId && uId === phoneDigits.toLowerCase());
@@ -7185,32 +7196,30 @@ function initWizard() {
 
           const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
 
-          if (existing.role === 'normal' || !existing.role || existing.role === 'user') {
-            users[existingIdx] = {
-              ...existing,
+          users[existingIdx] = {
+            ...existing,
+            name: ownerName || existing.name,
+            phone: ownerPhone,
+            email: enteredEmail || existing.email || '',
+            address: storeAddress || existing.address,
+            ...(hasExistingPw ? {} : { pw: hashedPassword })
+          };
+          if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+            window.DataStore.saveUsers(users);
+          } else {
+            safeSetStorage('users', users);
+          }
+          if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
+            window.SupabaseSync.updateUser(existing.id, { 
               name: ownerName || existing.name,
-              phone: ownerPhone,
+              phone: ownerPhone, 
               email: enteredEmail || existing.email || '',
               address: storeAddress || existing.address,
-              ...(hasExistingPw ? {} : { pw: hashedPassword })
-            };
-            if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-              window.DataStore.saveUsers(users);
-            } else {
-              safeSetStorage('users', users);
-            }
-            if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
-              window.SupabaseSync.updateUser(existing.id, { 
-                name: ownerName || existing.name,
-                phone: ownerPhone, 
-                email: enteredEmail || existing.email || '',
-                address: storeAddress || existing.address,
-                ...(hasExistingPw ? {} : { password_hash: hashedPassword })
-              }).catch(() => {});
-            }
+              ...(hasExistingPw ? {} : { password_hash: hashedPassword })
+            }).catch(() => {});
           }
         } else {
-          // 3. 신규 비회원 (처음 신청): 전화번호 기반 임시 계정 자동 생성
+          // 3. 신규 점주 비회원: 점주 전화번호 기반 신규 점주 계정 자동 생성
           userId = phoneDigits;
           loginNoticeId = phoneDigits;
           loginNoticePw = autoPw;
@@ -7329,7 +7338,7 @@ function initWizard() {
 
       const newApp = {
         id: customId,
-        userId: (loggedUser && loggedUser.role === 'business') ? loggedUser.id : userId,
+        userId: userId,
         applicantUserId: userId,
         registeredBy: loggedUser ? loggedUser.id : (phoneDigits || 'guest'),
         salespersonId: assignedSalespersonId,
