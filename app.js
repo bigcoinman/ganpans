@@ -1891,6 +1891,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     const isApproved = app.draftStatus === 'owner_approved' || app.draftStatus === 'admin_approved';
                     const approvedLabel = app.draftStatus === 'owner_approved' ? '점주 시안 확정 완료' : '관리자 시안 확정 완료';
+                    const isSalesperson = (activeUser && activeUser.role === 'business');
                     
                     return `
                         <div style="background: #fdf4ff; border: 1px solid #f5d0fe; border-radius: 8px; padding: 12px 14px; text-align: left; margin-bottom: 8px;">
@@ -1902,6 +1903,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div style="font-size: 0.94rem; color: #166534; font-weight: 700; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; gap: 6px;">
                                     <i class="fa-solid fa-circle-check"></i> ${approvedLabel}
                                 </div>
+                            ` : (isSalesperson ? `
+                                <div style="font-size: 0.90rem; color: #92400e; font-weight: 600; background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa-solid fa-clock"></i> 점주 시안 검토 중
+                                </div>
                             ` : `
                                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
                                     <span style="font-size: 0.90rem; color: #92400e; font-weight: 600;"><i class="fa-solid fa-clock"></i> 시안 검토 후 승인해주세요</span>
@@ -1909,7 +1914,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <i class="fa-solid fa-check"></i> 시안 승인 / 마음에 듭니다
                                     </button>
                                 </div>
-                            `}
+                            `)}
                         </div>
                     `;
                 })()}
@@ -1991,7 +1996,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const receiptBadge = getReceiptStatusBadgeHtmlMob(item.receiptStatus);
             const progressBadge = getProgressStatusBadgeHtmlMob(item.progressStatus);
 
-            const { count: pCount } = getAppPhotoInfo(item);
+            // [SSOT 단일 원천 연결] applications 저장소로부터 원본 신청 건 100% 동기화 매칭
+            const rawApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+                ? window.DataStore.getApplications()
+                : (JSON.parse(localStorage.getItem('applications')) || []);
+            const matchedApp = rawApps.find(a => String(a.id) === String(item.id) || (item.statusObj && String(item.statusObj.appRefId) === String(a.id))) || item;
+
+            const { count: pCount } = getAppPhotoInfo(matchedApp);
+            const targetAppId = matchedApp.id || item.id;
 
             const card = document.createElement('div');
             card.className = 'biz-card-mob';
@@ -2016,16 +2028,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 8px 0; line-height: 1.4;">
                     <strong style="color: #475569;">주소:</strong> ${escapeHtml(item.storeAddress || '-')}
                 </p>
-                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 0.82rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 현장사진</span>
+                <!-- 1. 현장사진 확인 영역 (단일 원천 실시간 동기화) -->
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.88rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 현장사진</span>
                     ${pCount > 0 ? `
-                        <button type="button" onclick="window.downloadApplicationPhotos('${item.id}', { expectedCount: ${pCount} }); return false;" style="padding: 4px 10px; font-size: 0.74rem; background: #2563eb; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                        <button type="button" onclick="window.downloadApplicationPhotos('${targetAppId}', { expectedCount: ${pCount} }); return false;" style="padding: 5px 12px; font-size: 0.82rem; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(37,99,235,0.2);">
                             사진 확인 (${pCount}장)
                         </button>
                     ` : `
-                        <span style="font-size: 0.72rem; color: #94a3b8;">미등록</span>
+                        <span style="font-size: 0.80rem; color: #94a3b8;">미등록</span>
                     `}
                 </div>
+
+                <!-- 2. 간판 디자인 시안 확인 박스 (시공사 등록 시 영업자 실시간 확인 SSOT) -->
+                ${(() => {
+                    const draftPhotos = matchedApp.signDraftPhotos || matchedApp.designPhotos || item.signDraftPhotos || [];
+                    const draftCount = draftPhotos.length;
+                    if (draftCount === 0) return '';
+
+                    const isApproved = matchedApp.draftStatus === 'owner_approved' || matchedApp.draftStatus === 'admin_approved';
+                    const approvedLabel = matchedApp.draftStatus === 'owner_approved' ? '점주 시안 확정 완료' : '관리자 시안 확정 완료';
+
+                    return `
+                        <div style="background: #fdf4ff; border: 1px solid #f5d0fe; border-radius: 8px; padding: 10px 12px; text-align: left; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <span style="font-size: 0.98rem; font-weight: 700; color: #86198f;"><i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftCount}장)</span>
+                                <button type="button" onclick="window.viewDraftModal('${targetAppId}')" style="padding: 4px 10px; font-size: 0.82rem; font-weight: 700; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-eye"></i> 시안 크게보기</button>
+                            </div>
+                            ${isApproved ? `
+                                <div style="font-size: 0.88rem; color: #166534; font-weight: 700; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa-solid fa-circle-check"></i> ${approvedLabel}
+                                </div>
+                            ` : `
+                                <div style="font-size: 0.86rem; color: #92400e; font-weight: 600; background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa-solid fa-clock"></i> 점주 시안 검토 중
+                                </div>
+                            `}
+                        </div>
+                    `;
+                })()}
+
+                <!-- 3. 실시간 진행상황 -->
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <span style="font-size: 0.9rem; font-weight: 700; color: #475569;"><i class="fa-solid fa-signal" style="color: #2563eb;"></i> 실시간 진행상황</span>
                     <div style="display: flex; gap: 6px; align-items: center;">
