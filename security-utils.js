@@ -2017,6 +2017,26 @@ window.SupabaseSync = {
     }
   },
 
+  // 범용 단일 레코드 저장/갱신 안전 래퍼
+  async upsertRecord(table, record) {
+    if (!record) return false;
+    try {
+      if (table === 'users') {
+        return await this.upsertUser(record);
+      } else if (table === 'applications') {
+        return await this.upsertApplication(record);
+      } else if (table === 'inquiries') {
+        return await this.upsertInquiry(record);
+      } else if (window.supabaseClient) {
+        const { error } = await window.supabaseClient.from(table).upsert([record]);
+        return !error;
+      }
+    } catch (e) {
+      console.warn(`Supabase upsertRecord(${table}) warning:`, e);
+    }
+    return false;
+  },
+
   // 3초 간편문의 매핑 함수 (실제 Supabase DB 스키마: id, name, phone, category, region, status, created_at)
   mapInquiryToDb(inq) {
     if (!inq) return null;
@@ -3138,13 +3158,17 @@ if (typeof window !== 'undefined') {
         localStorage.setItem('users', JSON.stringify(users));
       }
 
-      // 4-2) Supabase 클라우드 DB 즉시 동기화
-      if (window.SupabaseSync) {
-        await window.SupabaseSync.upsertRecord('users', { id: targetUser.id, pw: hashedPw }).catch(err => {
-          console.warn('Supabase reset pw upsert error:', err);
-        });
-      } else if (window.supabaseClient) {
-        await window.supabaseClient.from('users').update({ pw: hashedPw }).eq('id', targetUser.id).catch(() => {});
+      // 4-2) Supabase 클라우드 DB 즉시 동기화 (password_hash 컬럼 갱신)
+      try {
+        const targetUserObj = (idx !== -1) ? users[idx] : { ...targetUser, pw: hashedPw };
+        if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
+          await window.SupabaseSync.upsertUser(targetUserObj);
+        }
+        if (window.supabaseClient) {
+          await window.supabaseClient.from('users').update({ password_hash: hashedPw }).eq('id', targetUser.id);
+        }
+      } catch (errSync) {
+        console.warn('Supabase reset pw cloud sync warning:', errSync);
       }
 
       // 4-3) 신청서 autoAccount가 있는 경우 함께 최신화
