@@ -32,8 +32,7 @@ check('app.js 내 beforeinstallprompt 이벤트 리스너 등록', appJs.include
 check('app.js 내 window.handleAppShare 함수 정의', appJs.includes('window.handleAppShare = function'));
 check('app.js 내 window.handleAppShortcut 함수 정의', appJs.includes('window.handleAppShortcut = function'));
 check('app.js 내 모달 오버레이 클릭 시 닫기(overlay close) 장착', appJs.includes("mobileInstallModal.classList.remove('active')"));
-check('app.js 내 pwaShareBtn addEventListener 등록', appJs.includes("pwaShareBtn.addEventListener('click'"));
-check('app.js 내 pwaShortcutBtn addEventListener 등록', appJs.includes("pwaShortcutBtn.addEventListener('click'"));
+check('이벤트 단일 바인딩 준수 (app.js 내 pwa 중복 addEventListener 부존재)', !appJs.includes("pwaShareBtn.addEventListener('click'") && !appJs.includes("pwaShortcutBtn.addEventListener('click'"));
 
 // 3. 기능 시뮬레이션
 const windowMock = {

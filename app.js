@@ -1102,55 +1102,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Mobile Header App Install Trigger & Action Handlers ---
-    const mobileHeaderInstallBtn = document.getElementById('mobile-header-install-btn');
+    // --- Mobile Header App Install Modal & Action Handlers ---
     const mobileInstallModal = document.getElementById('install-modal');
-    if (mobileHeaderInstallBtn && mobileInstallModal) {
-        mobileHeaderInstallBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const qrImg = document.getElementById('install-qr-img');
-            if (qrImg) {
-                qrImg.onerror = () => {
-                    qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com';
-                };
-                qrImg.src = './ganpan-app-qr.png?v=20260817';
-            }
-
-            const qrSection = document.getElementById('install-qr-section');
-            if (qrSection) {
-                qrSection.style.display = 'flex';
-            }
-
-            mobileInstallModal.classList.add('active');
-        });
-    }
 
     if (mobileInstallModal) {
         mobileInstallModal.addEventListener('click', (e) => {
             if (e.target === mobileInstallModal) {
                 mobileInstallModal.classList.remove('active');
-            }
-        });
-    }
-
-    const pwaShareBtn = document.getElementById('pwa-share-btn');
-    if (pwaShareBtn) {
-        pwaShareBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (typeof window.handleAppShare === 'function') {
-                window.handleAppShare();
-            }
-        });
-    }
-
-    const pwaShortcutBtn = document.getElementById('pwa-shortcut-btn');
-    if (pwaShortcutBtn) {
-        pwaShortcutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (typeof window.handleAppShortcut === 'function') {
-                window.handleAppShortcut();
             }
         });
     }

@@ -46,12 +46,13 @@ const blueprintCode = fs.readFileSync('SYSTEM_BLUEPRINT.md', 'utf8');
 
 console.log('\n--- [설계도 등록 확인] SYSTEM_BLUEPRINT.md 체계 검사 ---');
 assertRule(
-  'SYSTEM_BLUEPRINT.md 공식 5대 설계도 목차 등록',
+  'SYSTEM_BLUEPRINT.md 공식 6대 설계도 목차 등록',
   blueprintCode.includes('BP-SALES-DASHBOARD') && 
   blueprintCode.includes('BP-APPLY-ACCOUNT') && 
   blueprintCode.includes('BP-APP-LIFECYCLE') && 
   blueprintCode.includes('BP-CONSTRUCTOR-FLOW') && 
-  blueprintCode.includes('BP-ADMIN-SSOT'),
+  blueprintCode.includes('BP-ADMIN-SSOT') &&
+  blueprintCode.includes('BP-APP-SHARE-INSTALL'),
   '설계도 공식 목차가 누락되었습니다.'
 );
 
@@ -118,6 +119,32 @@ assertRule(
   '사진 확인 공용 함수가 누락되었습니다.'
 );
 
+console.log('\n--- [설계도-06 검증] BP-APP-SHARE-INSTALL (모바일 앱 공유 및 원클릭 바로가기 설치) ---');
+assertRule(
+  '[BP-06] 모바일 앱 공유 함수(window.handleAppShare) 정상 장착',
+  appCode.includes('window.handleAppShare = function'),
+  '모바일 앱 공유 함수가 누락되었습니다.'
+);
+
+assertRule(
+  '[BP-06] 원클릭 바로가기 설치 함수(window.handleAppShortcut) 정상 장착',
+  appCode.includes('window.handleAppShortcut = function'),
+  '원클릭 바로가기 설치 함수가 누락되었습니다.'
+);
+
+const swCode = fs.readFileSync('sw.js', 'utf8');
+assertRule(
+  '[BP-06] PWA 서비스워커(sw.js) 무캐시 통과형 엔진 유지 (unregister 부존재)',
+  swCode.includes('fetch(event.request)') && !swCode.includes('unregister()'),
+  '서비스워커가 PWA 설치 요건을 충족하지 않거나 비정상 해제 코드가 포함되어 있습니다.'
+);
+
+assertRule(
+  '[BP-06] 이벤트 단일 바인딩 준수 (pwa 버튼 중복 addEventListener 부존재)',
+  !appCode.includes("pwaShareBtn.addEventListener('click'") && !appCode.includes("pwaShortcutBtn.addEventListener('click'"),
+  'pwa 버튼에 중복 addEventListener가 존재합니다. Rule #4를 준수하세요.'
+);
+
 console.log('\n--- [이원화 금지 검사] 유령 코드 및 찌꺼기 패턴 검사 ---');
 const ghostPatterns = [
   'viewDraftModalForSales',
@@ -135,7 +162,7 @@ for (const pattern of ghostPatterns) {
 
 console.log('\n========================================================');
 if (passed) {
-  console.log('🎉 [검증 완료] 5대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
+  console.log('🎉 [검증 완료] 6대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
   console.log('   기존 기능 훼손 0건, 이원화 찌꺼기 0건 확인 완료.');
   console.log('========================================================\n');
   process.exit(0);
