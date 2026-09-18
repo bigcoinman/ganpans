@@ -1773,7 +1773,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return isMyOwnApp;
             }
 
-            // 3. 영업자 회원인 경우: 최고관리자 SSOT 기준 적용
+            // 3. 영업자 회원인 경우: 최고관리자 SSOT 기준 절대 적용
+            // 3-0) 최고관리자가 본사 직접 접수(담당 영업자 해제)로 지정한 건은 모든 영업자 목록에서 0초 완전 소멸 (부존재 일치 의무)
+            const sName = String(app.salespersonName || '').trim();
+            const isHeadquartersDirect = (!salesId && !refCode) || (sName === '본사직접접수' || sName === '본사 직접 접수');
+            if (isHeadquartersDirect) return false;
+
             // 3-1) 최고관리자가 담당 영업자를 다른 사람으로 명시 지정한 건은 절대 내 목록에 노출 금지 (부존재 일치 의무)
             const isAssignedToOtherSales = Boolean(
                 (salesId && salesId !== myId && salesId !== myBiz) ||
@@ -1781,11 +1786,11 @@ document.addEventListener('DOMContentLoaded', () => {
             );
             if (isAssignedToOtherSales) return false;
 
-            // 3-2) 내게 귀속된 건: 담당코드가 내 코드이거나, 내게 배정된 건, 또는 내가 영업자로서 직접 접수한 건
+            // 3-2) 내게 귀속된 건: 담당코드가 내 코드이거나, 내게 배정된 건만 표시 (단일 진실의 원천)
             const isMyBizCode = Boolean(refCode && (refCode === myBiz || refCode === myId || refCode === myName));
             const isMyAssigned = Boolean(salesId && (salesId === myId || salesId === myBiz));
 
-            return isMyBizCode || isMyAssigned || isMyOwnApp;
+            return isMyBizCode || isMyAssigned;
         });
 
         // Search filtering

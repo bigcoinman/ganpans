@@ -1343,6 +1343,26 @@
       // [100% 순수 일원화] applications 단일 테이블에만 즉시 저장
       this.saveApplications(apps);
 
+      // [부존재 일치 의무] users.items 동기화: 타 영업자 및 본사직접접수 건의 이전 영업자 items에서 완전 영구 삭제
+      let usersChanged = false;
+      users.forEach(u => {
+        if (u.items && Array.isArray(u.items)) {
+          const prevLen = u.items.length;
+          if (!salesUser || String(u.id).toLowerCase() !== String(salesUser.id).toLowerCase()) {
+            u.items = u.items.filter(it => String(it.id) !== String(targetApp.id) && String(it.appRefId) !== String(targetApp.id));
+            if (u.items.length !== prevLen) {
+              usersChanged = true;
+              if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
+                window.SupabaseSync.updateUser(u.id, { items: u.items }).catch(() => {});
+              }
+            }
+          }
+        }
+      });
+      if (usersChanged) {
+        this.saveUsers(users);
+      }
+
       // 2) Supabase 비동기 클라우드 DB 저장 (Non-blocking)
       if (window.SupabaseSync) {
         if (typeof window.SupabaseSync.updateApplication === 'function') {
