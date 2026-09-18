@@ -6687,6 +6687,61 @@ function initWizard() {
     }
   }
 
+  // 바텀시트 사진 선택(실시간 촬영 / 갤러리 선택 / 취소 / 바깥 배경 클릭) 이벤트 리스너 연결
+  window.triggerPhotoCamera = function() {
+    const overlay = document.getElementById('photo-choice-overlay');
+    if (overlay) overlay.classList.remove('active');
+    const camInput = document.getElementById('store-photo-camera');
+    if (camInput) {
+      camInput.value = '';
+      camInput.click();
+    }
+  };
+
+  window.triggerPhotoGallery = function() {
+    const overlay = document.getElementById('photo-choice-overlay');
+    if (overlay) overlay.classList.remove('active');
+    const galInput = document.getElementById('store-photo');
+    if (galInput) {
+      galInput.value = '';
+      galInput.click();
+    }
+  };
+
+  window.closePhotoChoiceSheet = function() {
+    const overlay = document.getElementById('photo-choice-overlay');
+    if (overlay) overlay.classList.remove('active');
+  };
+
+  if (btnChoiceCamera) {
+    btnChoiceCamera.onclick = (e) => {
+      e.stopPropagation();
+      window.triggerPhotoCamera();
+    };
+  }
+
+  if (btnChoiceGallery) {
+    btnChoiceGallery.onclick = (e) => {
+      e.stopPropagation();
+      window.triggerPhotoGallery();
+    };
+  }
+
+  if (btnChoiceCancel) {
+    btnChoiceCancel.onclick = (e) => {
+      e.stopPropagation();
+      window.closePhotoChoiceSheet();
+    };
+  }
+
+  if (photoChoiceOverlay) {
+    photoChoiceOverlay.onclick = (e) => {
+      if (e.target === photoChoiceOverlay) {
+        window.closePhotoChoiceSheet();
+      }
+    };
+  }
+
   async function handlePhotoFiles(fileList) {
     const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'jfif', 'gif', 'bmp'];
     const newFiles = Array.from(fileList || []);

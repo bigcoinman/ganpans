@@ -326,11 +326,11 @@
                                     <div class="file-upload-area" id="file-upload-area" style="border: 2px dashed #1e40af; border-radius: 10px; padding: 22px; text-align: center; cursor: pointer; background: #fafbff;">
                                         <i class="fa-solid fa-camera" style="font-size: 2.2rem; color: #1e40af; margin-bottom: 8px;"></i>
                                         <p style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; margin: 0;">사진 촬영 또는 갤러리 선택</p>
-                                        <input type="file" id="store-photo" accept="image/*" multiple style="display: none;">
-                                        <input type="file" id="store-photo-camera" accept="image/*" capture="environment" style="display: none;">
                                         <div id="uploaded-file-name" class="uploaded-file-name"></div>
                                         <div id="uploaded-photos-preview" class="uploaded-photos-preview"></div>
                                     </div>
+                                    <input type="file" id="store-photo" accept="image/*" multiple style="display: none;">
+                                    <input type="file" id="store-photo-camera" accept="image/*" capture="environment" style="display: none;">
                                     <div id="apply-photo-count" style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 8px; font-weight: 600;">선택된 사진: 0 / 10장</div>
                                 </div>
                             </div>
@@ -2241,7 +2241,7 @@
     </div>
 
     <!-- Bottom Sheet for Photo Source Selection -->
-    <div class="bottom-sheet-overlay" id="photo-choice-overlay">
+    <div class="bottom-sheet-overlay" id="photo-choice-overlay" onclick="if(event.target === this && window.closePhotoChoiceSheet) window.closePhotoChoiceSheet();">
         <div class="bottom-sheet-container" id="photo-choice-sheet">
             <div class="bottom-sheet-handle"></div>
             <div class="bottom-sheet-header">
@@ -2249,7 +2249,7 @@
                 <p>현장 사진 등록 방식을 선택해 주세요</p>
             </div>
             <div class="bottom-sheet-options">
-                <button class="sheet-option-btn" id="btn-choice-camera">
+                <button type="button" class="sheet-option-btn" id="btn-choice-camera" onclick="if(window.triggerPhotoCamera) window.triggerPhotoCamera();">
                     <div class="option-icon camera-bg">
                         <i class="fa-solid fa-camera"></i>
                     </div>
@@ -2258,7 +2258,7 @@
                         <span class="option-desc">카메라로 현장 사진을 직접 촬영합니다.</span>
                     </div>
                 </button>
-                <button class="sheet-option-btn" id="btn-choice-gallery">
+                <button type="button" class="sheet-option-btn" id="btn-choice-gallery" onclick="if(window.triggerPhotoGallery) window.triggerPhotoGallery();">
                     <div class="option-icon gallery-bg">
                         <i class="fa-solid fa-images"></i>
                     </div>
@@ -2268,7 +2268,7 @@
                     </div>
                 </button>
             </div>
-            <button class="bottom-sheet-close-btn" id="btn-choice-cancel">취소</button>
+            <button type="button" class="bottom-sheet-close-btn" id="btn-choice-cancel" onclick="if(window.closePhotoChoiceSheet) window.closePhotoChoiceSheet();">취소</button>
         </div>
     </div>
 
@@ -2442,12 +2442,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js?v=20260918_fresh_v05"></script>
-    <script src="data-store.js?v=20260918_fresh_v05"></script>
-    <script src="security-utils.js?v=20260918_fresh_v05"></script>
-    <script src="kakao-notify.js?v=20260918_fresh_v05"></script>
+    <script src="supabase-config.js?v=20260918_fresh_v06"></script>
+    <script src="data-store.js?v=20260918_fresh_v06"></script>
+    <script src="security-utils.js?v=20260918_fresh_v06"></script>
+    <script src="kakao-notify.js?v=20260918_fresh_v06"></script>
     <!-- 단일 통합 무결 컨트롤러 (모든 대화형 컴포넌트/대시보드 내장) -->
-    <script src="app.js?v=20260918_fresh_v05"></script>
+    <script src="app.js?v=20260918_fresh_v06"></script>
     <script>
         // PC/모바일 웹 진입 시 관리자 세션이면 0.1초 만에 최신 회원 목록 클라우드 직통 즉시 강제 갱신
         if (typeof window !== 'undefined') {
