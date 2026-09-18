@@ -120,37 +120,44 @@ graph TD
 
 ## 📐 [설계도-07] BP-AUTH-RECOVERY: 로그인 팝업 내 아이디 찾기 및 비밀번호 재설정 단일 연동 설계도
 
-### 1. 4대 화면 상태 전환 규격 (`window.switchAuthTab`)
-* **단일 모달 내 4대 상태 통일**: 로그인(`login`), 회원가입(`signup`), 아이디 찾기(`find-id`), 비밀번호 찾기(`find-pw`).
-* **탭 및 헤더 제어**:
-  - `login` / `signup`: 상단 탭(`.auth-tabs`) 정상 노출, 이전 찾기 폼 입력값 및 결과 박스 자동 리셋.
-  - `find-id` / `find-pw`: 상단 탭 숨김 처리(`display='none'`), 상단 좌측 `[← 뒤로가기]` 버튼 탑재(클릭 시 `login` 탭 원복).
-  - 모달 진입 시 첫 번째 입력 필드 자동 포커스(50ms 디바운스).
+### 1. 명확한 원칙 (Clear & Absolute Principles)
+1. **단일 반응형 웹 내 4대 상태 완전 일원화**:
+   - 로그인 팝업(`auth-modal`)은 별도의 독립 페이지나 외부 분기 없이 단 하나의 모달 창 내에서 **`login` ↔ `signup` ↔ `find-id` ↔ `find-pw` 4대 상태**를 0ms 즉각 전환으로 100% 수용한다.
+2. **비회원 점주 및 가입 회원 통합 포괄 매칭 (Rule #5)**:
+   - `users` 테이블에 정식 가입된 회원뿐만 아니라, 온라인 간편 신청서(`applications`)를 통해 자동 채번된 비회원 점주 계정까지 단일 엔진으로 완벽하게 수용하여 데이터 누락을 원천 차단한다.
+3. **1회 터치 즉각 반응 및 모바일 폼 보호 (Rule #2, #4)**:
+   - 인라인 단일 이벤트 바인딩(`onclick`, `onsubmit`)을 준수하여 2회 중복 발화 충돌을 방지하고, 폼 제출 시 새로고침 없는 부드러운 즉각 응답을 보장한다.
+4. **보안 단방향 암호화 & Supabase 클라우드 실시간 동기화**:
+   - 비밀번호는 SHA-256 단방향 암호화를 필수로 거치며, 로컬 `DataStore`와 Supabase 클라우드 DB `users.password_hash`에 즉시 동시 기록된다.
 
-### 2. [기능 1] 아이디 찾기 엔진 (`window.executeFindId`)
-* **3선 포괄 정밀 매칭 (Comprehensive Matching)**:
-  1. `DataStore` / `localStorage.users` 정밀 대조
-  2. Supabase 클라우드 `users` 테이블 비동기 대조
-  3. 온라인 간편 신청서(`applications`)에 등록된 점주 자동 계정 대조 (휴대폰 번호 뒷 8자리 정규화)
-* **결과 표출 및 원클릭 로그인 연동**:
-  - 일치 시 아이디 앞 3자리 노출 후 마스킹(예: `hon*****`) 안내.
-  - `[로그인하러 가기]` 원클릭 버튼을 누르면 로그인 화면으로 0초 전환되며 아이디 자동 기입 및 비밀번호란 포커스 이동.
+### 2. 설계도 보존법칙 (모든 설계도는 일원화 할 것 - 이원화 절대 금지)
+1. **단일 탭 전환 엔진(`window.switchAuthTab`) 일원화**:
+   - 모달 내 화면 전환은 오직 `window.switchAuthTab` 단 하나의 함수로만 제어하며, 임의의 인라인 스타일 직접 조작이나 독자 모달을 만드는 일체의 이원화를 영구 엄격 금지한다.
+2. **Supabase `password_hash` 단일 컬럼 표준 준수**:
+   - 비밀번호는 `users` 테이블의 `password_hash` 단 하나의 공식 컬럼으로만 저장·대조하며, 구형 임시 컬럼(`pw`, `user_pw` 등)이나 독자 테이블 분기를 생성하는 것을 원천 금지한다.
+3. **독자 계정 캐시 부존재 의무 (Zero Local Dual Cache)**:
+   - `find_id_cache`, `find_pw_cache` 등 별도의 임시 세션이나 독자 배열을 절대 생성하지 않으며, 오직 최신 `DataStore`와 Supabase `users`/`applications` SSOT 원본만을 직접 읽고 갱신한다.
+4. **신청서 autoAccount 양방향 일원화 최신화**:
+   - 비회원 점주 건의 비밀번호가 변경된 경우, `applications.autoAccount.pw`까지 100% 동일하게 동시 최신화하여 향후 점주 계정 복구 시에도 단 1비트의 불일치도 발생하지 않도록 보장한다.
 
-### 3. [기능 2] 비밀번호 찾기 및 재설정 엔진 (`window.executeFindPw`, `window.executeResetPw`)
-* **1단계 본인 확인**: 아이디 + 휴대폰 번호 일치 시에만 새 비밀번호 입력 그룹(`#find-pw-reset-group`) 활성화.
-* **2단계 실시간 유효성 검사 (`window.checkFindPwNew`)**: 영문, 숫자, 특수문자 조합 8~20자 정규식 실시간 검증 및 초록/빨강 상태 메시지 표출, 비밀번호 보기/숨기기(눈 아이콘) 완벽 연동.
-* **3단계 보안 암호화 및 클라우드 DB 단일 갱신**:
-  - `sha256(newPw)` 단방향 암호화 수행.
-  - `window.SupabaseSync.upsertUser`로 Supabase `users` 테이블의 **`password_hash`** 컬럼에 즉시 직통 갱신.
-  - 신청서 비회원 점주 건의 경우 `applications.autoAccount.pw` 동시 최신화.
-  - `SupabaseSync.upsertRecord` 범용 안전 래퍼 기본 탑재로 예외 상황 원천 차단.
-* **4단계 자동 이동**: 비밀번호 변경 완료 후 1.2초 뒤 자동으로 로그인 화면 복귀(아이디 자동 기입, 비밀번호란 포커스).
+### 3. 자동 검문소 (검증망) 영구 감시 규칙 (Automated Blueprint Guard Rules)
+배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 5대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
+1. **[검문 1] switchAuthTab 4대 상태 분기 검증**: `tab === 'find-id'`, `tab === 'find-pw'` 정상 구현 확인.
+2. **[검문 2] 핵심 실행 함수 3대 세트 구비 검증**: `window.executeFindId`, `window.executeFindPw`, `window.executeResetPw` 누락 여부 검사.
+3. **[검문 3] Supabase 클라우드 직통 연동 검증**: `window.SupabaseSync.upsertUser` 및 `password_hash` 컬럼 갱신 코드 존재 검사.
+4. **[검문 4] 단일 이벤트 바인딩 무결성 검증**: `index.html` 내 찾기 버튼 및 폼의 인라인 단일 바인딩 및 중복 `addEventListener` 부존재 검사.
+5. **[검문 5] 유령/이원화 코드 부존재 검증**: `find_id_cache`, `find_pw_cache` 등 찌꺼기 패턴 0건 전수 검사.
 
-### 4. 기술 인프라 4대 불변 원칙 (Absolute Rules)
-1. **단일 탭 전환 엔진 SSOT 준수**: 팝업 내 4개 화면 전환은 오직 `window.switchAuthTab` 단 하나의 함수로만 통일 제어한다.
-2. **Supabase `password_hash` 단일 컬럼 규격 준수**: 비밀번호는 `password_hash` 표준 컬럼으로만 저장되며, 독자 컬럼 파편화를 엄격히 금지한다.
-3. **단일 이벤트 바인딩 준수 (Rule #4)**: 인라인 핸들러와 `addEventListener`의 중복 바인딩을 금지하여 2회 연속 충돌 발화를 방어한다.
-4. **비회원 점주 및 기회원 통합 포괄 매칭 (Rule #5)**: `users`와 `applications`를 아우르는 다각도 매칭으로 데이터 누락을 원천 차단한다.
+### 4. 4대 화면 상태 전환 매트릭스 및 실행 규격
+| 상태 (`tab`) | 상단 탭 (`.auth-tabs`) | 활성 패널 (`.auth-pane.active`) | 입력창 포커스 & 폼 라이프사이클 |
+| :--- | :---: | :---: | :--- |
+| **`login`** (로그인) | **표시** (`style.display=''`) | `#login-pane` | 찾기 입력 폼 및 결과 박스 자동 초기화(리셋) |
+| **`signup`** (회원가입) | **표시** (`style.display=''`) | `#signup-pane` | 아이디 중복검사 상태 초기화 |
+| **`find-id`** (아이디 찾기) | **숨김** (`style.display='none'`) | `#find-id-pane` | 이름(`#find-id-name`) 자동 포커스 (50ms) / 뒤로가기 버튼 지원 |
+| **`find-pw`** (비밀번호 찾기) | **숨김** (`style.display='none'`) | `#find-pw-pane` | 아이디(`#find-pw-id`) 자동 포커스 (50ms) / 뒤로가기 버튼 지원 |
+
+* **아이디 찾기 완료 시**: 아이디 마스킹 안내 후 `[로그인하러 가기]` 클릭 시 로그인 화면으로 0초 전환 + 아이디 자동 기입 + 비밀번호 입력란 자동 포커스.
+* **비밀번호 재설정 완료 시**: 1단계 계정 확인 ➔ 2단계 새 비밀번호 실시간 유효성 검사 ➔ 3단계 SHA-256 해싱 & Supabase `password_hash` 직통 저장 ➔ 1.2초 후 로그인 화면 자동 복귀.
 
 ---
 
