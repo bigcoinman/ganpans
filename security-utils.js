@@ -2761,20 +2761,453 @@ if (typeof window !== 'undefined') {
     const findPwPane = document.getElementById('find-pw-pane');
     const authTabs = document.querySelector('.auth-tabs');
 
-    if (authTabs) authTabs.style.display = '';
-    if (findIdPane) findIdPane.classList.remove('active');
-    if (findPwPane) findPwPane.classList.remove('active');
+    const resetFindForms = () => {
+      const fId = document.getElementById('find-id-form');
+      if (fId) fId.reset();
+      const rId = document.getElementById('find-id-result');
+      if (rId) { rId.style.display = 'none'; rId.innerHTML = ''; }
+      const fPw = document.getElementById('find-pw-form');
+      if (fPw) fPw.reset();
+      const gPw = document.getElementById('find-pw-reset-group');
+      if (gPw) gPw.style.display = 'none';
+      const rPw = document.getElementById('find-pw-result');
+      if (rPw) { rPw.style.display = 'none'; rPw.innerHTML = ''; }
+      const mPw = document.getElementById('find-pw-new-msg');
+      if (mPw) { mPw.textContent = ''; mPw.className = 'form-helper'; }
+      window._foundPwUser = null;
+    };
 
-    if (tab === 'signup') {
+    if (tab === 'find-id') {
+      if (authTabs) authTabs.style.display = 'none';
+      if (tabLoginBtn) tabLoginBtn.classList.remove('active');
+      if (tabSignupBtn) tabSignupBtn.classList.remove('active');
+      if (loginPane) loginPane.classList.remove('active');
+      if (signupPane) signupPane.classList.remove('active');
+      if (findPwPane) findPwPane.classList.remove('active');
+      if (findIdPane) findIdPane.classList.add('active');
+      resetFindForms();
+      const nameInput = document.getElementById('find-id-name');
+      if (nameInput) setTimeout(() => nameInput.focus(), 50);
+    } else if (tab === 'find-pw') {
+      if (authTabs) authTabs.style.display = 'none';
+      if (tabLoginBtn) tabLoginBtn.classList.remove('active');
+      if (tabSignupBtn) tabSignupBtn.classList.remove('active');
+      if (loginPane) loginPane.classList.remove('active');
+      if (signupPane) signupPane.classList.remove('active');
+      if (findIdPane) findIdPane.classList.remove('active');
+      if (findPwPane) findPwPane.classList.add('active');
+      resetFindForms();
+      const idInput = document.getElementById('find-pw-id');
+      if (idInput) setTimeout(() => idInput.focus(), 50);
+    } else if (tab === 'signup') {
+      if (authTabs) authTabs.style.display = '';
+      if (findIdPane) findIdPane.classList.remove('active');
+      if (findPwPane) findPwPane.classList.remove('active');
       if (tabLoginBtn) tabLoginBtn.classList.remove('active');
       if (tabSignupBtn) tabSignupBtn.classList.add('active');
       if (loginPane) loginPane.classList.remove('active');
       if (signupPane) signupPane.classList.add('active');
+      resetFindForms();
     } else {
+      if (authTabs) authTabs.style.display = '';
+      if (findIdPane) findIdPane.classList.remove('active');
+      if (findPwPane) findPwPane.classList.remove('active');
       if (tabLoginBtn) tabLoginBtn.classList.add('active');
       if (tabSignupBtn) tabSignupBtn.classList.remove('active');
       if (loginPane) loginPane.classList.add('active');
       if (signupPane) signupPane.classList.remove('active');
+      resetFindForms();
+    }
+  };
+
+  // 1) 아이디 찾기 엔진
+  window.executeFindId = async function(e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+
+    const nameInput = document.getElementById('find-id-name');
+    const phoneInput = document.getElementById('find-id-phone');
+    const resultBox = document.getElementById('find-id-result');
+    if (!resultBox) return;
+
+    const nameVal = nameInput ? nameInput.value.trim() : '';
+    const phoneVal = phoneInput ? phoneInput.value.trim() : '';
+
+    if (!nameVal) {
+      alert('이름을 입력해 주세요.');
+      nameInput?.focus();
+      return;
+    }
+    if (!phoneVal) {
+      alert('휴대폰 번호를 입력해 주세요.');
+      phoneInput?.focus();
+      return;
+    }
+
+    const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
+    if (cleanPhone.length < 9) {
+      alert('휴대폰 번호를 올바르게 입력해 주세요. (예: 010-1234-5678)');
+      phoneInput?.focus();
+      return;
+    }
+
+    // 1-1) DataStore / localStorage 조회
+    let users = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || []);
+
+    let foundUser = users.find(u => {
+      if (u.role === 'deleted') return false;
+      const uPhoneClean = String(u.phone || '').replace(/[^0-9]/g, '');
+      const uName = String(u.name || '').trim();
+      return uName === nameVal && (uPhoneClean === cleanPhone || (cleanPhone.length >= 8 && uPhoneClean.endsWith(cleanPhone.slice(-8))));
+    });
+
+    // 1-2) Supabase users 테이블 비동기 확인
+    if (!foundUser && window.supabaseClient) {
+      try {
+        const { data, error } = await window.supabaseClient
+          .from('users')
+          .select('id, name, phone, role, isSNS')
+          .eq('name', nameVal)
+          .neq('role', 'deleted');
+        if (!error && data && data.length > 0) {
+          const matched = data.find(u => {
+            const uPhoneClean = String(u.phone || '').replace(/[^0-9]/g, '');
+            return uPhoneClean === cleanPhone || (cleanPhone.length >= 8 && uPhoneClean.endsWith(cleanPhone.slice(-8)));
+          });
+          if (matched) foundUser = matched;
+        }
+      } catch (err) {
+        console.warn('Supabase find-id query error:', err);
+      }
+    }
+
+    // 1-3) 신청서(applications) 기반 비회원 점주 계정 조회
+    if (!foundUser) {
+      let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+        ? window.DataStore.getApplications()
+        : (JSON.parse(localStorage.getItem('applications')) || []);
+      const matchedApp = apps.find(a => {
+        const aName = String(a.ownerName || '').trim();
+        const aPhoneClean = String(a.ownerPhone || '').replace(/[^0-9]/g, '');
+        return aName === nameVal && (aPhoneClean === cleanPhone || (cleanPhone.length >= 8 && aPhoneClean.endsWith(cleanPhone.slice(-8))));
+      });
+      if (matchedApp) {
+        const appPhoneClean = String(matchedApp.ownerPhone || '').replace(/[^0-9]/g, '');
+        foundUser = {
+          id: appPhoneClean || String(matchedApp.id),
+          name: matchedApp.ownerName
+        };
+      }
+    }
+
+    resultBox.style.display = 'block';
+    if (foundUser) {
+      const rawId = String(foundUser.id);
+      let maskedId = rawId;
+      if (rawId.length <= 3) {
+        maskedId = rawId + '***';
+      } else {
+        maskedId = rawId.slice(0, 3) + '*'.repeat(Math.max(1, rawId.length - 3));
+      }
+
+      resultBox.className = 'find-result-box success';
+      resultBox.innerHTML = `
+        <div style="text-align: center; padding: 4px 0;">
+          <i class="fa-solid fa-circle-check" style="font-size: 1.8rem; color: #10b981; margin-bottom: 8px; display: inline-block;"></i>
+          <div style="font-weight: 700; color: #0f172a; font-size: 1rem; margin-bottom: 6px;">회원님의 아이디를 확인했습니다.</div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: #2563eb; letter-spacing: 1px; margin: 10px 0; padding: 10px 14px; background: rgba(37,99,235,0.08); border-radius: 8px; border: 1px solid rgba(37,99,235,0.2);">${maskedId}</div>
+          <button type="button" class="btn btn-primary btn-full" style="margin-top: 10px;" onclick="window.switchAuthTab('login', event); const idInp = document.getElementById('login-id'); if(idInp){ idInp.value='${rawId}'; } const pwInp = document.getElementById('login-pw'); if(pwInp){ pwInp.focus(); }">
+            <i class="fa-solid fa-right-to-bracket"></i> 로그인하러 가기
+          </button>
+        </div>
+      `;
+    } else {
+      resultBox.className = 'find-result-box error';
+      resultBox.innerHTML = `
+        <div style="text-align: center;">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; color: #ef4444; margin-bottom: 6px; display: inline-block;"></i>
+          <div style="font-weight: 700; color: #991b1b; margin-bottom: 4px;">일치하는 회원 정보를 찾을 수 없습니다.</div>
+          <div style="font-size: 0.82rem; color: #64748b;">입력하신 이름과 휴대폰 번호를 다시 한번 확인해 주세요.</div>
+        </div>
+      `;
+    }
+  };
+
+  // 2) 비밀번호 찾기 계정 확인 엔진
+  window.executeFindPw = async function(e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+
+    const idInput = document.getElementById('find-pw-id');
+    const phoneInput = document.getElementById('find-pw-phone');
+    const resultBox = document.getElementById('find-pw-result');
+    const resetGroup = document.getElementById('find-pw-reset-group');
+    if (!resultBox) return;
+
+    const idVal = idInput ? idInput.value.trim() : '';
+    const phoneVal = phoneInput ? phoneInput.value.trim() : '';
+
+    if (!idVal) {
+      alert('아이디를 입력해 주세요.');
+      idInput?.focus();
+      return;
+    }
+    if (!phoneVal) {
+      alert('휴대폰 번호를 입력해 주세요.');
+      phoneInput?.focus();
+      return;
+    }
+
+    const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
+    const idValLower = idVal.toLowerCase();
+
+    // 2-1) DataStore / localStorage 조회
+    let users = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+      ? window.DataStore.getUsers()
+      : (JSON.parse(localStorage.getItem('users')) || []);
+
+    let foundUser = users.find(u => {
+      if (u.role === 'deleted') return false;
+      const uIdLower = String(u.id || '').toLowerCase();
+      const uPhoneClean = String(u.phone || '').replace(/[^0-9]/g, '');
+      const isIdMatch = (uIdLower === idValLower) || (cleanPhone && uIdLower === cleanPhone);
+      const isPhoneMatch = (uPhoneClean === cleanPhone) || (cleanPhone.length >= 8 && uPhoneClean.endsWith(cleanPhone.slice(-8)));
+      return isIdMatch && isPhoneMatch;
+    });
+
+    // 2-2) Supabase users 테이블 조회
+    if (!foundUser && window.supabaseClient) {
+      try {
+        const { data, error } = await window.supabaseClient
+          .from('users')
+          .select('*')
+          .ilike('id', idVal)
+          .neq('role', 'deleted')
+          .maybeSingle();
+        if (!error && data) {
+          const uPhoneClean = String(data.phone || '').replace(/[^0-9]/g, '');
+          if (uPhoneClean === cleanPhone || (cleanPhone.length >= 8 && uPhoneClean.endsWith(cleanPhone.slice(-8)))) {
+            foundUser = data;
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase find-pw query error:', err);
+      }
+    }
+
+    // 2-3) 신청서(applications) 기반 비회원 점주 계정 조회
+    if (!foundUser) {
+      let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+        ? window.DataStore.getApplications()
+        : (JSON.parse(localStorage.getItem('applications')) || []);
+      const matchedApp = apps.find(a => {
+        const aPhoneClean = String(a.ownerPhone || '').replace(/[^0-9]/g, '');
+        const aUserIdClean = String(a.applicantUserId || a.userId || '').replace(/[^0-9]/g, '');
+        const isId = (String(a.id || '').toLowerCase() === idValLower) || (aPhoneClean === cleanPhone) || (aUserIdClean === cleanPhone) || (String(a.ownerPhone || '').trim() === idVal);
+        const isPhone = (aPhoneClean === cleanPhone) || (cleanPhone.length >= 8 && aPhoneClean.endsWith(cleanPhone.slice(-8)));
+        return isId && isPhone;
+      });
+      if (matchedApp) {
+        const appPhoneClean = String(matchedApp.ownerPhone || '').replace(/[^0-9]/g, '');
+        foundUser = {
+          id: appPhoneClean || String(matchedApp.id),
+          name: matchedApp.ownerName,
+          phone: matchedApp.ownerPhone,
+          role: 'normal',
+          isGuestApp: true
+        };
+      }
+    }
+
+    resultBox.style.display = 'block';
+
+    if (foundUser) {
+      window._foundPwUser = foundUser;
+      resultBox.className = 'find-result-box success';
+      resultBox.innerHTML = `
+        <div style="text-align: center;">
+          <i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 1.3rem; vertical-align: middle; margin-right: 4px;"></i>
+          <strong>본인 확인이 완료되었습니다.</strong>
+          <div style="font-size: 0.82rem; color: #065f46; margin-top: 4px;">아래 입력창에 새로운 비밀번호를 설정해 주세요.</div>
+        </div>
+      `;
+      if (resetGroup) resetGroup.style.display = 'block';
+      const newPwInput = document.getElementById('find-pw-new');
+      if (newPwInput) {
+        newPwInput.value = '';
+        setTimeout(() => newPwInput.focus(), 100);
+      }
+      const newPwMsg = document.getElementById('find-pw-new-msg');
+      if (newPwMsg) { newPwMsg.textContent = ''; newPwMsg.className = 'form-helper'; }
+    } else {
+      window._foundPwUser = null;
+      if (resetGroup) resetGroup.style.display = 'none';
+      resultBox.className = 'find-result-box error';
+      resultBox.innerHTML = `
+        <div style="text-align: center;">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; color: #ef4444; margin-bottom: 6px; display: inline-block;"></i>
+          <div style="font-weight: 700; color: #991b1b; margin-bottom: 4px;">일치하는 계정 정보를 찾을 수 없습니다.</div>
+          <div style="font-size: 0.82rem; color: #64748b;">아이디와 휴대폰 번호를 다시 한번 확인해 주세요.</div>
+        </div>
+      `;
+    }
+  };
+
+  // 3) 새 비밀번호 실시간 유효성 검사
+  window.checkFindPwNew = function(e) {
+    const pwInput = document.getElementById('find-pw-new');
+    const msg = document.getElementById('find-pw-new-msg');
+    if (!pwInput || !msg) return;
+
+    const val = pwInput.value;
+    if (!val) {
+      msg.textContent = '';
+      msg.className = 'form-helper';
+      return;
+    }
+
+    const pwRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\]{8,20}$/;
+    if (pwRegex.test(val)) {
+      msg.className = 'form-helper success';
+      msg.style.color = '#10b981';
+      msg.innerHTML = '<i class="fa-solid fa-circle-check"></i> 사용 가능한 안전한 비밀번호입니다.';
+    } else {
+      msg.className = 'form-helper error';
+      msg.style.color = '#dc2626';
+      msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 영문, 숫자, 특수문자 조합 8~20자로 입력해 주세요.';
+    }
+  };
+
+  // 4) 비밀번호 재설정 완료 엔진
+  window.executeResetPw = async function(e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+
+    if (!window._foundPwUser) {
+      alert('먼저 계정 본인 확인을 진행해 주세요.');
+      return;
+    }
+
+    const newPwInput = document.getElementById('find-pw-new');
+    const newPwVal = newPwInput ? newPwInput.value : '';
+    const pwRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\])[A-Za-z\d!@#$%^&*()\-_=+\[\]{};:'",.<>?~|\\]{8,20}$/;
+
+    if (!pwRegex.test(newPwVal)) {
+      alert('비밀번호는 영문, 숫자, 특수문자를 각 1개 이상 포함하여 8~20자로 입력해 주세요.');
+      newPwInput?.focus();
+      return;
+    }
+
+    const resetBtn = document.getElementById('btn-reset-pw');
+    if (resetBtn) {
+      resetBtn.disabled = true;
+      resetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 비밀번호 변경 중...';
+    }
+
+    try {
+      const targetUser = window._foundPwUser;
+      const hashedPw = typeof sha256 === 'function' ? sha256(newPwVal) : newPwVal;
+
+      // 4-1) DataStore / localStorage 반영
+      let users = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+        ? window.DataStore.getUsers()
+        : (JSON.parse(localStorage.getItem('users')) || []);
+
+      const idx = users.findIndex(u => String(u.id).toLowerCase() === String(targetUser.id).toLowerCase());
+      if (idx !== -1) {
+        users[idx].pw = hashedPw;
+      } else {
+        const newUserObj = {
+          ...targetUser,
+          pw: hashedPw
+        };
+        users.push(newUserObj);
+      }
+
+      if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+        window.DataStore.saveUsers(users);
+      } else {
+        localStorage.setItem('users', JSON.stringify(users));
+      }
+
+      // 4-2) Supabase 클라우드 DB 즉시 동기화
+      if (window.SupabaseSync) {
+        await window.SupabaseSync.upsertRecord('users', { id: targetUser.id, pw: hashedPw }).catch(err => {
+          console.warn('Supabase reset pw upsert error:', err);
+        });
+      } else if (window.supabaseClient) {
+        await window.supabaseClient.from('users').update({ pw: hashedPw }).eq('id', targetUser.id).catch(() => {});
+      }
+
+      // 4-3) 신청서 autoAccount가 있는 경우 함께 최신화
+      let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+        ? window.DataStore.getApplications()
+        : (JSON.parse(localStorage.getItem('applications')) || []);
+      let appChanged = false;
+      apps.forEach(a => {
+        const aPhoneDigits = String(a.ownerPhone || '').replace(/[^0-9]/g, '');
+        const aUserIdDigits = String(a.applicantUserId || a.userId || '').replace(/[^0-9]/g, '');
+        if (aPhoneDigits === String(targetUser.id) || aUserIdDigits === String(targetUser.id) || String(a.id) === String(targetUser.id)) {
+          if (!a.autoAccount) a.autoAccount = {};
+          a.autoAccount.pw = newPwVal;
+          appChanged = true;
+        }
+      });
+      if (appChanged) {
+        if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+          window.DataStore.saveApplications(apps);
+        } else {
+          localStorage.setItem('applications', JSON.stringify(apps));
+        }
+      }
+
+      const resultBox = document.getElementById('find-pw-result');
+      const resetGroup = document.getElementById('find-pw-reset-group');
+      if (resetGroup) resetGroup.style.display = 'none';
+
+      if (resultBox) {
+        resultBox.className = 'find-result-box success';
+        resultBox.innerHTML = `
+          <div style="text-align: center; padding: 6px 0;">
+            <i class="fa-solid fa-circle-check" style="font-size: 1.8rem; color: #10b981; margin-bottom: 8px; display: inline-block;"></i>
+            <div style="font-weight: 700; color: #065f46; font-size: 1rem; margin-bottom: 4px;">비밀번호가 성공적으로 변경되었습니다!</div>
+            <div style="font-size: 0.84rem; color: #475569;">잠시 후 로그인 화면으로 자동 이동합니다...</div>
+          </div>
+        `;
+      }
+
+      alert('비밀번호가 성공적으로 변경되었습니다!\n새로운 비밀번호로 로그인해 주세요.');
+
+      const targetId = targetUser.id;
+      window._foundPwUser = null;
+
+      setTimeout(() => {
+        window.switchAuthTab('login');
+        const loginId = document.getElementById('login-id');
+        const loginPw = document.getElementById('login-pw');
+        if (loginId) loginId.value = targetId;
+        if (loginPw) {
+          loginPw.value = '';
+          loginPw.focus();
+        }
+      }, 1200);
+
+    } catch (err) {
+      console.error('Reset password error:', err);
+      alert('비밀번호 변경 처리 중 오류가 발생했습니다: ' + (err.message || '다시 시도해 주세요.'));
+    } finally {
+      if (resetBtn) {
+        resetBtn.disabled = false;
+        resetBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 비밀번호 변경';
+      }
     }
   };
 
