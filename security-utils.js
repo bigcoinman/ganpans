@@ -786,7 +786,7 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
       for (const file of rawFiles) {
         let base64Data = '';
         if (typeof compressImageToBase64 === 'function') {
-          base64Data = await compressImageToBase64(file, 300 * 1024);
+          base64Data = await compressImageToBase64(file, 90 * 1024);
         } else {
           base64Data = await new Promise((resolve) => {
             const reader = new FileReader();

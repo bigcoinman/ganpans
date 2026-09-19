@@ -13,7 +13,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 console.log('========================================================');
-console.log('🛡️ [간판지원단] 7대 공식 설계도 자동 검문소 가동');
+console.log('🛡️ [간판지원단] 8대 공식 설계도 자동 검문소 가동');
 console.log('========================================================\n');
 
 let passed = true;
@@ -46,14 +46,15 @@ const blueprintCode = fs.readFileSync('SYSTEM_BLUEPRINT.md', 'utf8');
 
 console.log('\n--- [설계도 등록 확인] SYSTEM_BLUEPRINT.md 체계 검사 ---');
 assertRule(
-  'SYSTEM_BLUEPRINT.md 공식 7대 설계도 목차 등록',
+  'SYSTEM_BLUEPRINT.md 공식 8대 설계도 목차 등록',
   blueprintCode.includes('BP-SALES-DASHBOARD') && 
   blueprintCode.includes('BP-APPLY-ACCOUNT') && 
   blueprintCode.includes('BP-APP-LIFECYCLE') && 
   blueprintCode.includes('BP-CONSTRUCTOR-FLOW') && 
   blueprintCode.includes('BP-ADMIN-SSOT') &&
   blueprintCode.includes('BP-APP-SHARE-INSTALL') &&
-  blueprintCode.includes('BP-AUTH-RECOVERY'),
+  blueprintCode.includes('BP-AUTH-RECOVERY') &&
+  blueprintCode.includes('BP-TRAFFIC-DIET'),
   '설계도 공식 목차가 누락되었습니다.'
 );
 
@@ -180,6 +181,44 @@ assertRule(
   'index.html 내 찾기 UI의 단일 이벤트 바인딩이 누락되었습니다.'
 );
 
+console.log('\n--- [설계도-08 검증] BP-TRAFFIC-DIET (트래픽 다이어트 및 Supabase 대역폭 영구 방어) ---');
+assertRule(
+  '[BP-08] 이미지 압축 엔진 기본 규격 (800px, 90KB) 준수',
+  secUtilsCode.includes('maxSizeBytes = 90 * 1024') && secUtilsCode.includes('max_size = 800'),
+  'security-utils.js 내 compressImageFile 기본 규격(800px, 90KB)이 훼손되었습니다!'
+);
+
+assertRule(
+  '[BP-08] 대시보드 목록 동기화 시 사진 배제 쿼리(Column Selection) 준수',
+  secUtilsCode.includes("select('id, user_id, owner_name, phone, store_name, store_address, sign_type, referrer_code, status, assigned_constructor_id, assigned_constructor_name, construction_status, memo, applied_at, created_at')"),
+  '목록 동기화 시 대역폭 절감을 위한 컬럼 선별 쿼리가 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-08] Fallback 쿼리 select(\'*\') 부존재 및 경량 쿼리 고정 준수',
+  !secUtilsCode.includes("from('applications').select('*')"),
+  'security-utils.js 내 applications 조회 시 select(\'*\') fallback 찌꺼기가 발견되었습니다!'
+);
+
+assertRule(
+  '[BP-08] Supabase Realtime 300ms 디바운스 엔진 장착 준수',
+  secUtilsCode.includes('triggerDebouncedSync') && secUtilsCode.includes('300'),
+  'Realtime WebSocket 이벤트 수신 시 300ms 디바운스 코드가 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-08] 신규 신청 및 시공사진 업로드 90KB 압축 파라미터 준수',
+  appCode.includes('compressImageToBase64(file, 90 * 1024)') &&
+  dataStoreCode.includes('compressImageToBase64(file, 90 * 1024)'),
+  '신청서 또는 시안/시공사진 업로드 시 90KB 압축 파라미터가 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-08] 구형 300KB 하드코딩 찌꺼기 100% 부존재 준수',
+  !secUtilsCode.includes('300 * 1024') && !appCode.includes('300 * 1024') && !dataStoreCode.includes('300 * 1024'),
+  '코드베이스 내에 구형 300 * 1024 찌꺼기 하드코딩이 잔존합니다!'
+);
+
 console.log('\n--- [이원화 금지 검사] 유령 코드 및 찌꺼기 패턴 검사 ---');
 const ghostPatterns = [
   'viewDraftModalForSales',
@@ -187,7 +226,8 @@ const ghostPatterns = [
   'getBizItemsForSalesOnly',
   'sales_draft_cache',
   'find_id_cache',
-  'find_pw_cache'
+  'find_pw_cache',
+  'max_size = 1200'
 ];
 for (const pattern of ghostPatterns) {
   assertRule(
@@ -199,7 +239,7 @@ for (const pattern of ghostPatterns) {
 
 console.log('\n========================================================');
 if (passed) {
-  console.log('🎉 [검증 완료] 7대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
+  console.log('🎉 [검증 완료] 8대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
   console.log('   기존 기능 훼손 0건, 이원화 찌꺼기 0건 확인 완료.');
   console.log('========================================================\n');
   process.exit(0);
