@@ -1185,8 +1185,8 @@ function formatUserDate(dateStr) {
 }
 window.formatUserDate = formatUserDate;
 
-// 7. 실시간 사진 촬영본 및 이미지 파일 200~300KB 이하 강제 자동 축소/압축 유틸리티 (대역폭 다이어트 최적화)
-function compressImageFile(file, maxSizeBytes = 300 * 1024) {
+// 7. 실시간 사진 촬영본 및 이미지 파일 80~90KB 이하 초경량 강제 자동 축소/압축 유틸리티 (대역폭 다이어트 최적화)
+function compressImageFile(file, maxSizeBytes = 90 * 1024) {
   return new Promise((resolve) => {
     if (!file || !file.type || !file.type.startsWith('image/')) {
       resolve(file);
@@ -1201,8 +1201,8 @@ function compressImageFile(file, maxSizeBytes = 300 * 1024) {
         let width = img.width;
         let height = img.height;
 
-        // 해상도 최적화 (긴 변 기준 최대 1200px - 고화질 선명도 유지 및 300KB 미만 경량화)
-        const max_size = 1200;
+        // 해상도 최적화 (긴 변 기준 최대 800px - 모바일 Retina 2배율 선명도 100% 유지 및 80~90KB 초경량화)
+        const max_size = 800;
         if (width > max_size || height > max_size) {
           if (width > height) {
             height = Math.round(height * (max_size / width));
@@ -1218,14 +1218,14 @@ function compressImageFile(file, maxSizeBytes = 300 * 1024) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        let quality = 0.75;
+        let quality = 0.70;
         let dataUrl = canvas.toDataURL('image/jpeg', quality);
         let approximateSize = Math.round((dataUrl.length - 22) * 3 / 4);
 
-        // 300KB 이하가 될 때까지 화질 품질(quality)을 단계적으로 축소 (강제 경량 압축)
-        const targetMax = maxSizeBytes || (300 * 1024);
+        // 90KB 이하가 될 때까지 화질 품질(quality)을 단계적으로 축소 (강제 초경량 다이어트)
+        const targetMax = maxSizeBytes || (90 * 1024);
         while (approximateSize > targetMax && quality > 0.2) {
-          quality -= 0.1;
+          quality -= 0.08;
           dataUrl = canvas.toDataURL('image/jpeg', quality);
           approximateSize = Math.round((dataUrl.length - 22) * 3 / 4);
         }
@@ -1255,7 +1255,7 @@ function compressImageFile(file, maxSizeBytes = 300 * 1024) {
   });
 }
 
-function compressImageToBase64(file, maxSizeBytes = 300 * 1024) {
+function compressImageToBase64(file, maxSizeBytes = 90 * 1024) {
   return compressImageFile(file, maxSizeBytes).then((compressedFile) => {
     if (compressedFile && compressedFile.dataUrl) {
       return compressedFile.dataUrl;
@@ -2363,10 +2363,10 @@ window.SupabaseSync = {
         appsErr = eAppSelect;
       }
 
-      // 혹시 컬럼 선별 조회가 실패하는 환경인 경우 fallback
+      // 혹시 컬럼 선별 조회가 실패하는 환경인 경우 경량 fallback
       if (appsErr || !supaApps) {
         try {
-          const resFallback = await window.supabaseClient.from('applications').select('*');
+          const resFallback = await window.supabaseClient.from('applications').select('id, user_id, owner_name, phone, store_name, store_address, sign_type, referrer_code, status, assigned_constructor_id, assigned_constructor_name, construction_status, memo, applied_at, created_at');
           supaApps = resFallback.data;
           appsErr = resFallback.error;
         } catch (eFb) {}
@@ -2703,20 +2703,28 @@ window.SupabaseSync = {
     }
   },
 
-  // 8. Supabase Realtime WebSocket 실시간 채널 구독 (0초 지연 실시간 동기화)
+  // 8. Supabase Realtime WebSocket 실시간 채널 구독 (0초 지연 실시간 동기화 및 300ms 디바운스 방어)
   initRealtimeSubscription() {
     if (!window.supabaseClient || this.realtimeChannel) return;
     try {
+      let debounceTimer = null;
+      const triggerDebouncedSync = () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          this.syncAllData();
+        }, 300);
+      };
+
       this.realtimeChannel = window.supabaseClient
         .channel('public:ganpans-realtime')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'applications' }, () => {
-          this.syncAllData();
+          triggerDebouncedSync();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
-          this.syncAllData();
+          triggerDebouncedSync();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'inquiries' }, () => {
-          this.syncAllData();
+          triggerDebouncedSync();
         })
         .subscribe((status, err) => {
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
