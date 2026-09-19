@@ -928,6 +928,19 @@
         });
       }
 
+      // [레이스 컨디션 완벽 방어] 최신 상태 동기화 락 등록 (10초간 어떤 구형 DB 값도 덮어쓰지 못하도록 보장)
+      if (!this._recentStatusUpdates) this._recentStatusUpdates = {};
+      const normAid = String(app.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      this._recentStatusUpdates[String(app.id)] = {
+        status: app.status,
+        receiptStatus: app.receiptStatus,
+        progressStatus: app.progressStatus,
+        timestamp: Date.now()
+      };
+      if (normAid) {
+        this._recentStatusUpdates[normAid] = this._recentStatusUpdates[String(app.id)];
+      }
+
       // 2) 로컬스토리지 0초 즉각 저장
       this.saveUsers(curUsers);
       apps[appIndex] = app;
@@ -940,14 +953,13 @@
       if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
       if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
 
-      // 4) Supabase DB 완전 비동기 백그라운드 저장 (Non-blocking & 실존 컬럼만 전송)
+      // 4) Supabase DB 완전 비동기 백그라운드 저장 (심사 상태 status는 절대 임의로 덮어쓰지 않음)
       (async () => {
         try {
           if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
             await window.SupabaseSync.updateApplication(app.id, {
               memo: app.memo,
               referrer_code: app.referrerCode || '',
-              status: app.status || 'pending',
               assigned_constructor_id: app.assignedConstructorId || null,
               assigned_constructor_name: app.assignedConstructorName || null,
               construction_status: app.constructionStatus || 'before_construction'
@@ -959,7 +971,6 @@
             await window.supabaseClient.from('applications').update({
               memo: app.memo,
               referrer_code: app.referrerCode || '',
-              status: app.status || 'pending',
               assigned_constructor_id: app.assignedConstructorId || null,
               assigned_constructor_name: app.assignedConstructorName || null,
               construction_status: app.constructionStatus || 'before_construction'
@@ -1422,6 +1433,20 @@
         targetApp.assignedConstructorName = constName;
         targetApp.constructionStatus = targetApp.constructionStatus && targetApp.constructionStatus !== 'none' ? targetApp.constructionStatus : 'before_construction';
         targetApp.assignedAt = new Date().toISOString();
+
+        // [레이스 컨디션 완벽 방어] 최신 상태 동기화 락 등록 (10초간 어떤 구형 DB 값도 덮어쓰지 못하도록 보장)
+        if (!this._recentStatusUpdates) this._recentStatusUpdates = {};
+        const normTid = String(targetApp.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        this._recentStatusUpdates[String(targetApp.id)] = {
+          status: targetApp.status,
+          receiptStatus: targetApp.receiptStatus,
+          progressStatus: targetApp.progressStatus,
+          timestamp: Date.now()
+        };
+        if (normTid) {
+          this._recentStatusUpdates[normTid] = this._recentStatusUpdates[String(targetApp.id)];
+        }
+
         this.saveApplications(apps);
 
         if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
@@ -1653,6 +1678,19 @@
       app.reviewStatus = newStatus;
       app.updatedAt = new Date().toISOString();
       apps[appIndex] = app;
+
+      // [레이스 컨디션 완벽 방어] 최신 상태 동기화 락 등록 (10초간 어떤 구형 DB 값도 덮어쓰지 못하도록 보장)
+      if (!this._recentStatusUpdates) this._recentStatusUpdates = {};
+      const normAppId = String(app.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      this._recentStatusUpdates[String(app.id)] = {
+        status: newStatus,
+        reviewStatus: newStatus,
+        timestamp: Date.now()
+      };
+      if (normAppId) {
+        this._recentStatusUpdates[normAppId] = this._recentStatusUpdates[String(app.id)];
+      }
+
       this.saveApplications(apps);
 
       // users.items 내 매칭 항목의 신청 상태(status) 동기화 (progressStatus는 영업물건 진행상황 고유 필드이므로 보존)

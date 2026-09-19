@@ -4149,109 +4149,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.deleteManagerItemMob = deleteManagerItemMob;
 
-    // 모바일 영업 물건에 시공사 배정 (applications 단일 원천 SSOT)
+    // 모바일 영업 물건에 시공사 배정 (DataStore SSOT 단일 원천 호출)
     function assignConstructorToBizItemMob(uid, itemId, btnEl) {
-        const container = btnEl.closest('div');
-        const select = container ? container.querySelector('.select-constructor-bizitem-mob') : null;
-        const constId = select ? select.value : '';
+        const container = btnEl.closest("div");
+        const select = container ? container.querySelector(".select-constructor-bizitem-mob") : null;
+        const constId = select ? select.value : "";
         if (!constId) {
-            alert('배정할 시공사를 선택해 주세요.');
+            alert("배정할 시공사를 선택해 주세요.");
             return;
         }
 
-        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
-        const constUser = curUsers.find(u => String(u.id) === String(constId));
-        if (!constUser) {
-            alert('선택된 시공사 정보를 찾을 수 없습니다.');
-            return;
-        }
-
-        const constName = constUser.businessName || constUser.pendingBusinessName || constUser.name || constUser.id;
-        let targetItemName = '영업 물건';
-
-        // 1) applications 단일 원천 갱신
-        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-        let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
-        if (targetApp) {
-            targetItemName = targetApp.storeName || targetApp.shopName || targetItemName;
-            targetApp.isBizItem = true;
-            let mObj = {};
-            try { mObj = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {}); } catch(e) {}
-            mObj.isBizItem = true;
-            targetApp.memo = JSON.stringify(mObj);
-
-            targetApp.assignedConstructorId = constId;
-            targetApp.assignedConstructorName = constName;
-            targetApp.constructionStatus = targetApp.constructionStatus && targetApp.constructionStatus !== 'none' ? targetApp.constructionStatus : 'before_construction';
-            targetApp.assignedAt = new Date().toISOString();
-            if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-                window.DataStore.saveApplications(apps);
-            } else {
-                saveApplicationsSSOT(apps);
-            }
-
-            if (window.SupabaseSync) {
-                if (typeof window.SupabaseSync.updateApplication === 'function') {
-                    window.SupabaseSync.updateApplication(targetApp.id, {
-                        assigned_constructor_id: constId,
-                        assigned_constructor_name: constName,
-                        construction_status: targetApp.constructionStatus || 'before_construction',
-                        assigned_at: targetApp.assignedAt || new Date().toISOString()
-                    }).catch(() => {});
+        if (window.DataStore && typeof window.DataStore.assignConstructorToBizItem === "function") {
+            const res = window.DataStore.assignConstructorToBizItem(uid, itemId, constId);
+            if (res && res.success) {
+                const constName = res.constName || "시공사";
+                const msg = `영업 물건에 시공사 [${constName}]가 성공적으로 배정되었습니다.`;
+                if (typeof window.showToast === "function") {
+                    window.showToast(msg);
                 } else {
-                    window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
+                    alert(msg);
                 }
+                renderAdminDashboardMob(true);
+                return;
+            } else if (res && res.error) {
+                alert(res.error);
+                return;
             }
         }
-
-        // 2) users.items 동기화
-        curUsers = curUsers.map(u => {
-            if (String(u.id) === String(uid)) {
-                const updatedItems = (u.items || []).map(item => {
-                    if (String(item.id) === String(itemId)) {
-                        targetItemName = item.name || targetItemName;
-                        return {
-                            ...item,
-                            assignedConstructorId: constId,
-                            assignedConstructorName: constName,
-                            constructionStatus: item.constructionStatus || 'before_construction',
-                            assignedAt: new Date().toISOString()
-                        };
-                    }
-                    return item;
-                });
-                return { ...u, items: updatedItems };
-            }
-            return u;
-        });
-
-        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-            window.DataStore.saveUsers(curUsers);
-        } else {
-            saveUsersSSOT(curUsers);
-        }
-
-        if (window.SupabaseSync) {
-            const updatedUser = curUsers.find(u => String(u.id) === String(uid));
-            if (updatedUser) {
-                window.SupabaseSync.updateUser(uid, {
-                    items: updatedUser.items || []
-                }).catch(() => {});
-            }
-        }
-
-        const msg = `[${targetItemName}] 영업 물건에 시공사 [${constName}]가 성공적으로 배정되었습니다.`;
-        if (typeof window.showToast === 'function') {
-            window.showToast(msg);
-        } else {
-            alert(msg);
-        }
-        renderStatusTab();
-
-        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-            window.DataStore.notifyAll(true);
-        }
-        window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     }
     window.assignConstructorToBizItemMob = assignConstructorToBizItemMob;
 
