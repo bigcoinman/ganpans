@@ -532,14 +532,13 @@
           (app.memo && (typeof app.memo === 'string' ? app.memo.includes('"isBizItem":true') : app.memo.isBizItem === true))
         );
 
-        const hasConstructorOrProgress = Boolean(
-          app.assignedConstructorId ||
-          (app.assignedConstructorName && app.assignedConstructorName !== '미배정' && app.assignedConstructorName !== '-') ||
-          pStatus === '대상자선정' || pStatus === '간판시공 준비중' || pStatus === '간판시공완료' ||
-          cStatus === 'in_construction' || cStatus === 'completed' || cStatus === '간판시공 준비중' || cStatus === '간판시공완료'
+        // [방안 A 원칙] 실제로 시공사가 배정된(assignedConstructorId 실존) 물건만 시공업체 진행현황에 노출 (미배정 건 혼선 원천 차단)
+        const hasAssignedConstructor = Boolean(
+          (app.assignedConstructorId && app.assignedConstructorId !== 'none' && app.assignedConstructorId !== '-' && app.assignedConstructorId !== '미배정') ||
+          (app.assignedConstructorName && app.assignedConstructorName !== '미배정' && app.assignedConstructorName !== '-' && app.assignedConstructorName !== 'none')
         );
 
-        const isEligible = isBizItem && hasConstructorOrProgress && (
+        const isEligible = isBizItem && hasAssignedConstructor && (
           pStatus !== '반려됨' && pStatus !== '지원사업 포기' && pStatus !== '지원사업 탈락'
         );
 
@@ -718,13 +717,23 @@
             return { success: false, cancelled: true, message: '관리자 취소' };
           }
 
-          // 관리자가 확인한 경우: 시공사 배정 및 시공 상태 초기화
+          // 관리자가 확인한 경우: 시공사 배정 및 시공 상태, 디자인 시안 찌꺼기 100% 완전 초기화 (Clean Slate)
           app.assignedConstructorId = null;
           app.assignedConstructorName = null;
           app.assignedConstructorCode = null;
           app.assignedConstructorPhone = null;
           app.constructionStatus = 'before_construction';
           app.assignedAt = null;
+          app.signDraftPhotos = [];
+          app.draftStatus = 'pending';
+          app.draftApprovedAt = null;
+          let mObj = {};
+          try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch(e) {}
+          delete mObj.signDraftPhotos;
+          delete mObj.draftStatus;
+          delete mObj.draftApprovedAt;
+          app.memo = JSON.stringify(mObj);
+
           if (app.progressStatus === '간판시공 준비중' || app.progressStatus === '간판시공완료' || app.progressStatus === '대상자선정') {
             app.progressStatus = '지원대기중';
           }
@@ -1463,18 +1472,32 @@
     reassignConstructorItem: function (uid, itemId) {
       if (!itemId) return { success: false };
 
-      // 1) applications 단일 원천 초기화
+      // 1) applications 단일 원천 초기화 (시공사 배정 취소 시 시안 찌꺼기 100% 완전 정리)
       let apps = this.getApplications();
       let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
       if (targetApp) {
         targetApp.assignedConstructorId = null;
         targetApp.assignedConstructorName = null;
+        targetApp.assignedConstructorCode = null;
+        targetApp.assignedConstructorPhone = null;
+        targetApp.constructionStatus = 'before_construction';
+        targetApp.assignedAt = null;
+        targetApp.signDraftPhotos = [];
+        targetApp.draftStatus = 'pending';
+        targetApp.draftApprovedAt = null;
+        let mObj = {};
+        try { mObj = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {}); } catch(e) {}
+        delete mObj.signDraftPhotos;
+        delete mObj.draftStatus;
+        delete mObj.draftApprovedAt;
+        targetApp.memo = JSON.stringify(mObj);
         this.saveApplications(apps);
 
         if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
           window.SupabaseSync.updateApplication(targetApp.id, {
             assigned_constructor_id: null,
-            assigned_constructor_name: null
+            assigned_constructor_name: null,
+            memo: targetApp.memo
           }).catch(() => {});
         } else if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
           window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
@@ -1490,7 +1513,13 @@
               return {
                 ...item,
                 assignedConstructorId: null,
-                assignedConstructorName: null
+                assignedConstructorName: null,
+                assignedConstructorCode: null,
+                assignedConstructorPhone: null,
+                constructionStatus: 'before_construction',
+                signDraftPhotos: [],
+                draftStatus: 'pending',
+                draftApprovedAt: null
               };
             }
             return item;

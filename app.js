@@ -3528,20 +3528,24 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
                                 <span style="font-size: 0.92rem; font-weight: 700; color: #7c3aed;"><i class="fa-solid fa-palette"></i> 디자인 시안 (${draftCount}/5장):</span>
                                 <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                                    ${draftCount > 0 ? `
-                                        <button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 5px 10px; font-size: 0.86rem; font-weight: 700; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-eye"></i> 시안 확인 및 삭제</button>
-                                        ${(job.draftStatus !== 'owner_approved' && job.draftStatus !== 'admin_approved') ? `
-                                            <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved')" style="padding: 5px 9px; font-size: 0.85rem; font-weight: 700; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-check"></i> 직권확정</button>
-                                        ` : `
-                                            <span style="font-size: 0.86rem; color: #166534; font-weight: 700;">(${draftStatusText})</span>
-                                        `}
-                                    ` : `<span style="font-size: 0.86rem; color: #94a3b8;">미등록</span>`}
-                                    ${draftCount < 5 ? `
-                                        <label style="background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 5px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="시안 등록 (최대 5장, 300KB 자동 압축)">
-                                            <i class="fa-solid fa-plus"></i> ${draftCount > 0 ? '추가' : '등록'}
-                                            <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobDraftUploadCommon('${job.id}', this.files); this.value='';">
-                                        </label>
-                                    ` : ''}
+                                    ${(!job.assignedConstructorId || job.assignedConstructorName === '미배정') ? `
+                                        <span style="font-size: 0.86rem; color: #94a3b8; font-weight: 600;"><i class="fa-solid fa-circle-exclamation"></i> 시공사 배정 필요</span>
+                                    ` : `
+                                        ${draftCount > 0 ? `
+                                            <button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 5px 10px; font-size: 0.86rem; font-weight: 700; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-eye"></i> 시안 확인 및 삭제</button>
+                                            ${(job.draftStatus !== 'owner_approved' && job.draftStatus !== 'admin_approved') ? `
+                                                <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved')" style="padding: 5px 9px; font-size: 0.85rem; font-weight: 700; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-check"></i> 직권확정</button>
+                                            ` : `
+                                                <span style="font-size: 0.86rem; color: #166534; font-weight: 700;">(${draftStatusText})</span>
+                                            `}
+                                        ` : `<span style="font-size: 0.86rem; color: #94a3b8;">미등록</span>`}
+                                        ${draftCount < 5 ? `
+                                            <label style="background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; padding: 5px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="시안 등록 (최대 5장, 300KB 자동 압축)">
+                                                <i class="fa-solid fa-plus"></i> ${draftCount > 0 ? '추가' : '등록'}
+                                                <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobDraftUploadCommon('${job.id}', this.files); this.value='';">
+                                            </label>
+                                        ` : ''}
+                                    `}
                                 </div>
                             </div>
                             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
@@ -4258,6 +4262,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (targetApp) {
             targetApp.assignedConstructorId = null;
             targetApp.assignedConstructorName = null;
+            targetApp.assignedConstructorCode = null;
+            targetApp.assignedConstructorPhone = null;
+            targetApp.constructionStatus = 'before_construction';
+            targetApp.assignedAt = null;
+            targetApp.signDraftPhotos = [];
+            targetApp.draftStatus = 'pending';
+            targetApp.draftApprovedAt = null;
+            let mObj = {};
+            try { mObj = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {}); } catch(e) {}
+            delete mObj.signDraftPhotos;
+            delete mObj.draftStatus;
+            delete mObj.draftApprovedAt;
+            targetApp.memo = JSON.stringify(mObj);
+
             if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
                 window.DataStore.saveApplications(apps);
             } else {
@@ -4267,7 +4285,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof window.SupabaseSync.updateApplication === 'function') {
                     window.SupabaseSync.updateApplication(targetApp.id, {
                         assigned_constructor_id: null,
-                        assigned_constructor_name: null
+                        assigned_constructor_name: null,
+                        memo: targetApp.memo
                     }).catch(() => {});
                 } else {
                     window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
@@ -4286,7 +4305,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         return {
                             ...item,
                             assignedConstructorId: null,
-                            assignedConstructorName: null
+                            assignedConstructorName: null,
+                            assignedConstructorCode: null,
+                            assignedConstructorPhone: null,
+                            constructionStatus: 'before_construction',
+                            signDraftPhotos: [],
+                            draftStatus: 'pending',
+                            draftApprovedAt: null
                         };
                     }
                     return item;
