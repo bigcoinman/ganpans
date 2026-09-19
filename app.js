@@ -1302,6 +1302,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? getAppStatusBadgeHtmlMob(app) 
                 : ((typeof window.getAppStatusBadgeHtml === 'function') ? window.getAppStatusBadgeHtml(app) : '<span class="badge-status pending">사업시행 전 사전등록업체</span>');
 
+            // [설계도-03] 간판 디자인 시안 데이터 다각도 복원 (SSOT)
+            let draftPhotos = (app.signDraftPhotos && Array.isArray(app.signDraftPhotos)) ? app.signDraftPhotos : ((app.designPhotos && Array.isArray(app.designPhotos)) ? app.designPhotos : []);
+            if (draftPhotos.length === 0 && app.memo) {
+                try {
+                    const parsedMemo = typeof app.memo === 'object' ? app.memo : JSON.parse(app.memo || '{}');
+                    if (parsedMemo && Array.isArray(parsedMemo.signDraftPhotos)) draftPhotos = parsedMemo.signDraftPhotos;
+                } catch(e) {}
+            }
+            if (draftPhotos.length === 0) {
+                try {
+                    const allUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
+                    for (let u of allUsers) {
+                        if (u.items && Array.isArray(u.items)) {
+                            const foundItem = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
+                            if (foundItem && Array.isArray(foundItem.signDraftPhotos) && foundItem.signDraftPhotos.length > 0) {
+                                draftPhotos = foundItem.signDraftPhotos;
+                                break;
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+            const draftCount = draftPhotos.length;
+
+            // 시안 승인 상태 복원
+            let draftStatus = app.draftStatus || 'pending';
+            if (draftStatus === 'pending' && app.memo) {
+                try {
+                    const parsedMemo = typeof app.memo === 'object' ? app.memo : JSON.parse(app.memo || '{}');
+                    if (parsedMemo && parsedMemo.draftStatus) draftStatus = parsedMemo.draftStatus;
+                } catch(e) {}
+            }
+            if (draftStatus === 'pending') {
+                try {
+                    const allUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
+                    for (let u of allUsers) {
+                        if (u.items && Array.isArray(u.items)) {
+                            const foundItem = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
+                            if (foundItem && foundItem.draftStatus) {
+                                draftStatus = foundItem.draftStatus;
+                                break;
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            const isDraftApproved = (draftStatus === 'owner_approved' || draftStatus === 'admin_approved');
+            const draftApprovedLabel = (draftStatus === 'owner_approved') ? '점주 시안 승인완료' : '관리자 시안 확정완료';
+
+            // 현장사진 정보 복원
+            const { count: photoCount, hasPhoto } = (typeof getAppPhotoInfo === 'function') ? getAppPhotoInfo(app) : { count: 0, hasPhoto: false };
+
             card.innerHTML = `
                 <div class="app-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                     <div>
@@ -1322,6 +1375,38 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${statusBadgeHtml}
                     </div>
                 </div>
+
+                <!-- 1. 현장사진 확인 영역 (점주 확인/다운로드) -->
+                ${hasPhoto ? `
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 8px;">
+                        <span style="font-size: 0.88rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 현장사진</span>
+                        <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${photoCount} }); return false;" style="padding: 5px 12px; font-size: 0.82rem; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(37,99,235,0.2);">
+                            <i class="fa-solid fa-images"></i> 사진 확인 (${photoCount}장)
+                        </button>
+                    </div>
+                ` : ''}
+
+                <!-- 2. 간판 디자인 시안 확인 및 점주 승인 박스 (설계도-03 BP-APP-LIFECYCLE SSOT) -->
+                ${draftCount > 0 ? `
+                    <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 10px; padding: 12px 14px; text-align: left; margin-top: 10px; margin-bottom: 8px; box-shadow: 0 2px 6px rgba(192,38,211,0.06);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 1.05rem; font-weight: 800; color: #86198f;"><i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftCount}장)</span>
+                            <button type="button" onclick="window.viewDraftModal('${app.id}')" style="padding: 6px 12px; font-size: 0.88rem; font-weight: 700; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-eye"></i> 시안 크게보기</button>
+                        </div>
+                        ${isDraftApproved ? `
+                            <div style="font-size: 0.94rem; color: #166534; font-weight: 700; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; padding: 9px 12px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-circle-check" style="font-size: 1.1rem; color: #16a34a;"></i> ${draftApprovedLabel}
+                            </div>
+                        ` : `
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f5d0fe;">
+                                <span style="font-size: 0.88rem; color: #92400e; font-weight: 700;"><i class="fa-solid fa-clock"></i> 시안 검토 후 승인해주세요</span>
+                                <button type="button" onclick="window.approveDraftByOwner('${app.id}')" style="padding: 8px 14px; font-size: 0.92rem; font-weight: 800; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(22,163,74,0.3);">
+                                    <i class="fa-solid fa-check"></i> 시안 승인 / 마음에 듭니다
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                ` : ''}
 
                 <div class="app-card-footer" style="display: flex; justify-content: flex-end; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e2e8f0; gap: 8px;">
                     <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 700; border-radius: 6px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; cursor: pointer;">

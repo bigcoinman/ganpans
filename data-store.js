@@ -812,9 +812,9 @@
 
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
         // [규칙] 영업물건으로 전환 시 기본값은 접수: '접수예정', 진행: '지원대기중'
-        app.receiptStatus = '접수예정';
-        app.progressStatus = '지원대기중';
-        app.status = 'pending';
+        if (!app.receiptStatus) app.receiptStatus = '접수예정';
+        if (!app.progressStatus) app.progressStatus = '지원대기중';
+        // [영구 방어] app.status(심사 상태)는 관리자가 지정한 값(서류준비 & 접수대기 등)을 100% 영구 보존하며, 절대 임의로 'pending'으로 덮어쓰지 않음
 
         // memo JSON 객체 최신 동기화 (Supabase 단일 진실의 원천 보장)
         let memoObj = {};
@@ -2463,6 +2463,8 @@
       alert('관리자 직권으로 [간판 디자인 시안]을 최종 확정하였습니다.\n신청 점주 마이페이지 및 시공사 화면에 실시간으로 반영됩니다.');
     } else if (newDraftStatus === 'pending') {
       alert('간판 디자인 시안 확정을 취소하고 [검토중] 상태로 변경하였습니다.');
+    } else if (newDraftStatus === 'owner_approved') {
+      alert('간판 디자인 시안을 승인하셨습니다!\n시공업체에 승인 결과가 즉시 전달되어 간판 제작이 착수됩니다.');
     }
 
     if (window.DataStore) window.DataStore.notifyAll(true);
@@ -3211,13 +3213,25 @@
       document.body.appendChild(modal);
     }
 
+    let currentRole = 'user';
+    try {
+      const au = (typeof activeUser === 'object' && activeUser && activeUser.role) ? activeUser : JSON.parse(localStorage.getItem('activeUser') || sessionStorage.getItem('activeUser') || '{}');
+      if (au && au.role) currentRole = au.role;
+    } catch(e) {}
+    const isAdmin = currentRole === 'admin';
+    const isConstructor = currentRole === 'constructor';
+    const isOwner = (currentRole === 'user' || currentRole === 'normal' || !currentRole);
+    const canManageDrafts = (isAdmin || isConstructor);
+
     const photosHtml = job.signDraftPhotos.map((src, idx) => `
       <div style="text-align: center; margin-bottom: 24px; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; position: relative;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <span style="font-size: 1.0rem; font-weight: 700; color: #4338ca;"><i class="fa-solid fa-palette"></i> 디자인 시안 #${idx + 1}</span>
-          <button type="button" onclick="window.deleteJobDraftPhoto('${job.id}', ${idx})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="fa-solid fa-trash-can"></i> 이 시안 삭제
-          </button>
+          ${canManageDrafts ? `
+            <button type="button" onclick="window.deleteJobDraftPhoto('${job.id}', ${idx})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+              <i class="fa-solid fa-trash-can"></i> 이 시안 삭제
+            </button>
+          ` : ''}
         </div>
         <img src="${(typeof sanitizeUrl === 'function' ? sanitizeUrl(src) : src)}" alt="간판 디자인 시안 #${idx + 1}" style="max-width: 100%; max-height: 65vh; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); object-fit: contain;">
       </div>
@@ -3234,24 +3248,40 @@
       <div style="background: white; border-radius: 14px; padding: 22px; max-width: 780px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
           <div>
-            <h3 style="margin: 0; font-size: 1.25rem; color: #1e293b;"><i class="fa-solid fa-palette" style="color: #6366f1;"></i> 간판 디자인 시안 관리 (${job.signDraftPhotos.length}/5장)</h3>
+            <h3 style="margin: 0; font-size: 1.25rem; color: #1e293b;"><i class="fa-solid fa-palette" style="color: #6366f1;"></i> 간판 디자인 시안 (${job.signDraftPhotos.length}/5장)</h3>
             <div style="font-size: 0.92rem; color: #64748b; margin-top: 4px;">상호명: <strong>${safeStoreName}</strong> | 간판종류: <strong>${safeSignType}</strong> (${statusBadgeText})</div>
           </div>
           <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
         </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 10px 14px; background: #eff6ff; border-radius: 6px; font-size: 0.90rem; color: #1e40af;">
-          <span><i class="fa-solid fa-circle-info"></i> 시안은 최대 5장까지 등록 및 개별/전체 삭제가 가능합니다.</span>
-          <button type="button" onclick="window.deleteJobDraftAll('${job.id}')" style="background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="fa-solid fa-trash-can"></i> 전체 시안 삭제
-          </button>
-        </div>
+        ${canManageDrafts ? `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 10px 14px; background: #eff6ff; border-radius: 6px; font-size: 0.90rem; color: #1e40af;">
+            <span><i class="fa-solid fa-circle-info"></i> 시안은 최대 5장까지 등록 및 개별/전체 삭제가 가능합니다.</span>
+            <button type="button" onclick="window.deleteJobDraftAll('${job.id}')" style="background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+              <i class="fa-solid fa-trash-can"></i> 전체 시안 삭제
+            </button>
+          </div>
+        ` : ''}
         <div>${photosHtml}</div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px;">
-          ${(job.draftStatus !== 'owner_approved' && job.draftStatus !== 'admin_approved') ? `
-            <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved'); document.getElementById('${modalId}').style.display='none';" style="padding: 9px 18px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-check"></i> 관리자 직권 시안확정</button>
-          ` : `
-            <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'pending'); document.getElementById('${modalId}').style.display='none';" style="padding: 9px 18px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-rotate-left"></i> 시안 확정 취소</button>
-          `}
+        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px; flex-wrap: wrap;">
+          ${isOwner ? (
+            (job.draftStatus !== 'owner_approved' && job.draftStatus !== 'admin_approved') ? `
+              <button type="button" onclick="window.approveDraftByOwner('${job.id}'); document.getElementById('${modalId}').style.display='none';" style="padding: 9px 18px; background: #16a34a; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(22,163,74,0.3);">
+                <i class="fa-solid fa-check"></i> 시안 승인 / 마음에 듭니다
+              </button>
+            ` : `
+              <span style="padding: 8px 14px; background: #dcfce7; color: #166534; border: 1px solid #86efac; border-radius: 6px; font-weight: 700; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-circle-check" style="font-size: 1.1rem; color: #16a34a;"></i> 점주 시안 확정완료
+              </span>
+            `
+          ) : (
+            isAdmin ? (
+              (job.draftStatus !== 'owner_approved' && job.draftStatus !== 'admin_approved') ? `
+                <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved'); document.getElementById('${modalId}').style.display='none';" style="padding: 9px 18px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-check"></i> 관리자 직권 시안확정</button>
+              ` : `
+                <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'pending'); document.getElementById('${modalId}').style.display='none';" style="padding: 9px 18px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-rotate-left"></i> 시안 확정 취소</button>
+              `
+            ) : ''
+          )}
           <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="padding: 9px 18px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.95rem; cursor: pointer;">닫기</button>
         </div>
       </div>
