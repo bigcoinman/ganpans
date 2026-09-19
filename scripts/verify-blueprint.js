@@ -102,12 +102,46 @@ assertRule(
   '신청서 userId가 점주가 아닌 영업자 ID로 오기입되는 오류가 발견되었습니다!'
 );
 
-console.log('\n--- [설계도-03/04/05 검증] 권한 분리 및 공용 모달 단일화 ---');
+console.log('\n--- [설계도-03 검증] BP-APP-LIFECYCLE (신청서 7단계 생명주기 및 락 방어) ---');
 assertRule(
-  '[BP-03/04] 일반 점주 대시보드: 시안 승인(마음에 듭니다) 버튼 100% 보존',
+  '[BP-03] 일반 점주 대시보드: 시안 승인(마음에 듭니다) 버튼 100% 보존',
   appCode.includes('window.approveDraftByOwner') && appCode.includes('시안 승인 / 마음에 듭니다'),
   '일반 점주가 시안을 승인할 수 있는 녹색 버튼이 훼손되었습니다!'
 );
+
+assertRule(
+  '[BP-03] toggleBizItem 내 status="pending" 롤백 찌꺼기 100% 부존재',
+  !dataStoreCode.includes("status: app.status || 'pending'"),
+  'toggleBizItem 내에 구형 status="pending" 덮어쓰기 페이로드가 남아있습니다!'
+);
+
+const assignMobStart = appCode.indexOf('function assignConstructorToBizItemMob(');
+const assignMobEnd = appCode.indexOf('window.assignConstructorToBizItemMob = assignConstructorToBizItemMob;', assignMobStart);
+const assignMobBody = (assignMobStart !== -1 && assignMobEnd !== -1) ? appCode.slice(assignMobStart, assignMobEnd) : '';
+
+assertRule(
+  '[BP-03] assignConstructorToBizItemMob SSOT 일원화 및 강제 DB 동기화 제거',
+  assignMobBody.includes('DataStore.assignConstructorToBizItem(uid, itemId, constId)') &&
+  !assignMobBody.includes('syncAdminDataFromSupabaseMob'),
+  '모바일 시공사 배정 함수가 DataStore 단일 원천을 호출하지 않거나 force=true 재조회가 남아있습니다!'
+);
+
+assertRule(
+  '[BP-03] 7단계 상태 전이 10초 동기화 락(_recentStatusUpdates) 장착',
+  dataStoreCode.includes('_recentStatusUpdates') &&
+  dataStoreCode.includes('updateApplicationStatus') &&
+  dataStoreCode.includes('reassignConstructorItem'),
+  '핵심 상태 변경 함수에 _recentStatusUpdates 동기화 락이 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-03] 모바일 대시보드 헤더 단일 이벤트 바인딩 준수 (Rule #4 중복 리스너 부존재)',
+  !appCode.includes("toggleUserAppsMobHeader.addEventListener('click'") &&
+  !appCode.includes("toggleBizItemsMobHeader.addEventListener('click'"),
+  '모바일 대시보드 헤더에 인라인 onclick과 중복되는 addEventListener가 남아있습니다!'
+);
+
+console.log('\n--- [설계도-04/05 검증] 권한 분리 및 공용 모달 단일화 ---');
 
 assertRule(
   '[BP-공통] 시안 크게보기 단일 공용 함수(viewDraftModal) 호출 준수',

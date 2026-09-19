@@ -1516,12 +1516,31 @@
         delete mObj.draftStatus;
         delete mObj.draftApprovedAt;
         targetApp.memo = JSON.stringify(mObj);
+
+        // [레이스 컨디션 완벽 방어] 최신 상태 동기화 락 등록
+        if (!this._recentStatusUpdates) this._recentStatusUpdates = {};
+        const normAid = String(targetApp.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        this._recentStatusUpdates[String(targetApp.id)] = {
+          status: targetApp.status,
+          receiptStatus: targetApp.receiptStatus,
+          progressStatus: targetApp.progressStatus,
+          timestamp: Date.now()
+        };
+        if (normAid) this._recentStatusUpdates[normAid] = this._recentStatusUpdates[String(targetApp.id)];
+
+        if (this._recentDraftUpdates) {
+          delete this._recentDraftUpdates[String(targetApp.id)];
+          if (normAid) delete this._recentDraftUpdates[normAid];
+        }
+
         this.saveApplications(apps);
 
         if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
           window.SupabaseSync.updateApplication(targetApp.id, {
             assigned_constructor_id: null,
             assigned_constructor_name: null,
+            construction_status: 'before_construction',
+            assigned_at: null,
             memo: targetApp.memo
           }).catch(() => {});
         } else if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
@@ -2495,6 +2514,31 @@
       }
       return a;
     });
+    // [레이스 컨디션 방어] 최신 상태 및 시안 동기화 락 등록
+    if (window.DataStore) {
+      if (!window.DataStore._recentStatusUpdates) window.DataStore._recentStatusUpdates = {};
+      if (!window.DataStore._recentDraftUpdates) window.DataStore._recentDraftUpdates = {};
+      const targetApp = apps.find(a => String(a.id) === String(id));
+      if (targetApp) {
+        const normId = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        window.DataStore._recentStatusUpdates[String(id)] = {
+          status: targetApp.status,
+          receiptStatus: targetApp.receiptStatus,
+          progressStatus: targetApp.progressStatus,
+          timestamp: Date.now()
+        };
+        window.DataStore._recentDraftUpdates[String(id)] = {
+          signDraftPhotos: targetApp.signDraftPhotos || [],
+          draftStatus: newDraftStatus,
+          timestamp: Date.now()
+        };
+        if (normId) {
+          window.DataStore._recentStatusUpdates[normId] = window.DataStore._recentStatusUpdates[String(id)];
+          window.DataStore._recentDraftUpdates[normId] = window.DataStore._recentDraftUpdates[String(id)];
+        }
+      }
+    }
+
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(apps);
     } else {
@@ -2817,6 +2861,19 @@
       return app;
     });
 
+    // [레이스 컨디션 방어] 삭제 후 최신 시안 목록 락 등록
+    if (window.DataStore && window.DataStore._recentDraftUpdates) {
+      const normKey = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const targetApp = apps.find(a => String(a.id) === String(id));
+      const lockObj = {
+        signDraftPhotos: (targetApp && targetApp.signDraftPhotos) || [],
+        draftStatus: (targetApp && targetApp.draftStatus) || 'pending',
+        timestamp: Date.now()
+      };
+      window.DataStore._recentDraftUpdates[String(id)] = lockObj;
+      if (normKey) window.DataStore._recentDraftUpdates[normKey] = lockObj;
+    }
+
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(apps);
     } else {
@@ -2912,6 +2969,14 @@
       }
       return app;
     });
+
+    // [레이스 컨디션 방어] 전체 삭제 후 빈 시안 목록 락 등록
+    if (window.DataStore && window.DataStore._recentDraftUpdates) {
+      const normKey = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const lockObj = { signDraftPhotos: [], draftStatus: 'pending', timestamp: Date.now() };
+      window.DataStore._recentDraftUpdates[String(id)] = lockObj;
+      if (normKey) window.DataStore._recentDraftUpdates[normKey] = lockObj;
+    }
 
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(apps);
@@ -3580,6 +3645,24 @@
       return a;
     });
 
+    // [레이스 컨디션 방어] 시공 배정 취소 최신 상태 락 등록 및 시안 락 소멸
+    if (window.DataStore) {
+      if (!window.DataStore._recentStatusUpdates) window.DataStore._recentStatusUpdates = {};
+      const normAppId = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      window.DataStore._recentStatusUpdates[String(id)] = {
+        status: app.status,
+        receiptStatus: app.receiptStatus,
+        progressStatus: app.progressStatus,
+        timestamp: Date.now()
+      };
+      if (normAppId) window.DataStore._recentStatusUpdates[normAppId] = window.DataStore._recentStatusUpdates[String(id)];
+
+      if (window.DataStore._recentDraftUpdates) {
+        delete window.DataStore._recentDraftUpdates[String(id)];
+        if (normAppId) delete window.DataStore._recentDraftUpdates[normAppId];
+      }
+    }
+
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(apps);
     } else {
@@ -3684,6 +3767,23 @@
       }
       return app;
     });
+
+    // [레이스 컨디션 방어] 시공 상태 변경 최신 상태 락 등록
+    if (window.DataStore) {
+      if (!window.DataStore._recentStatusUpdates) window.DataStore._recentStatusUpdates = {};
+      const targetApp = apps.find(a => String(a.id) === String(id));
+      if (targetApp) {
+        const normId = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        window.DataStore._recentStatusUpdates[String(id)] = {
+          status: targetApp.status,
+          receiptStatus: targetApp.receiptStatus,
+          progressStatus: targetApp.progressStatus,
+          timestamp: Date.now()
+        };
+        if (normId) window.DataStore._recentStatusUpdates[normId] = window.DataStore._recentStatusUpdates[String(id)];
+      }
+    }
+
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(apps);
     } else {
@@ -3789,6 +3889,23 @@
       }
       return a;
     });
+
+    // [레이스 컨디션 방어] 시공 완료 보고 최신 상태 락 등록
+    if (window.DataStore) {
+      if (!window.DataStore._recentStatusUpdates) window.DataStore._recentStatusUpdates = {};
+      const targetApp = apps.find(a => String(a.id) === String(id));
+      if (targetApp) {
+        const normId = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        window.DataStore._recentStatusUpdates[String(id)] = {
+          status: targetApp.status,
+          receiptStatus: targetApp.receiptStatus,
+          progressStatus: '간판시공완료',
+          timestamp: Date.now()
+        };
+        if (normId) window.DataStore._recentStatusUpdates[normId] = window.DataStore._recentStatusUpdates[String(id)];
+      }
+    }
+
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
       window.DataStore.saveApplications(apps);
     } else {

@@ -2280,25 +2280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const toggleUserAppsMobHeader = document.getElementById('toggle-user-apps-mob-header');
-    if (toggleUserAppsMobHeader) {
-        toggleUserAppsMobHeader.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (typeof window.toggleUserAppsMob === 'function') {
-                window.toggleUserAppsMob();
-            }
-        });
-    }
-
-    const toggleBizItemsMobHeader = document.getElementById('toggle-biz-items-mob-header');
-    if (toggleBizItemsMobHeader) {
-        toggleBizItemsMobHeader.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (typeof window.toggleBizItemsMob === 'function') {
-                window.toggleBizItemsMob();
-            }
-        });
-    }
+    // Note: toggleUserAppsMobHeader and toggleBizItemsMobHeader already have single inline onclick in index.html (Rule #4)
 
     const searchBizItemsMobInput = document.getElementById('search-biz-items-mob');
     if (searchBizItemsMobInput) {
