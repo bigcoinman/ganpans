@@ -1352,6 +1352,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const isDraftApproved = (draftStatus === 'owner_approved' || draftStatus === 'admin_approved');
             const draftApprovedLabel = (draftStatus === 'owner_approved') ? '점주 시안 승인완료' : '관리자 시안 확정완료';
 
+            // [설계도-03 철벽 조건] 영업물건 승격(isBizItem) 및 실제 시공사 배정이 유효할 때만 시안 노출
+            const isBizItem = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
+            const hasAssignedConstructor = Boolean(
+                app.assignedConstructorId && 
+                app.assignedConstructorId !== 'none' && 
+                app.assignedConstructorId !== '-' && 
+                app.assignedConstructorId !== '미배정'
+            );
+            const showDraftBox = isBizItem && hasAssignedConstructor && (draftCount > 0);
+
             // 현장사진 정보 복원
             const { count: photoCount, hasPhoto } = (typeof getAppPhotoInfo === 'function') ? getAppPhotoInfo(app) : { count: 0, hasPhoto: false };
 
@@ -1387,7 +1397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ` : ''}
 
                 <!-- 2. 간판 디자인 시안 확인 및 점주 승인 박스 (설계도-03 BP-APP-LIFECYCLE SSOT) -->
-                ${draftCount > 0 ? `
+                ${showDraftBox ? `
                     <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 10px; padding: 12px 14px; text-align: left; margin-top: 10px; margin-bottom: 8px; box-shadow: 0 2px 6px rgba(192,38,211,0.06);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <span style="font-size: 1.05rem; font-weight: 800; color: #86198f;"><i class="fa-solid fa-palette"></i> 간판 디자인 시안 (${draftCount}장)</span>
@@ -1762,6 +1772,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (currentRole === 'business' || currentRole === 'admin' || currentRole === 'constructor') {
             return preBadgeHtml;
+        }
+
+        // [설계도-03 SSOT 대원칙] 최고관리자가 영업물건으로 승인하지 않은 건(isBizItem: false)은 공단 실시간 진행상황 박스를 일체 노출하지 않음
+        if (!isBizItem) {
+            return `<div style="width: 100%;">${preBadgeHtml}</div>`;
         }
 
         // 일반회원(점주) 또는 비회원 점주 전용: users.items에서 최신 공단 접수/진행상황 실시간 다각도 매칭 폴백

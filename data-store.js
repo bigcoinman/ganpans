@@ -859,13 +859,18 @@
           return u;
         });
       } else {
-        // 영업물건 해제: 시공사 배정 정보 및 시공 상태도 확실하게 초기화
+        // 영업물건 해제: 시공사 배정 정보, 시공 상태, 공단 진행상태, 시안 찌꺼기 100% 완전 초기화 (Clean Slate)
         app.assignedConstructorId = null;
         app.assignedConstructorName = null;
         app.assignedConstructorCode = null;
         app.assignedConstructorPhone = null;
         app.constructionStatus = 'before_construction';
         app.assignedAt = null;
+        app.receiptStatus = null;
+        app.progressStatus = null;
+        app.signDraftPhotos = [];
+        app.draftStatus = 'pending';
+        app.draftApprovedAt = null;
 
         // users.items에서 해당 appId 및 appRefId 완전 제거
         let memoObj = {};
@@ -873,6 +878,11 @@
           memoObj = typeof app.memo === 'object' ? (app.memo || {}) : JSON.parse(app.memo || '{}');
         } catch (e) { memoObj = {}; }
         memoObj.isBizItem = false;
+        delete memoObj.receiptStatus;
+        delete memoObj.progressStatus;
+        delete memoObj.signDraftPhotos;
+        delete memoObj.draftStatus;
+        delete memoObj.draftApprovedAt;
         const existingCount = Math.max(
           Number(memoObj.photoCount) || 0,
           Number(app.photosCount) || 0,
@@ -3473,9 +3483,19 @@
     const confirmMsg = `[${storeName}] 건의 시공업체(${constName}) 배정을 취소하시겠습니까?\n\n시공업체 진행현황에서 제외되며, 영업물건 진행상황(미배정) 상태로 되돌아갑니다.`;
     if (!confirm(confirmMsg)) return;
 
-    // 1) applications 단일 원천 시공 정보 초기화
+    // 1) applications 단일 원천 시공 정보 및 시안 찌꺼기 완전 초기화
+    let memoPayloadStr = null;
     apps = apps.map(a => {
       if (String(a.id) === String(id) || String(a.appRefId) === String(id)) {
+        let memoObj = {};
+        try {
+          memoObj = typeof a.memo === 'object' ? (a.memo || {}) : JSON.parse(a.memo || '{}');
+        } catch (e) { memoObj = {}; }
+        delete memoObj.signDraftPhotos;
+        delete memoObj.draftStatus;
+        delete memoObj.draftApprovedAt;
+        memoPayloadStr = JSON.stringify(memoObj);
+
         return {
           ...a,
           assignedConstructorId: null,
@@ -3483,7 +3503,11 @@
           assignedConstructorCode: null,
           assignedConstructorPhone: null,
           constructionStatus: 'before_construction',
-          assignedAt: null
+          assignedAt: null,
+          signDraftPhotos: [],
+          draftStatus: 'pending',
+          draftApprovedAt: null,
+          memo: memoPayloadStr
         };
       }
       return a;
@@ -3513,7 +3537,11 @@
               assignedConstructorCode: null,
               assignedConstructorPhone: null,
               constructionStatus: 'before_construction',
-              assignedAt: null
+              assignedAt: null,
+              signDraftPhotos: [],
+              draftStatus: 'pending',
+              draftApprovedAt: null,
+              memo: memoPayloadStr || it.memo
             };
           }
           return it;
@@ -3540,7 +3568,8 @@
             assigned_constructor_id: null,
             assigned_constructor_name: null,
             construction_status: 'before_construction',
-            assigned_at: null
+            assigned_at: null,
+            memo: memoPayloadStr
           });
           for (const uSync of usersToSync) {
             await window.SupabaseSync.updateUser(uSync.id, { items: uSync.items });
@@ -3550,7 +3579,8 @@
             assigned_constructor_id: null,
             assigned_constructor_name: null,
             construction_status: 'before_construction',
-            assigned_at: null
+            assigned_at: null,
+            memo: memoPayloadStr
           }).eq('id', String(app.id));
         }
       } catch (err) {
