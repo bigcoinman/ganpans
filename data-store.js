@@ -15,13 +15,11 @@
       try {
         const apps = JSON.parse(localStorage.getItem('applications')) || [];
         const deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
-        const validAppIds = ['P-260916-001', 'P-260917-001', 'B-260905-005', 'P-260920-001', 'P-260919-002', 'B-260905-006', 'B-260901-001', 'B-260905-004'];
         if (deletedAppIds.length > 0) {
           return apps.filter(a => {
             if (!a || !a.id) return false;
             const aid = String(a.id).trim();
             const aref = String(a.appRefId || '').trim();
-            if (validAppIds.includes(aid) || validAppIds.includes(aref)) return true;
             return !deletedAppIds.includes(aid) && !deletedAppIds.includes(aref);
           });
         }
@@ -4018,11 +4016,6 @@
       const rawApps = localStorage.getItem('applications');
       let apps = rawApps ? JSON.parse(rawApps) : [];
       let deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
-
-      // 정상 신청서 보호 목록
-      const validAppIds = ['P-260916-001', 'P-260917-001', 'B-260905-005', 'P-260920-001', 'P-260919-002', 'B-260905-006', 'B-260901-001', 'B-260905-004'];
-      // 혹시 deleted_app_ids에 정상 신청서 ID가 오염되어 있다면 즉시 정화
-      deletedAppIds = deletedAppIds.filter(id => !validAppIds.includes(String(id).trim()));
 
       let removedIds = [];
       if (Array.isArray(apps) && apps.length > 0) {
