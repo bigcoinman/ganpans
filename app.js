@@ -5449,8 +5449,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const query = rawQuery.toLowerCase();
-            const apps = JSON.parse(localStorage.getItem('applications')) || [];
-            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+                ? window.DataStore.getApplications()
+                : (JSON.parse(localStorage.getItem('applications')) || []);
+            const adminBizItems = (window.DataStore && typeof window.DataStore.getAdminBizItems === 'function')
+                ? window.DataStore.getAdminBizItems()
+                : [];
 
             const allRecords = [];
 
@@ -5467,21 +5471,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            users.forEach(u => {
-                if (u.items && Array.isArray(u.items)) {
-                    u.items.forEach(item => {
-                        if (!allRecords.some(r => r.id === item.id)) {
-                            allRecords.push({
-                                id: item.id,
-                                storeName: item.name || '상호명 미등록',
-                                ownerName: u.name || '영업자',
-                                ownerPhone: item.phone || u.phone || '',
-                                storeAddress: item.address || '주소 미등록',
-                                signType: '현장 실측 간판',
-                                status: item.progressStatus || '심사대기중',
-                                type: '영업물건'
-                            });
-                        }
+            adminBizItems.forEach(({ user: u, item }) => {
+                if (!allRecords.some(r => r.id === item.id || r.id === item.appRefId)) {
+                    allRecords.push({
+                        id: item.id,
+                        storeName: item.name || '상호명 미등록',
+                        ownerName: u.name || '영업자',
+                        ownerPhone: item.phone || u.phone || '',
+                        storeAddress: item.address || '주소 미등록',
+                        signType: '현장 실측 간판',
+                        status: item.progressStatus || '지원대기중',
+                        type: '영업물건'
                     });
                 }
             });

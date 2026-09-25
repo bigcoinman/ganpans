@@ -1070,14 +1070,14 @@
             if (cleanVal === '접수예정' || !cleanVal) {
               app.progressStatus = '지원대기중';
               app.status = 'pending';
-              app.constructionStatus = '지원대기중';
+              app.constructionStatus = 'before_construction';
             } else if (cleanVal === '접수완료' || cleanVal === '업체신청') {
               // [규칙 2] 접수: '접수완료' 또는 '업체신청'으로 변경 시, 진행상태가 '지원대기중'이거나 미정이면 자동으로 '심사대기중'으로 기본 적용
               // 만약 이미 '대상자선정' 등 더 진행된 상태라면 기존 진행상태를 절대 다운그레이드하지 않고 유지!
               if (!app.progressStatus || app.progressStatus === '지원대기중' || app.progressStatus === 'none') {
                 app.progressStatus = '심사대기중';
                 app.status = 'pending';
-                app.constructionStatus = '심사대기중';
+                app.constructionStatus = 'before_construction';
               }
             }
           } else {
@@ -1090,18 +1090,18 @@
               }
               app.progressStatus = cleanVal;
               app.status = (cleanVal === '심사대기중') ? 'pending' : 'approved';
-              app.constructionStatus = (cleanVal === '간판시공완료' ? 'completed' : (cleanVal === '간판시공 준비중' ? 'in_construction' : (cleanVal === '심사대기중' ? '심사대기중' : 'before_construction')));
+              app.constructionStatus = (cleanVal === '간판시공완료' ? 'completed' : (cleanVal === '간판시공 준비중' ? 'in_construction' : 'before_construction'));
               if (!app.signType || app.signType === '간판지원신청' || app.signType === '간판' || app.signType === '-' || app.signType === 'undefined' || app.signType === 'null') {
                 app.signType = '플렉스 간판';
               }
             } else if (cleanVal === '지원사업 탈락' || cleanVal === '반려됨') {
               app.progressStatus = cleanVal;
               app.status = 'rejected';
-              app.constructionStatus = cleanVal;
+              app.constructionStatus = 'before_construction';
             } else if (cleanVal === '지원사업 포기') {
               app.progressStatus = cleanVal;
               app.status = 'giveup';
-              app.constructionStatus = cleanVal;
+              app.constructionStatus = 'before_construction';
             } else {
               // 지원대기중 선택 시
               app.progressStatus = '지원대기중';
@@ -1148,7 +1148,7 @@
         } else if (type === 'progress') {
           initProgress = cleanVal;
         } else {
-          initProgress = (sourceItem.progressStatus && sourceItem.progressStatus !== '지원대기중') ? sourceItem.progressStatus : '심사대기중';
+          initProgress = sourceItem.progressStatus || '지원대기중';
         }
         targetApp = {
           id: sourceItem.id || targetIdStr,
@@ -1205,7 +1205,7 @@
                 status: targetApp.status || 'pending',
                 receipt_status: targetApp.receiptStatus || '접수예정',
                 progress_status: targetApp.progressStatus || '지원대기중',
-                construction_status: targetApp.constructionStatus || '지원대기중',
+                construction_status: targetApp.constructionStatus || 'before_construction',
                 sign_type: targetApp.signType || '',
                 referrer_code: targetApp.referrerCode || '',
                 memo: typeof targetApp.memo === 'object' ? JSON.stringify(targetApp.memo) : (targetApp.memo || '')
