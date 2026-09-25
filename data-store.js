@@ -704,14 +704,12 @@
       // [방안 A 안전 방어 검증] 이미 시공사가 배정되어 진행 중인 물건 해제 시도 시 관리자 사전 확인
       if (isCurrentlyBizItem) {
         const hasAssignedConstructor = Boolean(
-          app.assignedConstructorId ||
-          (app.assignedConstructorName && app.assignedConstructorName !== '미배정' && app.assignedConstructorName !== '-')
+          (app.assignedConstructorId && app.assignedConstructorId !== 'none' && app.assignedConstructorId !== '-') ||
+          (app.assignedConstructorName && app.assignedConstructorName !== '미배정' && app.assignedConstructorName !== '-' && app.assignedConstructorName !== '시공업체')
         );
-        const isInProgress = (app.constructionStatus && app.constructionStatus !== 'before_construction') ||
-          (app.progressStatus && (app.progressStatus === '간판시공 준비중' || app.progressStatus === '간판시공완료' || app.progressStatus === '대상자선정'));
 
-        if (hasAssignedConstructor || isInProgress) {
-          const constName = app.assignedConstructorName || '시공업체';
+        if (hasAssignedConstructor) {
+          const constName = app.assignedConstructorName || '배정된 시공업체';
           const confirmMsg = `[${app.storeName || '해당 업체'}] 건은 현재 시공업체(${constName})가 배정되어 진행 중인 물건입니다.\n\n시공업체 배정을 취소하고 영업물건 등록을 해제하시겠습니까?`;
           if (!confirm(confirmMsg)) {
             return { success: false, cancelled: true, message: '관리자 취소' };
@@ -821,8 +819,17 @@
 
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
         // [규칙] 영업물건으로 전환 시 기본값은 접수: '접수예정', 진행: '지원대기중'
-        if (!app.receiptStatus) app.receiptStatus = '접수예정';
-        if (!app.progressStatus) app.progressStatus = '지원대기중';
+        // 단, 이미 공단 접수 후 단계(대상자선정, 간판시공 준비중, 간판시공완료 등)로 진행 중인 건의 진행상태는 보존
+        const isAlreadyAdvanced = (app.progressStatus === '대상자선정' || app.progressStatus === '간판시공 준비중' || app.progressStatus === '간판시공완료');
+        if (!app.receiptStatus || (!isAlreadyAdvanced && (app.receiptStatus === '접수완료' || app.receiptStatus === '업체신청'))) {
+          app.receiptStatus = '접수예정';
+        }
+        if (!app.progressStatus || (!isAlreadyAdvanced && app.progressStatus === '심사대기중')) {
+          app.progressStatus = '지원대기중';
+        }
+        if (!app.constructionStatus || app.constructionStatus === 'none') {
+          app.constructionStatus = 'before_construction';
+        }
         // [영구 방어] app.status(심사 상태)는 관리자가 지정한 값(서류준비 & 접수대기 등)을 100% 영구 보존하며, 절대 임의로 'pending'으로 덮어쓰지 않음
 
         // memo JSON 객체 최신 동기화 (Supabase 단일 진실의 원천 보장)
@@ -845,8 +852,8 @@
           phone: app.ownerPhone || app.phone || '',
           address: app.storeAddress || app.address || '',
           photosCount: photosList.length,
-          receiptStatus: '접수예정',
-          progressStatus: '지원대기중',
+          receiptStatus: app.receiptStatus || '접수예정',
+          progressStatus: app.progressStatus || '지원대기중',
           photos: photosList,
           appRefId: String(app.id)
         };

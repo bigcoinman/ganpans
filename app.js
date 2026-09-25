@@ -7083,12 +7083,11 @@ function initWizard() {
   }
 
   function scrollToActiveStep() {
-    const doScroll = () => {
+    setTimeout(() => {
       const activePane = document.querySelector('.step-pane.active');
       const targetHeader = activePane ? (activePane.querySelector('h3') || activePane) : null;
       if (targetHeader) {
-        targetHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        const headerOffset = 100;
+        const headerOffset = 90;
         const rect = targetHeader.getBoundingClientRect();
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
         const targetTop = rect.top + scrollTop - headerOffset;
@@ -7097,17 +7096,23 @@ function initWizard() {
           top: Math.max(0, targetTop),
           behavior: 'smooth'
         });
+
+        // 2단계 진입 시 상호명 입력창에 시각적 포커스 안내
+        if (currentStep === 1) {
+          const shopInput = document.getElementById('app-shop-name');
+          if (shopInput) {
+            setTimeout(() => {
+              try { shopInput.focus({ preventScroll: true }); } catch (e) {}
+            }, 300);
+          }
+        }
       } else {
         const applySection = document.getElementById('apply-section') || document.getElementById('apply-form');
         if (applySection) {
           applySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }
-    };
-
-    requestAnimationFrame(doScroll);
-    setTimeout(doScroll, 60);
-    setTimeout(doScroll, 200);
+    }, 50);
   }
 
   if (prevBtn) {
@@ -7409,8 +7414,9 @@ function initWizard() {
 
       const memoPayload = {
         isBizItem: false,
-        receiptStatus: '접수완료',
-        progressStatus: '심사대기중',
+        receiptStatus: '접수예정',
+        progressStatus: '지원대기중',
+        constructionStatus: 'before_construction',
         salespersonId: assignedSalespersonId || '',
         salespersonName: assignedSalespersonName || (finalReferrerCode ? '' : '본사직접접수'),
         referrerCode: finalReferrerCode,
@@ -7439,8 +7445,9 @@ function initWizard() {
         appliedAt: now.toISOString(),
         status: 'pending',
         isBizItem: false,
-        receiptStatus: '접수완료',
-        progressStatus: '심사대기중',
+        receiptStatus: '접수예정',
+        progressStatus: '지원대기중',
+        constructionStatus: 'before_construction',
         referrerCode: finalReferrerCode,
         autoAccount: {
           id: loginNoticeId,
