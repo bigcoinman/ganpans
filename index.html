@@ -2442,15 +2442,20 @@
     <!-- 단일 통합 무결 컨트롤러 (모든 대화형 컴포넌트/대시보드 내장) -->
     <script src="app.js?v=20260920_bandwidth_diet_v1"></script>
     <script>
-        // PC/모바일 웹 진입 시 관리자 세션이면 0.1초 만에 최신 회원 목록 클라우드 직통 즉시 강제 갱신
+        // PC/모바일 웹 진입 시 관리자 세션이면 0.1초 만에 최신 회원 목록 및 신청서 목록 클라우드 직통 즉시 강제 갱신
         if (typeof window !== 'undefined') {
             window.addEventListener('DOMContentLoaded', function() {
                 setTimeout(function() {
                     const act = (window.DataStore && typeof window.DataStore.getActiveUser === 'function')
                         ? window.DataStore.getActiveUser()
                         : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')));
-                    if (act && act.role === 'admin' && typeof window.fetchAndRenderAdminUsersFresh === 'function') {
-                        window.fetchAndRenderAdminUsersFresh();
+                    if (act && act.role === 'admin') {
+                        if (typeof window.fetchAndRenderAdminUsersFresh === 'function') {
+                            window.fetchAndRenderAdminUsersFresh();
+                        }
+                        if (typeof window.fetchAndRenderAdminApplicationsFresh === 'function') {
+                            window.fetchAndRenderAdminApplicationsFresh();
+                        }
                     }
                 }, 150);
             });

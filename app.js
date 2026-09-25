@@ -2540,6 +2540,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof fetchAndRenderAdminUsersFresh === 'function') {
                 fetchAndRenderAdminUsersFresh();
             }
+        } else if (tabName === 'apps') {
+            syncAdminDataFromSupabaseMob(true);
+            if (typeof fetchAndRenderAdminApplicationsFresh === 'function') {
+                fetchAndRenderAdminApplicationsFresh();
+            }
         }
     };
 
@@ -2619,6 +2624,74 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     window.fetchAndRenderAdminUsersFresh = fetchAndRenderAdminUsersFresh;
+
+    // [최고관리자 신청서목록 직통 클라우드 최신 조회] 캐시 지연 없이 Supabase applications 테이블에서 실시간 0초 직통 로드
+    async function fetchAndRenderAdminApplicationsFresh() {
+        const appsListMob = document.getElementById('admin-apps-list-mob');
+        if (!appsListMob) return false;
+
+        let client = window.supabaseClient;
+        if (!client && typeof initGlobalSupabaseClient === 'function') {
+            client = initGlobalSupabaseClient();
+        }
+        if (!client && typeof window !== 'undefined' && window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+            try {
+                client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+                window.supabaseClient = client;
+            } catch (e) {}
+        }
+        if (!client) return false;
+
+        try {
+            const appColumns = 'id, user_id, owner_name, phone, store_name, store_address, sign_type, referrer_code, status, assigned_constructor_id, assigned_constructor_name, construction_status, memo, applied_at, created_at';
+            const { data: supaApps, error } = await client.from('applications').select(appColumns);
+            if (error || !Array.isArray(supaApps)) return false;
+
+            const deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
+            const mapper = (window.SupabaseSync && typeof window.SupabaseSync.mapDbToApp === 'function')
+                ? (sa) => window.SupabaseSync.mapDbToApp(sa)
+                : (sa) => ({
+                    id: sa.id,
+                    userId: sa.user_id,
+                    ownerName: sa.owner_name,
+                    ownerPhone: sa.phone,
+                    storeName: sa.store_name,
+                    storeAddress: sa.store_address,
+                    signType: sa.sign_type,
+                    referrerCode: sa.referrer_code,
+                    status: sa.status || 'pending',
+                    assignedConstructorId: sa.assigned_constructor_id,
+                    assignedConstructorName: sa.assigned_constructor_name,
+                    constructionStatus: sa.construction_status || 'before_construction',
+                    memo: sa.memo,
+                    appliedAt: sa.applied_at || sa.created_at,
+                    createdAt: sa.created_at
+                });
+
+            const freshApps = supaApps
+                .map(mapper)
+                .filter(a => {
+                    if (!a || !a.id) return false;
+                    const aid = String(a.id).trim();
+                    const aref = String(a.appRefId || '').trim();
+                    if (deletedAppIds.includes(aid) || (aref && deletedAppIds.includes(aref))) return false;
+                    return true;
+                });
+
+            if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+                window.DataStore.saveApplications(freshApps);
+            } else {
+                localStorage.setItem('applications', JSON.stringify(freshApps));
+            }
+
+            renderAdminDashboardMob(true);
+            return true;
+        } catch (err) {
+            console.warn('[fetchAndRenderAdminApplicationsFresh] error:', err);
+            return false;
+        }
+    }
+    window.fetchAndRenderAdminApplicationsFresh = fetchAndRenderAdminApplicationsFresh;
 
 
 

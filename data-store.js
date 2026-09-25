@@ -15,8 +15,15 @@
       try {
         const apps = JSON.parse(localStorage.getItem('applications')) || [];
         const deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
+        const validAppIds = ['P-260916-001', 'P-260917-001', 'B-260905-005', 'P-260920-001', 'P-260919-002', 'B-260905-006', 'B-260901-001', 'B-260905-004'];
         if (deletedAppIds.length > 0) {
-          return apps.filter(a => a && a.id && !deletedAppIds.includes(String(a.id).trim()) && !deletedAppIds.includes(String(a.appRefId || '').trim()));
+          return apps.filter(a => {
+            if (!a || !a.id) return false;
+            const aid = String(a.id).trim();
+            const aref = String(a.appRefId || '').trim();
+            if (validAppIds.includes(aid) || validAppIds.includes(aref)) return true;
+            return !deletedAppIds.includes(aid) && !deletedAppIds.includes(aref);
+          });
         }
         return apps.filter(a => a && a.id);
       } catch (e) {
@@ -4007,49 +4014,57 @@
   window.reportJobCompletion = window.reportJobCompletionCommon;
   window.reportJobCompletionMob = window.reportJobCompletionCommon;
 
-  // 🛡️ [과거 삭제된 5대 유령 데이터 전수 정리 및 영구 블랙리스트 등록 자동 실행]
+  // 🛡️ [최고관리자가 삭제한 5대 업체 전수 정리 및 영구 블랙리스트 등록 자동 실행]
   (function cleanseGhostApplications() {
     try {
-      const purgedNames = ['진수건어물', '성기네', '홍미용실', '기수정육점', '진수건업'];
+      const explicitPurgedIds = ['B-260905-003', 'P-260919-001', 'B-260905-002', 'B-260905-001', 'P-260905-002'];
       const rawApps = localStorage.getItem('applications');
       let apps = rawApps ? JSON.parse(rawApps) : [];
       let deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
-      let removedIds = [];
 
+      // 정상 신청서 보호 목록
+      const validAppIds = ['P-260916-001', 'P-260917-001', 'B-260905-005', 'P-260920-001', 'P-260919-002', 'B-260905-006', 'B-260901-001', 'B-260905-004'];
+      // 혹시 deleted_app_ids에 정상 신청서 ID가 오염되어 있다면 즉시 정화
+      deletedAppIds = deletedAppIds.filter(id => !validAppIds.includes(String(id).trim()));
+
+      let removedIds = [];
       if (Array.isArray(apps) && apps.length > 0) {
         apps = apps.filter(a => {
           if (!a) return false;
-          const sName = String(a.storeName || a.shopName || a.name || '').trim();
-          const oName = String(a.ownerName || '').trim();
-          const isTarget = purgedNames.some(p => (sName && sName.includes(p)) || (oName && oName.includes(p)));
-          if (isTarget) {
-            if (a.id) removedIds.push(String(a.id).trim());
-            if (a.appRefId) removedIds.push(String(a.appRefId).trim());
+          const aid = String(a.id || '').trim();
+          const aref = String(a.appRefId || '').trim();
+          if (explicitPurgedIds.includes(aid) || explicitPurgedIds.includes(aref)) {
+            if (aid) removedIds.push(aid);
+            if (aref) removedIds.push(aref);
             return false;
           }
           return true;
         });
 
-        if (removedIds.length > 0) {
-          removedIds.forEach(id => {
-            if (id && !deletedAppIds.includes(id)) deletedAppIds.push(id);
-          });
-          localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIds));
-          localStorage.setItem('applications', JSON.stringify(apps));
+        explicitPurgedIds.forEach(id => {
+          if (!deletedAppIds.includes(id)) deletedAppIds.push(id);
+        });
 
-          // users.items 에서도 동시 청소
-          const rawUsers = localStorage.getItem('users');
-          let users = rawUsers ? JSON.parse(rawUsers) : [];
-          if (Array.isArray(users)) {
-            users = users.map(u => {
-              if (u.items && Array.isArray(u.items)) {
-                u.items = u.items.filter(it => !removedIds.includes(String(it.id).trim()) && !removedIds.includes(String(it.appRefId || '').trim()));
-              }
-              return u;
-            });
-            localStorage.setItem('users', JSON.stringify(users));
-          }
+        localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIds));
+        localStorage.setItem('applications', JSON.stringify(apps));
+
+        // users.items 에서도 동시 청소
+        const rawUsers = localStorage.getItem('users');
+        let users = rawUsers ? JSON.parse(rawUsers) : [];
+        if (Array.isArray(users)) {
+          users = users.map(u => {
+            if (u.items && Array.isArray(u.items)) {
+              u.items = u.items.filter(it => !explicitPurgedIds.includes(String(it.id || '').trim()) && !explicitPurgedIds.includes(String(it.appRefId || '').trim()));
+            }
+            return u;
+          });
+          localStorage.setItem('users', JSON.stringify(users));
         }
+      } else {
+        explicitPurgedIds.forEach(id => {
+          if (!deletedAppIds.includes(id)) deletedAppIds.push(id);
+        });
+        localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIds));
       }
     } catch (e) {
       console.warn('[DataStore] cleanseGhostApplications notice:', e);

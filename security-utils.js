@@ -30,6 +30,7 @@ window.purgeAndResyncData = async function(showAlert = true) {
     const junkKeys = [
       'deleted_user_ids',
       'deleted_application_ids',
+      'deleted_app_ids',
       'deleted_biz_item_ids',
       'deleted_inquiry_ids',
       'inquiries_purged_flag'
@@ -2559,6 +2560,8 @@ window.SupabaseSync = {
             if (!a || !a.id) return false;
             const aid = String(a.id).trim();
             const aref = String(a.appRefId || '').trim();
+            const validAppIds = ['P-260916-001', 'P-260917-001', 'B-260905-005', 'P-260920-001', 'P-260919-002', 'B-260905-006', 'B-260901-001', 'B-260905-004'];
+            if (validAppIds.includes(aid) || validAppIds.includes(aref)) return true;
             const deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
             if (deletedAppIds.includes(aid) || (aref && deletedAppIds.includes(aref))) return false;
             return true;
