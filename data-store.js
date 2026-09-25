@@ -2172,7 +2172,6 @@
 
         // 1. 최고관리자 신청서 목록: 관리자가 신청서 드롭다운 조작 중일 때는 DOM 파괴 방지를 위해 스킵 (이미 In-place 갱신됨)
         if (!isAppSelectActive || isForced) {
-          if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
           if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
         }
 
@@ -2469,8 +2468,6 @@
     }
 
     // 5. 전체 렌더러 동기식 즉시 호출 (최고관리자 & 영업자 6대 화면 0초 동시 연동)
-    if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
-    if (typeof window.renderAdminDashboard === 'function') window.renderAdminDashboard();
     if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
     if (typeof window.renderStatusTab === 'function') window.renderStatusTab();
     if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();

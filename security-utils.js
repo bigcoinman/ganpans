@@ -48,7 +48,6 @@ window.purgeAndResyncData = async function(showAlert = true) {
     }
     if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
     if (typeof window.renderAllUsersList === 'function') window.renderAllUsersList();
-    if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
     if (typeof window.renderInquiriesList === 'function') window.renderInquiriesList();
 
     if (showAlert) {
@@ -927,7 +926,6 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
       if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
         window.DataStore.notifyAll('all');
       } else {
-        if (typeof window.renderApplicationsList === 'function') window.renderApplicationsList();
         if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
         if (typeof window.renderBizItemsListMob === 'function') window.renderBizItemsListMob();
         if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();

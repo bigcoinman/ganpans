@@ -18,14 +18,36 @@ window.updateApplicationStatusMob = function(id, newStatus, selectEl) {
         const res = window.DataStore.updateApplicationStatus(id, newStatus);
         const targetApp = res && res.app;
         let statusLabel = '사업시행 전 사전등록업체';
-        if (newStatus === 'approved' || newStatus === '서류준비 & 접수대기' || newStatus === '서류제출 & 접수예정') statusLabel = '서류준비 & 접수대기';
-        else if (newStatus === 'unqualified' || newStatus === '신청요건 미달업체') statusLabel = '신청요건 미달업체';
-        else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') statusLabel = '지원사업 탈락';
-        else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') statusLabel = '지원사업 포기';
+        let statusColor = '#475569';
+        let statusBg = '#ffffff';
+        let statusBorder = '#cbd5e1';
+
+        if (newStatus === 'approved' || newStatus === '서류준비 & 접수대기' || newStatus === '서류제출 & 접수예정') {
+            statusLabel = '서류준비 & 접수대기';
+            statusColor = '#15803d'; statusBg = '#f0fdf4'; statusBorder = '#86efac';
+        } else if (newStatus === 'unqualified' || newStatus === '신청요건 미달업체') {
+            statusLabel = '신청요건 미달업체';
+            statusColor = '#c2410c'; statusBg = '#fff7ed'; statusBorder = '#fed7aa';
+        } else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') {
+            statusLabel = '지원사업 탈락';
+            statusColor = '#b91c1c'; statusBg = '#fef2f2'; statusBorder = '#fca5a5';
+        } else if (newStatus === 'giveup' || newStatus === '지원사업 포기' || newStatus === '지원사업포기') {
+            statusLabel = '지원사업 포기';
+            statusColor = '#b45309'; statusBg = '#fffbeb'; statusBorder = '#fde68a';
+        }
+
+        if (selectEl) {
+            selectEl.style.color = statusColor;
+            selectEl.style.backgroundColor = statusBg;
+            selectEl.style.borderColor = statusBorder;
+        }
 
         const msg = `[${targetApp ? (targetApp.storeName || targetApp.shopName || targetApp.ownerName) : id}] 신청 건의 상태가 [${statusLabel}] (으)로 변경되었습니다.`;
         if (typeof window.showToast === 'function') {
             window.showToast(msg);
+        }
+        if (typeof window.renderAdminDashboardMob === 'function') {
+            window.renderAdminDashboardMob(true);
         }
         return res;
     }
@@ -1946,43 +1968,58 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!activeUser) return;
 
         const myApps = apps.filter(app => {
+            const appId = String(app.id || '').trim().toLowerCase();
             const refCode = String(app.referrerCode || app.referrer_code || '').trim().toLowerCase();
             const salesId = String(app.salespersonId || '').trim().toLowerCase();
+            const sName = String(app.salespersonName || '').trim();
             const myBiz = String(activeUser.bizCode || '').trim().toLowerCase();
             const myId = String(activeUser.id || '').trim().toLowerCase();
             const myName = String(activeUser.name || '').trim().toLowerCase();
 
-            // 1. 점주 본인 신청 건 확인 (내 계정 ID, 연락처, 대표자명 일치)
+            // 1. 점주/회원 본인 신청 건 확인 (내 계정 ID, 등록자, 연락처, 대표자명 일치)
             const isMyOwnApp = Boolean(
-                (app.userId && app.userId === activeUser.id) ||
-                (app.registeredBy && app.registeredBy === activeUser.id) ||
+                (app.userId && String(app.userId).toLowerCase() === myId) ||
+                (app.registeredBy && String(app.registeredBy).toLowerCase() === myId) ||
                 (activeUser.phone && app.ownerPhone && app.ownerPhone.replace(/[^0-9]/g, '') === activeUser.phone.replace(/[^0-9]/g, '')) ||
                 (activeUser.name && app.ownerName && app.ownerName === activeUser.name)
             );
 
-            // 2. 일반 점주/회원인 경우: 본인이 신청한 건은 담당 영업자 지정과 무관하게 항상 100% 정상 노출
+            // 2. 일반 점주/회원인 경우: 본인이 신청한 건 무조건 100% 정상 노출
             if (activeUser.role !== 'business') {
                 return isMyOwnApp;
             }
 
-            // 3. 영업자 회원인 경우: 최고관리자 SSOT 기준 절대 적용
+            // 3. 영업자 회원인 경우: 최고관리자 SSOT 기준 및 3+1 원칙 절대 적용
             // 3-0) 최고관리자가 본사 직접 접수(담당 영업자 해제)로 지정한 건은 모든 영업자 목록에서 0초 완전 소멸 (부존재 일치 의무)
-            const sName = String(app.salespersonName || '').trim();
-            const isHeadquartersDirect = (!salesId && !refCode) || (sName === '본사직접접수' || sName === '본사 직접 접수');
+            const isHeadquartersDirect = sName === '본사직접접수' || sName === '본사 직접 접수';
             if (isHeadquartersDirect) return false;
 
-            // 3-1) 최고관리자가 담당 영업자를 다른 사람으로 명시 지정한 건은 절대 내 목록에 노출 금지 (부존재 일치 의무)
-            const isAssignedToOtherSales = Boolean(
+            // 3-1) 최고관리자가 다른 특정 영업자에게 명시 배정/지정한 건은 내 목록에서 제외 (부존재 일치 의무)
+            const isAssignedToOther = Boolean(
                 (salesId && salesId !== myId && salesId !== myBiz) ||
-                (refCode && refCode !== myBiz && refCode !== myId && refCode !== myName)
+                (refCode && refCode !== myBiz && refCode !== myId && refCode !== myName && !salesId)
             );
-            if (isAssignedToOtherSales) return false;
+            if (isAssignedToOther) return false;
 
-            // 3-2) 내게 귀속된 건: 담당코드가 내 코드이거나, 내게 배정된 건만 표시 (단일 진실의 원천)
-            const isMyBizCode = Boolean(refCode && (refCode === myBiz || refCode === myId || refCode === myName));
-            const isMyAssigned = Boolean(salesId && (salesId === myId || salesId === myBiz));
+            // 3-2) 영업자 본인 직접 신청 건은 무조건 최우선 100% 노출
+            if (isMyOwnApp) return true;
 
-            return isMyBizCode || isMyAssigned;
+            // 3-3) 최고관리자 직권 배정 건 (P- 번호 등 번호 형식 무관 최고관리자 지정 0초 최우선)
+            const isAssignedByAdmin = Boolean(
+                (salesId && (salesId === myId || salesId === myBiz)) ||
+                (sName && myName && sName.toLowerCase() === myName)
+            );
+            if (isAssignedByAdmin) return true;
+
+            // 3-4) 추천인/영업자 코드 일치 건
+            const isMyRefCode = Boolean(refCode && (refCode === myBiz || refCode === myId || refCode === myName));
+            if (isMyRefCode) return true;
+
+            // 3-5) 신청번호 앞자리(영업자코드) 일치 안전망 (예: B-260905-001)
+            const isMyIdPrefix = Boolean(myBiz && appId.startsWith(myBiz));
+            if (isMyIdPrefix) return true;
+
+            return false;
         });
 
         // Search filtering
@@ -2282,6 +2319,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderUserApplicationsMob();
         renderBizRegisteredItemsMob();
+
+        // [영업자 클라우드 0초 동기화 보장] 백그라운드에서 Supabase applications 최신화 후 화면 동기화
+        if (window.SupabaseSync && typeof window.SupabaseSync.syncAllData === 'function') {
+            const now = Date.now();
+            if (!window._lastBizSyncTime || (now - window._lastBizSyncTime > 4000)) {
+                window._lastBizSyncTime = now;
+                window.SupabaseSync.syncAllData().then(() => {
+                    renderUserApplicationsMob();
+                    renderBizRegisteredItemsMob();
+                }).catch(() => {});
+            }
+        }
     }
 
     // 모바일 영업자 대시보드 [전체 펼치기 / 기본 3건만 접기] 글로벌 핸들러
@@ -3045,11 +3094,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     const signType = String(app.signType || '').toLowerCase();
                     const constName = String(app.assignedConstructorName || '').toLowerCase();
 
+                    const qDigits = qApps.replace(/[^0-9]/g, '');
+                    const phoneMatched = Boolean(qDigits.length > 0 && cleanPhone.includes(qDigits));
+
                     return appId.includes(qApps) ||
                         ownerName.includes(qApps) ||
                         userId.includes(qApps) ||
                         rawPhone.includes(qApps) ||
-                        cleanPhone.includes(qApps.replace(/[^0-9]/g, '')) ||
+                        phoneMatched ||
                         storeName.includes(qApps) ||
                         storeAddr.includes(qApps) ||
                         refCode.includes(qApps) ||
@@ -3139,7 +3191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span style="font-weight: 700; font-size: 0.82rem; color: ${hasPhoto ? '#16a34a' : '#94a3b8'};">${hasPhoto ? `등록됨 (${finalCount}장)` : '미등록'}</span>
                             </div>
                             <div style="display: flex; gap: 6px; align-items: center;">
-                                <button type="button" class="btn btn-sm btn-upload-app-photo-mob" data-id="${app.id}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 700; color: #16a34a; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${hasPhoto ? '현장사진 변경/재등록' : '현장사진 등록'}">
+                                <button type="button" class="btn btn-sm btn-upload-app-photo-mob" data-id="${app.id}" onclick="window.handleApplicationPhotoUploadMob && window.handleApplicationPhotoUploadMob('${app.id}'); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 700; color: #16a34a; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${hasPhoto ? '현장사진 변경/재등록' : '현장사진 등록'}">
                                     <i class="fa-solid fa-camera" style="font-size: 0.8rem;"></i> 사진 등록
                                 </button>
                                 ${hasPhoto ? `
@@ -3207,13 +3259,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     appsList.appendChild(card);
                 });
 
-                appsList.querySelectorAll('.btn-upload-app-photo-mob').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const id = e.target.closest('button').dataset.id;
-                        handleApplicationPhotoUploadMob(id);
-                    });
-                });
-                // Action buttons are handled directly by inline onclick/onchange for instant single response
+                // All action buttons and photo buttons are handled directly by inline onclick/onchange for instant single response (Rule #4)
 
             }
         }
