@@ -1999,14 +1999,23 @@ window.SupabaseSync = {
     return false;
   },
 
-  // 6. 지원 신청서 DB 완전 영구 삭제 (재접수 시 충돌 방지)
+  // 6. 지원 신청서 DB 완전 영구 삭제 (재접수 시 충돌 방지 & 영구 차단 블랙리스트)
   async deleteApplication(appId) {
     if (!appId) return;
     const targetId = String(appId).trim();
+    // 영구 차단 블랙리스트 등록
+    try {
+      let deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
+      if (!deletedAppIds.includes(targetId)) {
+        deletedAppIds.push(targetId);
+        localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIds));
+      }
+    } catch (eStorage) {}
     try {
       if (window.supabaseClient) {
         // 1) applications 테이블에서 영구 완전 삭제
-        await window.supabaseClient.from('applications').delete().eq('id', targetId);
+        const { error } = await window.supabaseClient.from('applications').delete().eq('id', targetId);
+        if (error) console.error('[SupabaseSync] deleteApplication error:', error);
         // 2) 혹시 business_items 테이블에도 남아있다면 동시 완전 삭제
         try {
           await window.supabaseClient.from('business_items').delete().eq('id', targetId);
@@ -2014,6 +2023,35 @@ window.SupabaseSync = {
       }
     } catch (e) {
       console.error('Supabase deleteApplication error:', e);
+    }
+  },
+
+  // 6-1. 회원 DB 완전 영구 삭제 (최고관리자 권한 & 영구 차단 블랙리스트)
+  async deleteUser(userId, userPhone) {
+    if (!userId) return;
+    const targetId = String(userId).trim();
+    const targetLower = targetId.toLowerCase();
+    try {
+      let deletedUserIds = JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
+      if (!deletedUserIds.includes(targetLower)) {
+        deletedUserIds.push(targetLower);
+        localStorage.setItem('deleted_user_ids', JSON.stringify(deletedUserIds));
+      }
+    } catch (eStorage) {}
+    try {
+      if (window.supabaseClient) {
+        const { error } = await window.supabaseClient.from('users').delete().eq('id', targetId);
+        if (error) console.error('[SupabaseSync] deleteUser by id error:', error);
+        if (userPhone) {
+          const cleanPhone = String(userPhone).replace(/[^0-9]/g, '');
+          if (cleanPhone) {
+            await window.supabaseClient.from('users').delete().eq('phone', userPhone);
+            await window.supabaseClient.from('users').delete().eq('phone', cleanPhone);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Supabase deleteUser error:', e);
     }
   },
 
@@ -2137,12 +2175,20 @@ window.SupabaseSync = {
   },
 
   // 3초 간편문의 영구 삭제 (삭제 캐시 관리 및 DB 삭제)
-  // 3초 간편문의 영구 삭제
   async deleteInquiry(inqId) {
     if (!inqId) return;
+    const targetId = String(inqId).trim();
+    try {
+      let delInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids') || '[]');
+      if (!delInqIds.includes(targetId)) {
+        delInqIds.push(targetId);
+        localStorage.setItem('deleted_inquiry_ids', JSON.stringify(delInqIds));
+      }
+    } catch (eStorage) {}
     try {
       if (window.supabaseClient) {
-        await window.supabaseClient.from('inquiries').delete().eq('id', String(inqId));
+        const { error } = await window.supabaseClient.from('inquiries').delete().eq('id', targetId);
+        if (error) console.error('[SupabaseSync] deleteInquiry error:', error);
       }
     } catch (e) {
       console.error('Supabase deleteInquiry error:', e);
@@ -2213,9 +2259,10 @@ window.SupabaseSync = {
       }
       if (!usersErr && Array.isArray(supaUsers)) {
         const recentUserLocks = (window.DataStore && window.DataStore._recentUserUpdates) || {};
+        const deletedUserIds = JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
         const freshUsers = supaUsers
           .map(su => this.mapDbToUser(su))
-          .filter(u => u && u.id && u.role !== 'deleted')
+          .filter(u => u && u.id && u.role !== 'deleted' && !deletedUserIds.includes(String(u.id).trim().toLowerCase()))
           .map(u => {
             const uId = String(u.id).trim().toLowerCase();
             const uLock = recentUserLocks[uId];
@@ -2507,9 +2554,15 @@ window.SupabaseSync = {
                 appObj.draftApprovedAt = localApp.draftApprovedAt;
               }
             }
-            return appObj;
           })
-          .filter(a => a && a.id);
+          .filter(a => {
+            if (!a || !a.id) return false;
+            const aid = String(a.id).trim();
+            const aref = String(a.appRefId || '').trim();
+            const deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
+            if (deletedAppIds.includes(aid) || (aref && deletedAppIds.includes(aref))) return false;
+            return true;
+          });
 
         const newAppsStr = JSON.stringify(freshApps);
         if (oldAppsStr !== newAppsStr) {
@@ -2669,9 +2722,11 @@ window.SupabaseSync = {
       const { data: supaInqs, error: inqsErr } = await window.supabaseClient.from('inquiries').select('*');
       let inqsChanged = false;
       if (!inqsErr && Array.isArray(supaInqs)) {
-        const freshInqs = supaInqs
+        const deletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids') || '[]');
+        const isPurged = localStorage.getItem('inquiries_purged_flag') === 'true';
+        const freshInqs = isPurged ? [] : supaInqs
           .map(si => this.mapDbToInquiry(si))
-          .filter(i => i && i.id);
+          .filter(i => i && i.id && !deletedInqIds.includes(String(i.id).trim()));
         const newInqsStr = JSON.stringify(freshInqs);
         if (oldInqsStr !== newInqsStr) {
           if (window.DataStore && typeof window.DataStore.saveInquiries === 'function') {

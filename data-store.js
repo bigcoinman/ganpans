@@ -14,6 +14,10 @@
     getApplications: function () {
       try {
         const apps = JSON.parse(localStorage.getItem('applications')) || [];
+        const deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
+        if (deletedAppIds.length > 0) {
+          return apps.filter(a => a && a.id && !deletedAppIds.includes(String(a.id).trim()) && !deletedAppIds.includes(String(a.appRefId || '').trim()));
+        }
         return apps.filter(a => a && a.id);
       } catch (e) {
         console.error('[DataStore] getApplications error:', e);
@@ -44,6 +48,10 @@
         const raw = localStorage.getItem('users');
         let users = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(users)) users = [];
+        const deletedUserIds = JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
+        if (deletedUserIds.length > 0) {
+          users = users.filter(u => u && u.id && !deletedUserIds.includes(String(u.id).toLowerCase()));
+        }
         return users.filter(u => u && u.id && u.role !== 'deleted');
       } catch (e) {
         console.error('[DataStore] getUsers error:', e);
@@ -136,8 +144,13 @@
     getInquiries: function () {
       try {
         const raw = localStorage.getItem('inquiries');
-        const inqs = raw ? JSON.parse(raw) : [];
-        return Array.isArray(inqs) ? inqs : [];
+        let inqs = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(inqs)) inqs = [];
+        const deletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids') || '[]');
+        if (deletedInqIds.length > 0) {
+          inqs = inqs.filter(i => i && i.id && !deletedInqIds.includes(String(i.id).trim()));
+        }
+        return inqs;
       } catch (e) {
         console.error('[DataStore] getInquiries error:', e);
         return [];
@@ -1611,8 +1624,19 @@
 
       // 2) applications 배열에서 영구 제거
       let apps = this.getApplications();
+      const targetApp = apps.find(a => a && (String(a.id).trim() === targetId || String(a.appRefId || '').trim() === targetId));
       apps = apps.filter(a => a && String(a.id).trim() !== targetId && String(a.appRefId || '').trim() !== targetId);
       this.saveApplications(apps);
+
+      // 3) 영구 삭제 블랙리스트 등록 (클라우드/로컬 부활 원천 차단)
+      try {
+        let deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
+        if (!deletedAppIds.includes(targetId)) deletedAppIds.push(targetId);
+        if (targetApp && targetApp.appRefId && !deletedAppIds.includes(String(targetApp.appRefId).trim())) {
+          deletedAppIds.push(String(targetApp.appRefId).trim());
+        }
+        localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIds));
+      } catch (eStorage) {}
 
       // 4) users.items 에서도 연계 물건 영구 제거
       let users = this.getUsers();
@@ -1628,7 +1652,7 @@
       });
       this.saveUsers(users);
 
-      // 5) Supabase DB 영구 삭제 (Non-blocking)
+      // 5) Supabase DB 영구 삭제
       if (window.SupabaseSync && typeof window.SupabaseSync.deleteApplication === 'function') {
         window.SupabaseSync.deleteApplication(targetId);
       }
@@ -1671,7 +1695,14 @@
       });
       this.saveUsers(rawUsers);
 
-      // 3) 현재 로그인 세션이 삭제된 회원이면 즉시 세션 파기
+      // 3) 영구 삭제 회원 블랙리스트 등록 (클라우드/로컬 부활 원천 차단)
+      try {
+        let deletedUserIds = JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
+        if (!deletedUserIds.includes(targetLower)) deletedUserIds.push(targetLower);
+        localStorage.setItem('deleted_user_ids', JSON.stringify(deletedUserIds));
+      } catch (eStorage) {}
+
+      // 4) 현재 로그인 세션이 삭제된 회원이면 즉시 세션 파기
       const active = this.getActiveUser();
       if (active) {
         const actId = String(active.id || '').toLowerCase();
@@ -1681,7 +1712,7 @@
         }
       }
 
-      // 4) Supabase DB 영구 삭제
+      // 5) Supabase DB 영구 삭제
       if (window.SupabaseSync && typeof window.SupabaseSync.deleteUser === 'function') {
         window.SupabaseSync.deleteUser(targetId, targetPhone);
       }
@@ -2003,12 +2034,20 @@
 
     // --- 7. 3초 간편문의 (Inquiries) 통합 관리 엔진 ---
     getDeletedInquiryIds: function () {
-      return [];
+      try {
+        return JSON.parse(localStorage.getItem('deleted_inquiry_ids') || '[]');
+      } catch (e) {
+        return [];
+      }
     },
 
     getInquiries: function () {
       try {
         const inqs = JSON.parse(localStorage.getItem('inquiries')) || [];
+        const deletedInqIds = this.getDeletedInquiryIds();
+        if (deletedInqIds.length > 0) {
+          return inqs.filter(i => i && i.id && !deletedInqIds.includes(String(i.id).trim()));
+        }
         return inqs.filter(i => i && i.id);
       } catch (e) {
         console.error('[DataStore] getInquiries error:', e);
@@ -2096,6 +2135,13 @@
       const targetId = target ? target.id : id;
       inqs = inqs.filter(i => String(i.id) !== String(targetId));
       this.saveInquiries(inqs);
+
+      // 영구 삭제 문의 블랙리스트 등록 (클라우드/로컬 부활 원천 차단)
+      try {
+        let delInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids') || '[]');
+        if (!delInqIds.includes(String(targetId))) delInqIds.push(String(targetId));
+        localStorage.setItem('deleted_inquiry_ids', JSON.stringify(delInqIds));
+      } catch (eStorage) {}
 
       if (window.SupabaseSync && typeof window.SupabaseSync.deleteInquiry === 'function') {
         window.SupabaseSync.deleteInquiry(targetId);
@@ -3971,5 +4017,54 @@
   };
   window.reportJobCompletion = window.reportJobCompletionCommon;
   window.reportJobCompletionMob = window.reportJobCompletionCommon;
+
+  // 🛡️ [과거 삭제된 5대 유령 데이터 전수 정리 및 영구 블랙리스트 등록 자동 실행]
+  (function cleanseGhostApplications() {
+    try {
+      const purgedNames = ['진수건어물', '성기네', '홍미용실', '기수정육점', '진수건업'];
+      const rawApps = localStorage.getItem('applications');
+      let apps = rawApps ? JSON.parse(rawApps) : [];
+      let deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
+      let removedIds = [];
+
+      if (Array.isArray(apps) && apps.length > 0) {
+        apps = apps.filter(a => {
+          if (!a) return false;
+          const sName = String(a.storeName || a.shopName || a.name || '').trim();
+          const oName = String(a.ownerName || '').trim();
+          const isTarget = purgedNames.some(p => (sName && sName.includes(p)) || (oName && oName.includes(p)));
+          if (isTarget) {
+            if (a.id) removedIds.push(String(a.id).trim());
+            if (a.appRefId) removedIds.push(String(a.appRefId).trim());
+            return false;
+          }
+          return true;
+        });
+
+        if (removedIds.length > 0) {
+          removedIds.forEach(id => {
+            if (id && !deletedAppIds.includes(id)) deletedAppIds.push(id);
+          });
+          localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIds));
+          localStorage.setItem('applications', JSON.stringify(apps));
+
+          // users.items 에서도 동시 청소
+          const rawUsers = localStorage.getItem('users');
+          let users = rawUsers ? JSON.parse(rawUsers) : [];
+          if (Array.isArray(users)) {
+            users = users.map(u => {
+              if (u.items && Array.isArray(u.items)) {
+                u.items = u.items.filter(it => !removedIds.includes(String(it.id).trim()) && !removedIds.includes(String(it.appRefId || '').trim()));
+              }
+              return u;
+            });
+            localStorage.setItem('users', JSON.stringify(users));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[DataStore] cleanseGhostApplications notice:', e);
+    }
+  })();
 })();
 
