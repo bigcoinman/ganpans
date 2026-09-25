@@ -141,48 +141,28 @@
       }
     },
 
-    getInquiries: function () {
+    getDeletedAppIds: function () {
       try {
-        const raw = localStorage.getItem('inquiries');
-        let inqs = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(inqs)) inqs = [];
-        const deletedInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids') || '[]');
-        if (deletedInqIds.length > 0) {
-          inqs = inqs.filter(i => i && i.id && !deletedInqIds.includes(String(i.id).trim()));
-        }
-        return inqs;
+        return JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
       } catch (e) {
-        console.error('[DataStore] getInquiries error:', e);
         return [];
       }
     },
 
-    saveInquiries: function (inquiries) {
+    getDeletedUserIds: function () {
       try {
-        if (!Array.isArray(inquiries)) inquiries = [];
-        localStorage.setItem('inquiries', JSON.stringify(inquiries));
-        return true;
+        return JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
       } catch (e) {
-        console.error('[DataStore] saveInquiries error:', e);
-        return false;
+        return [];
       }
     },
 
-    getDeletedAppIds: function () {
-      return [];
-    },
-
-    getDeletedUserIds: function () {
-      return [];
-    },
-
-    getDeletedBizItemIds: function () {
-      return [];
-    },
-
-    cleanGhostItems: function () {
-      // [일원화 완료] 영업자 물건은 applications SSOT에서 직접 조회하므로 불필요한 users.items 반복 쓰기 제거
-      return;
+    getDeletedInquiryIds: function () {
+      try {
+        return JSON.parse(localStorage.getItem('deleted_inquiry_ids') || '[]');
+      } catch (e) {
+        return [];
+      }
     },
 
     // --- 2. 영업물건 전용 데이터 조회 (최고관리자 대시보드 절대 SSOT 기반 & 완벽한 중복 방지) ---
@@ -1617,8 +1597,8 @@
       }
 
       // 1) 0초 즉각 DOM 요소 제거 (낙관적 UI)
-      if (btnEl) {
-        const card = (btnEl instanceof Element) ? (btnEl.closest('tr') || btnEl.closest('.admin-app-card') || btnEl.closest('div[style*="border"]') || btnEl.closest('.app-card') || btnEl.closest('.card')) : null;
+      if (btnEl && typeof btnEl.closest === 'function') {
+        const card = btnEl.closest('tr') || btnEl.closest('.admin-app-card') || btnEl.closest('div[style*="border"]') || btnEl.closest('.app-card') || btnEl.closest('.card');
         if (card && card.parentNode) card.parentNode.removeChild(card);
       }
 
@@ -1663,13 +1643,13 @@
     },
 
     // --- 5. 회원 영구 탈퇴/삭제 (DB 직통 영구 삭제) ---
-    deleteUser: function (userId, btnEl) {
+    deleteUser: function (userId, btnEl, skipConfirm) {
       if (!userId) return { success: false };
       const targetId = String(userId).trim();
       if (!targetId) return { success: false };
       const targetLower = targetId.toLowerCase();
 
-      if (!confirm('[주의] 회원 ID [' + targetId + ']을(를) 정말로 강제 탈퇴/삭제 처리하시겠습니까?\n삭제 후 복구할 수 없습니다.')) {
+      if (!skipConfirm && !confirm('[주의] 회원 ID [' + targetId + ']을(를) 정말로 강제 탈퇴/삭제 처리하시겠습니까?\n삭제 후 복구할 수 없습니다.')) {
         return { success: false, cancelled: true };
       }
 
@@ -2133,6 +2113,15 @@
       }
 
       const targetId = target ? target.id : id;
+
+      // 0) 즉각 DOM 제거 (낙관적 UI)
+      if (btnEl && typeof btnEl.closest === 'function') {
+        const rowOrCard = btnEl.closest('tr') || btnEl.closest('.admin-inquiry-card-mob') || btnEl.closest('.inquiry-card');
+        if (rowOrCard && rowOrCard.parentNode) {
+          rowOrCard.parentNode.removeChild(rowOrCard);
+        }
+      }
+
       inqs = inqs.filter(i => String(i.id) !== String(targetId));
       this.saveInquiries(inqs);
 
@@ -2264,7 +2253,7 @@
   window.deleteInquiryAdminMob = function (inqId, e) {
     if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
     if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
-    const btnEl = (e instanceof Element) ? e : (e && e.target instanceof Element ? e.target.closest('button') : null);
+    const btnEl = (e && typeof e.closest === 'function') ? e : (e && e.target && typeof e.target.closest === 'function' ? e.target.closest('button') : null);
     const res = window.DataStore.deleteInquiry(inqId, btnEl);
     alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
     return res;

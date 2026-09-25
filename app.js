@@ -219,7 +219,7 @@ window.toggleInquiryStatusMob = function (id, e) {
         if (typeof e.preventDefault === 'function') e.preventDefault();
         if (typeof e.stopPropagation === 'function') e.stopPropagation();
     }
-    const btnEl = (e instanceof Element) ? e : (e && e.currentTarget instanceof Element ? e.currentTarget : (e && e.target instanceof Element ? e.target.closest('button') : null));
+    const btnEl = (e && typeof e.closest === 'function') ? e : (e && e.currentTarget && typeof e.currentTarget.closest === 'function' ? e.currentTarget : (e && e.target && typeof e.target.closest === 'function' ? e.target.closest('button') : null));
 
     let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
     let inqIndex = currentInquiries.findIndex(i => String(i.id) === String(id));
@@ -267,16 +267,45 @@ window.deleteInquiryAdminMob = function (id, e) {
         if (typeof e.stopPropagation === 'function') e.stopPropagation();
     }
     if (!id) return;
+    const btnEl = (e && typeof e.closest === 'function') ? e : (e && e.target && typeof e.target.closest === 'function' ? e.target.closest('button') : null);
+    if (window.DataStore && typeof window.DataStore.deleteInquiry === 'function') {
+        if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
+        const res = window.DataStore.deleteInquiry(id, btnEl);
+        alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
+        if (typeof window.renderAdminDashboardMob === 'function') {
+            window.renderAdminDashboardMob(true);
+        }
+        return res;
+    }
     if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
     let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
     currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
     saveInquiriesSSOT(currentInquiries);
-    if (window.SupabaseSync) {
+    try {
+        let delInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids') || '[]');
+        if (!delInqIds.includes(String(id))) {
+            delInqIds.push(String(id));
+            localStorage.setItem('deleted_inquiry_ids', JSON.stringify(delInqIds));
+        }
+    } catch (eStorage) {}
+    if (window.SupabaseSync && typeof window.SupabaseSync.deleteInquiry === 'function') {
         window.SupabaseSync.deleteInquiry(id);
     }
     alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
     if (typeof window.renderAdminDashboardMob === 'function') {
         window.renderAdminDashboardMob(true);
+    }
+};
+
+window.deleteApplicationAdminMob = function (appId, btnEl, event) {
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    if (window.DataStore && typeof window.DataStore.deleteApplication === 'function') {
+        const res = window.DataStore.deleteApplication(appId, btnEl, event);
+        if (typeof window.renderAdminDashboardMob === 'function') {
+            window.renderAdminDashboardMob(true);
+        }
+        return res;
     }
 };
 
@@ -1041,18 +1070,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         : (getActiveUser() || null);
                     if (activeUser) {
                         const deletedUid = String(activeUser.id);
+                        const deletedPhone = activeUser.phone ? String(activeUser.phone).trim() : '';
 
-                        // 1) 로컬 users 제거
-                        users = users.filter(u => String(u.id) !== deletedUid);
-                        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-                            window.DataStore.saveUsers(users);
+                        if (window.DataStore && typeof window.DataStore.deleteUser === 'function') {
+                            window.DataStore.deleteUser(deletedUid, null, true);
                         } else {
+                            users = users.filter(u => String(u.id) !== deletedUid);
                             saveUsersSSOT(users);
-                        }
-
-                        // 2) Supabase DB 영구 삭제
-                        if (window.SupabaseSync) {
-                            window.SupabaseSync.deleteUser(deletedUid);
+                            try {
+                                let delUsers = JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
+                                if (!delUsers.includes(deletedUid.toLowerCase())) delUsers.push(deletedUid.toLowerCase());
+                                localStorage.setItem('deleted_user_ids', JSON.stringify(delUsers));
+                            } catch (eStorage) {}
+                            if (window.SupabaseSync && typeof window.SupabaseSync.deleteUser === 'function') {
+                                window.SupabaseSync.deleteUser(deletedUid, deletedPhone);
+                            }
                         }
 
                         if (window.DataStore && typeof window.DataStore.setActiveUser === 'function') {
@@ -1427,25 +1459,23 @@ document.addEventListener('DOMContentLoaded', () => {
             myAppsList.appendChild(card);
         });
 
-        // Add Delete application listener
+        // Add Delete application listener (DataStore 단일 원천 호출)
         myAppsList.querySelectorAll('.btn-delete-app-mob').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
+            btn.addEventListener('click', (e) => {
                 const targetBtn = e.currentTarget;
                 const appId = targetBtn.getAttribute('data-id');
                 if (!appId) return;
-                if (confirm('정말로 이 신청을 취소하고 내역을 삭제하시겠습니까?')) {
+                if (window.DataStore && typeof window.DataStore.deleteApplication === 'function') {
+                    window.DataStore.deleteApplication(appId, targetBtn, e);
+                } else if (confirm('정말로 이 신청을 취소하고 내역을 삭제하시겠습니까?')) {
                     if (window.SecurityUtils && typeof window.SecurityUtils.deleteApplication === 'function') {
-                        await window.SecurityUtils.deleteApplication(appId);
+                        window.SecurityUtils.deleteApplication(appId);
                     }
-                    if (window.DataStore && typeof window.DataStore.deleteApplication === 'function') {
-                        window.DataStore.deleteApplication(appId);
-                    } else {
-                        let apps = JSON.parse(localStorage.getItem('applications')) || [];
-                        apps = apps.filter(app => app.id !== appId);
-                        saveApplicationsSSOT(apps);
-                    }
-                    renderStatusTab();
+                    let apps = JSON.parse(localStorage.getItem('applications')) || [];
+                    apps = apps.filter(app => app.id !== appId);
+                    saveApplicationsSSOT(apps);
                 }
+                renderStatusTab();
             });
         });
     }
@@ -4096,14 +4126,36 @@ document.addEventListener('DOMContentLoaded', () => {
             activeUser = activeU;
         }
 
-        // 4) applications 에서도 isBizItem 해제
+        // 4) applications 에서도 완전 제거 및 블랙리스트 등록
         let curApps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-        curApps = curApps.map(app => {
+        let deletedAppIdsList = [];
+        try {
+            deletedAppIdsList = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
+        } catch (e) { deletedAppIdsList = []; }
+
+        curApps = curApps.filter(app => {
             if (isMatchTarget(app)) {
-                return { ...app, isBizItem: false };
+                if (app.id && !deletedAppIdsList.includes(String(app.id).trim())) {
+                    deletedAppIdsList.push(String(app.id).trim());
+                }
+                if (app.appRefId && !deletedAppIdsList.includes(String(app.appRefId).trim())) {
+                    deletedAppIdsList.push(String(app.appRefId).trim());
+                }
+                return false;
             }
-            return app;
+            return true;
         });
+
+        if (itemId && !deletedAppIdsList.includes(String(itemId).trim())) {
+            deletedAppIdsList.push(String(itemId).trim());
+        }
+        if (targetAppRefId && !deletedAppIdsList.includes(String(targetAppRefId).trim())) {
+            deletedAppIdsList.push(String(targetAppRefId).trim());
+        }
+        try {
+            localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIdsList));
+        } catch (e) {}
+
         if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
             window.DataStore.saveApplications(curApps);
         } else {
