@@ -2553,6 +2553,7 @@ window.SupabaseSync = {
                 appObj.draftApprovedAt = localApp.draftApprovedAt;
               }
             }
+            return appObj;
           })
           .filter(a => {
             if (!a || !a.id) return false;
@@ -2564,6 +2565,11 @@ window.SupabaseSync = {
             if (deletedAppIds.includes(aid) || (aref && deletedAppIds.includes(aref))) return false;
             return true;
           });
+
+        if (freshApps.length === 0 && localApps.length > 0 && supaApps && supaApps.length > 0) {
+          console.warn('[SupabaseSync] Safety Guard: preserving local apps against transient empty freshApps');
+          freshApps = localApps;
+        }
 
         const newAppsStr = JSON.stringify(freshApps);
         if (oldAppsStr !== newAppsStr) {
