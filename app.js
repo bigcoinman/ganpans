@@ -5459,20 +5459,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const allRecords = [];
 
             apps.forEach(app => {
+                const isBiz = Boolean(app.isBizItem === true || String(app.isBizItem) === 'true');
                 allRecords.push({
                     id: app.id,
                     storeName: app.storeName || '상호명 미등록',
                     ownerName: app.ownerName || '신청자',
                     ownerPhone: app.phone || app.ownerPhone || '',
                     storeAddress: app.storeAddress || '주소 미등록',
-                    signType: app.signType || '플렉스',
-                    status: app.status || 'pending',
-                    type: '일반신청'
+                    signType: app.signType || '플렉스 간판',
+                    status: isBiz ? (app.progressStatus || '지원대기중') : (app.status || 'pending'),
+                    type: isBiz ? '영업물건' : '일반신청'
                 });
             });
 
             adminBizItems.forEach(({ user: u, item }) => {
-                if (!allRecords.some(r => r.id === item.id || r.id === item.appRefId)) {
+                const existingIdx = allRecords.findIndex(r => r.id === item.id || r.id === item.appRefId);
+                if (existingIdx >= 0) {
+                    allRecords[existingIdx].type = '영업물건';
+                    allRecords[existingIdx].status = item.progressStatus || '지원대기중';
+                } else {
                     allRecords.push({
                         id: item.id,
                         storeName: item.name || '상호명 미등록',
