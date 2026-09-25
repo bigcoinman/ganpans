@@ -1965,9 +1965,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!userAppsContainer) return;
 
         let apps = window.DataStore ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-        if ((!apps || apps.length === 0) && window._lastValidAdminApps && window._lastValidAdminApps.length > 0) {
-            apps = window._lastValidAdminApps;
-        }
         if (!activeUser) return;
 
         const myApps = apps.filter(app => {
@@ -2735,9 +2732,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 localStorage.setItem('applications', JSON.stringify(freshApps));
             }
-            if (freshApps && freshApps.length > 0) {
-                window._lastValidAdminApps = freshApps;
-            }
 
             renderAdminDashboardMob(true);
             return true;
@@ -3076,12 +3070,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const qApps = searchAppsInput && searchAppsInput.value ? searchAppsInput.value.trim().slice(0, 30).toLowerCase() : '';
 
             // 최신 신청서 목록 수집 (SSOT)
-            let curApps = window.DataStore ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-            if ((!curApps || curApps.length === 0) && window._lastValidAdminApps && window._lastValidAdminApps.length > 0) {
-                curApps = window._lastValidAdminApps;
-            } else if (curApps && curApps.length > 0) {
-                window._lastValidAdminApps = curApps;
-            }
+            const curApps = window.DataStore ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
             // Sort applications by applied date descending (latest first)
             let sortedApps = [...curApps].sort((a, b) => {
                 const timeA = new Date(a.appliedAt || a.createdAt || a.created_at || 0).getTime();
