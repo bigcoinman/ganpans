@@ -946,13 +946,12 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
   }
 
   // 7. Supabase 비동기 백그라운드 DB 갱신 (Q7)
+  // ⚠️ 유효 컬럼만 사용: image_url, memo (file_name, updated_at 컬럼 없음)
   if (window.supabaseClient) {
     window.supabaseClient.from('applications')
       .update({
         image_url: newImageUrl,
-        memo: updatedMemoStr,
-        file_name: newFileName,
-        updated_at: new Date().toISOString()
+        memo: updatedMemoStr
       })
       .eq('id', String(app.id))
       .then(({ error }) => {
