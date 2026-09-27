@@ -7259,40 +7259,60 @@ function initWizard() {
   }
 
   function scrollToActiveStep() {
-    setTimeout(() => {
-      const activePane = document.querySelector('.step-pane.active');
-      const targetHeader = activePane ? (activePane.querySelector('h3') || activePane) : null;
-      if (targetHeader) {
-        const headerOffset = 90;
-        const rect = targetHeader.getBoundingClientRect();
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-        const targetTop = rect.top + scrollTop - headerOffset;
+    // 1. 모바일 하단 버튼 터치 포커스 해제 (키보드 호출 방지 및 스크롤 고정 해제)
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      try { document.activeElement.blur(); } catch (e) {}
+    }
 
-        window.scrollTo({
-          top: Math.max(0, targetTop),
+    const doScroll = () => {
+      const activePane = document.querySelector('.step-pane.active') || document.getElementById('step-pane-complete');
+      const targetHeader = activePane ? (activePane.querySelector('h3') || activePane) : (document.getElementById('apply-section') || document.getElementById('apply-form'));
+      if (!targetHeader) return;
+
+      // 1) 모바일 반응형 전용 스크롤 컨테이너 (#view-home 또는 활성 .app-view)
+      const homeView = document.getElementById('view-home') || document.querySelector('.app-view.active');
+      if (homeView && typeof homeView.scrollTo === 'function') {
+        const targetRect = targetHeader.getBoundingClientRect();
+        const containerRect = homeView.getBoundingClientRect();
+        // 상단 안전 여백 15px
+        const targetScrollTop = Math.max(0, homeView.scrollTop + (targetRect.top - containerRect.top) - 15);
+        homeView.scrollTo({
+          top: targetScrollTop,
           behavior: 'smooth'
         });
-
-        // 2단계 진입 시 상호명 입력창에 시각적 포커스 안내
-        if (currentStep === 1) {
-          const shopInput = document.getElementById('app-shop-name');
-          if (shopInput) {
-            setTimeout(() => {
-              try { shopInput.focus({ preventScroll: true }); } catch (e) {}
-            }, 300);
-          }
-        }
-      } else {
-        const applySection = document.getElementById('apply-section') || document.getElementById('apply-form');
-        if (applySection) {
-          applySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
       }
-    }, 50);
+
+      // 2) PC / 전역 브라우저 창 스크롤 (window)
+      const rect = targetHeader.getBoundingClientRect();
+      const winScrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      const targetWinTop = Math.max(0, rect.top + winScrollTop - 80);
+      if (typeof window.scrollTo === 'function') {
+        try {
+          window.scrollTo({
+            top: targetWinTop,
+            behavior: 'smooth'
+          });
+        } catch (e) {}
+      }
+
+      // 3) 표준 scrollIntoView 보조 가드
+      try {
+        if (typeof targetHeader.scrollIntoView === 'function') {
+          targetHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } catch (e) {}
+    };
+
+    // DOM 렌더링 즉시 1차 실행 + 렌더링 리플로우 안정화 후 2차 확인 실행 (더블 가드)
+    requestAnimationFrame(doScroll);
+    setTimeout(doScroll, 80);
   }
 
   if (prevBtn) {
-    prevBtn.addEventListener('click', () => {
+    prevBtn.addEventListener('click', (e) => {
+      if (e && e.target && typeof e.target.blur === 'function') {
+        e.target.blur();
+      }
       if (currentStep > 0) {
         currentStep--;
         renderWizard();
@@ -7302,7 +7322,10 @@ function initWizard() {
   }
 
   if (nextBtn) {
-    nextBtn.addEventListener('click', () => {
+    nextBtn.addEventListener('click', (e) => {
+      if (e && e.target && typeof e.target.blur === 'function') {
+        e.target.blur();
+      }
       if (currentStep === steps.length - 1) {
         submitApplication();
         return;

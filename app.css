@@ -2796,9 +2796,10 @@ body.mobile-app-body {
   background: #ef4444;
 }
 
+.wizard-container,
 .step-pane,
 .step-pane h3 {
-  scroll-margin-top: 110px !important;
+  scroll-margin-top: 75px !important;
 }
 
 /* Bottom Navigation Tab Bar Refresh Button Style */
