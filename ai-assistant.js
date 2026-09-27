@@ -59,7 +59,7 @@
             title: "📞 고객센터 및 일정",
             content: "📞 <strong>고객센터 및 접수 일정 안내</strong><br><br>" +
                 "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong><br>" +
-                "• <strong>경상원 종합상담 콜센터</strong>: <strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
+                "• <strong>경기도시장상권진흥원 종합상담 콜센터</strong>: <strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
                 "• <strong>지역센터별 관할 구역</strong>:<br>" +
                 "  - 남부센터(수원 소재): 수원, 용인, 군포, 의왕, 과천<br>" +
                 "  - 남부센터(화성 소재): 화성, 오산, 평택, 안성<br>" +
@@ -199,7 +199,7 @@
         if (cleaned.includes('서류') || cleaned.includes('준비') || cleaned.includes('제출') || cleaned.includes('증명원') || cleaned.includes('동의서')) {
             return FAQ_DATABASE.documents.content;
         }
-        if (cleaned.includes('일정') || cleaned.includes('기간') || cleaned.includes('날짜') || cleaned.includes('언제') || cleaned.includes('방법') || cleaned.includes('접수') || cleaned.includes('신청') || cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('콜센터') || cleaned.includes('번호') || cleaned.includes('문의') || cleaned.includes('주소') || cleaned.includes('경상원')) {
+        if (cleaned.includes('일정') || cleaned.includes('기간') || cleaned.includes('날짜') || cleaned.includes('언제') || cleaned.includes('방법') || cleaned.includes('접수') || cleaned.includes('신청') || cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('콜센터') || cleaned.includes('번호') || cleaned.includes('문의') || cleaned.includes('주소') || cleaned.includes('경상원') || cleaned.includes('진흥원')) {
             return FAQ_DATABASE.contact.content;
         }
         if (cleaned.includes('안녕') || cleaned.includes('반가') || cleaned.includes('하이') || cleaned.includes('hello')) {
