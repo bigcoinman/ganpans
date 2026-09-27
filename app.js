@@ -453,14 +453,22 @@ window.switchTab = function (tabId) {
     }
 };
 
-// URL 해시 기반 자동 라우팅 (#dashboard, #status, #mypage, #apply 등 0초 즉각 전환)
+// URL 해시 기반 자동 라우팅 (#dashboard, #status, #mypage, #apply, #simulator 등 0초 즉각 전환)
 window.handleAppHashRouting = function () {
     try {
         const hash = (window.location.hash || '').toLowerCase();
         if (hash.includes('dashboard') || hash.includes('status') || hash.includes('mypage')) {
             window.switchTab('status');
+        } else if (hash.includes('simulator')) {
+            window.switchTab('simulator');
         } else if (hash.includes('apply')) {
             window.switchTab('apply');
+        } else if (hash.includes('check')) {
+            window.switchTab('home');
+            setTimeout(() => {
+                const checkSec = document.getElementById('check');
+                if (checkSec) checkSec.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
         } else if (hash.includes('home')) {
             window.switchTab('home');
         }
@@ -643,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
     safeInitModule('Wizard', initWizard);
     safeInitModule('Checklist', initChecklist);
     safeInitModule('Popups', initPopups);
+    safeInitModule('AIAssistant', () => { if (typeof initAIAssistant === 'function') initAIAssistant(); });
 
     // --- State Variables ---
 
@@ -658,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     let users = JSON.parse(localStorage.getItem('users')) || [];
-    let activeUser = getActiveUser() || null;
+    let activeUser = (typeof getActiveUser === 'function') ? (getActiveUser() || null) : null;
     let applications = JSON.parse(localStorage.getItem('applications')) || [];
 
     // 상태 표준화 자동 마이그레이션 (접수 3개, 진행 5개 표준값 매핑)
@@ -792,7 +801,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.closeDrawer = closeDrawer;
 
     function updateDrawerProfile() {
-        activeUser = getActiveUser() || null;
+        activeUser = (typeof getActiveUser === 'function')
+            ? (getActiveUser() || null)
+            : ((window.DataStore && typeof window.DataStore.getActiveUser === 'function')
+                ? window.DataStore.getActiveUser()
+                : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')) || null));
         if (typeof window.updateReferrerField === 'function') {
             window.updateReferrerField();
         }
@@ -4798,13 +4811,22 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/'/g, "&#039;");
     }
 
-    // Initialize display states
-    updateDrawerProfile();
+    // Initialize display states (Safely guarded)
+    try {
+        updateDrawerProfile();
+    } catch (e) {
+        console.warn('[updateDrawerProfile Safe Guard]', e);
+    }
 
     // --- Initialize AI Assistant ---
-    initAIAssistant();
+    try {
+        initAIAssistant();
+    } catch (e) {
+        console.error('[initAIAssistant Safe Guard]', e);
+    }
 
     function initAIAssistant() {
+        if (window._aiAssistantInitialized) return;
         const trigger = document.getElementById('ai-assistant-trigger');
         const chatWindow = document.getElementById('ai-chat-window');
         const closeBtn = document.getElementById('ai-chat-close');
@@ -4813,43 +4835,62 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatMessages = document.getElementById('ai-chat-messages');
 
         if (!trigger || !chatWindow) return;
+        window._aiAssistantInitialized = true;
 
         // Toggle Chat Window
-        trigger.addEventListener('click', () => {
+        trigger.addEventListener('click', (e) => {
+            if (e) e.preventDefault();
             chatWindow.classList.add('active');
             trigger.style.display = 'none';
-            chatInput.focus();
+            if (chatInput) setTimeout(() => chatInput.focus(), 100);
+            if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
         });
 
-        closeBtn.addEventListener('click', () => {
-            chatWindow.classList.remove('active');
-            trigger.style.display = 'flex';
-        });
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                if (e) e.preventDefault();
+                chatWindow.classList.remove('active');
+                trigger.style.display = 'flex';
+            });
+        }
 
-        // Handle Quick Reply Clicks
-        chatMessages.addEventListener('click', (e) => {
-            const btn = e.target.closest('.quick-reply-btn');
-            if (btn) {
-                const faqType = btn.getAttribute('data-faq');
-                const question = btn.innerText;
-                handleUserMessage(question, faqType);
-            }
-        });
+        // Handle Quick Reply Clicks (Delegated)
+        if (chatMessages) {
+            chatMessages.addEventListener('click', (e) => {
+                const btn = e.target.closest('.quick-reply-btn');
+                if (btn) {
+                    e.preventDefault();
+                    const faqType = btn.getAttribute('data-faq');
+                    const question = btn.innerText.trim();
+                    handleUserMessage(question, faqType);
+                }
+            });
+        }
 
         // Send Message
         function sendMessage() {
+            if (!chatInput) return;
             const text = chatInput.value.trim();
             if (!text) return;
             chatInput.value = '';
             handleUserMessage(text);
         }
 
-        sendBtn.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
+        if (sendBtn) {
+            sendBtn.addEventListener('click', (e) => {
+                if (e) e.preventDefault();
                 sendMessage();
-            }
-        });
+            });
+        }
+
+        if (chatInput) {
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
 
         const faqDatabase = {
             target: "💡 <strong>지원 대상 및 자격 기준</strong><br><br>" +
@@ -4873,13 +4914,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 "  5. 최근 2개년 부가세 과세표준증명원(또는 면세사업자 수입금액증명원)<br>" +
                 "  6. 소득금액증명원 (직전년도 기준)<br>" +
                 "• <strong>가점 증빙 (해당자만 제출)</strong>: 표창장(도지사 등), 자영업아카데미 수료증, 취약계층 증명서 등",
-            schedule: "📅 <strong>접수 일정 및 방법 안내</strong><br><br>" +
-                "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong> (공고는 3. 18 발표)<br>" +
-                "• <strong>신청 방법</strong>:<br>" +
-                "  - <strong>온라인 신청</strong>: 경기바로 홈페이지(www.ggbaro.kr)에서 공공마이데이터 연동 접수<br>" +
-                "  - <strong>방문 신청</strong>: 경기도시장상권진흥원(경상원) 각 지역센터 영업시간 내 방문 접수 (제출 서류 상담 가능)<br>" +
-                "  - <strong>※ 주의</strong>: 우편 신청 및 온/오프라인 중복 신청은 불가능합니다. 1인 1건만 신청 가능합니다.",
-            contact: "📞 <strong>문의처 및 접수 지역센터</strong><br><br>" +
+            simulator: "🎨 <strong>AI 간판 시뮬레이터 사용법</strong><br><br>" +
+                "• <strong>기능 안내</strong>: 실제 점포 파사드 배경에 원하는 상호 글자, 서체, 간판 프레임 색상, 야간 조명 효과를 실시간으로 미리 시뮬레이션해 볼 수 있는 100% 무료 체험 기능입니다.<br>" +
+                "• <strong>이용 방법</strong>:<br>" +
+                "  1. 상단 메뉴 또는 홈 화면의 <strong>[AI 간판 시뮬레이터]</strong> 버튼 클릭<br>" +
+                "  2. 매장 상호명 입력 및 간판 종류(LED채널, 플렉스, 돌출간판 등) 선택<br>" +
+                "  3. 글자 색상, 프레임, 조명 스위치를 켜보며 마음에 드는 디자인 완성<br>" +
+                "  4. 완성된 시뮬레이션 이미지를 저장하거나 바로 <strong>[지원 신청]</strong>과 연동 가능합니다.<br><br>" +
+                "👉 지금 바로 <a href=\"#simulator\" onclick=\"window.switchTab('simulator'); if(document.getElementById('ai-chat-close')) document.getElementById('ai-chat-close').click(); return false;\" style=\"color: #2563eb; font-weight: 700; text-decoration: underline;\">[시뮬레이터 바로가기]</a>를 눌러 체험해 보세요!",
+            contact: "📞 <strong>고객센터 및 접수 일정 안내</strong><br><br>" +
+                "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong><br>" +
                 "• <strong>경상원 종합상담 콜센터</strong>: <strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
                 "• <strong>지역센터별 관할 구역</strong>:<br>" +
                 "  - 남부센터(수원 소재): 수원, 용인, 군포, 의왕, 과천<br>" +
@@ -4891,7 +4935,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         function handleUserMessage(messageText, faqType = null) {
-            // 1. Add User Message
+            // 1. Add User Message (XSS protected)
             appendMessage(messageText, 'user');
 
             // Remove quick replies section if present to avoid screen cluttering
@@ -4903,7 +4947,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. Add Loading Indicator
             const loadingId = appendLoading();
 
-            // 3. Simulate Thinking & Respond
+            // 3. Simulate Thinking & Respond (Fast 400ms for snappy response)
             setTimeout(() => {
                 removeLoading(loadingId);
 
@@ -4913,35 +4957,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     // Keyword match logic
                     const cleaned = messageText.toLowerCase().replace(/\s+/g, '');
-                    if (cleaned.includes('대상') || cleaned.includes('조건') || cleaned.includes('자격') || cleaned.includes('제한') || cleaned.includes('제외') || cleaned.includes('누가') || cleaned.includes('기준')) {
+                    if (cleaned.includes('시뮬') || cleaned.includes('가상') || cleaned.includes('디자인') || cleaned.includes('미리보기')) {
+                        response = faqDatabase.simulator;
+                    } else if (cleaned.includes('대상') || cleaned.includes('조건') || cleaned.includes('자격') || cleaned.includes('제한') || cleaned.includes('제외') || cleaned.includes('누가') || cleaned.includes('기준')) {
                         response = faqDatabase.target;
                     } else if (cleaned.includes('금액') || cleaned.includes('한도') || cleaned.includes('비용') || cleaned.includes('얼마') || cleaned.includes('지원금') || cleaned.includes('썬팅') || cleaned.includes('투광기') || cleaned.includes('인테리어')) {
                         response = faqDatabase.amount;
                     } else if (cleaned.includes('서류') || cleaned.includes('준비') || cleaned.includes('제출') || cleaned.includes('증명원') || cleaned.includes('동의서')) {
                         response = faqDatabase.documents;
-                    } else if (cleaned.includes('일정') || cleaned.includes('기간') || cleaned.includes('날짜') || cleaned.includes('언제') || cleaned.includes('방법') || cleaned.includes('접수') || cleaned.includes('신청')) {
-                        response = faqDatabase.schedule;
-                    } else if (cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('콜센터') || cleaned.includes('번호') || cleaned.includes('문의') || cleaned.includes('주소') || cleaned.includes('경상원')) {
+                    } else if (cleaned.includes('일정') || cleaned.includes('기간') || cleaned.includes('날짜') || cleaned.includes('언제') || cleaned.includes('방법') || cleaned.includes('접수') || cleaned.includes('신청') || cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('콜센터') || cleaned.includes('번호') || cleaned.includes('문의') || cleaned.includes('주소') || cleaned.includes('경상원')) {
                         response = faqDatabase.contact;
-                    } else if (cleaned.includes('안녕')) {
-                        response = "안녕하세요! 경기도 소상공인 경영환경개선사업 AI비서입니다. 😊 무엇이든 물어보세요.<br><br>💡 <strong>예시 질문 키워드</strong>:<br>• '지원 자격', '제외 대상'<br>• '지원 금액', '신청 비용'<br>• '필수 서류', '공공마이데이터'<br>• '신청 일정', '접수 방법'<br>• '고객센터', '지역센터 전화번호'";
+                    } else if (cleaned.includes('안녕') || cleaned.includes('반가')) {
+                        response = "안녕하세요! 경기도 소상공인 경영환경개선사업 AI비서입니다. 😊 무엇이든 물어보세요.<br><br>💡 <strong>주요 질문 메뉴</strong>:<br>• '지원 자격', '제외 대상'<br>• '지원 금액', '신청 비용'<br>• '필수 서류', '공공마이데이터'<br>• '시뮬레이터 사용법'<br>• '고객센터 및 접수 일정'";
                     } else {
-                        response = "죄송합니다. 질문하신 내용에 대한 정확한 정보를 찾지 못했습니다. 😢<br><br>아래 주요 지원사업 키워드를 참고하여 간략히 질문해 주시면 상세히 답변해 드릴 수 있습니다!<br><br>• <strong>'지원 자격'</strong> (창업 3년 이상 소상공인 여부)<br>• <strong>'지원 금액'</strong> (최대 200만원 한도 및 품목)<br>• <strong>'필수 서류'</strong> (제출 생략 가능 서류 등)<br>• <strong>'신청 일정'</strong> (3월 31일 ~ 4월 13일 일정)<br>• <strong>'고객센터'</strong> (대표번호 1600-8001 및 지역센터)";
+                        response = "죄송합니다. 질문하신 내용에 대한 정확한 정보를 찾지 못했습니다. 😢<br><br>아래 주요 지원사업 퀵 메뉴를 누르시거나 관련 키워드로 질문해 주시면 상세히 답변해 드릴 수 있습니다!<br><br>• <strong>'지원 자격'</strong> (창업 3년 이상 소상공인 여부)<br>• <strong>'지원 금액'</strong> (최대 200만원 한도 및 품목)<br>• <strong>'필수 서류'</strong> (제출 생략 가능 서류 등)<br>• <strong>'시뮬레이터'</strong> (간판 가상 시뮬레이터 사용법)<br>• <strong>'고객센터'</strong> (대표번호 1600-8001 및 지역센터)";
                     }
                 }
 
                 appendMessage(response, 'bot');
 
-                // Re-append quick replies at the bottom so user can click other options
+                // Re-append unified 5 core quick replies
                 appendQuickReplies();
 
-            }, 800);
+            }, 400);
         }
 
         function appendMessage(text, sender) {
             const bubble = document.createElement('div');
             bubble.className = `chat-bubble ${sender}-message`;
-            bubble.innerHTML = text;
+            if (sender === 'user') {
+                const safeText = (typeof escapeHtml === 'function') ? escapeHtml(text) : text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                bubble.innerHTML = safeText;
+            } else {
+                bubble.innerHTML = text;
+            }
             chatMessages.appendChild(bubble);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
@@ -4966,16 +5015,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const div = document.createElement('div');
             div.className = 'ai-quick-replies';
             div.innerHTML = `
-                <button class="quick-reply-btn" data-faq="target">💡 지원 자격 및 대상</button>
-                <button class="quick-reply-btn" data-faq="amount">💰 지원 금액 및 품목</button>
-                <button class="quick-reply-btn" data-faq="documents">📄 필수 제출 서류</button>
-                <button class="quick-reply-btn" data-faq="schedule">📅 신청 일정 및 방법</button>
-                <button class="quick-reply-btn" data-faq="contact">📞 고객센터 및 문의처</button>
+                <button type="button" class="quick-reply-btn" data-faq="target">💡 지원 자격 및 대상</button>
+                <button type="button" class="quick-reply-btn" data-faq="amount">💰 지원 금액 및 품목</button>
+                <button type="button" class="quick-reply-btn" data-faq="documents">📄 필수 제출 서류</button>
+                <button type="button" class="quick-reply-btn" data-faq="simulator">🎨 시뮬레이터 사용법</button>
+                <button type="button" class="quick-reply-btn" data-faq="contact">📞 고객센터 및 일정</button>
             `;
             chatMessages.appendChild(div);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
     }
+    window.initAIAssistant = initAIAssistant;
 
     // Drawer transition request handlers (1회 클릭 즉각 실행)
     const drawerBtnConversion = document.getElementById('drawer-btn-conversion');
