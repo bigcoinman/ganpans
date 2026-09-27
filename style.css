@@ -1972,15 +1972,15 @@ input:checked+.slider-round:before {
   background: var(--accent-success);
 }
 
-/* Step content switcher */
 .step-pane {
   display: none;
   animation: fadeIn 0.5s ease;
-  scroll-margin-top: 110px;
 }
 
+.wizard-container,
+.step-pane,
 .step-pane h3 {
-  scroll-margin-top: 110px;
+  scroll-margin-top: 75px;
 }
 
 .step-pane.active {
