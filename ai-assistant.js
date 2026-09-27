@@ -55,12 +55,18 @@
                 "  4. 완성된 시뮬레이션 이미지를 저장하거나 바로 <strong>[지원 신청]</strong>과 연동 가능합니다.<br><br>" +
                 "👉 지금 바로 <a href=\"#simulator\" onclick=\"if(window.switchTab) window.switchTab('simulator'); if(window.AIAssistant) window.AIAssistant.close(); return false;\" style=\"color: #2563eb; font-weight: 700; text-decoration: underline;\">[시뮬레이터 바로가기]</a>를 눌러 체험해 보세요!"
         },
+        schedule: {
+            title: "📅 접수 일정 안내",
+            content: "📅 <strong>지원사업 접수 일정 안내</strong><br><br>" +
+                "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong><br><br>" +
+                "👉 <strong>[안내]</strong> 공식 접수 기간이 아니더라도, 지금 <strong>[간편 지원 신청]</strong>을 남겨주시면 추가 예산 배정 및 다음 회차 공고 시 담당 매니저가 1순위로 우선 배정·연락드립니다!<br><br>" +
+                "※ 공식 접수 기간 외에도 사전 무료 상담은 연중 상시 가능합니다."
+        },
         contact: {
-            title: "📞 고객센터 및 일정",
-            content: "📞 <strong>고객센터 및 접수 일정 안내</strong><br><br>" +
-                "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong><br>" +
+            title: "📞 고객 종합 콜 센터",
+            content: "📞 <strong>고객 종합 콜 센터 안내</strong><br><br>" +
                 "• <strong>경기도시장상권진흥원 종합상담 콜센터</strong>:<br>" +
-                "&nbsp;&nbsp;<strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
+                "&nbsp;&nbsp;<strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br><br>" +
                 "• <strong>지역센터별 관할 구역</strong>:<br>" +
                 "  - 남부센터(수원 소재): 수원, 용인, 군포, 의왕, 과천<br>" +
                 "  - 남부센터(화성 소재): 화성, 오산, 평택, 안성<br>" +
@@ -200,14 +206,17 @@
         if (cleaned.includes('서류') || cleaned.includes('준비') || cleaned.includes('제출') || cleaned.includes('증명원') || cleaned.includes('동의서')) {
             return FAQ_DATABASE.documents.content;
         }
-        if (cleaned.includes('일정') || cleaned.includes('기간') || cleaned.includes('날짜') || cleaned.includes('언제') || cleaned.includes('방법') || cleaned.includes('접수') || cleaned.includes('신청') || cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('콜센터') || cleaned.includes('번호') || cleaned.includes('문의') || cleaned.includes('주소') || cleaned.includes('경상원') || cleaned.includes('진흥원')) {
+        if (cleaned.includes('일정') || cleaned.includes('기간') || cleaned.includes('날짜') || cleaned.includes('언제') || cleaned.includes('접수일') || cleaned.includes('마감') || cleaned.includes('시작')) {
+            return FAQ_DATABASE.schedule.content;
+        }
+        if (cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('콜센터') || cleaned.includes('번호') || cleaned.includes('문의') || cleaned.includes('주소') || cleaned.includes('경상원') || cleaned.includes('진흥원') || cleaned.includes('고객')) {
             return FAQ_DATABASE.contact.content;
         }
         if (cleaned.includes('안녕') || cleaned.includes('반가') || cleaned.includes('하이') || cleaned.includes('hello')) {
             return "안녕하세요! 소상공인 간판지원단 AI 비서입니다. 😊<br>궁금하신 점을 언제든 말씀해 주시거나 위 메뉴 버튼을 눌러주세요!";
         }
         return "죄송합니다. 질문하신 내용에 대한 정확한 안내를 찾지 못했습니다. 😢<br><br>" +
-            "위의 <strong>주요 안내 버튼</strong>을 터치하시거나, '지원 자격', '지원 금액', '필수 서류', '시뮬레이터', '고객센터' 등의 단어로 질문해 주세요!";
+            "위의 <strong>주요 안내 버튼</strong>을 터치하시거나, '지원 자격', '지원 금액', '필수 서류', '시뮬레이터', '접수 일정', '고객 종합 콜 센터' 등의 단어로 질문해 주세요!";
     }
 
     // 5. 공개 인터페이스
