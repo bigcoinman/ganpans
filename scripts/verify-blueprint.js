@@ -135,6 +135,13 @@ assertRule(
 );
 
 assertRule(
+  '[BP-03] toggleBizItem 사진 카운트 0 리셋 방어 및 영구 보존(preservedPhotoCount) 준수',
+  dataStoreCode.includes('preservedPhotoCount') &&
+  !dataStoreCode.includes('memoObj.photoCount = photosList.length;'),
+  'toggleBizItem 내에 사진 카운트를 0으로 덮어쓰는 찌꺼기 코드가 남아있습니다!'
+);
+
+assertRule(
   '[BP-03] 모바일 대시보드 헤더 단일 이벤트 바인딩 준수 (Rule #4 중복 리스너 부존재)',
   !appCode.includes("toggleUserAppsMobHeader.addEventListener('click'") &&
   !appCode.includes("toggleBizItemsMobHeader.addEventListener('click'"),

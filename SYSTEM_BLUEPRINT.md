@@ -103,6 +103,10 @@ graph TD
    - `approved`: 점주가 `window.approveDraftByOwner`를 클릭하여 확정한 상태 (영업자 화면에 `점주 시안 승인완료` 녹색 배지 표시).
 3. **`processStatus` (공정 단계)**:
    - `접수예정` ➔ `접수완료` ➔ `심사대기` ➔ `대상자선정` ➔ `간판시공 준비중` ➔ `간판시공완료`
+4. **`photoCount` 영구 불변 보존 원칙 (Photo Count SSOT Preservation)**:
+   - `toggleBizItem` (영업물건 승격/해제), `assignConstructorToBizItem`, `updateItemStatus` 등 모든 상태 전이 단계에서 `photoCount`는 절대 0으로 초기화되거나 덮어써지지 않으며, `Math.max(memo.photoCount, app.photosCount, ...)`를 통해 영구 보존된다.
+5. **온디맨드 단일 조회 및 원클릭 다운로드 보장 (On-Demand Non-blocking Download)**:
+   - 대시보드 목록의 다운로드 버튼은 로컬 카운트에 의존하여 `disabled` 처리하지 않고 항상 클릭 가능하며, 클릭 시 `ensureApplicationPhotosLoaded`를 통해 Supabase DB 단일 원천으로부터 즉시 온디맨드 로딩하여 사진 열람 및 다운로드를 100% 보장한다.
 
 ---
 
