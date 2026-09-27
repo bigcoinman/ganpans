@@ -829,21 +829,22 @@
           app.salespersonName = '본사직접접수';
         }
 
-        // [영구 방어] 사진 카운트 및 유무 보존: 목록 경량 조회로 로컬 photos 배열이 비어있더라도 기존 photoCount를 0으로 덮어쓰지 않음
+        // [설계도-03 정식 재구축] 현장사진 100% 불변 보존: 영업물건 토글 시 사진 카운트를 일체 건드리지 않고 영구 보존
         let memoObj = {};
         try {
           memoObj = typeof app.memo === 'object' ? (app.memo || {}) : JSON.parse(app.memo || '{}');
         } catch (e) { memoObj = {}; }
 
-        const existingPhotoCount = Math.max(
+        // 기존에 등록된 사진 카운트가 있다면 절대 삭제/0으로 덮어쓰지 않고 100% 보존
+        const preservedPhotoCount = Math.max(
           Number(memoObj.photoCount) || 0,
           Number(app.photosCount) || 0,
           Number(app.photos_count) || 0,
           (Array.isArray(app.photos) ? app.photos.length : 0),
           (app.fileData ? 1 : 0)
         );
-        const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
-        const finalPhotoCount = existingPhotoCount > 0 ? existingPhotoCount : photosList.length;
+
+        const photosList = (Array.isArray(app.photos) && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
 
         // [규칙] 영업물건으로 전환 시 기본값은 접수: '접수예정', 진행: '지원대기중'
         // 단, 이미 공단 접수 후 단계(대상자선정, 간판시공 준비중, 간판시공완료 등)로 진행 중인 건의 진행상태는 보존
@@ -866,9 +867,9 @@
         memoObj.salespersonId = app.salespersonId || (targetUser ? targetUser.id : '');
         memoObj.salespersonName = app.salespersonName || (targetUser ? targetUser.name : '');
         memoObj.referrerCode = app.referrerCode || (targetUser ? targetUser.bizCode : '');
-        if (finalPhotoCount > 0) {
-          memoObj.photoCount = finalPhotoCount;
-          app.photosCount = finalPhotoCount;
+        if (preservedPhotoCount > 0) {
+          memoObj.photoCount = preservedPhotoCount;
+          app.photosCount = preservedPhotoCount;
           app.hasPhoto = true;
         }
         app.memo = JSON.stringify(memoObj);
@@ -878,7 +879,7 @@
           name: app.storeName || app.shopName || app.ownerName || '영업물건',
           phone: app.ownerPhone || app.phone || '',
           address: app.storeAddress || app.address || '',
-          photosCount: finalPhotoCount,
+          photosCount: preservedPhotoCount > 0 ? preservedPhotoCount : photosList.length,
           receiptStatus: app.receiptStatus || '접수예정',
           progressStatus: app.progressStatus || '지원대기중',
           photos: photosList,
