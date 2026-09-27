@@ -1,5 +1,49 @@
 // app.js - Mobile App Shell & Interactive State Synchronizer
 
+// AI 비서 단일 SSOT FAQ 데이터베이스 (파일 최상단 전역 스코프 초기화로 TDZ/호이스팅 오류 영구 소멸)
+const faqDatabase = {
+    target: "💡 <strong>지원 대상 및 자격 기준</strong><br><br>" +
+        "• <strong>대상자</strong>: 공고일 현재 경기도 내에 사업장을 두고 영업 중인 <strong>창업 3년 이상</strong>(사업자등록 기준) 소상공인 사업자입니다.<br>" +
+        "• <strong>소상공인 상시 근로자 기준</strong>:<br>" +
+        "  - 도소매업, 음식점, 숙박업, 서비스업: 5인 미만<br>" +
+        "  - 광업, 제조업, 건설업, 운수업: 10인 미만<br>" +
+        "• <strong>지원 제외 대상</strong>: 대기업 프랜차이즈 직영점, 사치향락 업종(유흥주점 등), 무등록/휴폐업자, 지방세 체납자, 최근 3년 이내 경기도 및 시·군 유사 지원사업 수혜자는 신청할 수 없습니다.",
+    amount: "💰 <strong>지원 금액 및 품목 안내</strong><br><br>" +
+        "• <strong>지원 한도</strong>: 업체당 <strong>최대 200만원 한도</strong> (공급가의 100% 지원, 부가세 10% 및 200만원 초과 금액은 본인 부담)<br>" +
+        "  * 예: 견적서 공급가액이 220만원인 경우, 지원금 200만원 + 본인부담 20만원 + 부가세 별도 납부<br>" +
+        "• <strong>지원 품목</strong>: 간판(불법 간판 제외), 썬팅, 투광기 중 <strong>최대 2개 품목 이하</strong> 선택 가능<br>" +
+        "• <strong>시공 주의사항</strong>: 반드시 <strong>선정 후 견적서 승인</strong>을 먼저 받은 다음 시공을 진행해야 합니다. 승인 전 <strong>사전 시공 시 지원 대상에서 제외(선정 취소)</strong>되므로 절대 주의 바랍니다.",
+    documents: "📄 <strong>제출 서류 안내</strong><br><br>" +
+        "• <strong>필수 기본 서류</strong>:<br>" +
+        "  1. 신청서 및 추진계획서 (점포 사진 첨부 필수)<br>" +
+        "  2. 개인신용정보 제공 동의서<br>" +
+        "  3. 시공계획서<br>" +
+        "• <strong>증빙 서류 (※ 경기바로 공공마이데이터 간편 신청 동의 시 제출 생략 가능)</strong>:<br>" +
+        "  4. 사업자등록증 사본 1부<br>" +
+        "  5. 최근 2개년 부가세 과세표준증명원(또는 면세사업자 수입금액증명원)<br>" +
+        "  6. 소득금액증명원 (직전년도 기준)<br>" +
+        "• <strong>가점 증빙 (해당자만 제출)</strong>: 표창장(도지사 등), 자영업아카데미 수료증, 취약계층 증명서 등",
+    simulator: "🎨 <strong>AI 간판 시뮬레이터 사용법</strong><br><br>" +
+        "• <strong>기능 안내</strong>: 실제 점포 파사드 배경에 원하는 상호 글자, 서체, 간판 프레임 색상, 야간 조명 효과를 실시간으로 미리 시뮬레이션해 볼 수 있는 100% 무료 체험 기능입니다.<br>" +
+        "• <strong>이용 방법</strong>:<br>" +
+        "  1. 상단 메뉴 또는 홈 화면의 <strong>[AI 간판 시뮬레이터]</strong> 버튼 클릭<br>" +
+        "  2. 매장 상호명 입력 및 간판 종류(LED채널, 플렉스, 돌출간판 등) 선택<br>" +
+        "  3. 글자 색상, 프레임, 조명 스위치를 켜보며 마음에 드는 디자인 완성<br>" +
+        "  4. 완성된 시뮬레이션 이미지를 저장하거나 바로 <strong>[지원 신청]</strong>과 연동 가능합니다.<br><br>" +
+        "👉 지금 바로 <a href=\"#simulator\" onclick=\"window.switchTab('simulator'); if(document.getElementById('ai-chat-close')) document.getElementById('ai-chat-close').click(); return false;\" style=\"color: #2563eb; font-weight: 700; text-decoration: underline;\">[시뮬레이터 바로가기]</a>를 눌러 체험해 보세요!",
+    contact: "📞 <strong>고객센터 및 접수 일정 안내</strong><br><br>" +
+        "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong><br>" +
+        "• <strong>경상원 종합상담 콜센터</strong>: <strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
+        "• <strong>지역센터별 관할 구역</strong>:<br>" +
+        "  - 남부센터(수원 소재): 수원, 용인, 군포, 의왕, 과천<br>" +
+        "  - 남부센터(화성 소재): 화성, 오산, 평택, 안성<br>" +
+        "  - 남동센터(광주 소재): 광주, 성남, 여주, 이천<br>" +
+        "  - 남서센터(시흥 소재): 시흥, 안양, 안산, 광명, 부천<br>" +
+        "  - 북부센터(남양주 소재): 남양주, 의정부, 포천, 구리, 가평, 하남, 양평<br>" +
+        "  - 북서센터(파주 소재): 파주, 고양, 양주, 동두천, 연천, 김포"
+};
+window.faqDatabase = faqDatabase;
+
 // --- 영업물건 진행상황 상태 변경 모바일 글로벌 핸들러 (0초 즉시 전역 등록) ---
 window.updateItemStatusMob = function(uid, itemId, type, value) {
     if (window.DataStore && typeof window.DataStore.updateItemStatus === 'function') {
@@ -4830,50 +4874,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('[initAIAssistant Safe Guard]', e);
     }
 
-    // AI 비서 단일 SSOT FAQ 데이터베이스 (전역 스코프 초기화로 TDZ/호이스팅 오류 원천 차단)
-    const faqDatabase = {
-        target: "💡 <strong>지원 대상 및 자격 기준</strong><br><br>" +
-            "• <strong>대상자</strong>: 공고일 현재 경기도 내에 사업장을 두고 영업 중인 <strong>창업 3년 이상</strong>(사업자등록 기준) 소상공인 사업자입니다.<br>" +
-            "• <strong>소상공인 상시 근로자 기준</strong>:<br>" +
-            "  - 도소매업, 음식점, 숙박업, 서비스업: 5인 미만<br>" +
-            "  - 광업, 제조업, 건설업, 운수업: 10인 미만<br>" +
-            "• <strong>지원 제외 대상</strong>: 대기업 프랜차이즈 직영점, 사치향락 업종(유흥주점 등), 무등록/휴폐업자, 지방세 체납자, 최근 3년 이내 경기도 및 시·군 유사 지원사업 수혜자는 신청할 수 없습니다.",
-        amount: "💰 <strong>지원 금액 및 품목 안내</strong><br><br>" +
-            "• <strong>지원 한도</strong>: 업체당 <strong>최대 200만원 한도</strong> (공급가의 100% 지원, 부가세 10% 및 200만원 초과 금액은 본인 부담)<br>" +
-            "  * 예: 견적서 공급가액이 220만원인 경우, 지원금 200만원 + 본인부담 20만원 + 부가세 별도 납부<br>" +
-            "• <strong>지원 품목</strong>: 간판(불법 간판 제외), 썬팅, 투광기 중 <strong>최대 2개 품목 이하</strong> 선택 가능<br>" +
-            "• <strong>시공 주의사항</strong>: 반드시 <strong>선정 후 견적서 승인</strong>을 먼저 받은 다음 시공을 진행해야 합니다. 승인 전 <strong>사전 시공 시 지원 대상에서 제외(선정 취소)</strong>되므로 절대 주의 바랍니다.",
-        documents: "📄 <strong>제출 서류 안내</strong><br><br>" +
-            "• <strong>필수 기본 서류</strong>:<br>" +
-            "  1. 신청서 및 추진계획서 (점포 사진 첨부 필수)<br>" +
-            "  2. 개인신용정보 제공 동의서<br>" +
-            "  3. 시공계획서<br>" +
-            "• <strong>증빙 서류 (※ 경기바로 공공마이데이터 간편 신청 동의 시 제출 생략 가능)</strong>:<br>" +
-            "  4. 사업자등록증 사본 1부<br>" +
-            "  5. 최근 2개년 부가세 과세표준증명원(또는 면세사업자 수입금액증명원)<br>" +
-            "  6. 소득금액증명원 (직전년도 기준)<br>" +
-            "• <strong>가점 증빙 (해당자만 제출)</strong>: 표창장(도지사 등), 자영업아카데미 수료증, 취약계층 증명서 등",
-        simulator: "🎨 <strong>AI 간판 시뮬레이터 사용법</strong><br><br>" +
-            "• <strong>기능 안내</strong>: 실제 점포 파사드 배경에 원하는 상호 글자, 서체, 간판 프레임 색상, 야간 조명 효과를 실시간으로 미리 시뮬레이션해 볼 수 있는 100% 무료 체험 기능입니다.<br>" +
-            "• <strong>이용 방법</strong>:<br>" +
-            "  1. 상단 메뉴 또는 홈 화면의 <strong>[AI 간판 시뮬레이터]</strong> 버튼 클릭<br>" +
-            "  2. 매장 상호명 입력 및 간판 종류(LED채널, 플렉스, 돌출간판 등) 선택<br>" +
-            "  3. 글자 색상, 프레임, 조명 스위치를 켜보며 마음에 드는 디자인 완성<br>" +
-            "  4. 완성된 시뮬레이션 이미지를 저장하거나 바로 <strong>[지원 신청]</strong>과 연동 가능합니다.<br><br>" +
-            "👉 지금 바로 <a href=\"#simulator\" onclick=\"window.switchTab('simulator'); if(document.getElementById('ai-chat-close')) document.getElementById('ai-chat-close').click(); return false;\" style=\"color: #2563eb; font-weight: 700; text-decoration: underline;\">[시뮬레이터 바로가기]</a>를 눌러 체험해 보세요!",
-        contact: "📞 <strong>고객센터 및 접수 일정 안내</strong><br><br>" +
-            "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong><br>" +
-            "• <strong>경상원 종합상담 콜센터</strong>: <strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
-            "• <strong>지역센터별 관할 구역</strong>:<br>" +
-            "  - 남부센터(수원 소재): 수원, 용인, 군포, 의왕, 과천<br>" +
-            "  - 남부센터(화성 소재): 화성, 오산, 평택, 안성<br>" +
-            "  - 남동센터(광주 소재): 광주, 성남, 여주, 이천<br>" +
-            "  - 남서센터(시흥 소재): 시흥, 안양, 안산, 광명, 부천<br>" +
-            "  - 북부센터(남양주 소재): 남양주, 의정부, 포천, 구리, 가평, 하남, 양평<br>" +
-            "  - 북서센터(파주 소재): 파주, 고양, 양주, 동두천, 연천, 김포"
-    };
-    window.faqDatabase = faqDatabase;
-
     function initAIAssistant() {
         const trigger = document.getElementById('ai-assistant-trigger');
         const chatWindow = document.getElementById('ai-chat-window');
@@ -4881,6 +4881,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const sendBtn = document.getElementById('ai-chat-send');
         const chatInput = document.getElementById('ai-chat-input');
         const chatMessages = document.getElementById('ai-chat-messages');
+
+        let isProcessingAIMessage = false;
 
         // 전역 직통 핸들러 (모바일 사파리 / 터치 이벤트 100% 즉시 발화 보장)
         window.openAIChatWindow = function(e) {
@@ -4934,19 +4936,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!trigger || !chatWindow) return;
         window._aiAssistantInitialized = true;
 
-        // Toggle Chat Window (Event Listener)
+        // Toggle Chat Window
         trigger.addEventListener('click', window.openAIChatWindow);
         if (closeBtn) closeBtn.addEventListener('click', window.closeAIChatWindow);
-
-        // Handle Quick Reply Clicks (Delegated Event Listener)
-        if (chatMessages) {
-            chatMessages.addEventListener('click', (e) => {
-                const btn = e.target.closest('.quick-reply-btn');
-                if (btn) {
-                    window.handleAIQuickReply(btn, e);
-                }
-            });
-        }
 
         // Send Message
         function sendMessage() {
@@ -4970,11 +4962,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function handleUserMessage(messageText, faqType = null) {
+            if (isProcessingAIMessage) return;
+            isProcessingAIMessage = true;
+
             // 1. Add User Message (XSS protected)
             appendMessage(messageText, 'user');
 
             // Remove quick replies section if present to avoid screen cluttering
-            const quickReplies = chatMessages.querySelector('.ai-quick-replies');
+            const quickReplies = chatMessages ? chatMessages.querySelector('.ai-quick-replies') : null;
             if (quickReplies) {
                 quickReplies.remove();
             }
@@ -4982,42 +4977,52 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. Add Loading Indicator
             const loadingId = appendLoading();
 
-            // 3. Simulate Thinking & Respond (Fast 400ms for snappy response)
+            // 3. Simulate Thinking & Respond (Fast 250ms for snappy response)
             setTimeout(() => {
-                removeLoading(loadingId);
+                try {
+                    removeLoading(loadingId);
 
-                let response = "";
-                if (faqType && faqDatabase[faqType]) {
-                    response = faqDatabase[faqType];
-                } else {
-                    // Keyword match logic
-                    const cleaned = messageText.toLowerCase().replace(/\s+/g, '');
-                    if (cleaned.includes('시뮬') || cleaned.includes('가상') || cleaned.includes('디자인') || cleaned.includes('미리보기')) {
-                        response = faqDatabase.simulator;
-                    } else if (cleaned.includes('대상') || cleaned.includes('조건') || cleaned.includes('자격') || cleaned.includes('제한') || cleaned.includes('제외') || cleaned.includes('누가') || cleaned.includes('기준')) {
-                        response = faqDatabase.target;
-                    } else if (cleaned.includes('금액') || cleaned.includes('한도') || cleaned.includes('비용') || cleaned.includes('얼마') || cleaned.includes('지원금') || cleaned.includes('썬팅') || cleaned.includes('투광기') || cleaned.includes('인테리어')) {
-                        response = faqDatabase.amount;
-                    } else if (cleaned.includes('서류') || cleaned.includes('준비') || cleaned.includes('제출') || cleaned.includes('증명원') || cleaned.includes('동의서')) {
-                        response = faqDatabase.documents;
-                    } else if (cleaned.includes('일정') || cleaned.includes('기간') || cleaned.includes('날짜') || cleaned.includes('언제') || cleaned.includes('방법') || cleaned.includes('접수') || cleaned.includes('신청') || cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('콜센터') || cleaned.includes('번호') || cleaned.includes('문의') || cleaned.includes('주소') || cleaned.includes('경상원')) {
-                        response = faqDatabase.contact;
-                    } else if (cleaned.includes('안녕') || cleaned.includes('반가')) {
-                        response = "안녕하세요! 경기도 소상공인 경영환경개선사업 AI비서입니다. 😊 무엇이든 물어보세요.<br><br>💡 <strong>주요 질문 메뉴</strong>:<br>• '지원 자격', '제외 대상'<br>• '지원 금액', '신청 비용'<br>• '필수 서류', '공공마이데이터'<br>• '시뮬레이터 사용법'<br>• '고객센터 및 접수 일정'";
+                    let response = "";
+                    const db = (typeof faqDatabase !== 'undefined' && faqDatabase) ? faqDatabase : window.faqDatabase;
+                    if (faqType && db && db[faqType]) {
+                        response = db[faqType];
+                    } else if (db) {
+                        // Keyword match logic
+                        const cleaned = (messageText || '').toLowerCase().replace(/\s+/g, '');
+                        if (cleaned.includes('시뮬') || cleaned.includes('가상') || cleaned.includes('디자인') || cleaned.includes('미리보기')) {
+                            response = db.simulator;
+                        } else if (cleaned.includes('대상') || cleaned.includes('조건') || cleaned.includes('자격') || cleaned.includes('제한') || cleaned.includes('제외') || cleaned.includes('누가') || cleaned.includes('기준')) {
+                            response = db.target;
+                        } else if (cleaned.includes('금액') || cleaned.includes('한도') || cleaned.includes('비용') || cleaned.includes('얼마') || cleaned.includes('지원금') || cleaned.includes('썬팅') || cleaned.includes('투광기') || cleaned.includes('인테리어')) {
+                            response = db.amount;
+                        } else if (cleaned.includes('서류') || cleaned.includes('준비') || cleaned.includes('제출') || cleaned.includes('증명원') || cleaned.includes('동의서')) {
+                            response = db.documents;
+                        } else if (cleaned.includes('일정') || cleaned.includes('기간') || cleaned.includes('날짜') || cleaned.includes('언제') || cleaned.includes('방법') || cleaned.includes('접수') || cleaned.includes('신청') || cleaned.includes('센터') || cleaned.includes('전화') || cleaned.includes('콜센터') || cleaned.includes('번호') || cleaned.includes('문의') || cleaned.includes('주소') || cleaned.includes('경상원')) {
+                            response = db.contact;
+                        } else if (cleaned.includes('안녕') || cleaned.includes('반가')) {
+                            response = "안녕하세요! 경기도 소상공인 경영환경개선사업 AI비서입니다. 😊 무엇이든 물어보세요.<br><br>💡 <strong>주요 질문 메뉴</strong>:<br>• '지원 자격', '제외 대상'<br>• '지원 금액', '신청 비용'<br>• '필수 서류', '공공마이데이터'<br>• '시뮬레이터 사용법'<br>• '고객센터 및 접수 일정'";
+                        } else {
+                            response = "죄송합니다. 질문하신 내용에 대한 정확한 정보를 찾지 못했습니다. 😢<br><br>아래 주요 지원사업 퀵 메뉴를 누르시거나 관련 키워드로 질문해 주시면 상세히 답변해 드릴 수 있습니다!<br><br>• <strong>'지원 자격'</strong> (창업 3년 이상 소상공인 여부)<br>• <strong>'지원 금액'</strong> (최대 200만원 한도 및 품목)<br>• <strong>'필수 서류'</strong> (제출 생략 가능 서류 등)<br>• <strong>'시뮬레이터'</strong> (간판 가상 시뮬레이터 사용법)<br>• <strong>'고객센터'</strong> (대표번호 1600-8001 및 지역센터)";
+                        }
                     } else {
-                        response = "죄송합니다. 질문하신 내용에 대한 정확한 정보를 찾지 못했습니다. 😢<br><br>아래 주요 지원사업 퀵 메뉴를 누르시거나 관련 키워드로 질문해 주시면 상세히 답변해 드릴 수 있습니다!<br><br>• <strong>'지원 자격'</strong> (창업 3년 이상 소상공인 여부)<br>• <strong>'지원 금액'</strong> (최대 200만원 한도 및 품목)<br>• <strong>'필수 서류'</strong> (제출 생략 가능 서류 등)<br>• <strong>'시뮬레이터'</strong> (간판 가상 시뮬레이터 사용법)<br>• <strong>'고객센터'</strong> (대표번호 1600-8001 및 지역센터)";
+                        response = "안내 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.";
                     }
+
+                    appendMessage(response, 'bot');
+                    appendQuickReplies();
+                } catch (err) {
+                    console.error('[AI Assistant Bot Error]', err);
+                    removeLoading(loadingId);
+                    appendMessage("답변 생성 중 오류가 발생했습니다. 아래 버튼을 다시 선택해 주세요.", 'bot');
+                    appendQuickReplies();
+                } finally {
+                    isProcessingAIMessage = false;
                 }
-
-                appendMessage(response, 'bot');
-
-                // Re-append unified 5 core quick replies
-                appendQuickReplies();
-
-            }, 400);
+            }, 250);
         }
 
         function appendMessage(text, sender) {
+            if (!chatMessages) return;
             const bubble = document.createElement('div');
             bubble.className = `chat-bubble ${sender}-message`;
             if (sender === 'user') {
@@ -5031,6 +5036,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function appendLoading() {
+            if (!chatMessages) return null;
             const loading = document.createElement('div');
             const id = 'loading-' + Date.now();
             loading.id = id;
@@ -5042,19 +5048,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function removeLoading(id) {
+            if (!id) return;
             const elem = document.getElementById(id);
             if (elem) elem.remove();
         }
 
         function appendQuickReplies() {
+            if (!chatMessages) return;
             const div = document.createElement('div');
             div.className = 'ai-quick-replies';
             div.innerHTML = `
-                <button type="button" class="quick-reply-btn" data-faq="target">💡 지원 자격 및 대상</button>
-                <button type="button" class="quick-reply-btn" data-faq="amount">💰 지원 금액 및 품목</button>
-                <button type="button" class="quick-reply-btn" data-faq="documents">📄 필수 제출 서류</button>
-                <button type="button" class="quick-reply-btn" data-faq="simulator">🎨 시뮬레이터 사용법</button>
-                <button type="button" class="quick-reply-btn" data-faq="contact">📞 고객센터 및 일정</button>
+                <button type="button" class="quick-reply-btn" data-faq="target" onclick="if(window.handleAIQuickReply) window.handleAIQuickReply('target', event);">💡 지원 자격 및 대상</button>
+                <button type="button" class="quick-reply-btn" data-faq="amount" onclick="if(window.handleAIQuickReply) window.handleAIQuickReply('amount', event);">💰 지원 금액 및 품목</button>
+                <button type="button" class="quick-reply-btn" data-faq="documents" onclick="if(window.handleAIQuickReply) window.handleAIQuickReply('documents', event);">📄 필수 제출 서류</button>
+                <button type="button" class="quick-reply-btn" data-faq="simulator" onclick="if(window.handleAIQuickReply) window.handleAIQuickReply('simulator', event);">🎨 시뮬레이터 사용법</button>
+                <button type="button" class="quick-reply-btn" data-faq="contact" onclick="if(window.handleAIQuickReply) window.handleAIQuickReply('contact', event);">📞 고객센터 및 일정</button>
             `;
             chatMessages.appendChild(div);
             chatMessages.scrollTop = chatMessages.scrollHeight;
