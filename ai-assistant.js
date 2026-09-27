@@ -59,7 +59,8 @@
             title: "📞 고객센터 및 일정",
             content: "📞 <strong>고객센터 및 접수 일정 안내</strong><br><br>" +
                 "• <strong>접수 기간</strong>: <strong>2026. 3. 31(화) ~ 4. 13(월) 18:00까지</strong><br>" +
-                "• <strong>경기도시장상권진흥원 종합상담 콜센터</strong>: <strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
+                "• <strong>경기도시장상권진흥원 종합상담 콜센터</strong>:<br>" +
+                "&nbsp;&nbsp;<strong>☎ 1600-8001</strong> (평일 09:00 ~ 18:00)<br>" +
                 "• <strong>지역센터별 관할 구역</strong>:<br>" +
                 "  - 남부센터(수원 소재): 수원, 용인, 군포, 의왕, 과천<br>" +
                 "  - 남부센터(화성 소재): 화성, 오산, 평택, 안성<br>" +
