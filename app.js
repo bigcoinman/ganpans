@@ -6826,13 +6826,7 @@ function initReviews() {
             <button type="submit" class="comment-submit-btn">등록</button>
           </form>
         `;
-      } else {
-        commentFormHTML = `
-          <div style="text-align: center; padding: 6px; font-size: 0.75rem; color: #64748b;">
-            <a href="javascript:void(0)" onclick="if(document.getElementById('auth-modal')) document.getElementById('auth-modal').classList.add('active');" style="color: #2563eb; font-weight: 700; text-decoration: underline;">로그인</a> 후 댓글을 작성할 수 있습니다.
-          </div>
-        `;
-      }
+      } 
 
       const avatarIcon = review.avatar || 'fa-store';
       const isCommentsOpen = window._openedReviewComments.has(String(review.id));
