@@ -787,10 +787,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openDrawer() {
-        drawer.classList.add('active');
-        drawerOverlay.classList.add('active');
+        if (drawer) drawer.classList.add('active');
+        if (drawerOverlay) drawerOverlay.classList.add('active');
         updateDrawerProfile();
     }
+    window.openDrawer = openDrawer;
 
     function closeDrawer() {
         if (drawer && drawerOverlay) {
