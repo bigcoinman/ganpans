@@ -29,7 +29,7 @@ function assertRule(name, condition, errorDetail) {
 
 // 1. JS 파일 구문 문법 무결성 전수 검사 (Zero SyntaxError)
 console.log('--- [기본 검사] 자바스크립트 구문 문법 무결성 (node -c) ---');
-const jsFiles = ['app.js', 'security-utils.js', 'data-store.js', 'supabase-config.js'];
+const jsFiles = ['app.js', 'security-utils.js', 'data-store.js', 'supabase-config.js', 'ai-assistant.js'];
 for (const file of jsFiles) {
   try {
     execSync(`node -c "${file}"`, { stdio: 'pipe' });
