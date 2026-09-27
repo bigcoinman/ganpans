@@ -2923,4 +2923,193 @@ body.mobile-app-body {
     pointer-events: auto !important;
 }
 
+/* ======================================================== */
+/* 💬 [간판지원단] 후기 댓글 및 삭제 전용 스타일 (Review Comments & Delete SSOT) */
+/* ======================================================== */
+.review-card-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+}
+
+.review-header-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.review-del-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #94a3b8 !important;
+    font-size: 0.72rem !important;
+    cursor: pointer !important;
+    padding: 3px 6px !important;
+    border-radius: 4px !important;
+    transition: color 0.15s ease, background 0.15s ease !important;
+}
+
+.review-del-btn:hover {
+    color: #ef4444 !important;
+    background: #fee2e2 !important;
+}
+
+.review-admin-del-btn {
+    background: #fee2e2 !important;
+    border: 1px solid #fca5a5 !important;
+    color: #ef4444 !important;
+    font-size: 0.7rem !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    padding: 2px 7px !important;
+    border-radius: 4px !important;
+    transition: all 0.15s ease !important;
+}
+
+.review-admin-del-btn:hover {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+}
+
+.review-actions-bar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    padding-top: 8px !important;
+    margin-top: 8px !important;
+    border-top: 1px dashed #e2e8f0 !important;
+}
+
+.review-comment-toggle-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #2563eb !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+    transition: background-color 0.15s ease !important;
+}
+
+.review-comment-toggle-btn:hover {
+    background-color: #eff6ff !important;
+}
+
+.review-comments-wrapper {
+    margin-top: 10px !important;
+    padding: 10px 12px !important;
+    background: #f8fafc !important;
+    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    display: none;
+}
+
+.review-comments-wrapper.active {
+    display: block !important;
+}
+
+.review-comments-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+    max-height: 220px !important;
+    overflow-y: auto !important;
+}
+
+.review-comment-item {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 8px 10px !important;
+    font-size: 0.78rem !important;
+}
+
+.comment-meta {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 4px !important;
+}
+
+.comment-author-badge {
+    font-weight: 700 !important;
+    color: #334155 !important;
+    font-size: 0.75rem !important;
+}
+
+.comment-author-badge.admin {
+    color: #dc2626 !important;
+    background: #fee2e2 !important;
+    padding: 1px 5px !important;
+    border-radius: 4px !important;
+}
+
+.comment-date {
+    font-size: 0.68rem !important;
+    color: #94a3b8 !important;
+}
+
+.comment-content {
+    color: #1e293b !important;
+    line-height: 1.4 !important;
+    word-break: break-word !important;
+}
+
+.comment-del-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #94a3b8 !important;
+    cursor: pointer !important;
+    font-size: 0.68rem !important;
+    padding: 1px 4px !important;
+    margin-left: 6px !important;
+}
+
+.comment-del-btn:hover {
+    color: #ef4444 !important;
+    text-decoration: underline !important;
+}
+
+.comment-input-form {
+    display: flex !important;
+    gap: 6px !important;
+}
+
+.comment-input-field {
+    flex: 1 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    padding: 7px 10px !important;
+    font-size: 0.78rem !important;
+    outline: none !important;
+    background: #ffffff !important;
+}
+
+.comment-input-field:focus {
+    border-color: #2563eb !important;
+}
+
+.comment-submit-btn {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 7px 12px !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    transition: background-color 0.15s ease !important;
+}
+
+.comment-submit-btn:hover {
+    background: #1d4ed8 !important;
+}
+
 

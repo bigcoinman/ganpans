@@ -6288,107 +6288,347 @@ function initReviews() {
 
   if (!reviewsGrid || !moreBtn) return;
 
-  const existingReviews = localStorage.getItem('reviews');
-  if (existingReviews) {
-    try {
-      const list = JSON.parse(existingReviews);
-      if (list.length > 0 && list.some(r => r.name && r.name.includes('김성우'))) {
-        localStorage.removeItem('reviews');
-      }
-    } catch (e) {
-      console.warn('Reviews parse error:', e);
-    }
+  // 캐시 버전 검사 (교체된 간판 "LED 조명용 플렉스 간판" 갱신 보장)
+  if (localStorage.getItem('reviews_version') !== '20260928_flex_v1') {
+    localStorage.removeItem('reviews');
+    localStorage.setItem('reviews_version', '20260928_flex_v1');
   }
 
+  // 10대 기본 추천 후기 (지원 받아 교체된 간판만 "LED 조명용 플렉스 간판"으로 수정, 기존 간판 보존)
+  const initialReviews = [
+    {
+      id: 'init_1',
+      authorId: 'system_sample',
+      stars: 5,
+      date: '2026.06',
+      text: '12년 넘게 쓴 낡은 천막 간판을 이번 사업으로 교체했습니다. LED 조명용 플렉스 간판으로 바꿨더니 멀리서도 가게가 환하게 잘 보여요. 저녁 영업 때 손님이 평균 25% 늘었고 전기세도 확 줄었습니다!',
+      avatar: 'fa-store',
+      name: 'ksw99*** 사장님',
+      shop: '수원시 · 늘봄분식 운영',
+      comments: []
+    },
+    {
+      id: 'init_2',
+      authorId: 'system_sample',
+      stars: 5,
+      date: '2026.05',
+      text: '낡고 한자가 섞인 칙칙한 나무 간판이었는데 트렌디한 LED 조명용 플렉스 간판으로 전면 변경했습니다. 골목 전체가 밝아진 느낌이에요. 젊은 직장인 점심 고객들이 확실히 많이 찾아옵니다.',
+      avatar: 'fa-bowl-food',
+      name: 'lhy88*** 사장님',
+      shop: '성남시 · 온가 가마솥국밥 운영',
+      comments: []
+    },
+    {
+      id: 'init_3',
+      authorId: 'system_sample',
+      stars: 5,
+      date: '2026.05',
+      text: '가게가 2층 구석이라 지나치는 분들이 많았습니다. 골드 메탈 프레임 돌출 간판과 세련된 전면 LED 조명용 플렉스 간판으로 함께 교체한 뒤로 예약 없이 직접 방문하시는 신규 손님이 매달 눈에 띄게 늘었어요.',
+      avatar: 'fa-scissors',
+      name: 'pjh77*** 사장님',
+      shop: '안양시 · 헤어살롱 秀 운영',
+      comments: []
+    },
+    {
+      id: 'init_4',
+      authorId: 'system_sample',
+      stars: 5,
+      date: '2026.04',
+      text: '카페 이름이 작아서 손님들이 길을 헤맸었는데 LED 조명용 플렉스 간판으로 교체하고 나서 해결됐습니다. 인스타그램에서 입소문을 타고 골목의 예쁜 카페로 입소문 나며 주말 매출이 부쩍 늘었습니다.',
+      avatar: 'fa-mug-hot',
+      name: 'cej66*** 사장님',
+      shop: '고양시 · 카페 드 솔 운영',
+      comments: []
+    },
+    {
+      id: 'init_5',
+      authorId: 'system_sample',
+      stars: 5,
+      date: '2026.03',
+      text: '고급 정장을 파는데 녹슨 철제 프레임 간판이 어울리지 않아 고민이었습니다. 사업비 지원으로 LED 조명용 플렉스 간판으로 교체했는데 점포 품격이 살아나며 단골 손님들이 칭찬을 아끼지 않습니다.',
+      avatar: 'fa-shirt',
+      name: 'jts55*** 사장님',
+      shop: '부천시 · 클래식 옴므 운영',
+      comments: []
+    },
+    {
+      id: 'init_6',
+      authorId: 'system_sample',
+      stars: 5,
+      date: '2026.02',
+      text: '초등학교 앞 골목 구석이라 눈에 띄지 않았는데 귀여운 식빵 캐릭터가 들어간 포인트 LED 조명용 플렉스 간판을 달았습니다. 등하굣길 아이들과 학부모님들이 멀리서 보고 빵 사러 많이 들어옵니다.',
+      avatar: 'fa-bread-slice',
+      name: 'kmj44*** 사장님',
+      shop: '용인시 · 도란도란 베이커리 운영',
+      comments: []
+    },
+    {
+      id: 'init_7',
+      authorId: 'system_sample',
+      stars: 5,
+      date: '2026.02',
+      text: '붉은 색 네온사인 간판이 너무 무서워 보인다는 피드백이 있었는데 친환경 느낌의 화이트&그린 LED 조명용 플렉스 간판으로 바꿨습니다. 청결하고 정돈된 분위기가 나서 젊은 주부 고객층의 단골 등록율이 크게 상승했어요.',
+      avatar: 'fa-cow',
+      name: 'ysm33*** 사장님',
+      shop: '의정부시 · 바른정육점 운영',
+      comments: []
+    },
+    {
+      id: 'init_8',
+      authorId: 'system_sample',
+      stars: 5,
+      date: '2026.01',
+      text: '이전 학원 간판을 떼지 못하고 영업하다가 이번 철거 지원과 LED 조명용 플렉스 간판 교체를 묶어 100% 무상으로 해결했습니다. 학원가가 몰린 골목에서 확실하게 저희 독서실 존재감을 드러내고 있어요.',
+      avatar: 'fa-book-open',
+      name: 'hjm22*** 사장님',
+      shop: '안산시 · 스터디프렌드 독서실 운영',
+      comments: []
+    },
+    {
+      id: 'init_9',
+      authorId: 'system_sample',
+      stars: 5,
+      date: '2025.12',
+      text: '야간 응급 진료를 함께 운영 중인데 외부 간판 불이 약해 보호자분들이 당황하는 일이 잦았습니다. 밤에도 시인성이 탁월한 고휘도 LED 조명용 플렉스 간판을 설치하여 안전하고 편하게 찾아오십니다.',
+      avatar: 'fa-paw',
+      name: 'och11*** 사장님',
+      shop: '화성시 · 튼튼동물병원 운영',
+      comments: []
+    },
+    {
+      id: 'init_10',
+      authorId: 'system_sample',
+      stars: 5,
+      date: '2025.11',
+      text: '산뜻한 파스텔톤 플라워 샵 전용 LED 조명용 플렉스 간판으로 교체했습니다. 매장 앞을 포토존처럼 꾸밀 수 있게 조명 설계까지 도와주셔서 꽃 다발 주문은 물론 원데이 클래스 정원도 항상 꽉 차요.',
+      avatar: 'fa-fan',
+      name: 'byj00*** 사장님',
+      shop: '평택시 · 플라워 가든 운영',
+      comments: []
+    }
+  ];
+
   if (!localStorage.getItem('reviews')) {
-    const initialReviews = [
-      {
-        stars: 5,
-        date: '2026.06',
-        text: '12년 넘게 쓴 낡은 천막 간판을 이번 사업으로 교체했습니다. LED용 플렉스 간판으로 바꿨더니 멀리서도 가게가 환하게 잘 보여요. 저녁 영업 때 손님이 평균 25% 늘었고 전기세도 확 줄었습니다!',
-        avatar: 'fa-store',
-        name: 'ksw99*** 사장님',
-        shop: '수원시 · 늘봄분식 운영'
-      },
-      {
-        stars: 5,
-        date: '2026.05',
-        text: '낡고 한자가 섞인 칙칙한 나무 간판이었는데 트렌디한 LED용 플렉스 간판으로 전면 변경했습니다. 골목 전체가 밝아진 느낌이에요. 젊은 직장인 점심 고객들이 확실히 많이 찾아옵니다.',
-        avatar: 'fa-bowl-food',
-        name: 'lhy88*** 사장님',
-        shop: '성남시 · 온가 가마솥국밥 운영'
-      },
-      {
-        stars: 5,
-        date: '2026.05',
-        text: '가게가 2층 구석이라 지나치는 분들이 많았습니다. 골드 메탈 프레임 돌출 간판과 세련된 전면 LED용 플렉스 간판으로 함께 교체한 뒤로 예약 없이 직접 방문하시는 신규 손님이 매달 눈에 띄게 늘었어요.',
-        avatar: 'fa-scissors',
-        name: 'pjh77*** 사장님',
-        shop: '안양시 · 헤어살롱 秀 운영'
-      },
-      {
-        stars: 5,
-        date: '2026.04',
-        text: '카페 이름이 작아서 손님들이 길을 헤맸었는데 LED용 플렉스 간판으로 교체하고 나서 해결됐습니다. 인스타그램에서 입소문을 타고 골목의 예쁜 카페로 입소문 나며 주말 매출이 부쩍 늘었습니다.',
-        avatar: 'fa-mug-hot',
-        name: 'cej66*** 사장님',
-        shop: '고양시 · 카페 드 솔 운영'
-      },
-      {
-        stars: 5,
-        date: '2026.03',
-        text: '고급 정장을 파는데 녹슨 철제 프레임 간판이 어울리지 않아 고민이었습니다. 사업비 지원으로 LED용 플렉스 간판으로 교체했는데 점포 품격이 살아나며 단골 손님들이 칭찬을 아끼지 않습니다.',
-        avatar: 'fa-shirt',
-        name: 'jts55*** 사장님',
-        shop: '부천시 · 클래식 옴므 운영'
-      },
-      {
-        stars: 5,
-        date: '2026.02',
-        text: '초등학교 앞 골목 구석이라 눈에 띄지 않았는데 귀여운 식빵 캐릭터가 들어간 포인트 LED용 플렉스 간판을 달았습니다. 등하굣길 아이들과 학부모님들이 멀리서 보고 빵 사러 많이 들어옵니다.',
-        avatar: 'fa-bread-slice',
-        name: 'kmj44*** 사장님',
-        shop: '용인시 · 도란도란 베이커리 운영'
-      },
-      {
-        stars: 5,
-        date: '2026.02',
-        text: '붉은 색 네온사인 간판이 너무 무서워 보인다는 피드백이 있었는데 친환경 느낌의 화이트&그린 LED용 플렉스 간판으로 바꿨습니다. 청결하고 정돈된 분위기가 나서 젊은 주부 고객층의 단골 등록율이 크게 상승했어요.',
-        avatar: 'fa-cow',
-        name: 'ysm33*** 사장님',
-        shop: '의정부시 · 바른정육점 운영'
-      },
-      {
-        stars: 5,
-        date: '2026.01',
-        text: '이전 학원 간판을 떼지 못하고 영업하다가 이번 철거 지원과 아크릴 입체 문자 간판 교체를 묶어 100% 무상으로 해결했습니다. 학원가가 몰린 골목에서 확실하게 저희 독서실 존재감을 드러내고 있어요.',
-        avatar: 'fa-book-open',
-        name: 'hjm22*** 사장님',
-        shop: '안산시 · 스터디프렌드 독서실 운영'
-      },
-      {
-        stars: 5,
-        date: '2025.12',
-        text: '야간 응급 진료를 함께 운영 중인데 외부 간판 불이 약해 보호자분들이 당황하는 일이 잦았습니다. 밤에도 시인성이 탁월한 고휘도 LED용 플렉스 간판을 설치하여 안전하고 편하게 찾아오십니다.',
-        avatar: 'fa-paw',
-        name: 'och11*** 사장님',
-        shop: '화성시 · 튼튼동물병원 운영'
-      },
-      {
-        stars: 5,
-        date: '2025.11',
-        text: '산뜻한 파스텔톤 플라워 샵 전용 LED용 플렉스 간판으로 교체했습니다. 매장 앞을 포토존처럼 꾸밀 수 있게 조명 설계까지 도와주셔서 꽃 다발 주문은 물론 원데이 클래스 정원도 항상 꽉 차요.',
-        avatar: 'fa-fan',
-        name: 'byj00*** 사장님',
-        shop: '평택시 · 플라워 가든 운영'
-      }
-    ];
     localStorage.setItem('reviews', JSON.stringify(initialReviews));
   }
 
-  let reviewsList = JSON.parse(localStorage.getItem('reviews')) || [];
+  let reviewsList = JSON.parse(localStorage.getItem('reviews')) || initialReviews;
   let isExpanded = false;
+  window._openedReviewComments = window._openedReviewComments || new Set();
 
+  function getDeletedReviewIds() {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('deleted_reviews') || '[]'));
+    } catch (e) {
+      return new Set();
+    }
+  }
+
+  function addDeletedReviewId(id) {
+    const set = getDeletedReviewIds();
+    set.add(String(id));
+    localStorage.setItem('deleted_reviews', JSON.stringify(Array.from(set)));
+  }
+
+  // --- 댓글 펼침/접기 토글 글로벌 함수 ---
+  window.toggleReviewComments = function(reviewId, e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    const box = document.getElementById(`comments-box-${reviewId}`);
+    if (!box) return;
+    const strId = String(reviewId);
+    if (box.classList.contains('active')) {
+      box.classList.remove('active');
+      window._openedReviewComments.delete(strId);
+    } else {
+      box.classList.add('active');
+      window._openedReviewComments.add(strId);
+      const inp = document.getElementById(`comment-input-${reviewId}`);
+      if (inp) setTimeout(() => inp.focus(), 100);
+    }
+  };
+
+  // --- 댓글 작성 제출 글로벌 함수 (1번/7번 전역 소통 & Supabase 동기화) ---
+  window.submitReviewComment = function(reviewId, e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+
+    const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : null;
+    if (!activeUser) {
+      alert('댓글 작성을 위해 로그인이 필요합니다.');
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('active');
+      return;
+    }
+
+    const inp = document.getElementById(`comment-input-${reviewId}`);
+    if (!inp) return;
+    const text = inp.value.trim();
+    if (!text) {
+      alert('댓글 내용을 입력해 주세요.');
+      return;
+    }
+
+    const strId = String(reviewId);
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
+    const isAdmin = (activeUser.role === 'admin');
+    const maskedId = (typeof maskUserId === 'function') ? maskUserId(activeUser.id) : (activeUser.id.length > 3 ? activeUser.id.substring(0, 3) + '***' : activeUser.id);
+    const authorName = isAdmin ? '최고관리자' : `${maskedId} 사장님`;
+
+    const commentObj = {
+      id: 'c_' + Date.now(),
+      authorId: activeUser.id,
+      authorName: authorName,
+      text: text,
+      date: dateStr,
+      isAdmin: isAdmin
+    };
+
+    // 로컬 즉시 낙관적 반영
+    const targetRev = reviewsList.find(r => String(r.id) === strId);
+    if (targetRev) {
+      if (!Array.isArray(targetRev.comments)) targetRev.comments = [];
+      targetRev.comments.push(commentObj);
+      localStorage.setItem('reviews', JSON.stringify(reviewsList));
+    }
+
+    inp.value = '';
+    window._openedReviewComments.add(strId);
+    renderReviews();
+
+    // Supabase 백그라운드 클라우드 저장
+    if (window.supabaseClient) {
+      window.supabaseClient.from('reviews').insert([{
+        author_id: null,
+        author_name: authorName,
+        shop_name: `COMMENT:${strId}:${activeUser.id}`,
+        content: text,
+        rating: 0
+      }]).then(({ error }) => {
+        if (error) console.error('Supabase comment insert error:', error.message);
+      });
+    }
+  };
+
+  // --- 후기 삭제 글로벌 함수 (3번/4번/6번/7번 본인글/관리자 삭제 & Supabase 동기화) ---
+  window.deleteReview = function(reviewId, e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+
+    const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : null;
+    const strId = String(reviewId);
+    const targetRev = reviewsList.find(r => String(r.id) === strId);
+    if (!targetRev) return;
+
+    const isAdmin = activeUser && (activeUser.role === 'admin');
+    const isAuthor = activeUser && (targetRev.authorId === activeUser.id);
+
+    if (!isAdmin && !isAuthor) {
+      alert('삭제 권한이 없습니다.');
+      return;
+    }
+
+    const confirmMsg = isAdmin
+      ? '최고관리자 권한으로 이 후기를 영구 삭제하시겠습니까?'
+      : '작성하신 후기를 삭제하시겠습니까?';
+
+    if (!confirm(confirmMsg)) return;
+
+    // 1. 영구 삭제 ID 등록 (샘플 후기 및 DB 후기 재등장 방지)
+    addDeletedReviewId(strId);
+
+    // 2. 로컬 배열 제거
+    reviewsList = reviewsList.filter(r => String(r.id) !== strId);
+    localStorage.setItem('reviews', JSON.stringify(reviewsList));
+    renderReviews();
+
+    // 3. Supabase 클라우드 동기화
+    if (window.supabaseClient) {
+      if (strId.startsWith('init_')) {
+        // 기본 샘플 후기 삭제는 삭제 묘비(tombstone) 행 기록
+        window.supabaseClient.from('reviews').insert([{
+          author_id: null,
+          author_name: 'SYSTEM',
+          shop_name: `DELETED:${strId}`,
+          content: 'DELETED',
+          rating: 0
+        }]).then(({ error }) => {
+          if (error) console.warn('Supabase tombstone error:', error.message);
+        });
+      } else {
+        // 사용자 DB 후기 행 및 연관 댓글 삭제
+        const numId = parseInt(strId, 10);
+        if (!isNaN(numId)) {
+          window.supabaseClient.from('reviews').delete().eq('id', numId).then(({ error }) => {
+            if (error) console.warn('Supabase review delete error:', error.message);
+          });
+        }
+        window.supabaseClient.from('reviews').delete().like('shop_name', `COMMENT:${strId}%`).then(({ error }) => {
+          if (error) console.warn('Supabase review comments delete error:', error.message);
+        });
+      }
+    }
+
+    alert('후기가 삭제되었습니다.');
+  };
+
+  // --- 댓글 삭제 글로벌 함수 (3번/4번 본인/관리자 댓글 삭제 & Supabase 동기화) ---
+  window.deleteReviewComment = function(reviewId, commentId, e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+
+    const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : null;
+    const strRevId = String(reviewId);
+    const targetRev = reviewsList.find(r => String(r.id) === strRevId);
+    if (!targetRev || !Array.isArray(targetRev.comments)) return;
+
+    const targetComment = targetRev.comments.find(c => String(c.id) === String(commentId));
+    if (!targetComment) return;
+
+    const isAdmin = activeUser && (activeUser.role === 'admin');
+    const isCommentAuthor = activeUser && (targetComment.authorId === activeUser.id);
+
+    if (!isAdmin && !isCommentAuthor) {
+      alert('댓글 삭제 권한이 없습니다.');
+      return;
+    }
+
+    if (!confirm('댓글을 삭제하시겠습니까?')) return;
+
+    // 로컬 즉시 삭제
+    targetRev.comments = targetRev.comments.filter(c => String(c.id) !== String(commentId));
+    localStorage.setItem('reviews', JSON.stringify(reviewsList));
+    window._openedReviewComments.add(strRevId);
+    renderReviews();
+
+    // Supabase 클라우드 삭제
+    if (window.supabaseClient) {
+      const numCId = parseInt(commentId, 10);
+      if (!isNaN(numCId)) {
+        window.supabaseClient.from('reviews').delete().eq('id', numCId).then(({ error }) => {
+          if (error) console.warn('Supabase comment delete error:', error.message);
+        });
+      } else {
+        window.supabaseClient.from('reviews').delete()
+          .eq('content', targetComment.text)
+          .like('shop_name', `COMMENT:${strRevId}%`)
+          .then(({ error }) => {
+            if (error) console.warn('Supabase comment text delete error:', error.message);
+          });
+      }
+    }
+  };
+
+  // --- Supabase 클라우드 후기 & 댓글 실시간 조회 및 결합 (7번 SSOT) ---
   async function fetchSupabaseReviews() {
     if (window.supabaseClient) {
       try {
@@ -6400,53 +6640,132 @@ function initReviews() {
         if (error) {
           console.error('Supabase fetch reviews error:', error.message);
         } else if (data && data.length > 0) {
-          const mapped = data.map(r => {
-            const d = new Date(r.created_at);
-            const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+          const deletedSet = getDeletedReviewIds();
 
-            let avatar = 'fa-store';
-            if (r.shop_name.includes('카페') || r.shop_name.includes('커피') || r.shop_name.includes('디저트')) avatar = 'fa-mug-hot';
-            else if (r.shop_name.includes('헤어') || r.shop_name.includes('미용')) avatar = 'fa-scissors';
-            else if (r.shop_name.includes('국밥') || r.shop_name.includes('음식') || r.shop_name.includes('식당') || r.shop_name.includes('식사')) avatar = 'fa-bowl-food';
-            else if (r.shop_name.includes('옷') || r.shop_name.includes('의류') || r.shop_name.includes('패션')) avatar = 'fa-shirt';
-
-            return {
-              stars: r.rating || 5,
-              date: dateStr,
-              text: r.content,
-              avatar: avatar,
-              name: r.author_name,
-              shop: r.shop_name
-            };
+          // 1. 삭제 묘비(tombstone) 수집
+          data.forEach(r => {
+            if (r.shop_name && r.shop_name.startsWith('DELETED:')) {
+              deletedSet.add(r.shop_name.replace('DELETED:', ''));
+            }
           });
 
-          const localAndDb = [...mapped, ...reviewsList];
+          // 2. 댓글 수집
+          const commentsMap = {};
+          data.forEach(r => {
+            if (r.shop_name && r.shop_name.startsWith('COMMENT:')) {
+              const parts = r.shop_name.split(':');
+              const targetRevId = parts[1];
+              const authorId = parts[2] || r.author_id || '';
+              if (!commentsMap[targetRevId]) commentsMap[targetRevId] = [];
+
+              const d = new Date(r.created_at);
+              const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+              commentsMap[targetRevId].push({
+                id: r.id,
+                authorId: authorId,
+                authorName: r.author_name,
+                text: r.content,
+                date: dateStr,
+                isAdmin: Boolean(r.author_name && r.author_name.includes('관리자'))
+              });
+            }
+          });
+
+          // 3. 일반 사용자 작성 후기 수집
+          const dbReviews = [];
+          data.forEach(r => {
+            if (r.shop_name && !r.shop_name.startsWith('COMMENT:') && !r.shop_name.startsWith('DELETED:')) {
+              const strId = String(r.id);
+              if (deletedSet.has(strId)) return;
+
+              const d = new Date(r.created_at);
+              const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+              let shopName = r.shop_name;
+              let authorId = r.author_id || '';
+              if (shopName.includes('::')) {
+                const sp = shopName.split('::');
+                shopName = sp[0];
+                authorId = sp[1] || authorId;
+              }
+
+              let avatar = 'fa-store';
+              if (shopName.includes('카페') || shopName.includes('커피') || shopName.includes('디저트')) avatar = 'fa-mug-hot';
+              else if (shopName.includes('헤어') || shopName.includes('미용')) avatar = 'fa-scissors';
+              else if (shopName.includes('국밥') || shopName.includes('음식') || shopName.includes('식당') || shopName.includes('식사')) avatar = 'fa-bowl-food';
+              else if (shopName.includes('옷') || shopName.includes('의류') || shopName.includes('패션')) avatar = 'fa-shirt';
+
+              dbReviews.push({
+                id: strId,
+                authorId: authorId,
+                stars: r.rating || 5,
+                date: dateStr,
+                text: r.content,
+                avatar: avatar,
+                name: r.author_name,
+                shop: shopName,
+                comments: commentsMap[strId] || []
+              });
+            }
+          });
+
+          // 4. 기본 샘플 후기 결합 (삭제된 것 배제 + 해당 댓글 장착)
+          const activeInitial = initialReviews
+            .filter(init => !deletedSet.has(String(init.id)))
+            .map(init => {
+              const cloudComments = commentsMap[String(init.id)] || [];
+              const localComments = init.comments || [];
+              const combinedComments = [...cloudComments];
+              localComments.forEach(lc => {
+                if (!combinedComments.some(cc => cc.text === lc.text)) combinedComments.push(lc);
+              });
+              return { ...init, comments: combinedComments };
+            });
+
+          // 5. 합본 및 중복 제거
           const seen = new Set();
-          reviewsList = localAndDb.filter(el => {
-            const key = el.shop + '|' + el.text;
-            const duplicate = seen.has(key);
+          const combined = [...dbReviews, ...activeInitial];
+          reviewsList = combined.filter(el => {
+            const key = String(el.id);
+            if (seen.has(key)) return false;
             seen.add(key);
-            return !duplicate;
+            return true;
           });
 
+          localStorage.setItem('reviews', JSON.stringify(reviewsList));
           renderReviews();
         }
       } catch (e) {
-        console.error(e);
+        console.error('fetchSupabaseReviews error:', e);
       }
     }
   }
 
   fetchSupabaseReviews();
 
+  // --- 화면 렌더링 함수 ---
   function renderReviews() {
     reviewsGrid.innerHTML = '';
+    const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : null;
+    const currentUserId = activeUser ? activeUser.id : null;
+    const isAdmin = activeUser && (activeUser.role === 'admin');
 
     reviewsList.forEach((review, index) => {
       const isHidden = index >= 5;
       const card = document.createElement('div');
       card.className = `review-card glass-panel ${isHidden ? 'hidden-review' : ''}`;
+      card.setAttribute('data-review-id', review.id);
 
+      // 삭제 버튼 권한 판단 (작성자 본인 또는 최고관리자)
+      const isAuthor = currentUserId && (review.authorId === currentUserId);
+      let deleteBtnHTML = '';
+      if (isAdmin) {
+        deleteBtnHTML = `<button type="button" class="review-admin-del-btn" onclick="window.deleteReview('${review.id}', event)"><i class="fa-solid fa-trash-can"></i> 관리자 삭제</button>`;
+      } else if (isAuthor) {
+        deleteBtnHTML = `<button type="button" class="review-del-btn" onclick="window.deleteReview('${review.id}', event)"><i class="fa-solid fa-trash-can"></i> 삭제</button>`;
+      }
+
+      // 별점 출력
       let starsHTML = '';
       for (let i = 1; i <= 5; i++) {
         if (i <= review.stars) {
@@ -6456,12 +6775,65 @@ function initReviews() {
         }
       }
 
+      // 댓글 목록 출력
+      const comments = Array.isArray(review.comments) ? review.comments : [];
+      const commentCount = comments.length;
+      let commentsListHTML = '';
+
+      if (commentCount > 0) {
+        comments.forEach(c => {
+          const isCommentAuthor = currentUserId && (c.authorId === currentUserId);
+          let cDelBtn = '';
+          if (isAdmin) {
+            cDelBtn = `<button type="button" class="comment-del-btn" onclick="window.deleteReviewComment('${review.id}', '${c.id}', event)" title="관리자 삭제">[관리자 삭제]</button>`;
+          } else if (isCommentAuthor) {
+            cDelBtn = `<button type="button" class="comment-del-btn" onclick="window.deleteReviewComment('${review.id}', '${c.id}', event)" title="삭제">[삭제]</button>`;
+          }
+
+          commentsListHTML += `
+            <div class="review-comment-item">
+              <div class="comment-meta">
+                <span class="comment-author-badge ${c.isAdmin ? 'admin' : ''}">${typeof escapeHtml === 'function' ? escapeHtml(c.authorName) : c.authorName}</span>
+                <div>
+                  <span class="comment-date">${typeof escapeHtml === 'function' ? escapeHtml(c.date) : c.date}</span>
+                  ${cDelBtn}
+                </div>
+              </div>
+              <div class="comment-content">${typeof escapeHtml === 'function' ? escapeHtml(c.text) : c.text}</div>
+            </div>
+          `;
+        });
+      } else {
+        commentsListHTML = `<div style="text-align: center; color: #94a3b8; font-size: 0.74rem; padding: 6px 0;">등록된 댓글이 없습니다. 첫 댓글을 남겨보세요!</div>`;
+      }
+
+      // 댓글 입력 폼
+      let commentFormHTML = '';
+      if (activeUser) {
+        commentFormHTML = `
+          <form class="comment-input-form" onsubmit="window.submitReviewComment('${review.id}', event)">
+            <input type="text" class="comment-input-field" id="comment-input-${review.id}" placeholder="댓글을 입력하세요..." maxlength="150" required />
+            <button type="submit" class="comment-submit-btn">등록</button>
+          </form>
+        `;
+      } else {
+        commentFormHTML = `
+          <div style="text-align: center; padding: 6px; font-size: 0.75rem; color: #64748b;">
+            <a href="javascript:void(0)" onclick="if(document.getElementById('auth-modal')) document.getElementById('auth-modal').classList.add('active');" style="color: #2563eb; font-weight: 700; text-decoration: underline;">로그인</a> 후 댓글을 작성할 수 있습니다.
+          </div>
+        `;
+      }
+
       const avatarIcon = review.avatar || 'fa-store';
+      const isCommentsOpen = window._openedReviewComments.has(String(review.id));
 
       card.innerHTML = `
         <div class="review-card-header">
-            <span class="review-stars">${starsHTML}</span>
-            <span class="review-date">${typeof escapeHtml === 'function' ? escapeHtml(review.date) : review.date}</span>
+            <div class="review-header-left">
+                <span class="review-stars">${starsHTML}</span>
+                <span class="review-date">${typeof escapeHtml === 'function' ? escapeHtml(review.date) : review.date}</span>
+            </div>
+            ${deleteBtnHTML}
         </div>
         <p class="review-text">"${typeof escapeHtml === 'function' ? escapeHtml(review.text) : review.text}"</p>
         <div class="review-author">
@@ -6470,6 +6842,17 @@ function initReviews() {
                 <div class="review-name">${typeof escapeHtml === 'function' ? escapeHtml(review.name) : review.name}</div>
                 <div class="review-shop">${typeof escapeHtml === 'function' ? escapeHtml(review.shop) : review.shop}</div>
             </div>
+        </div>
+        <div class="review-actions-bar">
+            <button type="button" class="review-comment-toggle-btn" onclick="window.toggleReviewComments('${review.id}', event)">
+                <i class="fa-regular fa-comment-dots"></i> 댓글 <span id="comment-count-${review.id}">${commentCount}</span>개
+            </button>
+        </div>
+        <div class="review-comments-wrapper ${isCommentsOpen ? 'active' : ''}" id="comments-box-${review.id}">
+            <div class="review-comments-list" id="comments-list-${review.id}">
+                ${commentsListHTML}
+            </div>
+            ${commentFormHTML}
         </div>
       `;
 
@@ -6647,6 +7030,9 @@ function initReviews() {
         return;
       }
 
+      const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : null;
+      const authorId = activeUser ? activeUser.id : '';
+
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -6664,14 +7050,18 @@ function initReviews() {
       else if (shop.includes('정육') || shop.includes('고기')) avatar = 'fa-cow';
 
       const maskedName = maskId(name) + ' 사장님';
+      const newReviewId = 'rev_' + Date.now();
 
       const newReview = {
+        id: newReviewId,
+        authorId: authorId,
         stars: rating,
         date: dateStr,
         text: text,
         avatar: avatar,
         name: maskedName,
-        shop: shop
+        shop: shop,
+        comments: []
       };
 
       reviewsList = JSON.parse(localStorage.getItem('reviews')) || [];
@@ -6679,15 +7069,15 @@ function initReviews() {
       localStorage.setItem('reviews', JSON.stringify(reviewsList));
 
       if (window.supabaseClient) {
-        const activeUser = typeof getActiveUser === 'function' ? getActiveUser() : null;
         window.supabaseClient.from('reviews').insert([{
-          author_id: activeUser ? activeUser.id : null,
+          author_id: null,
           author_name: maskedName,
-          shop_name: shop,
+          shop_name: `${shop}::${authorId}`,
           content: text,
           rating: rating
         }]).then(({ error }) => {
           if (error) console.error('Supabase Sync Error:', error.message);
+          else fetchSupabaseReviews();
         });
       }
 
