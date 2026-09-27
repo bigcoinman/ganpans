@@ -366,14 +366,28 @@
           rStatus = '접수예정';
         }
 
+        const existingPhotoCount = Math.max(
+          Number(app.photosCount) || 0,
+          Number(app.photos_count) || 0,
+          (() => {
+            try {
+              const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+              return Number(m.photoCount || m.photosCount) || 0;
+            } catch(e) { return 0; }
+          })(),
+          (Array.isArray(app.photos) ? app.photos.length : 0),
+          (app.fileData ? 1 : 0)
+        );
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
+        const finalPhotosCount = existingPhotoCount > 0 ? existingPhotoCount : photosList.length;
+
         const itemObj = {
           id: String(app.id),
           appRefId: String(app.id),
           name: app.storeName || app.shopName || app.ownerName || '영업물건',
           phone: app.ownerPhone || app.phone || '',
           address: app.storeAddress || app.address || '',
-          photosCount: photosList.length,
+          photosCount: finalPhotosCount,
           receiptStatus: rStatus,
           progressStatus: pStatus,
           photos: photosList,
@@ -815,7 +829,22 @@
           app.salespersonName = '본사직접접수';
         }
 
+        // [영구 방어] 사진 카운트 및 유무 보존: 목록 경량 조회로 로컬 photos 배열이 비어있더라도 기존 photoCount를 0으로 덮어쓰지 않음
+        let memoObj = {};
+        try {
+          memoObj = typeof app.memo === 'object' ? (app.memo || {}) : JSON.parse(app.memo || '{}');
+        } catch (e) { memoObj = {}; }
+
+        const existingPhotoCount = Math.max(
+          Number(memoObj.photoCount) || 0,
+          Number(app.photosCount) || 0,
+          Number(app.photos_count) || 0,
+          (Array.isArray(app.photos) ? app.photos.length : 0),
+          (app.fileData ? 1 : 0)
+        );
         const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
+        const finalPhotoCount = existingPhotoCount > 0 ? existingPhotoCount : photosList.length;
+
         // [규칙] 영업물건으로 전환 시 기본값은 접수: '접수예정', 진행: '지원대기중'
         // 단, 이미 공단 접수 후 단계(대상자선정, 간판시공 준비중, 간판시공완료 등)로 진행 중인 건의 진행상태는 보존
         const isAlreadyAdvanced = (app.progressStatus === '대상자선정' || app.progressStatus === '간판시공 준비중' || app.progressStatus === '간판시공완료');
@@ -831,17 +860,17 @@
         // [영구 방어] app.status(심사 상태)는 관리자가 지정한 값(서류준비 & 접수대기 등)을 100% 영구 보존하며, 절대 임의로 'pending'으로 덮어쓰지 않음
 
         // memo JSON 객체 최신 동기화 (Supabase 단일 진실의 원천 보장)
-        let memoObj = {};
-        try {
-          memoObj = typeof app.memo === 'object' ? (app.memo || {}) : JSON.parse(app.memo || '{}');
-        } catch (e) { memoObj = {}; }
         memoObj.isBizItem = true;
         memoObj.receiptStatus = app.receiptStatus || '접수예정';
         memoObj.progressStatus = app.progressStatus || '지원대기중';
         memoObj.salespersonId = app.salespersonId || (targetUser ? targetUser.id : '');
         memoObj.salespersonName = app.salespersonName || (targetUser ? targetUser.name : '');
         memoObj.referrerCode = app.referrerCode || (targetUser ? targetUser.bizCode : '');
-        memoObj.photoCount = photosList.length;
+        if (finalPhotoCount > 0) {
+          memoObj.photoCount = finalPhotoCount;
+          app.photosCount = finalPhotoCount;
+          app.hasPhoto = true;
+        }
         app.memo = JSON.stringify(memoObj);
 
         const bizItem = {
@@ -849,7 +878,7 @@
           name: app.storeName || app.shopName || app.ownerName || '영업물건',
           phone: app.ownerPhone || app.phone || '',
           address: app.storeAddress || app.address || '',
-          photosCount: photosList.length,
+          photosCount: finalPhotoCount,
           receiptStatus: app.receiptStatus || '접수예정',
           progressStatus: app.progressStatus || '지원대기중',
           photos: photosList,

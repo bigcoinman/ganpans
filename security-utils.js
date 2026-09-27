@@ -498,6 +498,7 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
 
         app.photos = photos;
         app.photosCount = photos.length;
+        app.hasPhoto = photos.length > 0;
         app.fileData = fileData;
         if (Array.isArray(data.construction_photos)) {
           app.constructionPhotos = data.construction_photos;
@@ -511,6 +512,18 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
             if (m && Array.isArray(m.signDraftPhotos) && m.signDraftPhotos.length > 0) app.signDraftPhotos = m.signDraftPhotos;
             if (m && m.draftStatus) app.draftStatus = m.draftStatus;
             if (m && m.draftApprovedAt) app.draftApprovedAt = m.draftApprovedAt;
+
+            // [영구 자가 치유 SSOT] 실제 사진이 존재하는데 memo.photoCount가 0 또는 불일치하면 백그라운드에서 즉시 DB 정상 동기화
+            if (photos.length > 0 && Number(m.photoCount) !== photos.length && window.supabaseClient) {
+              m.photoCount = photos.length;
+              window.supabaseClient.from('applications')
+                .update({ memo: JSON.stringify(m) })
+                .eq('id', String(app.id))
+                .then(({ error: healErr }) => {
+                  if (healErr) console.warn('[PhotoSSOT] Memo self-healing warn:', healErr.message);
+                  else console.log(`[PhotoSSOT] ✅ 사진 개수 불일치 자동 치유 완료 (${app.id}): memo.photoCount = ${photos.length}`);
+                });
+            }
           } catch (eM) {}
         }
 
@@ -535,6 +548,7 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
           localApps[idx].photos = app.photos;
           localApps[idx].fileData = app.fileData;
           localApps[idx].photosCount = app.photosCount;
+          localApps[idx].hasPhoto = app.hasPhoto;
           if (app.constructionPhotos) localApps[idx].constructionPhotos = app.constructionPhotos;
           if (app.invoicePhotos) localApps[idx].invoicePhotos = app.invoicePhotos;
           if (app.signDraftPhotos) localApps[idx].signDraftPhotos = app.signDraftPhotos;
@@ -546,6 +560,32 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
             localStorage.setItem('applications', JSON.stringify(localApps));
           }
         }
+
+        // users.items도 동시 갱신
+        try {
+          let localUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+            ? window.DataStore.getUsers()
+            : (JSON.parse(localStorage.getItem('users')) || []);
+          let userChanged = false;
+          localUsers.forEach(u => {
+            if (u.items && Array.isArray(u.items)) {
+              u.items.forEach(it => {
+                if (String(it.id) === String(app.id) || String(it.appRefId) === String(app.id)) {
+                  it.photos = app.photos;
+                  it.photosCount = app.photosCount;
+                  userChanged = true;
+                }
+              });
+            }
+          });
+          if (userChanged) {
+            if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+              window.DataStore.saveUsers(localUsers);
+            } else {
+              localStorage.setItem('users', JSON.stringify(localUsers));
+            }
+          }
+        } catch (eUUpdate) {}
       }
     } catch (eFetch) {
       console.warn('ensureApplicationPhotosLoaded fetch error:', eFetch);
