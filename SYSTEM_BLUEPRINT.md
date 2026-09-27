@@ -107,6 +107,9 @@ graph TD
    - `toggleBizItem` (영업물건 승격/해제), `assignConstructorToBizItem`, `updateItemStatus` 등 모든 상태 전이 단계에서 `photoCount`는 절대 0으로 초기화되거나 덮어써지지 않으며, `Math.max(memo.photoCount, app.photosCount, ...)`를 통해 영구 보존된다.
 5. **온디맨드 단일 조회 및 원클릭 다운로드 보장 (On-Demand Non-blocking Download)**:
    - 대시보드 목록의 다운로드 버튼은 로컬 카운트에 의존하여 `disabled` 처리하지 않고 항상 클릭 가능하며, 클릭 시 `ensureApplicationPhotosLoaded`를 통해 Supabase DB 단일 원천으로부터 즉시 온디맨드 로딩하여 사진 열람 및 다운로드를 100% 보장한다.
+6. **최고관리자 잘못된 현장사진 개별 삭제 규격 (Admin Single Photo Deletion)**:
+   - 최고관리자만 사진 모달창(`showPhotoDownloadModal`) 내 각 사진 우측 상단 `[삭제 🗑️]` 버튼을 통해 잘못 등록된 특정 1장만 선별 삭제할 수 있으며(`window.deleteApplicationSinglePhoto`), 삭제 시 남은 사진과 `photoCount`가 0초 실시간으로 일원화 갱신된다.
+   - 모든 사진이 삭제되어 0장이 된 경우, [사진 다운로드] 버튼은 [사진 없음] 상태로 자동 변경되며 점주 대시보드에는 `[현장 사진 재등록 필요]` 배지가 표시된다.
 
 ---
 

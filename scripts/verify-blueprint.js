@@ -43,6 +43,7 @@ for (const file of jsFiles) {
 const appCode = fs.readFileSync('app.js', 'utf8');
 const dataStoreCode = fs.readFileSync('data-store.js', 'utf8');
 const blueprintCode = fs.readFileSync('SYSTEM_BLUEPRINT.md', 'utf8');
+const secUtilsCode = fs.readFileSync('security-utils.js', 'utf8');
 
 console.log('\n--- [설계도 등록 확인] SYSTEM_BLUEPRINT.md 체계 검사 ---');
 assertRule(
@@ -142,6 +143,14 @@ assertRule(
 );
 
 assertRule(
+  '[BP-03] 최고관리자 전용 잘못된 현장사진 선별 삭제(deleteApplicationSinglePhoto) 엔진 장착',
+  secUtilsCode.includes('window.deleteApplicationSinglePhoto = deleteApplicationSinglePhoto;') &&
+  secUtilsCode.includes('photos.splice(photoIndex, 1)') &&
+  appCode.includes('현장 사진 재등록 필요'),
+  '최고관리자 현장사진 개별 삭제 함수 또는 점주 재등록 안내 배지가 누락되었습니다!'
+);
+
+assertRule(
   '[BP-03] 모바일 대시보드 헤더 단일 이벤트 바인딩 준수 (Rule #4 중복 리스너 부존재)',
   !appCode.includes("toggleUserAppsMobHeader.addEventListener('click'") &&
   !appCode.includes("toggleBizItemsMobHeader.addEventListener('click'"),
@@ -189,7 +198,6 @@ assertRule(
 );
 
 console.log('\n--- [설계도-07 검증] BP-AUTH-RECOVERY (아이디 찾기 및 비밀번호 재설정) ---');
-const secUtilsCode = fs.readFileSync('security-utils.js', 'utf8');
 const indexHtmlCode = fs.readFileSync('index.html', 'utf8');
 
 assertRule(

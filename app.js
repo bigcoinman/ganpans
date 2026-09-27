@@ -2089,12 +2089,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const statusBadge = getAppStatusBadgeHtmlMob(app);
             const { count, hasPhoto } = getAppPhotoInfo(app);
 
+            const isNormalUser = Boolean(activeUser && activeUser.role !== 'business' && activeUser.role !== 'admin' && activeUser.role !== 'constructor');
+            const needPhotoBadge = (!hasPhoto && isNormalUser)
+                ? `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; font-size: 0.76rem; font-weight: 700; color: #d97706; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;" title="현장 사진 재등록이 필요합니다.">
+                    <i class="fa-solid fa-triangle-exclamation"></i> 현장 사진 재등록 필요
+                </span>`
+                : '';
+
             const downloadBtn = hasPhoto
                 ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${count} }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}">
                     <i class="fa-solid ${count > 1 ? 'fa-images' : 'fa-download'}" style="font-size: 0.76rem; color: #2563eb;"></i> ${count > 1 ? `사진 (${count}장)` : '다운로드'}
                 </button>`
-                : `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: 0 }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; color: #475569; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="현장사진 확인/다운로드">
-                    <i class="fa-solid fa-download" style="font-size: 0.76rem; color: #64748b;"></i> 다운로드
+                : `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: 0 }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; color: #94a3b8; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="현장사진 미등록 상태">
+                    <i class="fa-solid fa-camera" style="font-size: 0.76rem; color: #94a3b8;"></i> 사진 없음
                 </button>`;
 
             const card = document.createElement('div');
@@ -2120,7 +2127,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <!-- 1. 현장사진 박스 -->
                 <div style="background: #fefce8; border: 1px dashed #fde047; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
-                    <span style="font-size: 0.92rem; font-weight: 700; color: #a16207;">현장사진</span>
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                        <span style="font-size: 0.92rem; font-weight: 700; color: #a16207;">현장사진</span>
+                        ${needPhotoBadge}
+                    </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <button type="button" class="btn-upload-mob-app-photo" data-id="${app.id}" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; background: #10b981; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(16,185,129,0.2);">
                             <i class="fa-solid fa-camera"></i> 사진 촬영/등록
@@ -3216,8 +3226,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <i class="fa-solid ${finalCount > 1 ? 'fa-images' : 'fa-download'}" style="font-size: 0.76rem; color: #2563eb;"></i> ${finalCount > 1 ? `사진 (${finalCount}장)` : '다운로드'}
                                     </button>
                                 ` : `
-                                    <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: 0 }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 600; color: #475569; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="현장사진 확인/다운로드">
-                                        <i class="fa-solid fa-download" style="font-size: 0.76rem; color: #64748b;"></i> 다운로드
+                                    <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: 0 }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 600; color: #94a3b8; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="현장사진 미등록 상태">
+                                        <i class="fa-solid fa-camera" style="font-size: 0.76rem; color: #94a3b8;"></i> 사진 없음
                                     </button>
                                 `}
                             </div>

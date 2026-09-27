@@ -752,6 +752,18 @@ async function showPhotoDownloadModal(appOrId) {
     document.body.appendChild(modal);
   }
 
+  const activeUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function') 
+    ? window.DataStore.getActiveUser() 
+    : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')) || null);
+  const isAdmin = Boolean(
+    activeUser && (
+      activeUser.role === 'admin' || 
+      String(activeUser.id).toLowerCase() === 'admin' || 
+      String(activeUser.name || '').includes('최고관리자') || 
+      (activeUser.bizCode && String(activeUser.bizCode).toLowerCase() === 'admin')
+    )
+  );
+
   modal.innerHTML = `
     <div style="background:#ffffff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid #e2e8f0;">
       <div style="padding:16px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
@@ -761,7 +773,7 @@ async function showPhotoDownloadModal(appOrId) {
           </div>
           <div>
             <h3 style="margin:0;font-size:1.02rem;font-weight:700;color:#1e293b;">${escapeHtml(storeName)} 현장사진 (${photos.length}장)</h3>
-            <p style="margin:2px 0 0;font-size:0.8rem;color:#64748b;">원하시는 사진의 [다운로드] 버튼을 눌러 개별 저장하세요</p>
+            <p style="margin:2px 0 0;font-size:0.8rem;color:#64748b;">${isAdmin ? '원하시는 사진 다운로드 및 잘못된 사진 우측 상단 [삭제] 가능' : '원하시는 사진의 [다운로드] 버튼을 눌러 개별 저장하세요'}</p>
           </div>
         </div>
         <button type="button" onclick="document.getElementById('photo-download-modal').style.display='none'" style="background:none;border:none;font-size:1.4rem;color:#94a3b8;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;" title="닫기">&times;</button>
@@ -773,7 +785,12 @@ async function showPhotoDownloadModal(appOrId) {
             <div style="border-radius:10px;overflow:hidden;border:1px solid #cbd5e1;background:#f8fafc;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
               <div style="position:relative;width:100%;aspect-ratio:1/1;background:#0f172a;overflow:hidden;">
                 <img src="${sanitizeUrl(p)}" alt="사진 ${idx + 1}" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" onclick="window.open('${sanitizeUrl(p)}', '_blank');" title="클릭하여 원본 크게보기">
-                <span style="position:absolute;top:4px;left:4px;background:rgba(15,23,42,0.75);color:#ffffff;font-size:0.72rem;font-weight:700;padding:2px 6px;border-radius:4px;">#${idx + 1}</span>
+                <span style="position:absolute;top:5px;left:5px;background:rgba(15,23,42,0.8);color:#ffffff;font-size:0.72rem;font-weight:700;padding:2px 6px;border-radius:4px;">#${idx + 1}</span>
+                ${isAdmin ? `
+                  <button type="button" onclick="event.stopPropagation(); window.deleteApplicationSinglePhoto('${escapeHtml(String(app.id))}', ${idx});" style="position:absolute;top:5px;right:5px;background:rgba(220,38,38,0.92);color:#ffffff;border:1px solid rgba(255,255,255,0.4);border-radius:6px;padding:3px 7px;font-size:0.72rem;font-weight:700;display:inline-flex;align-items:center;gap:3px;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.3);transition:all 0.15s;touch-action:manipulation;" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='rgba(220,38,38,0.92)'" title="이 사진만 영구 삭제">
+                    <i class="fa-solid fa-trash-can"></i> 삭제
+                  </button>
+                ` : ''}
               </div>
               <div style="padding:8px;display:flex;justify-content:center;background:#ffffff;">
                 <a href="${sanitizeUrl(p)}" download="${safeStoreName}_현장사진_${idx + 1}.jpg" style="display:inline-flex;align-items:center;justify-content:center;gap:4px;width:100%;padding:6px 0;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;font-size:0.76rem;font-weight:700;text-decoration:none;transition:all 0.15s;" title="이 사진 개별 다운로드">
@@ -794,6 +811,190 @@ async function showPhotoDownloadModal(appOrId) {
   modal.style.display = 'flex';
 }
 window.showPhotoDownloadModal = showPhotoDownloadModal;
+
+// 4-2. 최고관리자 전용 잘못된 현장사진 개별 삭제 마스터 함수 (SSOT 단일 연동)
+async function deleteApplicationSinglePhoto(appId, photoIndex) {
+  if (!appId) return;
+
+  // 1. 최고관리자 권한 엄격 검증 (Q5)
+  const activeUser = (window.DataStore && typeof window.DataStore.getActiveUser === 'function') 
+    ? window.DataStore.getActiveUser() 
+    : (JSON.parse(localStorage.getItem('activeUser')) || JSON.parse(sessionStorage.getItem('activeUser')) || null);
+  const isAdmin = Boolean(
+    activeUser && (
+      activeUser.role === 'admin' || 
+      String(activeUser.id).toLowerCase() === 'admin' || 
+      String(activeUser.name || '').includes('최고관리자') || 
+      (activeUser.bizCode && String(activeUser.bizCode).toLowerCase() === 'admin')
+    )
+  );
+
+  if (!isAdmin) {
+    alert('최고관리자 권한만 현장 사진을 삭제할 수 있습니다.');
+    return;
+  }
+
+  // 2. 삭제 전 확인 창 (Q4)
+  const confirmMsg = `[#${photoIndex + 1}] 번 현장 사진을 영구 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.`;
+  if (!confirm(confirmMsg)) {
+    return;
+  }
+
+  // 3. 최신 신청서 데이터 온디맨드 로드 (forceReload: true)
+  let app = await ensureApplicationPhotosLoaded(appId, { forceReload: true });
+  if (!app) {
+    alert('신청서 데이터를 찾을 수 없습니다.');
+    return;
+  }
+
+  let photos = extractValidPhotos(app);
+  if (photoIndex < 0 || photoIndex >= photos.length) {
+    alert('삭제할 사진이 존재하지 않습니다.');
+    return;
+  }
+
+  // 4. 선택한 1장만 삭제 (Q2)
+  photos.splice(photoIndex, 1);
+  const newCount = photos.length;
+  const hasPhoto = newCount > 0;
+  const newFileData = hasPhoto ? photos[0] : '';
+  const newFileName = hasPhoto ? `${app.storeName || '신청점포'}_현장사진_${newCount}장` : '업로드 파일 없음';
+  const newImageUrl = hasPhoto ? (newCount === 1 ? photos[0] : JSON.stringify(photos)) : null;
+
+  // 5. memo 객체 업데이트 (Q2, Q9: 별도 메모 텍스트 없이 photoCount만 정밀 갱신)
+  let memoObj = {};
+  try {
+    memoObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+  } catch (e) { memoObj = {}; }
+
+  if (hasPhoto) {
+    memoObj.photoCount = newCount;
+  } else {
+    delete memoObj.photoCount;
+  }
+  const updatedMemoStr = JSON.stringify(memoObj);
+
+  // 6. 로컬 앱 객체 및 DataStore / localStorage 즉시 갱신 (0초 낙관적 UI)
+  app.photos = photos;
+  app.photosCount = newCount;
+  app.hasPhoto = hasPhoto;
+  app.fileData = newFileData;
+  app.fileName = newFileName;
+  app.image_url = newImageUrl;
+  app.memo = updatedMemoStr;
+
+  let allApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+    ? window.DataStore.getApplications()
+    : (JSON.parse(localStorage.getItem('applications')) || []);
+  const appIdx = allApps.findIndex(a => String(a.id) === String(appId) || String(a.appRefId) === String(appId));
+  if (appIdx !== -1) {
+    allApps[appIdx] = {
+      ...allApps[appIdx],
+      photos: photos,
+      photosCount: newCount,
+      hasPhoto: hasPhoto,
+      fileData: newFileData,
+      fileName: newFileName,
+      image_url: newImageUrl,
+      memo: updatedMemoStr,
+      updatedAt: new Date().toISOString()
+    };
+    if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+      window.DataStore.saveApplications(allApps);
+    } else {
+      localStorage.setItem('applications', JSON.stringify(allApps));
+    }
+  }
+
+  // users.items도 동기화
+  let allUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
+    ? window.DataStore.getUsers()
+    : (JSON.parse(localStorage.getItem('users')) || []);
+  let userItemsChanged = false;
+  allUsers = allUsers.map(u => {
+    if (u.items && Array.isArray(u.items)) {
+      const itIdx = u.items.findIndex(it => String(it.id) === String(appId) || String(it.appRefId) === String(appId));
+      if (itIdx !== -1) {
+        u.items[itIdx] = {
+          ...u.items[itIdx],
+          photos: photos,
+          photosCount: newCount,
+          hasPhoto: hasPhoto,
+          fileData: newFileData
+        };
+        userItemsChanged = true;
+      }
+    }
+    return u;
+  });
+  if (userItemsChanged) {
+    if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
+      window.DataStore.saveUsers(allUsers);
+    } else {
+      localStorage.setItem('users', JSON.stringify(allUsers));
+    }
+  }
+
+  // PhotoCacheManager 최신화
+  if (window.PhotoCacheManager) {
+    await window.PhotoCacheManager.set(app.id, {
+      photos: photos,
+      fileData: newFileData,
+      constructionPhotos: app.constructionPhotos || [],
+      invoicePhotos: app.invoicePhotos || []
+    });
+  }
+
+  // 7. Supabase 비동기 백그라운드 DB 갱신 (Q7)
+  if (window.supabaseClient) {
+    window.supabaseClient.from('applications')
+      .update({
+        image_url: newImageUrl,
+        memo: updatedMemoStr,
+        file_name: newFileName,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', String(app.id))
+      .then(({ error }) => {
+        if (error) console.error('[PhotoDelete] Supabase error:', error);
+        else console.log(`[PhotoDelete] ✅ Supabase DB 사진 삭제 완료 (${app.id}): 잔여 ${newCount}장`);
+      });
+
+    // users.items 동기화
+    if (userItemsChanged) {
+      allUsers.forEach(u => {
+        if (u.items && u.items.some(it => String(it.id) === String(appId) || String(it.appRefId) === String(appId))) {
+          window.supabaseClient.from('users')
+            .update({ items: u.items, updated_at: new Date().toISOString() })
+            .eq('id', String(u.id))
+            .catch(() => {});
+        }
+      });
+    }
+  }
+
+  // 8. 모달 UI 및 대시보드 0초 즉각 갱신 (Q1, Q3, Q8)
+  if (hasPhoto) {
+    showPhotoDownloadModal(app);
+    if (typeof showToast === 'function') showToast(`[#${photoIndex + 1}] 번 사진이 삭제되었습니다. (잔여 ${newCount}장)`);
+  } else {
+    const modalEl = document.getElementById('photo-download-modal');
+    if (modalEl) modalEl.style.display = 'none';
+    if (typeof showToast === 'function') showToast('현장 사진이 모두 삭제되었습니다.');
+  }
+
+  // 전역 대시보드 0초 실시간 리렌더링 (Q8: 최고관리자, 영업자, 점주 화면 동시 갱신)
+  if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob();
+  if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
+  if (typeof window.renderBizItemsMob === 'function') window.renderBizItemsMob();
+  if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob();
+  if (typeof window.renderAdminDashboard === 'function') window.renderAdminDashboard();
+  if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
+  if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
+  if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
+  if (window.DataStore && typeof window.DataStore.notifyAll === 'function') window.DataStore.notifyAll();
+}
+window.deleteApplicationSinglePhoto = deleteApplicationSinglePhoto;
 
 // 4-3. 최고관리자 및 모바일 통합 사진 업로드 & 안전 보존 마스터 함수 (SSOT)
 async function handleApplicationPhotoUploadProcess(appId, options = {}) {
