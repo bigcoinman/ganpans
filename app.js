@@ -1114,13 +1114,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (window.DataStore && typeof window.DataStore.deleteUser === 'function') {
                             window.DataStore.deleteUser(deletedUid, null, true);
                         } else {
+                            // [SSOT] DataStore.deleteUser 없을 경우 fallback — 블랙리스트 없이 DB 삭제만
                             users = users.filter(u => String(u.id) !== deletedUid);
                             saveUsersSSOT(users);
-                            try {
-                                let delUsers = JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
-                                if (!delUsers.includes(deletedUid.toLowerCase())) delUsers.push(deletedUid.toLowerCase());
-                                localStorage.setItem('deleted_user_ids', JSON.stringify(delUsers));
-                            } catch (eStorage) {}
                             if (window.SupabaseSync && typeof window.SupabaseSync.deleteUser === 'function') {
                                 window.SupabaseSync.deleteUser(deletedUid, deletedPhone);
                             }

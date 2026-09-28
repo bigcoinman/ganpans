@@ -55,10 +55,7 @@
         const raw = localStorage.getItem('users');
         let users = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(users)) users = [];
-        const deletedUserIds = JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
-        if (deletedUserIds.length > 0) {
-          users = users.filter(u => u && u.id && !deletedUserIds.includes(String(u.id).toLowerCase()));
-        }
+        // [SSOT] Supabase DB가 유일한 진실의 원천 — 로컬 블랙리스트 불필요
         return users.filter(u => u && u.id && u.role !== 'deleted');
       } catch (e) {
         console.error('[DataStore] getUsers error:', e);
@@ -148,21 +145,7 @@
       }
     },
 
-    getDeletedAppIds: function () {
-      try {
-        return JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
-      } catch (e) {
-        return [];
-      }
-    },
-
-    getDeletedUserIds: function () {
-      try {
-        return JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
-      } catch (e) {
-        return [];
-      }
-    },
+    // [SSOT] getDeletedAppIds / getDeletedUserIds 제거 — Supabase DB 삭제가 유일한 진실
 
     getDeletedInquiryIds: function () {
       try {
@@ -1708,12 +1691,7 @@
       });
       this.saveUsers(rawUsers);
 
-      // 3) 영구 삭제 회원 블랙리스트 등록 (클라우드/로컬 부활 원천 차단)
-      try {
-        let deletedUserIds = JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
-        if (!deletedUserIds.includes(targetLower)) deletedUserIds.push(targetLower);
-        localStorage.setItem('deleted_user_ids', JSON.stringify(deletedUserIds));
-      } catch (eStorage) {}
+      // 3) [SSOT] 로컬 블랙리스트 제거 — Supabase DB 삭제가 유일한 영구 삭제 수단
 
       // 4) 현재 로그인 세션이 삭제된 회원이면 즉시 세션 파기
       const active = this.getActiveUser();

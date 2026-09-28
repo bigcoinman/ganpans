@@ -2261,18 +2261,10 @@ window.SupabaseSync = {
     }
   },
 
-  // 6-1. 회원 DB 완전 영구 삭제 (최고관리자 권한 & 영구 차단 블랙리스트)
+  // 6-1. 회원 DB 완전 영구 삭제 (최고관리자 권한) — Supabase DB 삭제가 유일한 영구 삭제 수단
   async deleteUser(userId, userPhone) {
     if (!userId) return;
     const targetId = String(userId).trim();
-    const targetLower = targetId.toLowerCase();
-    try {
-      let deletedUserIds = JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
-      if (!deletedUserIds.includes(targetLower)) {
-        deletedUserIds.push(targetLower);
-        localStorage.setItem('deleted_user_ids', JSON.stringify(deletedUserIds));
-      }
-    } catch (eStorage) {}
     try {
       if (window.supabaseClient) {
         const { error } = await window.supabaseClient.from('users').delete().eq('id', targetId);
@@ -2494,10 +2486,10 @@ window.SupabaseSync = {
       }
       if (!usersErr && Array.isArray(supaUsers)) {
         const recentUserLocks = (window.DataStore && window.DataStore._recentUserUpdates) || {};
-        const deletedUserIds = JSON.parse(localStorage.getItem('deleted_user_ids') || '[]');
+        // [SSOT] Supabase에서 미반환 row(role!=='deleted')만 유효 — 로컬 블랙리스트 불필요
         const freshUsers = supaUsers
           .map(su => this.mapDbToUser(su))
-          .filter(u => u && u.id && u.role !== 'deleted' && !deletedUserIds.includes(String(u.id).trim().toLowerCase()))
+          .filter(u => u && u.id && u.role !== 'deleted')
           .map(u => {
             const uId = String(u.id).trim().toLowerCase();
             const uLock = recentUserLocks[uId];
