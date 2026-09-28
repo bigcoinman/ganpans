@@ -2709,7 +2709,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const { data: supaApps, error } = await client.from('applications').select(appColumns);
             if (error || !Array.isArray(supaApps)) return false;
 
-            const deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
             const mapper = (window.SupabaseSync && typeof window.SupabaseSync.mapDbToApp === 'function')
                 ? (sa) => window.SupabaseSync.mapDbToApp(sa)
                 : (sa) => ({
@@ -2732,13 +2731,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const freshApps = supaApps
                 .map(mapper)
-                .filter(a => {
-                    if (!a || !a.id) return false;
-                    const aid = String(a.id).trim();
-                    const aref = String(a.appRefId || '').trim();
-                    if (deletedAppIds.includes(aid) || (aref && deletedAppIds.includes(aref))) return false;
-                    return true;
-                });
+                .filter(a => a && a.id);
 
             if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
                 window.DataStore.saveApplications(freshApps);
@@ -4269,35 +4262,9 @@ document.addEventListener('DOMContentLoaded', () => {
             activeUser = activeU;
         }
 
-        // 4) applications 에서도 완전 제거 및 블랙리스트 등록
+        // 4) applications 에서도 완전 제거
         let curApps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-        let deletedAppIdsList = [];
-        try {
-            deletedAppIdsList = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
-        } catch (e) { deletedAppIdsList = []; }
-
-        curApps = curApps.filter(app => {
-            if (isMatchTarget(app)) {
-                if (app.id && !deletedAppIdsList.includes(String(app.id).trim())) {
-                    deletedAppIdsList.push(String(app.id).trim());
-                }
-                if (app.appRefId && !deletedAppIdsList.includes(String(app.appRefId).trim())) {
-                    deletedAppIdsList.push(String(app.appRefId).trim());
-                }
-                return false;
-            }
-            return true;
-        });
-
-        if (itemId && !deletedAppIdsList.includes(String(itemId).trim())) {
-            deletedAppIdsList.push(String(itemId).trim());
-        }
-        if (targetAppRefId && !deletedAppIdsList.includes(String(targetAppRefId).trim())) {
-            deletedAppIdsList.push(String(targetAppRefId).trim());
-        }
-        try {
-            localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIdsList));
-        } catch (e) {}
+        curApps = curApps.filter(app => !isMatchTarget(app));
 
         if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
             window.DataStore.saveApplications(curApps);

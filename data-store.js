@@ -14,16 +14,7 @@
     getApplications: function () {
       try {
         const apps = JSON.parse(localStorage.getItem('applications')) || [];
-        const deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
-        if (deletedAppIds.length > 0) {
-          return apps.filter(a => {
-            if (!a || !a.id) return false;
-            const aid = String(a.id).trim();
-            const aref = String(a.appRefId || '').trim();
-            return !deletedAppIds.includes(aid) && !deletedAppIds.includes(aref);
-          });
-        }
-        return apps.filter(a => a && a.id);
+        return Array.isArray(apps) ? apps.filter(a => a && a.id) : [];
       } catch (e) {
         console.error('[DataStore] getApplications error:', e);
         return [];
@@ -1657,15 +1648,8 @@
       apps = apps.filter(a => a && String(a.id).trim() !== targetId && String(a.appRefId || '').trim() !== targetId);
       this.saveApplications(apps);
 
-      // 3) 영구 삭제 블랙리스트 등록 (클라우드/로컬 부활 원천 차단)
-      try {
-        let deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
-        if (!deletedAppIds.includes(targetId)) deletedAppIds.push(targetId);
-        if (targetApp && targetApp.appRefId && !deletedAppIds.includes(String(targetApp.appRefId).trim())) {
-          deletedAppIds.push(String(targetApp.appRefId).trim());
-        }
-        localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIds));
-      } catch (eStorage) {}
+
+      // 3) 영구 삭제 완료 (로컬 찌꺼기 장부 부존재 단일 원칙)
 
       // 4) users.items 에서도 연계 물건 영구 제거
       let users = this.getUsers();
@@ -4114,56 +4098,11 @@
     if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
   };
 
-  // 🛡️ [최고관리자가 삭제한 5대 업체 전수 정리 및 영구 블랙리스트 등록 자동 실행]
-  (function cleanseGhostApplications() {
+  // 🛡️ [과거 삭제 장부 찌꺼기 자동 정화 (Clean Slate SSOT)]
+  (function cleanseResidueStorage() {
     try {
-      const explicitPurgedIds = ['B-260905-003', 'P-260919-001', 'B-260905-002', 'B-260905-001', 'P-260905-002'];
-      const rawApps = localStorage.getItem('applications');
-      let apps = rawApps ? JSON.parse(rawApps) : [];
-      let deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
-
-      let removedIds = [];
-      if (Array.isArray(apps) && apps.length > 0) {
-        apps = apps.filter(a => {
-          if (!a) return false;
-          const aid = String(a.id || '').trim();
-          const aref = String(a.appRefId || '').trim();
-          if (explicitPurgedIds.includes(aid) || explicitPurgedIds.includes(aref)) {
-            if (aid) removedIds.push(aid);
-            if (aref) removedIds.push(aref);
-            return false;
-          }
-          return true;
-        });
-
-        explicitPurgedIds.forEach(id => {
-          if (!deletedAppIds.includes(id)) deletedAppIds.push(id);
-        });
-
-        localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIds));
-        localStorage.setItem('applications', JSON.stringify(apps));
-
-        // users.items 에서도 동시 청소
-        const rawUsers = localStorage.getItem('users');
-        let users = rawUsers ? JSON.parse(rawUsers) : [];
-        if (Array.isArray(users)) {
-          users = users.map(u => {
-            if (u.items && Array.isArray(u.items)) {
-              u.items = u.items.filter(it => !explicitPurgedIds.includes(String(it.id || '').trim()) && !explicitPurgedIds.includes(String(it.appRefId || '').trim()));
-            }
-            return u;
-          });
-          localStorage.setItem('users', JSON.stringify(users));
-        }
-      } else {
-        explicitPurgedIds.forEach(id => {
-          if (!deletedAppIds.includes(id)) deletedAppIds.push(id);
-        });
-        localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIds));
-      }
-    } catch (e) {
-      console.warn('[DataStore] cleanseGhostApplications notice:', e);
-    }
+      localStorage.removeItem('deleted_app_ids');
+    } catch (e) {}
   })();
 })();
 

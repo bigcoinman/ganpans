@@ -2441,14 +2441,16 @@
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js?v=20260928_ai_perfect_v3"></script>
-    <script src="data-store.js?v=20260928_apps_sync_v4"></script>
-    <script src="security-utils.js?v=20260928_apps_sync_v4"></script>
-    <script src="kakao-notify.js?v=20260928_ai_perfect_v3"></script>
+    <script src="data-store.js?v=20260929_clean_ssot_v1"></script>
+    <script src="security-utils.js?v=20260929_clean_ssot_v1"></script>
+    <script src="kakao-notify.js?v=20260929_clean_ssot_v1"></script>
     <!-- 단일 통합 무결 컨트롤러 (모든 대화형 컴포넌트/대시보드 내장) -->
-    <script src="app.js?v=20260928_apps_sync_v2"></script>
+    <script src="app.js?v=20260929_clean_ssot_v1"></script>
     <!-- AI 비서 단일 클린 엔진 (Zero-Dependency SSOT) -->
-    <script src="ai-assistant.js?v=20260928_clean_ai_v4"></script>
+    <script src="ai-assistant.js?v=20260929_clean_ssot_v1"></script>
     <script>
+        // PC/모바일 웹 진입 시 과거 삭제 찌꺼기 스토리지 즉시 완전 정화 (Clean Slate)
+        try { localStorage.removeItem('deleted_app_ids'); } catch (e) {}
         // PC/모바일 웹 진입 시 관리자 세션이면 0.1초 만에 최신 회원 목록 및 신청서 목록 클라우드 직통 즉시 강제 갱신
         if (typeof window !== 'undefined') {
             window.addEventListener('DOMContentLoaded', function() {

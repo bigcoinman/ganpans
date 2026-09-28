@@ -1540,7 +1540,11 @@ function generateApplicationId(appsList) {
   const prefixWithHyphen = `P-${yy}${mm}${dd}-`;
   const prefixLegacy = `P-${yy}${mm}${dd}`;
 
-  const currentApps = Array.isArray(appsList) ? appsList : (JSON.parse(localStorage.getItem('applications')) || []);
+  let currentApps = (Array.isArray(appsList) && appsList.length > 0)
+    ? appsList
+    : ((window.DataStore && typeof window.DataStore.getApplications === 'function')
+        ? window.DataStore.getApplications()
+        : (JSON.parse(localStorage.getItem('applications')) || []));
 
   let maxSeq = 0;
   currentApps.forEach(app => {
@@ -2242,14 +2246,6 @@ window.SupabaseSync = {
   async deleteApplication(appId) {
     if (!appId) return;
     const targetId = String(appId).trim();
-    // 영구 차단 블랙리스트 등록
-    try {
-      let deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
-      if (!deletedAppIds.includes(targetId)) {
-        deletedAppIds.push(targetId);
-        localStorage.setItem('deleted_app_ids', JSON.stringify(deletedAppIds));
-      }
-    } catch (eStorage) {}
     try {
       if (window.supabaseClient) {
         // 1) applications 테이블에서 영구 완전 삭제
@@ -2800,14 +2796,7 @@ window.SupabaseSync = {
             }
             return appObj;
           })
-          .filter(a => {
-            if (!a || !a.id) return false;
-            const aid = String(a.id).trim();
-            const aref = String(a.appRefId || '').trim();
-            const deletedAppIds = JSON.parse(localStorage.getItem('deleted_app_ids') || '[]');
-            if (deletedAppIds.includes(aid) || (aref && deletedAppIds.includes(aref))) return false;
-            return true;
-          });
+          .filter(a => a && a.id);
 
         if (freshApps.length === 0 && localApps.length > 0 && supaApps && supaApps.length > 0) {
           console.warn('[SupabaseSync] Safety Guard: preserving local apps against transient empty freshApps');
