@@ -197,6 +197,23 @@
         if (cleaned.includes('시뮬') || cleaned.includes('가상') || cleaned.includes('디자인') || cleaned.includes('미리보기')) {
             return FAQ_DATABASE.simulator.content;
         }
+        // [추가] 경기도 외 타 지역 문의 — 최우선 매칭 (대상 조건 전에 체크)
+        if (
+            cleaned.includes('경기도이외') || cleaned.includes('경기도외') ||
+            cleaned.includes('이외지방') || cleaned.includes('다른지역') || cleaned.includes('타지역') ||
+            cleaned.includes('지방인데') || cleaned.includes('지방은') || cleaned.includes('지방도') ||
+            cleaned.includes('경기도아닌') || cleaned.includes('경기도가아닌') ||
+            cleaned.includes('서울인데') || cleaned.includes('부산인데') || cleaned.includes('인천인데') ||
+            cleaned.includes('대구인데') || cleaned.includes('광주인데') || cleaned.includes('대전인데') ||
+            cleaned.includes('울산인데') || cleaned.includes('강원') || cleaned.includes('충청') ||
+            cleaned.includes('전라') || cleaned.includes('경상') || cleaned.includes('제주') ||
+            (cleaned.includes('지방') && (cleaned.includes('안되') || cleaned.includes('가능') || cleaned.includes('신청') || cleaned.includes('지원')))
+        ) {
+            return "📍 <strong>경기도 지역만 지원 가능합니다</strong><br><br>" +
+                "경기도시장상권진흥원에서 주관하는 사업으로, <strong>경기도 내에 사업장을 두고 3년 이상 영업 중인 소상공인</strong>만 신청하실 수 있습니다.<br><br>" +
+                "• 타 시·도(서울, 부산, 인천, 충청, 전라, 경상, 강원, 제주 등)에 소재한 사업장은 아쉽게도 본 사업의 지원 대상에 해당되지 않습니다.<br><br>" +
+                "• 타 지역 거주 사업자분께서는 해당 <strong>지역 소상공인지원센터</strong> 또는 <strong>소상공인시장진흥공단(1357)</strong>에 문의하시면 지역별 유사 지원 사업을 안내받으실 수 있습니다.";
+        }
         if (cleaned.includes('대상') || cleaned.includes('조건') || cleaned.includes('자격') || cleaned.includes('제한') || cleaned.includes('제외') || cleaned.includes('누가') || cleaned.includes('기준')) {
             return FAQ_DATABASE.target.content;
         }
