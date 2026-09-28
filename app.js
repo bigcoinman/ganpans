@@ -2904,6 +2904,8 @@ document.addEventListener('DOMContentLoaded', () => {
             syncAdminDataFromSupabaseMob(true);
             if (adminActiveTab === 'users' && typeof fetchAndRenderAdminUsersFresh === 'function') {
                 fetchAndRenderAdminUsersFresh();
+            } else if (adminActiveTab === 'apps' && typeof fetchAndRenderAdminApplicationsFresh === 'function') {
+                fetchAndRenderAdminApplicationsFresh();
             }
         }
 
@@ -3079,6 +3081,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3) Render Applications list (신청서목록)
         const appsList = document.getElementById('admin-apps-list-mob');
         if (appsList) {
+            // [PC/모바일 공통 100% 직통 최신 조회] skipSync 여부와 무관하게 최신 신청서 목록 클라우드 직통 조회
+            if (typeof fetchAndRenderAdminApplicationsFresh === 'function' && !window._isFetchingAppsFresh) {
+                window._isFetchingAppsFresh = true;
+                fetchAndRenderAdminApplicationsFresh().finally(() => {
+                    setTimeout(() => { window._isFetchingAppsFresh = false; }, 1500);
+                });
+            }
+
             const searchAppsInput = document.getElementById('search-apps-input-mob');
             const qApps = searchAppsInput && searchAppsInput.value ? searchAppsInput.value.trim().slice(0, 30).toLowerCase() : '';
 

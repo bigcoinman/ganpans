@@ -2815,7 +2815,7 @@ window.SupabaseSync = {
         }
 
         const newAppsStr = JSON.stringify(freshApps);
-        if (oldAppsStr !== newAppsStr) {
+        if (oldAppsStr !== newAppsStr || force) {
           if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
             window.DataStore.saveApplications(freshApps);
             appsChanged = true;

@@ -40,8 +40,19 @@
           }
           return a;
         });
-        localStorage.setItem('applications', JSON.stringify(stampedApps));
-        return true;
+        try {
+          localStorage.setItem('applications', JSON.stringify(stampedApps));
+          return true;
+        } catch (quotaErr) {
+          console.warn('[DataStore] applications quota exceeded, pruning heavy photos...', quotaErr);
+          const lightApps = stampedApps.map(app => ({
+            ...app,
+            photos: (app.photos && app.photos.length > 0) ? [app.photos[0]] : [],
+            fileData: (app.photos && app.photos.length > 0) ? app.photos[0] : ''
+          }));
+          localStorage.setItem('applications', JSON.stringify(lightApps));
+          return true;
+        }
       } catch (e) {
         console.error('[DataStore] saveApplications error:', e);
         return false;
