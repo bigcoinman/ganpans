@@ -2223,7 +2223,9 @@ window.SupabaseSync = {
         'user_id', 'owner_name', 'phone', 'store_name', 'store_address',
         'sign_type', 'referrer_code', 'status', 'assigned_constructor_id',
         'assigned_constructor_name', 'construction_status', 'memo',
-        'image_url', 'construction_photos', 'construction_invoice', 'applied_at'
+        'image_url', 'construction_photos', 'construction_invoice', 'applied_at',
+        // [추가] 실제 사용 중이나 누락되어 있던 컬럼
+        'receipt_status', 'progress_status', 'assigned_at', 'construction_completed_at'
       ];
       const safePayload = {};
       for (const [k, v] of Object.entries(updateFields)) {
