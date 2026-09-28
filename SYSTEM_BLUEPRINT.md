@@ -131,17 +131,17 @@ graph TD
 
 ### [설계도-04] 5대 절대 원칙 (Absolute Principles)
 
-1. **제1원칙 (최고관리자/DB 절대 단일 원천 원칙 - Draft SSOT Single Origin)**:
-   - 디자인 시안 사진(`signDraftPhotos`) 및 심사상태(`draftStatus`)는 오직 최고관리자 DB(`applications.memo`)만이 유일무이한 단일 진실의 원천(SSOT)이다.
-   - 영업자나 점주의 로컬 캐시에 과거 사진이 더 많이 남아있더라도, 서버의 사진 수가 우선하며(`local.length > server.length` 판정문 영구 금지), 삭제된 사진을 로컬 캐시나 `users.items`에서 되살려내는 어떠한 좀비 부활 코드도 영구 엄격 금지한다.
+1. **제1원칙 (최고관리자/DB 절대 단일 원천 원칙 - Draft & Construction Photos SSOT Single Origin)**:
+   - 디자인 시안 사진(`signDraftPhotos`), 심사상태(`draftStatus`), 시공 후 현장사진(`constructionPhotos`)은 오직 최고관리자 DB(`applications`)만이 유일무이한 단일 진실의 원천(SSOT)이다.
+   - 영업자나 점주의 로컬 캐시에 과거 사진이 더 많이 남아있더라도 서버의 사진 수가 우선하며(`local.length > server.length` 판정문 및 `!appObj.constructionPhotos` 복원 잔재 영구 금지), 삭제된 시안 및 시공사진을 로컬 캐시나 `users.items`에서 되살려내는 어떠한 좀비 부활 코드도 영구 엄격 금지한다.
 
-2. **제2원칙 (클린 슬레이트 시안 삭제 원칙 - Clean Slate Draft Deletion)**:
-   - 시공사 또는 관리자가 시안을 1장 또는 전체 삭제하는 즉시, `applications`와 해당 물건을 공유하는 모든 사용자(`users.items` - 영업자, 시공사, 관리자)의 저장소에서 동일 인덱스의 사진이 0초 만에 동시 소멸한다.
-   - 단 1명의 유저만 저장하고 넘어가는 단편 코드를 영구 금지하고, 관련 유저 전원(`usersToSync`)을 배열로 수집하여 Supabase 클라우드에 비동기 백그라운드로 100% 동시 저장한다.
+2. **제2원칙 (클린 슬레이트 시안 & 시공 증빙 삭제 및 전 사용자 동시 저장 원칙 - Clean Slate Deletion & Multi-user Sync)**:
+   - 시공사 또는 관리자가 시안이나 시공 후 사진을 1장 또는 전체 삭제하는 즉시, `applications`와 해당 물건을 공유하는 모든 사용자(`users.items` - 영업자, 시공사, 관리자)의 저장소에서 동일 인덱스의 사진이 0초 만에 동시 소멸한다.
+   - 단 1명의 유저만 저장하고 넘어가는 단편 코드(`updatedUid`)를 영구 금지하고, 관련 유저 전원(`usersToSync`)을 배열로 수집하여 Supabase 클라우드에 비동기 백그라운드로 100% 동시 저장한다. (시안 업로드/삭제, 시공사진 업로드/삭제, 간판종류 변경, 시공상태 전이, 시공완료보고 전체 적용)
 
 3. **제3원칙 (0초 동적 모달 인플레이스 리프레시 원칙 - In-place Modal Auto Refresh)**:
-   - 최고관리자나 점주가 `[시안 확인 및 삭제]` 모달(`modal-view-draft-preview`)을 열어놓고 있는 상태에서 시공사가 사진을 추가/삭제하거나 승인 상태가 변경되면, 모달을 닫고 다시 열 필요 없이 모달 내부 DOM이 0초 만에 실시간으로 자동 갱신(`viewDraftModal(id, true)`)된다.
-   - 잔여 사진이 0장이 되면 안내와 함께 모달이 안전하게 자동 종료(`closeDraftModal()`)된다.
+   - 최고관리자나 점주가 `[시안 확인 및 삭제]` 모달(`modal-view-draft-preview`) 또는 `[시공 후 사진 확인 및 삭제]` 모달(`modal-view-const-photos-preview`)을 열어놓고 있는 상태에서 사진이 추가/삭제되거나 상태가 변경되면, 모달을 닫고 다시 열 필요 없이 모달 내부 DOM이 0초 만에 실시간으로 자동 갱신(`viewDraftModal(id, true)`, `viewConstructionPhotosModal(id, true)`)된다.
+   - 잔여 사진이 0장이 되면 안내와 함께 모달이 안전하게 자동 종료(`closeDraftModal()`, `closeConstPhotosModal()`)된다.
 
 4. **제4원칙 (크로스 탭 & Realtime 전방위 동기화 원칙 - Cross-Tab & Realtime Sync)**:
    - 시공사가 시안/시공 증빙을 변경하는 즉시 `storage` 이벤트(`ganpan_cross_tab_sync`)와 Supabase Realtime WebSocket을 동시에 발화하여, 동일 기기의 다른 탭(관리자 ↔ 시공사 ↔ 영업자)과 다른 기기(점주 모바일) 모두 0초 만에 완벽 동기화 리렌더링된다.

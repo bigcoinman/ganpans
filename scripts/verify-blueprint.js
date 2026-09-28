@@ -226,6 +226,26 @@ assertRule(
   '영업자 카드에서 applications SSOT가 아닌 영업자 items 구형 캐시를 읽는 이원화 fallback이 남아있습니다!'
 );
 
+assertRule(
+  '[BP-04] 시공사진 삭제 시 좀비 사진 부활 방어 (!appObj.constructionPhotos 복원 코드 100% 부존재)',
+  !secUtilsCode.includes('localApp.constructionPhotos.length > 0 && (!appObj.constructionPhotos || appObj.constructionPhotos.length === 0)'),
+  '서버에서 삭제된 시공사진을 로컬 캐시에서 되살리는 좀비 부활 코드가 남아있습니다!'
+);
+
+assertRule(
+  '[BP-04] 시공사진 모달 인플레이스 리프레시 및 동적 닫기 지원 (closeConstPhotosModal & isSilentRefresh)',
+  dataStoreCode.includes('window.closeConstPhotosModal') &&
+  appCode.includes('window.viewConstructionPhotosModal(window._currentOpenConstModalId, true)'),
+  '시공사진 모달의 0초 동적 리프레시 또는 닫기 함수가 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-04] 시공 사진/상태/간판종류 전수 usersToSync 적용 및 updatedUid 찌꺼기 100% 부존재',
+  !dataStoreCode.includes('updatedUid =') &&
+  !dataStoreCode.includes('let updatedUid'),
+  'data-store.js 내에 특정 1명 유저만 동기화하고 누락시키는 updatedUid 찌꺼기가 남아있습니다!'
+);
+
 console.log('\n--- [설계도-05 검증] 권한 분리 및 공용 모달 단일화 ---');
 
 assertRule(

@@ -2744,13 +2744,20 @@ window.SupabaseSync = {
                 appObj.photosCount = existingLocalCount;
                 appObj.hasPhoto = true;
               }
-              // 최신 시공사진 락 및 로컬 보존
+              // 최신 시공사진 락 및 서버 SSOT 동기화 (설계도-04 BP-CONSTRUCTOR-FLOW SSOT 단일 기준)
               const photoLock = (window.DataStore && window.DataStore._recentPhotoUpdates && (window.DataStore._recentPhotoUpdates[String(appObj.id)] || (normObjKey && window.DataStore._recentPhotoUpdates[normObjKey])));
               const isPhotoLockActive = Boolean(photoLock && (Date.now() - (photoLock.timestamp || 0) < 10000));
               if (isPhotoLockActive && Array.isArray(photoLock.constructionPhotos)) {
                 appObj.constructionPhotos = photoLock.constructionPhotos;
-              } else if (localApp.constructionPhotos && localApp.constructionPhotos.length > 0 && (!appObj.constructionPhotos || appObj.constructionPhotos.length === 0)) {
-                appObj.constructionPhotos = localApp.constructionPhotos;
+              } else {
+                let serverConstPhotos = sa.construction_photos;
+                if ((!serverConstPhotos || !Array.isArray(serverConstPhotos) || serverConstPhotos.length === 0) && sa.memo) {
+                  try {
+                    const m = typeof sa.memo === 'string' ? JSON.parse(sa.memo) : sa.memo;
+                    if (m && Array.isArray(m.constructionPhotos)) serverConstPhotos = m.constructionPhotos;
+                  } catch (e) {}
+                }
+                appObj.constructionPhotos = Array.isArray(serverConstPhotos) ? serverConstPhotos : [];
               }
               if (localApp.invoicePhotos && localApp.invoicePhotos.length > 0 && (!appObj.invoicePhotos || appObj.invoicePhotos.length === 0)) {
                 appObj.invoicePhotos = localApp.invoicePhotos;
@@ -2890,7 +2897,13 @@ window.SupabaseSync = {
                     signDraftPhotos: fa.signDraftPhotos || [],
                     draftStatus: fa.draftStatus || 'pending',
                     draftApprovedAt: fa.draftApprovedAt || null,
+                    assignedConstructorId: fa.assignedConstructorId || null,
+                    assignedConstructorName: fa.assignedConstructorName || null,
+                    assignedConstructorCode: fa.assignedConstructorCode || null,
+                    assignedConstructorPhone: fa.assignedConstructorPhone || null,
                     constructionStatus: fa.constructionStatus || 'none',
+                    constructionPhotos: Array.isArray(fa.constructionPhotos) ? fa.constructionPhotos : [],
+                    constPhotoCount: Number(fa.constPhotoCount) || (Array.isArray(fa.constructionPhotos) ? fa.constructionPhotos.length : 0),
                     memo: fa.memo || ''
                   };
                   if (existingIdx >= 0) {

@@ -4183,6 +4183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.renderStatusTab = renderStatusTab;
     window.renderBusinessDashboardMob = renderBusinessDashboardMob;
     window.renderConstructorDashboardMob = renderConstructorDashboardMob;
+    window.renderConstructorDashboard = renderConstructorDashboardMob;
     window.renderUserApplicationsMob = renderUserApplicationsMob;
     window.renderBizRegisteredItemsMob = renderBizRegisteredItemsMob;
 
@@ -4735,12 +4736,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 window._isConstUploading = true;
                 const id = e.target.dataset.id;
                 const files = Array.from(e.target.files);
-                if (files.length > 0) {
-                    if (typeof window.handleJobDraftUploadCommon === 'function') {
-                        await window.handleJobDraftUploadCommon(id, files);
-                    } else {
-                        await handleJobDraftUploadMob(id, files);
-                    }
+                if (files.length > 0 && typeof window.handleJobDraftUploadCommon === 'function') {
+                    await window.handleJobDraftUploadCommon(id, files);
                 }
                 e.target.value = '';
                 setTimeout(() => {
@@ -4760,12 +4757,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 window._isConstUploading = true;
                 const id = e.target.dataset.id;
                 const files = Array.from(e.target.files);
-                if (files.length > 0) {
-                    if (typeof window.handleJobPhotoUploadCommon === 'function') {
-                        await window.handleJobPhotoUploadCommon(id, files);
-                    } else {
-                        await handleJobPhotoUploadMob(id, files);
-                    }
+                if (files.length > 0 && typeof window.handleJobPhotoUploadCommon === 'function') {
+                    await window.handleJobPhotoUploadCommon(id, files);
                 }
                 e.target.value = '';
                 setTimeout(() => {
@@ -4781,24 +4774,28 @@ document.addEventListener('DOMContentLoaded', () => {
             window.updateJobConstructionStatusCommon(id, val);
         }
     }
+    window.updateJobConstructionStatusMob = updateJobConstructionStatusMob;
 
     async function handleJobDraftUploadMob(id, files) {
         if (typeof window.handleJobDraftUploadCommon === 'function') {
             await window.handleJobDraftUploadCommon(id, files);
         }
     }
+    window.handleJobDraftUploadMob = handleJobDraftUploadMob;
 
     async function handleJobPhotoUploadMob(id, files) {
         if (typeof window.handleJobPhotoUploadCommon === 'function') {
             await window.handleJobPhotoUploadCommon(id, files);
         }
     }
+    window.handleJobPhotoUploadMob = handleJobPhotoUploadMob;
 
     function reportJobCompletionMob(id) {
         if (typeof window.reportJobCompletionCommon === 'function') {
             window.reportJobCompletionCommon(id);
         }
     }
+    window.reportJobCompletionMob = reportJobCompletionMob;
 
     // --- Helper Utilities ---
     function escapeHtml(str) {
@@ -5701,6 +5698,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const m = document.getElementById('modal-view-draft-preview');
             if (m && m.style.display !== 'none') {
                 window.viewDraftModal(window._currentOpenDraftModalId, true);
+            }
+        }
+        // 시공 후 사진 확인 모달이 열려 있는 상태라면 0초 동적 리프레시 (In-place Refresh)
+        if (window._currentOpenConstModalId && typeof window.viewConstructionPhotosModal === 'function') {
+            const mc = document.getElementById('modal-view-const-photos-preview');
+            if (mc && mc.style.display !== 'none') {
+                window.viewConstructionPhotosModal(window._currentOpenConstModalId, true);
             }
         }
     };

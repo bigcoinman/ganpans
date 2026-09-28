@@ -2517,7 +2517,7 @@
     let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
       ? window.DataStore.getUsers()
       : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
+    let usersToSync = [];
 
     apps = apps.map(a => {
       if (String(a.id) === String(id)) {
@@ -2533,13 +2533,17 @@
 
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
+        let userChanged = false;
         const updatedItems = u.items.map(it => {
           if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
-            updatedUid = u.id;
+            userChanged = true;
             return { ...it, signType: trimmed };
           }
           return it;
         });
+        if (userChanged) {
+          usersToSync.push({ id: u.id, items: updatedItems });
+        }
         return { ...u, items: updatedItems };
       }
       return u;
@@ -2557,10 +2561,9 @@
         const app = apps.find(a => String(a.id) === String(id));
         if (app) window.SupabaseSync.upsertApplication(app);
       }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
+      usersToSync.forEach(uSync => {
+        window.SupabaseSync.updateUser(uSync.id, { items: uSync.items || [] });
+      });
     }
     if (window.DataStore) window.DataStore.notifyAll(true);
     return true;
@@ -2575,7 +2578,6 @@
     let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
       ? window.DataStore.getUsers()
       : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
     let targetMemoStr = '';
     const approvedTime = (newDraftStatus === 'admin_approved' || newDraftStatus === 'owner_approved') ? new Date().toISOString() : null;
 
@@ -3243,13 +3245,14 @@
       let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
         ? window.DataStore.getUsers()
         : (JSON.parse(localStorage.getItem('users')) || []);
-      let updatedUid = null;
+      let usersToSync = [];
       let targetMemoForUser = '';
       curUsers = curUsers.map(u => {
         if (u.items && Array.isArray(u.items)) {
+          let userChanged = false;
           const updatedItems = u.items.map(item => {
             if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-              updatedUid = u.id;
+              userChanged = true;
               let mObj = {};
               try { mObj = typeof item.memo === 'string' ? JSON.parse(item.memo) : (item.memo || {}); } catch (e) {}
               mObj.constPhotoCount = merged.length;
@@ -3258,6 +3261,9 @@
             }
             return item;
           });
+          if (userChanged) {
+            usersToSync.push({ id: u.id, items: updatedItems });
+          }
           return { ...u, items: updatedItems };
         }
         return u;
@@ -3274,10 +3280,9 @@
         if (typeof window.SupabaseSync.updateApplication === 'function') {
           window.SupabaseSync.updateApplication(id, { construction_photos: merged, memo: memoToSend });
         }
-        if (updatedUid) {
-          const u = curUsers.find(usr => usr.id === updatedUid);
-          if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-        }
+        usersToSync.forEach(uSync => {
+          window.SupabaseSync.updateUser(uSync.id, { items: uSync.items || [] });
+        });
       }
 
       // In-place 즉시 부분 갱신
@@ -3295,6 +3300,7 @@
         window.DataStore.notifyAll();
       }
       if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+      if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
     } catch (err) {
       console.error('[handleJobPhotoUploadCommon] error:', err);
     } finally {
@@ -3338,12 +3344,13 @@
     let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
       ? window.DataStore.getUsers()
       : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
+    let usersToSync = [];
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
+        let userChanged = false;
         const updatedItems = u.items.map(item => {
           if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-            updatedUid = u.id;
+            userChanged = true;
             let existing = item.constructionPhotos || item.afterPhotos || [];
             const updated = existing.filter((_, idx) => idx !== photoIndex);
             let mObj = {};
@@ -3353,6 +3360,9 @@
           }
           return item;
         });
+        if (userChanged) {
+          usersToSync.push({ id: u.id, items: updatedItems });
+        }
         return { ...u, items: updatedItems };
       }
       return u;
@@ -3372,10 +3382,9 @@
           memo: targetMemoStr
         });
       }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
+      usersToSync.forEach(uSync => {
+        window.SupabaseSync.updateUser(uSync.id, { items: uSync.items || [] });
+      });
     }
 
     if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
@@ -3389,8 +3398,12 @@
     if (remainingCount > 0) {
       window.viewConstructionPhotosModal(id);
     } else {
-      const modal = document.getElementById('modal-view-const-photos-preview');
-      if (modal) modal.style.display = 'none';
+      if (typeof window.closeConstPhotosModal === 'function') {
+        window.closeConstPhotosModal();
+      } else {
+        const modal = document.getElementById('modal-view-const-photos-preview');
+        if (modal) modal.style.display = 'none';
+      }
       if (typeof window.showToast === 'function') {
         window.showToast('모든 시공 후 사진이 삭제되었습니다.', 'info');
       } else {
@@ -3534,8 +3547,15 @@
     modal.style.display = 'flex';
   };
 
-  // --- 시공 후 사진 증빙 확인 & 관리 모달 (PC웹 & 모바일 공용 & 온디맨드 단일 조회 지원) ---
-  window.viewConstructionPhotosModal = async function (id) {
+  // --- 시공 후 사진 모달 닫기 ---
+  window.closeConstPhotosModal = function () {
+    window._currentOpenConstModalId = null;
+    const modal = document.getElementById('modal-view-const-photos-preview');
+    if (modal) modal.style.display = 'none';
+  };
+
+  // --- 시공 후 사진 증빙 확인 & 관리 모달 (PC웹 & 모바일 공용 & 온디맨드 단일 조회 지원 & 0초 동적 리프레시) ---
+  window.viewConstructionPhotosModal = async function (id, isSilentRefresh = false) {
     let targetStoreName = '';
     let targetConstName = '';
 
@@ -3650,9 +3670,15 @@
     }
 
     if (cPhotos.length === 0) {
+      if (isSilentRefresh) {
+        window.closeConstPhotosModal();
+        return;
+      }
       alert('등록된 시공 후 사진 증빙이 없습니다.');
       return;
     }
+
+    window._currentOpenConstModalId = String(id);
 
     const modalId = 'modal-view-const-photos-preview';
     let modal = document.getElementById(modalId);
@@ -3685,7 +3711,7 @@
             <h3 style="margin: 0; font-size: 1.25rem; color: #1e293b;"><i class="fa-solid fa-camera" style="color: #10b981;"></i> 시공 후 사진 증빙 (${cPhotos.length}/5장)</h3>
             <div style="font-size: 0.92rem; color: #64748b; margin-top: 4px;">상호명: <strong>${safeStoreName}</strong> | 시공사: <strong>${safeConstName}</strong></div>
           </div>
-          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
+          <button type="button" onclick="window.closeConstPhotosModal();" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
         </div>
         <div>${photosHtml}</div>
         <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px; flex-wrap: wrap; gap: 8px;">
@@ -3695,7 +3721,7 @@
               <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobPhotoUploadCommon('${id}', this.files); this.value='';">
             </label>
           ` : '<div></div>'}
-          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="padding: 8px 18px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.95rem; cursor: pointer;">닫기</button>
+          <button type="button" onclick="window.closeConstPhotosModal();" style="padding: 8px 18px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.95rem; cursor: pointer;">닫기</button>
         </div>
       </div>
     `;
@@ -4073,6 +4099,9 @@
   };
   window.reportJobCompletion = window.reportJobCompletionCommon;
   window.reportJobCompletionMob = window.reportJobCompletionCommon;
+  window.renderManagerConstProgress = function () {
+    if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
+  };
 
   // 🛡️ [최고관리자가 삭제한 5대 업체 전수 정리 및 영구 블랙리스트 등록 자동 실행]
   (function cleanseGhostApplications() {
