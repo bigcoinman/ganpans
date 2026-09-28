@@ -2622,15 +2622,20 @@
       localStorage.setItem('applications', JSON.stringify(apps));
     }
 
+    let usersToSync = [];
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
+        let userChanged = false;
         const updatedItems = u.items.map(it => {
           if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
-            updatedUid = u.id;
+            userChanged = true;
             return { ...it, draftStatus: newDraftStatus, draftApprovedAt: approvedTime, memo: targetMemoStr || it.memo };
           }
           return it;
         });
+        if (userChanged) {
+          usersToSync.push({ id: u.id, items: updatedItems });
+        }
         return { ...u, items: updatedItems };
       }
       return u;
@@ -2651,10 +2656,9 @@
         const app = apps.find(a => String(a.id) === String(id));
         if (app) window.SupabaseSync.upsertApplication(app);
       }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
+      usersToSync.forEach(uSync => {
+        window.SupabaseSync.updateUser(uSync.id, { items: uSync.items || [] });
+      });
     }
 
     if (newDraftStatus === 'admin_approved') {
@@ -2822,16 +2826,17 @@
         localStorage.setItem('applications', JSON.stringify(apps));
       }
 
-      // 4. users.items 갱신
+      // 4. users.items 갱신 (모든 관련 사용자: 영업자, 시공사, 관리자 전원 동시 갱신)
       let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
         ? window.DataStore.getUsers()
         : (JSON.parse(localStorage.getItem('users')) || []);
-      let updatedUid = null;
+      let usersToSync = [];
       curUsers = curUsers.map(u => {
         if (u.items && Array.isArray(u.items)) {
+          let userChanged = false;
           const updatedItems = u.items.map(item => {
             if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-              updatedUid = u.id;
+              userChanged = true;
               return {
                 ...item,
                 signDraftPhotos: merged,
@@ -2842,6 +2847,9 @@
             }
             return item;
           });
+          if (userChanged) {
+            usersToSync.push({ id: u.id, items: updatedItems });
+          }
           return { ...u, items: updatedItems };
         }
         return u;
@@ -2852,7 +2860,7 @@
         localStorage.setItem('users', JSON.stringify(curUsers));
       }
 
-      // 5. Supabase 비동기 백그라운드 저장
+      // 5. Supabase 비동기 백그라운드 저장 (신청서 및 전 관련 사용자 동시 저장)
       if (window.SupabaseSync) {
         if (typeof window.SupabaseSync.updateApplication === 'function') {
           const app = apps.find(a => String(a.id) === String(id));
@@ -2864,10 +2872,9 @@
           const app = apps.find(a => String(a.id) === String(id));
           if (app) window.SupabaseSync.upsertApplication(app);
         }
-        if (updatedUid) {
-          const u = curUsers.find(usr => usr.id === updatedUid);
-          if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-        }
+        usersToSync.forEach(uSync => {
+          window.SupabaseSync.updateUser(uSync.id, { items: uSync.items || [] });
+        });
       }
 
       // 6. In-place 즉시 부분 갱신 (전체 DOM 파괴 없이 0초 만에 시안 개수 반영)
@@ -2957,16 +2964,17 @@
       localStorage.setItem('applications', JSON.stringify(apps));
     }
 
-    // users.items 갱신
+    // users.items 갱신 (영업자, 시공사, 관리자 등 관련 사용자 전원 동시 갱신)
     let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
       ? window.DataStore.getUsers()
       : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
+    let usersToSync = [];
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
+        let userChanged = false;
         const updatedItems = u.items.map(item => {
           if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-            updatedUid = u.id;
+            userChanged = true;
             let existing = item.signDraftPhotos || item.designPhotos || [];
             const updated = existing.filter((_, idx) => idx !== photoIndex);
             return {
@@ -2978,6 +2986,9 @@
           }
           return item;
         });
+        if (userChanged) {
+          usersToSync.push({ id: u.id, items: updatedItems });
+        }
         return { ...u, items: updatedItems };
       }
       return u;
@@ -2989,15 +3000,14 @@
       localStorage.setItem('users', JSON.stringify(curUsers));
     }
 
-    // Supabase 연동
+    // Supabase 연동 (신청서 및 전 관련 사용자 동시 저장)
     if (window.SupabaseSync) {
       if (typeof window.SupabaseSync.updateApplication === 'function') {
         window.SupabaseSync.updateApplication(id, { memo: targetMemoStr });
       }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
+      usersToSync.forEach(uSync => {
+        window.SupabaseSync.updateUser(uSync.id, { items: uSync.items || [] });
+      });
     }
 
     if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
@@ -3010,8 +3020,8 @@
     if (remainingCount > 0) {
       window.viewDraftModal(id);
     } else {
-      const modal = document.getElementById('modal-view-draft-preview');
-      if (modal) modal.style.display = 'none';
+      if (typeof window.closeDraftModal === 'function') window.closeDraftModal();
+      else { const modal = document.getElementById('modal-view-draft-preview'); if (modal) modal.style.display = 'none'; }
       if (typeof window.showToast === 'function') {
         window.showToast('모든 간판 디자인 시안이 삭제되었습니다.', 'info');
       } else {
@@ -3064,12 +3074,13 @@
     let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
       ? window.DataStore.getUsers()
       : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
+    let usersToSync = [];
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
+        let userChanged = false;
         const updatedItems = u.items.map(item => {
           if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-            updatedUid = u.id;
+            userChanged = true;
             return {
               ...item,
               signDraftPhotos: [],
@@ -3079,6 +3090,9 @@
           }
           return item;
         });
+        if (userChanged) {
+          usersToSync.push({ id: u.id, items: updatedItems });
+        }
         return { ...u, items: updatedItems };
       }
       return u;
@@ -3094,14 +3108,13 @@
       if (typeof window.SupabaseSync.updateApplication === 'function') {
         window.SupabaseSync.updateApplication(id, { memo: targetMemoStr });
       }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
+      usersToSync.forEach(uSync => {
+        window.SupabaseSync.updateUser(uSync.id, { items: uSync.items || [] });
+      });
     }
 
-    const modal = document.getElementById('modal-view-draft-preview');
-    if (modal) modal.style.display = 'none';
+    if (typeof window.closeDraftModal === 'function') window.closeDraftModal();
+    else { const modal = document.getElementById('modal-view-draft-preview'); if (modal) modal.style.display = 'none'; }
 
     if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
       window.DataStore.notifyAll(true);
@@ -3386,8 +3399,15 @@
     }
   };
 
-  // --- 간판 디자인 시안 크게보기 & 관리 모달 (PC웹 & 모바일 공용) ---
-  window.viewDraftModal = function (id) {
+  // --- 간판 디자인 시안 모달 닫기 ---
+  window.closeDraftModal = function () {
+    window._currentOpenDraftModalId = null;
+    const modal = document.getElementById('modal-view-draft-preview');
+    if (modal) modal.style.display = 'none';
+  };
+
+  // --- 간판 디자인 시안 크게보기 & 관리 모달 (PC웹 & 모바일 공용 & 0초 동적 리프레시) ---
+  window.viewDraftModal = function (id, isSilentRefresh = false) {
     const jobs = (window.DataStore && typeof window.DataStore.getConstructionJobs === 'function')
       ? window.DataStore.getConstructionJobs()
       : [];
@@ -3419,9 +3439,15 @@
       }
     }
     if (!job || !job.signDraftPhotos || job.signDraftPhotos.length === 0) {
+      if (isSilentRefresh) {
+        window.closeDraftModal();
+        return;
+      }
       alert('등록된 간판 디자인 시안이 없습니다.');
       return;
     }
+
+    window._currentOpenDraftModalId = String(id);
 
     const modalId = 'modal-view-draft-preview';
     let modal = document.getElementById(modalId);
@@ -3470,7 +3496,7 @@
             <h3 style="margin: 0; font-size: 1.25rem; color: #1e293b;"><i class="fa-solid fa-palette" style="color: #6366f1;"></i> 간판 디자인 시안 (${job.signDraftPhotos.length}/5장)</h3>
             <div style="font-size: 0.92rem; color: #64748b; margin-top: 4px;">상호명: <strong>${safeStoreName}</strong> | 간판종류: <strong>${safeSignType}</strong> (${statusBadgeText})</div>
           </div>
-          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
+          <button type="button" onclick="window.closeDraftModal();" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; padding: 4px 8px;">&times;</button>
         </div>
         ${canManageDrafts ? `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 10px 14px; background: #eff6ff; border-radius: 6px; font-size: 0.90rem; color: #1e40af;">
@@ -3484,7 +3510,7 @@
         <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px; flex-wrap: wrap;">
           ${isOwner ? (
             (job.draftStatus !== 'owner_approved' && job.draftStatus !== 'admin_approved') ? `
-              <button type="button" onclick="window.approveDraftByOwner('${job.id}'); document.getElementById('${modalId}').style.display='none';" style="padding: 9px 18px; background: #16a34a; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(22,163,74,0.3);">
+              <button type="button" onclick="window.approveDraftByOwner('${job.id}'); window.closeDraftModal();" style="padding: 9px 18px; background: #16a34a; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(22,163,74,0.3);">
                 <i class="fa-solid fa-check"></i> 시안 승인 / 마음에 듭니다
               </button>
             ` : `
@@ -3495,13 +3521,13 @@
           ) : (
             isAdmin ? (
               (job.draftStatus !== 'owner_approved' && job.draftStatus !== 'admin_approved') ? `
-                <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved'); document.getElementById('${modalId}').style.display='none';" style="padding: 9px 18px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-check"></i> 관리자 직권 시안확정</button>
+                <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'admin_approved'); window.closeDraftModal();" style="padding: 9px 18px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-check"></i> 관리자 직권 시안확정</button>
               ` : `
-                <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'pending'); document.getElementById('${modalId}').style.display='none';" style="padding: 9px 18px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-rotate-left"></i> 시안 확정 취소</button>
+                <button type="button" onclick="window.toggleDraftApproval('${job.id}', 'pending'); window.closeDraftModal();" style="padding: 9px 18px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-rotate-left"></i> 시안 확정 취소</button>
               `
             ) : ''
           )}
-          <button type="button" onclick="document.getElementById('${modalId}').style.display='none';" style="padding: 9px 18px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.95rem; cursor: pointer;">닫기</button>
+          <button type="button" onclick="window.closeDraftModal();" style="padding: 9px 18px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 0.95rem; cursor: pointer;">닫기</button>
         </div>
       </div>
     `;
@@ -3870,16 +3896,20 @@
     let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
       ? window.DataStore.getUsers()
       : (JSON.parse(localStorage.getItem('users')) || []);
-    let updatedUid = null;
+    let usersToSync = [];
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
+        let userChanged = false;
         const updatedItems = u.items.map(item => {
           if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-            updatedUid = u.id;
+            userChanged = true;
             return { ...item, constructionStatus: val };
           }
           return item;
         });
+        if (userChanged) {
+          usersToSync.push({ id: u.id, items: updatedItems });
+        }
         return { ...u, items: updatedItems };
       }
       return u;
@@ -3894,10 +3924,9 @@
       if (typeof window.SupabaseSync.updateApplication === 'function') {
         window.SupabaseSync.updateApplication(id, { construction_status: val });
       }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
+      usersToSync.forEach(uSync => {
+        window.SupabaseSync.updateUser(uSync.id, { items: uSync.items || [] });
+      });
     }
 
     if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
@@ -3989,12 +4018,13 @@
       localStorage.setItem('applications', JSON.stringify(apps));
     }
 
-    let updatedUid = null;
+    let usersToSync = [];
     curUsers = curUsers.map(u => {
       if (u.items && Array.isArray(u.items)) {
+        let userChanged = false;
         const updatedItems = u.items.map(item => {
           if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
-            updatedUid = u.id;
+            userChanged = true;
             return {
               ...item,
               constructionStatus: 'after_construction',
@@ -4005,6 +4035,9 @@
           }
           return item;
         });
+        if (userChanged) {
+          usersToSync.push({ id: u.id, items: updatedItems });
+        }
         return { ...u, items: updatedItems };
       }
       return u;
@@ -4024,10 +4057,9 @@
           memo: targetMemoStr
         });
       }
-      if (updatedUid) {
-        const u = curUsers.find(usr => usr.id === updatedUid);
-        if (u) window.SupabaseSync.updateUser(updatedUid, { items: u.items || [] });
-      }
+      usersToSync.forEach(uSync => {
+        window.SupabaseSync.updateUser(uSync.id, { items: uSync.items || [] });
+      });
     }
 
     alert('시공 완료 보고가 정상 접수되었습니다!\n최고관리자의 최종 시공 사진 검수 후 정산 종결 처리가 진행됩니다.');

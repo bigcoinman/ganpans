@@ -183,7 +183,50 @@ assertRule(
   '모바일 대시보드 헤더에 인라인 onclick과 중복되는 addEventListener가 남아있습니다!'
 );
 
-console.log('\n--- [설계도-04/05 검증] 권한 분리 및 공용 모달 단일화 ---');
+console.log('\n--- [설계도-04 검증] BP-CONSTRUCTOR-FLOW (시공사 배정 및 시안/시공 증빙 무결성) ---');
+
+assertRule(
+  '[BP-04] 시안 SSOT 단일 기준 준수 (local.length > server.length 판정문 100% 부존재)',
+  !secUtilsCode.includes('localApp.signDraftPhotos.length > serverDraftList.length'),
+  '로컬과 서버의 시안 사진 수를 비교하여 삭제를 거부하는 구형 판정문이 남아있습니다!'
+);
+
+assertRule(
+  '[BP-04] 시안 삭제 시 좀비 사진 부활 방어 (prevItem.signDraftPhotos 복원 코드 100% 부존재)',
+  !secUtilsCode.includes('itemPayload.signDraftPhotos = prevItem.signDraftPhotos'),
+  'users.items 동기화 시 삭제된 시안 사진을 임의로 되살려내는 복원문이 남아있습니다!'
+);
+
+assertRule(
+  '[BP-04] 시안 및 시공 상태 변경 시 전 관련 사용자(usersToSync) Supabase 동시 저장 준수',
+  dataStoreCode.includes('usersToSync.forEach') &&
+  dataStoreCode.includes('deleteJobDraftPhoto') &&
+  dataStoreCode.includes('deleteJobDraftAll'),
+  '시안 업로드/삭제 시 특정 단일 유저만 저장하고 나머지가 누락되는 오류가 있습니다!'
+);
+
+assertRule(
+  '[BP-04] 시안 확인 모달 인플레이스 리프레시 및 동적 닫기 지원 (closeDraftModal & isSilentRefresh)',
+  dataStoreCode.includes('window.closeDraftModal') &&
+  dataStoreCode.includes('isSilentRefresh') &&
+  appCode.includes('window.viewDraftModal(window._currentOpenDraftModalId, true)'),
+  '시안 확인 모달의 0초 동적 리프레시 또는 닫기 함수가 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-04] 크로스 탭 0초 동기화 리스너(ganpan_cross_tab_sync) 장착 준수',
+  appCode.includes("e.key === 'ganpan_cross_tab_sync'") &&
+  dataStoreCode.includes("localStorage.setItem('ganpan_cross_tab_sync'"),
+  '탭 간 시안 변경을 0초 만에 감지하는 ganpan_cross_tab_sync 리스너가 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-04] 영업자 하단 카드 시안 SSOT 단일 기준 연결 준수 (item.signDraftPhotos 이원화 fallback 부존재)',
+  !appCode.includes('matchedApp.signDraftPhotos || matchedApp.designPhotos || item.signDraftPhotos'),
+  '영업자 카드에서 applications SSOT가 아닌 영업자 items 구형 캐시를 읽는 이원화 fallback이 남아있습니다!'
+);
+
+console.log('\n--- [설계도-05 검증] 권한 분리 및 공용 모달 단일화 ---');
 
 assertRule(
   '[BP-공통] 시안 크게보기 단일 공용 함수(viewDraftModal) 호출 준수',

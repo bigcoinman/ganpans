@@ -2756,7 +2756,7 @@ window.SupabaseSync = {
                 appObj.invoicePhotos = localApp.invoicePhotos;
               }
 
-              // 간판 디자인 시안 최신 락 및 서버 memo 동기화 (레이스 컨디션 완벽 방어)
+              // 간판 디자인 시안 최신 락 및 서버 memo 동기화 (설계도-04 BP-CONSTRUCTOR-FLOW SSOT 단일 기준)
               const draftLock = (window.DataStore && window.DataStore._recentDraftUpdates && (window.DataStore._recentDraftUpdates[String(appObj.id)] || (normObjKey && window.DataStore._recentDraftUpdates[normObjKey])));
               const isDraftLockActive = Boolean(draftLock && (Date.now() - (draftLock.timestamp || 0) < 10000));
               if (isDraftLockActive && Array.isArray(draftLock.signDraftPhotos)) {
@@ -2766,13 +2766,9 @@ window.SupabaseSync = {
                 try {
                   const sMemo = typeof sa.memo === 'string' ? JSON.parse(sa.memo) : (sa.memo || {});
                   if (sMemo && sMemo.signDraftPhotos !== undefined) {
-                    const serverDraftList = Array.isArray(sMemo.signDraftPhotos) ? sMemo.signDraftPhotos : [];
-                    // 로컬 시안이 더 많으면(방금 추가 업로드됨) 로컬 시안 우선 보존
-                    if (localApp.signDraftPhotos && localApp.signDraftPhotos.length > serverDraftList.length) {
-                      appObj.signDraftPhotos = localApp.signDraftPhotos;
-                    } else {
-                      appObj.signDraftPhotos = serverDraftList;
-                    }
+                    appObj.signDraftPhotos = Array.isArray(sMemo.signDraftPhotos) ? sMemo.signDraftPhotos : [];
+                  } else {
+                    appObj.signDraftPhotos = [];
                   }
                   if (sMemo && sMemo.draftStatus) {
                     appObj.draftStatus = sMemo.draftStatus;
@@ -2780,14 +2776,16 @@ window.SupabaseSync = {
                   if (sMemo && sMemo.draftApprovedAt) {
                     appObj.draftApprovedAt = sMemo.draftApprovedAt;
                   }
-                } catch (eMemoSync) {}
+                } catch (eMemoSync) {
+                  appObj.signDraftPhotos = [];
+                }
               }
 
-              if (appObj.signDraftPhotos === undefined && localApp.signDraftPhotos && localApp.signDraftPhotos.length > 0) {
-                appObj.signDraftPhotos = localApp.signDraftPhotos;
+              if (appObj.signDraftPhotos === undefined) {
+                appObj.signDraftPhotos = [];
               }
-              if (localApp.draftStatus && (!appObj.draftStatus || appObj.draftStatus === 'pending')) {
-                appObj.draftStatus = localApp.draftStatus;
+              if (!appObj.draftStatus) {
+                appObj.draftStatus = 'pending';
               }
               if (localApp.draftApprovedAt && !appObj.draftApprovedAt) {
                 appObj.draftApprovedAt = localApp.draftApprovedAt;
@@ -2902,10 +2900,7 @@ window.SupabaseSync = {
                       itemPayload.fileData = prevItem.fileData || prevItem.photos[0];
                     }
                     itemPayload.photosCount = Math.max(itemPayload.photosCount, Number(prevItem.photosCount) || 0);
-                    itemPayload.hasPhoto = Boolean(itemPayload.hasPhoto || prevItem.hasPhoto || (itemPayload.photosCount > 0));
-                    if ((!itemPayload.signDraftPhotos || itemPayload.signDraftPhotos.length === 0) && prevItem.signDraftPhotos && prevItem.signDraftPhotos.length > 0) {
-                      itemPayload.signDraftPhotos = prevItem.signDraftPhotos;
-                    }
+                    // [설계도-04 SSOT] 시안 사진은 최신 applications(fa.signDraftPhotos) 단일 기준을 100% 추종하며, 삭제된 사진의 임의 부활을 엄격 금지
                     if (!itemPayload.draftStatus && prevItem.draftStatus) itemPayload.draftStatus = prevItem.draftStatus;
                     if (!itemPayload.draftApprovedAt && prevItem.draftApprovedAt) itemPayload.draftApprovedAt = prevItem.draftApprovedAt;
                     targetUser.items[existingIdx] = { ...prevItem, ...itemPayload };

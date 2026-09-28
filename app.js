@@ -1373,26 +1373,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? getAppStatusBadgeHtmlMob(app) 
                 : ((typeof window.getAppStatusBadgeHtml === 'function') ? window.getAppStatusBadgeHtml(app) : '<span class="badge-status pending">사업시행 전 사전등록업체</span>');
 
-            // [설계도-03] 간판 디자인 시안 데이터 다각도 복원 (SSOT)
-            let draftPhotos = (app.signDraftPhotos && Array.isArray(app.signDraftPhotos)) ? app.signDraftPhotos : ((app.designPhotos && Array.isArray(app.designPhotos)) ? app.designPhotos : []);
+            // [설계도-04 SSOT] 간판 디자인 시안 데이터 단일 원천 복원 (applications SSOT)
+            let draftPhotos = (app.signDraftPhotos && Array.isArray(app.signDraftPhotos)) ? app.signDraftPhotos : [];
             if (draftPhotos.length === 0 && app.memo) {
                 try {
                     const parsedMemo = typeof app.memo === 'object' ? app.memo : JSON.parse(app.memo || '{}');
                     if (parsedMemo && Array.isArray(parsedMemo.signDraftPhotos)) draftPhotos = parsedMemo.signDraftPhotos;
-                } catch(e) {}
-            }
-            if (draftPhotos.length === 0) {
-                try {
-                    const allUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
-                    for (let u of allUsers) {
-                        if (u.items && Array.isArray(u.items)) {
-                            const foundItem = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
-                            if (foundItem && Array.isArray(foundItem.signDraftPhotos) && foundItem.signDraftPhotos.length > 0) {
-                                draftPhotos = foundItem.signDraftPhotos;
-                                break;
-                            }
-                        }
-                    }
                 } catch(e) {}
             }
             const draftCount = draftPhotos.length;
@@ -2141,7 +2127,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <!-- 2. 간판 디자인 시안 확인 박스 (시공사 등록 시 점주 실시간 확인/승인) -->
                 ${(() => {
-                    const draftPhotos = app.signDraftPhotos || app.designPhotos || [];
+                    const draftPhotos = (app && Array.isArray(app.signDraftPhotos)) ? app.signDraftPhotos : [];
                     const draftCount = draftPhotos.length;
                     if (draftCount === 0) return '';
                     
@@ -2298,7 +2284,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <!-- 2. 간판 디자인 시안 확인 박스 (시공사 등록 시 영업자 실시간 확인 SSOT) -->
                 ${(() => {
-                    const draftPhotos = matchedApp.signDraftPhotos || matchedApp.designPhotos || item.signDraftPhotos || [];
+                    const draftPhotos = (matchedApp && Array.isArray(matchedApp.signDraftPhotos)) ? matchedApp.signDraftPhotos : [];
                     const draftCount = draftPhotos.length;
                     if (draftCount === 0) return '';
 
@@ -5709,11 +5695,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof renderConstructorDashboardMob === 'function' && curAct && curAct.role === 'constructor') renderConstructorDashboardMob(true);
         if (typeof updateDrawerProfile === 'function') updateDrawerProfile();
         if (typeof updateHeaderAuthButton === 'function') updateHeaderAuthButton();
+
+        // 시안 확인 모달이 열려 있는 상태라면 0초 동적 리프레시 (In-place Refresh)
+        if (window._currentOpenDraftModalId && typeof window.viewDraftModal === 'function') {
+            const m = document.getElementById('modal-view-draft-preview');
+            if (m && m.style.display !== 'none') {
+                window.viewDraftModal(window._currentOpenDraftModalId, true);
+            }
+        }
     };
 
     window.addEventListener('supabase-data-synced', handleRealtimeSyncMob);
     window.addEventListener('storage', (e) => {
-        if (!e.key || e.key === 'applications' || e.key === 'users' || e.key === 'site_stats' || e.key === 'inquiries') {
+        if (!e.key || e.key === 'applications' || e.key === 'users' || e.key === 'site_stats' || e.key === 'inquiries' || e.key === 'ganpan_cross_tab_sync') {
             handleRealtimeSyncMob();
         }
     });
