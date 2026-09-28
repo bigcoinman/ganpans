@@ -94,25 +94,28 @@ graph TD
 | **6단계** | **시안 승인 & 모니터링** | `draftStatus: 'approved'` | 시안 승인 완료 상태 관제 | **점주 시안 승인 여부 실시간 확인** | **점주 시안 승인 확인 후 실물 제작 착수** | **`[시안 승인 / 마음에 듭니다]` 클릭** (최종 승인) |
 | **7단계** | **간판 시공 & 공정 완료** | `processStatus: '간판시공완료'`<br/>`constructionPhotos: [...]` | 시공 완료사진 검수 및 정산 승인 | 최종 시공 완료 확인 및 수수료 정산 대기 | **시공 완료사진(최대 5장) & 계산서 등록** | 새 간판 시공 완료 확인 및 사업 종료 |
 
-### 4. 핵심 데이터 필드 및 상태 전이 규칙
-1. **`isBizItem` (Boolean)**:
-   - `false`: 상단 신청내역 영역에만 머뭄 (공단 접수 전 초기 상태).
-   - `true`: 최고관리자가 승인한 정식 영업물건으로 하단 공정 관리 영역 진입.
-2. **`draftStatus` (String)**:
-   - `pending`: 시공사가 시안을 등록하였으나 점주가 승인하기 전 상태 (영업자 화면에 `시안 검토중` 배지 표시).
-   - `approved`: 점주가 `window.approveDraftByOwner`를 클릭하여 확정한 상태 (영업자 화면에 `점주 시안 승인완료` 녹색 배지 표시).
-3. **`processStatus` (공정 단계)**:
-   - `접수예정` ➔ `접수완료` ➔ `심사대기` ➔ `대상자선정` ➔ `간판시공 준비중` ➔ `간판시공완료`
-4. **`photoCount` 영구 불변 보존 원칙 (Photo Count SSOT Preservation)**:
+### 4. [설계도-03 절대 헌법] 5대 명확한 원칙 및 단일 일원화 보존법칙 (Permanent SSOT Preservation Law)
+
+모든 권한 화면(최고관리자, 영업자, 시공사, 일반점주)과 데이터 파이프라인은 아래 5대 절대 원칙을 영구 불변의 헌법으로 준수하며, **어떠한 독자 분기, 독자 캐시, 별도 배열 쪼개기 등 이원화도 100% 영구 엄격 금지**한다:
+
+1. **제1원칙 (단일 절대 SSOT 원칙 - 이원화 영구 금지)**:
+   - 모든 온라인 간편 지원 신청서, 승격된 영업물건, 배정된 시공물건 데이터의 단일 진실의 원천(SSOT)은 오직 **`applications` 단일 테이블**이다.
+   - `users.items`는 `applications`의 단순 투영(View/Cache)일 뿐 독자적 데이터를 갖지 않으며, 모든 CUD(생성/수정/삭제) 작업은 반드시 `applications`를 단일 기준으로 0초 일원화 처리한다.
+   - 영업자나 시공사가 독립된 별도 배열이나 독자적인 캐시 테이블을 생성하여 조작하는 모든 형태의 데이터 이원화를 영구 엄격 차단한다.
+2. **제2원칙 (상태 독립성 및 신청서 심사 상태 영구 보존 원칙 - Non-destructive State Transition)**:
+   - 좌측 [신청서 목록]의 고유 심사 상태(`app.status`: `pending`, `approved`, `unqualified`, `rejected`, `giveup`)와 우측 [영업물건 진행상황]의 공정 단계(`receiptStatus`: `업체신청`/`접수예정`/`접수완료`, `progressStatus`: `지원대기중`/`심사대기중`/`대상자선정`/`간판시공 준비중`/`간판시공완료`)는 상호 독립된 라이프사이클을 가진다.
+   - `updateItemStatus`를 통해 우측 [영업물건]의 접수나 진행상태를 아무리 변경하거나 이전 단계(`접수예정`, `지원대기중` 등)로 되돌려도, 좌측 [신청서 목록]의 고유 심사 상태인 `app.status`(`approved` 즉 `서류준비 & 접수대기` 등)는 절대 `pending`(`사업시행 전 사전등록업체`)으로 임의 리셋/덮어써지지 않고 100% 영구 보존된다.
+   - 단, 사용자가 명시적으로 지원사업 탈락(`rejected`)이나 포기(`giveup`)로 전이하는 경우에만 심사 상태가 탈락/포기로 연동된다.
+3. **제3원칙 (클린 슬레이트 시공 배정 및 배정 취소 원칙 - Clean Slate Assignment)**:
+   - 시공사 배정 시 `assignedConstructorId`, `assignedConstructorName` 등이 `applications` 단일 원천에 즉시 기록되고 10초 상태 락(`_recentStatusUpdates`)에 등록된다.
+   - 최고관리자가 시공업체 진행현황에서 [배정취소]를 실행하는 경우, 시공사 정보 초기화뿐만 아니라 시안 사진 배열(`signDraftPhotos`), 시안 심사상태(`draftStatus`), 시안 승인일자(`draftApprovedAt`) 등 모든 시안 찌꺼기를 100% 완전 소멸(Clean Slate)하여 영업물건(미배정) 상태로 안전하게 복귀한다.
+4. **제4원칙 (사진 및 시안 카운트 영구 불변 보존 원칙 - Photo Count SSOT Preservation)**:
    - `toggleBizItem` (영업물건 승격/해제), `assignConstructorToBizItem`, `updateItemStatus` 등 모든 상태 전이 단계에서 `photoCount`는 절대 0으로 초기화되거나 덮어써지지 않으며, `Math.max(memo.photoCount, app.photosCount, ...)`를 통해 영구 보존된다.
-5. **온디맨드 단일 조회 및 원클릭 다운로드 보장 (On-Demand Non-blocking Download)**:
    - 대시보드 목록의 다운로드 버튼은 로컬 카운트에 의존하여 `disabled` 처리하지 않고 항상 클릭 가능하며, 클릭 시 `ensureApplicationPhotosLoaded`를 통해 Supabase DB 단일 원천으로부터 즉시 온디맨드 로딩하여 사진 열람 및 다운로드를 100% 보장한다.
-6. **최고관리자 잘못된 현장사진 개별 삭제 규격 (Admin Single Photo Deletion)**:
-   - 최고관리자만 사진 모달창(`showPhotoDownloadModal`) 내 각 사진 우측 상단 `[삭제 🗑️]` 버튼을 통해 잘못 등록된 특정 1장만 선별 삭제할 수 있으며(`window.deleteApplicationSinglePhoto`), 삭제 시 남은 사진과 `photoCount`가 0초 실시간으로 일원화 갱신된다.
-   - 모든 사진이 삭제되어 0장이 된 경우, [사진 다운로드] 버튼은 [사진 없음] 상태로 자동 변경되며 점주 대시보드에는 `[현장 사진 재등록 필요]` 배지가 표시된다.
-7. **영업물건 접수/진행 상태 전이 시 신청서 심사 상태(app.status) 영구 보존 원칙 (Screening Status Absolute Preservation)**:
-   - `updateItemStatus`를 통해 우측 [영업물건 진행상황]의 접수상태(`receiptStatus`)나 진행상태(`progressStatus`)를 조작하거나 이전 단계(`접수예정`, `지원대기중` 등)로 되돌리더라도, 좌측 [신청서 목록]의 고유 심사 상태인 `app.status`(`approved` 즉 `서류준비 & 접수대기` 등)는 절대 `pending`(`사업시행 전 사전등록업체`)으로 임의 리셋/덮어써지지 않고 100% 영구 보존된다.
-   - 단, 사용자가 명시적으로 지원사업 탈락(`rejected`)이나 포기(`giveup`)로 전이하는 경우에만 탈락/포기 상태로 동기화된다.
+   - 최고관리자만 사진 모달창(`showPhotoDownloadModal`) 내 각 사진 우측 상단 `[삭제 🗑️]` 버튼을 통해 잘못 등록된 특정 1장만 선별 삭제할 수 있으며(`window.deleteApplicationSinglePhoto`), 삭제 시 남은 사진과 `photoCount`가 0초 실시간으로 일원화 갱신된다. 모든 사진이 삭제되어 0장이 된 경우 점주 대시보드에는 `[현장 사진 재등록 필요]` 배지가 표시된다.
+5. **제5원칙 (4대 권한 0초 실시간 동시 연동 및 단일 바인딩 원칙 - Realtime Sync & Single Binding)**:
+   - 최고관리자 ↔ 영업자 ↔ 시공업체 ↔ 일반 점주 4대 권한 화면은 `DataStore.notifyAll(true)` 및 `_recentStatusUpdates` 락에 의해 단일 반응형 웹 내에서 0초 실시간으로 100% 동시 동기화된다.
+   - 모바일 대시보드 헤더 및 버튼에 인라인 핸들러(`onclick`)와 JS `addEventListener`를 중복 바인딩하여 2회 연속 충돌 발화되는 현상을 영구 차단한다.
 
 ---
 

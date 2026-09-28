@@ -159,6 +159,24 @@ assertRule(
 );
 
 assertRule(
+  '[BP-03] 시공사 배정 취소(cancelJobConstructorAssignment) 클린 슬레이트 시안 찌꺼기 100% 소멸 준수',
+  dataStoreCode.includes('window.cancelJobConstructorAssignment = function') &&
+  dataStoreCode.includes('delete memoObj.signDraftPhotos') &&
+  dataStoreCode.includes('delete memoObj.draftStatus') &&
+  dataStoreCode.includes('signDraftPhotos: []'),
+  '시공사 배정 취소 함수에 시안 찌꺼기를 완전 초기화하는 클린 슬레이트 로직이 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-03] 설계도 보존법칙 (단일 일원화 준수 & 독자 캐시/이원화 분기 100% 부존재)',
+  !dataStoreCode.includes('biz_items_cache') &&
+  !dataStoreCode.includes('sales_apps_cache') &&
+  !appCode.includes('biz_items_cache') &&
+  dataStoreCode.includes('DataStore.notifyAll'),
+  '영업물건 또는 신청서 관리에 독자 캐시나 이원화 분기 찌꺼기가 남아있습니다!'
+);
+
+assertRule(
   '[BP-03] 모바일 대시보드 헤더 단일 이벤트 바인딩 준수 (Rule #4 중복 리스너 부존재)',
   !appCode.includes("toggleUserAppsMobHeader.addEventListener('click'") &&
   !appCode.includes("toggleBizItemsMobHeader.addEventListener('click'"),
