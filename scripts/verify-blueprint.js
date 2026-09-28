@@ -116,6 +116,14 @@ assertRule(
   'toggleBizItem 내에 구형 status="pending" 덮어쓰기 페이로드가 남아있습니다!'
 );
 
+assertRule(
+  '[BP-03] updateItemStatus 내 app.status="pending" 덮어쓰기 찌꺼기 100% 부존재 및 심사 상태 영구 보존',
+  !dataStoreCode.includes("app.status = 'pending'") &&
+  !dataStoreCode.includes('app.status = "pending"') &&
+  dataStoreCode.includes('신청서 본래의 심사 상태(app.status, 예: \'approved\' 서류준비 & 접수대기)는 절대 pending으로 덮어쓰지 않고 100% 영구 보존'),
+  'updateItemStatus 내에 신청서 심사 상태를 pending으로 덮어쓰는 찌꺼기 코드가 남아있습니다!'
+);
+
 const assignMobStart = appCode.indexOf('function assignConstructorToBizItemMob(');
 const assignMobEnd = appCode.indexOf('window.assignConstructorToBizItemMob = assignConstructorToBizItemMob;', assignMobStart);
 const assignMobBody = (assignMobStart !== -1 && assignMobEnd !== -1) ? appCode.slice(assignMobStart, assignMobEnd) : '';

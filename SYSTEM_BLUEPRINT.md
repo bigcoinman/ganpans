@@ -110,6 +110,9 @@ graph TD
 6. **최고관리자 잘못된 현장사진 개별 삭제 규격 (Admin Single Photo Deletion)**:
    - 최고관리자만 사진 모달창(`showPhotoDownloadModal`) 내 각 사진 우측 상단 `[삭제 🗑️]` 버튼을 통해 잘못 등록된 특정 1장만 선별 삭제할 수 있으며(`window.deleteApplicationSinglePhoto`), 삭제 시 남은 사진과 `photoCount`가 0초 실시간으로 일원화 갱신된다.
    - 모든 사진이 삭제되어 0장이 된 경우, [사진 다운로드] 버튼은 [사진 없음] 상태로 자동 변경되며 점주 대시보드에는 `[현장 사진 재등록 필요]` 배지가 표시된다.
+7. **영업물건 접수/진행 상태 전이 시 신청서 심사 상태(app.status) 영구 보존 원칙 (Screening Status Absolute Preservation)**:
+   - `updateItemStatus`를 통해 우측 [영업물건 진행상황]의 접수상태(`receiptStatus`)나 진행상태(`progressStatus`)를 조작하거나 이전 단계(`접수예정`, `지원대기중` 등)로 되돌리더라도, 좌측 [신청서 목록]의 고유 심사 상태인 `app.status`(`approved` 즉 `서류준비 & 접수대기` 등)는 절대 `pending`(`사업시행 전 사전등록업체`)으로 임의 리셋/덮어써지지 않고 100% 영구 보존된다.
+   - 단, 사용자가 명시적으로 지원사업 탈락(`rejected`)이나 포기(`giveup`)로 전이하는 경우에만 탈락/포기 상태로 동기화된다.
 
 ---
 
