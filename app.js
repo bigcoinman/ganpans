@@ -2710,16 +2710,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         renderAdminDashboardMob(true);
-        if (tabName === 'users') {
+        if (tabName === 'users' || tabName === 'apps') {
             syncAdminDataFromSupabaseMob(true);
-            if (typeof fetchAndRenderAdminUsersFresh === 'function') {
-                fetchAndRenderAdminUsersFresh();
-            }
-        } else if (tabName === 'apps') {
-            syncAdminDataFromSupabaseMob(true);
-            if (typeof fetchAndRenderAdminApplicationsFresh === 'function') {
-                fetchAndRenderAdminApplicationsFresh();
-            }
         }
     };
 
@@ -2735,171 +2727,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderAdminDashboardMob(true);
         }
     }
-
-    // [최고관리자 회원정보관리 직통 클라우드 최신 조회] 캐시 지연 없이 Supabase users 테이블에서 실시간 0초 직통 로드
-    async function fetchAndRenderAdminUsersFresh() {
-        const allUsersListMob = document.getElementById('admin-all-users-list-mob');
-        if (!allUsersListMob) return false;
-
-        let client = window.supabaseClient;
-        if (!client && typeof initGlobalSupabaseClient === 'function') {
-            client = initGlobalSupabaseClient();
-        }
-        if (!client && typeof window !== 'undefined' && window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-            try {
-                client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-                window.supabaseClient = client;
-            } catch (e) {}
-        }
-        if (!client) return false;
-
-        try {
-            const userColumns = 'id, name, email, phone, address, role, biz_code, const_code, conversion_status, pending_business_name, pending_license_number, items, created_at';
-            const { data: supaUsers, error } = await client.from('users').select(userColumns);
-            if (error || !Array.isArray(supaUsers) || supaUsers.length === 0) return false;
-
-            const mapper = (window.SupabaseSync && typeof window.SupabaseSync.mapDbToUser === 'function')
-                ? (su) => window.SupabaseSync.mapDbToUser(su)
-                : (su) => ({
-                    id: su.id,
-                    name: su.name || '',
-                    phone: su.phone || '',
-                    email: su.email || '',
-                    address: su.address || '',
-                    role: su.role || 'normal',
-                    bizCode: su.biz_code || null,
-                    constCode: su.const_code || null,
-                    conversionStatus: su.conversion_status || 'none',
-                    pendingBusinessName: su.pending_business_name || '',
-                    pendingLicenseNumber: su.pending_license_number || '',
-                    createdAt: su.created_at || new Date().toISOString(),
-                    items: Array.isArray(su.items) ? su.items : []
-                });
-
-            const freshUsers = supaUsers.map(mapper).filter(u => u && u.id && u.role !== 'deleted');
-
-            // admin 계정 보존
-            if (!freshUsers.some(u => String(u.id).toLowerCase() === 'admin')) {
-                const localUsers = JSON.parse(localStorage.getItem('users')) || [];
-                const localAdmin = localUsers.find(u => String(u.id).toLowerCase() === 'admin');
-                freshUsers.unshift(localAdmin || { id: 'admin', name: '최고관리자', role: 'admin', phone: '010-0000-0000' });
-            }
-
-            if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-                window.DataStore.saveUsers(freshUsers);
-            } else {
-                localStorage.setItem('users', JSON.stringify(freshUsers));
-            }
-
-            renderAdminDashboardMob(true);
-            return true;
-        } catch (err) {
-            console.warn('[fetchAndRenderAdminUsersFresh] error:', err);
-            return false;
-        }
-    }
-    window.fetchAndRenderAdminUsersFresh = fetchAndRenderAdminUsersFresh;
-
-    // [최고관리자 신청서목록 직통 클라우드 최신 조회] 캐시 지연 없이 Supabase applications 테이블에서 실시간 0초 직통 로드
-    async function fetchAndRenderAdminApplicationsFresh() {
-        const appsListMob = document.getElementById('admin-apps-list-mob');
-        if (!appsListMob) return false;
-
-        let client = window.supabaseClient;
-        if (!client && typeof initGlobalSupabaseClient === 'function') {
-            client = initGlobalSupabaseClient();
-        }
-        if (!client && typeof window !== 'undefined' && window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-            try {
-                client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-                window.supabaseClient = client;
-            } catch (e) {}
-        }
-        if (!client) return false;
-
-        try {
-            const appColumns = 'id, user_id, owner_name, phone, store_name, store_address, sign_type, referrer_code, status, assigned_constructor_id, assigned_constructor_name, construction_status, memo, applied_at, created_at';
-            const { data: supaApps, error } = await client.from('applications').select(appColumns);
-            if (error || !Array.isArray(supaApps)) return false;
-
-            const mapper = (window.SupabaseSync && typeof window.SupabaseSync.mapDbToApp === 'function')
-                ? (sa) => window.SupabaseSync.mapDbToApp(sa)
-                : (sa) => ({
-                    id: sa.id,
-                    userId: sa.user_id,
-                    ownerName: sa.owner_name,
-                    ownerPhone: sa.phone,
-                    storeName: sa.store_name,
-                    storeAddress: sa.store_address,
-                    signType: sa.sign_type,
-                    referrerCode: sa.referrer_code,
-                    status: sa.status || 'pending',
-                    assignedConstructorId: sa.assigned_constructor_id,
-                    assignedConstructorName: sa.assigned_constructor_name,
-                    constructionStatus: sa.construction_status || 'before_construction',
-                    memo: sa.memo,
-                    appliedAt: sa.applied_at || sa.created_at,
-                    createdAt: sa.created_at
-                });
-
-            const localApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
-                ? window.DataStore.getApplications()
-                : (JSON.parse(localStorage.getItem('applications')) || []);
-            const recentLocks = (window.DataStore && window.DataStore._recentStatusUpdates) || {};
-
-            const freshApps = supaApps
-                .map(mapper)
-                .filter(a => a && a.id)
-                .map(appObj => {
-                    const normObjId = String(appObj.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-                    const localApp = localApps.find(la => {
-                        if (!la) return false;
-                        const laid = String(la.id || '').trim().toLowerCase();
-                        const laref = String(la.appRefId || '').trim().toLowerCase();
-                        const objid = String(appObj.id || '').trim().toLowerCase();
-                        if (laid === objid || laref === objid) return true;
-                        if (normObjId && (laid.replace(/[^a-zA-Z0-9]/g, '') === normObjId || laref.replace(/[^a-zA-Z0-9]/g, '') === normObjId)) return true;
-                        return false;
-                    });
-                    if (localApp) {
-                        const lock = recentLocks[String(appObj.id)] || (normObjId && recentLocks[normObjId]);
-                        const isLockActive = Boolean(lock && (Date.now() - (lock.timestamp || 0) < 30000));
-                        if (isLockActive) {
-                            if (lock.status !== undefined) appObj.status = lock.status;
-                            if (lock.receiptStatus !== undefined) appObj.receiptStatus = lock.receiptStatus;
-                            if (lock.progressStatus !== undefined) appObj.progressStatus = lock.progressStatus;
-                            if (lock.isBizItem !== undefined) appObj.isBizItem = lock.isBizItem;
-                            if (lock.memo !== undefined) appObj.memo = lock.memo;
-                            if (lock.assignedConstructorId !== undefined) appObj.assignedConstructorId = lock.assignedConstructorId;
-                            if (lock.assignedConstructorName !== undefined) appObj.assignedConstructorName = lock.assignedConstructorName;
-                            if (lock.constructionStatus !== undefined) appObj.constructionStatus = lock.constructionStatus;
-                            if (lock.salespersonId !== undefined) appObj.salespersonId = lock.salespersonId;
-                            if (lock.salespersonName !== undefined) appObj.salespersonName = lock.salespersonName;
-                            if (lock.referrerCode !== undefined) {
-                                appObj.referrerCode = lock.referrerCode;
-                                appObj.referrer_code = lock.referrerCode;
-                            }
-                        } else {
-                            if (localApp.isBizItem !== undefined && appObj.isBizItem === undefined) appObj.isBizItem = localApp.isBizItem;
-                        }
-                    }
-                    return appObj;
-                });
-
-            if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-                window.DataStore.saveApplications(freshApps);
-            } else {
-                localStorage.setItem('applications', JSON.stringify(freshApps));
-            }
-
-            renderAdminDashboardMob(true);
-            return true;
-        } catch (err) {
-            console.warn('[fetchAndRenderAdminApplicationsFresh] error:', err);
-            return false;
-        }
-    }
-    window.fetchAndRenderAdminApplicationsFresh = fetchAndRenderAdminApplicationsFresh;
 
 
 
@@ -3048,13 +2875,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!skipSync) {
             syncAdminDataFromSupabaseMob(true);
-            if (adminActiveTab === 'users' && typeof fetchAndRenderAdminUsersFresh === 'function') {
-                fetchAndRenderAdminUsersFresh();
-            } else if (adminActiveTab === 'apps' && typeof fetchAndRenderAdminApplicationsFresh === 'function') {
-                fetchAndRenderAdminApplicationsFresh();
-            }
         }
-
 
         // SSOT 유저 목록을 최상단에서 일괄 로드
         let allStoreUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
@@ -3064,14 +2885,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // 0) Render All Users list (회원정보관리)
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');
         if (allUsersListMob) {
-            // [PC/모바일 공통 100% 직통 최신 조회] skipSync가 아닐 때만 백그라운드 클라우드 직통 조회 (낙관적 UI 즉시 보존)
-            if (!skipSync && typeof fetchAndRenderAdminUsersFresh === 'function' && !window._isFetchingUsersFresh) {
-                window._isFetchingUsersFresh = true;
-                fetchAndRenderAdminUsersFresh().finally(() => {
-                    setTimeout(() => { window._isFetchingUsersFresh = false; }, 1500);
-                });
-            }
-
             let displayUsers = allStoreUsers.filter(u => u && u.id && u.role !== 'deleted');
 
             const sortFn = (typeof window.sortUsersLatestFirst === 'function' ? window.sortUsersLatestFirst : null);
@@ -3227,14 +3040,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3) Render Applications list (신청서목록)
         const appsList = document.getElementById('admin-apps-list-mob');
         if (appsList) {
-            // [PC/모바일 공통 100% 직통 최신 조회] skipSync가 아닐 때만 백그라운드 클라우드 직통 조회 (낙관적 UI 즉시 보존)
-            if (!skipSync && typeof fetchAndRenderAdminApplicationsFresh === 'function' && !window._isFetchingAppsFresh) {
-                window._isFetchingAppsFresh = true;
-                fetchAndRenderAdminApplicationsFresh().finally(() => {
-                    setTimeout(() => { window._isFetchingAppsFresh = false; }, 1500);
-                });
-            }
-
             const searchAppsInput = document.getElementById('search-apps-input-mob');
             const qApps = searchAppsInput && searchAppsInput.value ? searchAppsInput.value.trim().slice(0, 30).toLowerCase() : '';
 

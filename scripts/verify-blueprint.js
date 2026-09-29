@@ -378,7 +378,9 @@ const ghostPatterns = [
   'sales_draft_cache',
   'find_id_cache',
   'find_pw_cache',
-  'max_size = 1200'
+  'max_size = 1200',
+  'fetchAndRenderAdminApplicationsFresh',
+  'fetchAndRenderAdminUsersFresh'
 ];
 for (const pattern of ghostPatterns) {
   assertRule(
