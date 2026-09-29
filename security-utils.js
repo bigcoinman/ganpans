@@ -2539,11 +2539,19 @@ window.SupabaseSync = {
                 return laid === itIdStr || laref === itIdStr || (normItId && (laid.replace(/[^a-zA-Z0-9]/g, '') === normItId || laref.replace(/[^a-zA-Z0-9]/g, '') === normItId));
               });
               if (matchedApp) {
+                let itMemoObj = {};
+                try { itMemoObj = typeof it.memo === 'string' ? JSON.parse(it.memo) : (it.memo || {}); } catch(e) {}
+                itMemoObj.receiptStatus = matchedApp.receiptStatus !== undefined ? matchedApp.receiptStatus : it.receiptStatus;
+                itMemoObj.progressStatus = matchedApp.progressStatus !== undefined ? matchedApp.progressStatus : it.progressStatus;
                 return {
                   ...it,
-                  receiptStatus: matchedApp.receiptStatus || it.receiptStatus,
-                  progressStatus: matchedApp.progressStatus || it.progressStatus,
-                  status: matchedApp.status || it.status
+                  receiptStatus: matchedApp.receiptStatus !== undefined ? matchedApp.receiptStatus : it.receiptStatus,
+                  progressStatus: matchedApp.progressStatus !== undefined ? matchedApp.progressStatus : it.progressStatus,
+                  status: matchedApp.status !== undefined ? matchedApp.status : it.status,
+                  assignedConstructorId: matchedApp.assignedConstructorId !== undefined ? matchedApp.assignedConstructorId : (it.assignedConstructorId || ''),
+                  assignedConstructorName: matchedApp.assignedConstructorName !== undefined ? matchedApp.assignedConstructorName : (it.assignedConstructorName || ''),
+                  constructionStatus: matchedApp.constructionStatus !== undefined ? matchedApp.constructionStatus : (it.constructionStatus || 'before_construction'),
+                  memo: JSON.stringify(itMemoObj)
                 };
               }
               return it;
@@ -2706,19 +2714,7 @@ window.SupabaseSync = {
                 appObj.updatedAt = new Date().toISOString();
               }
 
-              // [시공사 배정 정합성 영구 방어] 시공사가 이미 배정된 건은 진행상태가 '지원대기중'이나 '심사대기중'으로 다운그레이드되지 않도록 보장 (블루프린트 4단계 SSOT)
-              if (appObj.assignedConstructorId || localApp.assignedConstructorId) {
-                if (!appObj.progressStatus || appObj.progressStatus === '지원대기중' || appObj.progressStatus === '심사대기중' || appObj.progressStatus === 'pending' || appObj.progressStatus === 'none') {
-                  appObj.progressStatus = '대상자선정';
-                }
-                if (appObj.receiptStatus === '접수예정' || !appObj.receiptStatus) {
-                  appObj.receiptStatus = '접수완료';
-                }
-                if (!appObj.assignedConstructorId && localApp.assignedConstructorId) {
-                  appObj.assignedConstructorId = localApp.assignedConstructorId;
-                  appObj.assignedConstructorName = localApp.assignedConstructorName || '';
-                }
-              }
+              // [SSOT 보존] 최고관리자가 설정한 progressStatus 및 receiptStatus를 절대 임의 변조하지 않음 (단일 진실의 원천 100% 보존)
               // 로컬 캐시된 고용량 사진 보존 vs 실서버 최신 변경 감지
               const serverPhotoCount = (() => {
                 try {

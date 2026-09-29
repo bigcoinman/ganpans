@@ -1870,38 +1870,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<div style="width: 100%;">${preBadgeHtml}</div>`;
         }
 
-        // 일반회원(점주) 또는 비회원 점주 전용: users.items에서 최신 공단 접수/진행상황 실시간 다각도 매칭 폴백
-        if (!rStatus || !pStatus || !isBizItem || !constName) {
+        // 일반회원(점주) 또는 비회원 점주: memo JSON으로부터 최신 상태 보충 (단일 원천 applications SSOT 준수)
+        if (!rStatus || !pStatus) {
             try {
-                const allUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function') ? window.DataStore.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
-                const appIdStr = String(app.id || '').trim().toLowerCase();
-                const appName = String(app.storeName || app.shopName || app.name || '').trim().toLowerCase();
-                const appPhone = String(app.ownerPhone || app.phone || '').replace(/[^0-9]/g, '');
-
-                for (let u of allUsers) {
-                    if (u.items && Array.isArray(u.items)) {
-                        for (let it of u.items) {
-                            const itId = String(it.id || '').trim().toLowerCase();
-                            const itRef = String(it.appRefId || '').trim().toLowerCase();
-                            const itName = String(it.name || '').trim().toLowerCase();
-                            const itPhone = String(it.phone || '').replace(/[^0-9]/g, '');
-
-                            const matchId = (appIdStr && (itId === appIdStr || itRef === appIdStr));
-                            const matchName = (appName && itName && (appName.includes(itName) || itName.includes(appName)));
-                            const matchPhone = (appPhone && itPhone && appPhone === itPhone);
-
-                            if (matchId || (matchName && matchPhone) || (matchName && app.ownerName && it.ownerName === app.ownerName)) {
-                                isBizItem = true;
-                                if (!rStatus && it.receiptStatus) rStatus = it.receiptStatus;
-                                if (!pStatus && it.progressStatus) pStatus = it.progressStatus;
-                                if (!constName && (it.assignedConstructorName || it.assignedConstructorId)) {
-                                    constName = it.assignedConstructorName || it.assignedConstructorId;
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
+                const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+                if (!rStatus && m.receiptStatus) rStatus = m.receiptStatus;
+                if (!pStatus && m.progressStatus) pStatus = m.progressStatus;
             } catch (e) {}
         }
 
@@ -1977,7 +1951,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (s === '간판시공 준비중' || s === 'in_construction' || s === '시공 준비중' || s === '간판 시공 중' || s === '시공준비') {
             return '<span style="background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; padding: 3px 8px; border-radius: 4px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-paint-roller"></i> 간판시공 준비중</span>';
         }
-        if (s === '대상자선정' || s === '선정' || s === '승인 완료' || s === '승인완료' || s === 'approved' || s === 'before_construction' || s === '시공 전' || s === '시공사 배정 (시공 전)' || s === '서류 심사 통과' || s === '현장 실사 중' || s === '지원금 최종 승인') {
+        if (s === '대상자선정' || s === '선정' || s === '대상자 선정') {
             return '<span style="background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 4px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
         }
         if (s === '심사대기' || s === '심사 대기' || s === '심사대기중' || s === '서류 보완 필요') {

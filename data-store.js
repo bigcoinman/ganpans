@@ -1235,12 +1235,20 @@
             const itRef = String(it.appRefId || '').trim().toLowerCase();
             if (itId === targetIdStr.toLowerCase() || itRef === targetIdStr.toLowerCase() || (normTargetId && (itId.replace(/[^a-zA-Z0-9]/g, '') === normTargetId || itRef.replace(/[^a-zA-Z0-9]/g, '') === normTargetId))) {
               userItemModified = true;
+              let itMemoObj = {};
+              try { itMemoObj = typeof it.memo === 'string' ? JSON.parse(it.memo) : (it.memo || {}); } catch(e) {}
+              if (targetApp) {
+                itMemoObj.receiptStatus = targetApp.receiptStatus;
+                itMemoObj.progressStatus = targetApp.progressStatus;
+                itMemoObj.isBizItem = true;
+              }
               return {
                 ...it,
                 receiptStatus: targetApp ? targetApp.receiptStatus : it.receiptStatus,
                 progressStatus: targetApp ? targetApp.progressStatus : it.progressStatus,
                 status: targetApp ? targetApp.status : it.status,
-                constructionStatus: targetApp ? targetApp.constructionStatus : it.constructionStatus
+                constructionStatus: targetApp ? targetApp.constructionStatus : it.constructionStatus,
+                memo: JSON.stringify(itMemoObj)
               };
             }
             return it;
