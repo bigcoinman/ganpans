@@ -1471,6 +1471,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 ` : ''}
 
+                <!-- 3. 시공 완료사진 확인 박스 (점주 실시간 확인) -->
+                ${(() => {
+                    const constPhotos = (app && Array.isArray(app.constructionPhotos)) ? app.constructionPhotos : [];
+                    let cCount = constPhotos.length;
+                    if (cCount === 0 && app && app.memo) {
+                        try {
+                            const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
+                            if (m && Array.isArray(m.constructionPhotos)) cCount = m.constructionPhotos.length;
+                            else if (m && Number(m.constPhotoCount) > 0) cCount = Number(m.constPhotoCount);
+                        } catch(e) {}
+                    }
+                    if (cCount === 0 && app && Number(app.constPhotoCount) > 0) {
+                        cCount = Number(app.constPhotoCount);
+                    }
+                    if (cCount === 0 && app.progressStatus !== '간판시공완료' && app.constructionStatus !== 'after_construction' && app.constructionStatus !== 'completed') {
+                        return '';
+                    }
+                    return `
+                        <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 12px 14px; text-align: left; margin-top: 10px; margin-bottom: 8px; box-shadow: 0 2px 6px rgba(22,163,74,0.06);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span style="font-size: 1.05rem; font-weight: 800; color: #15803d;"><i class="fa-solid fa-camera-retro"></i> 시공 완료사진 ${cCount > 0 ? `(${cCount}장)` : ''}</span>
+                                    <div style="font-size: 0.84rem; color: #166534; margin-top: 2px;">새 간판 시공이 성공적으로 완료되었습니다!</div>
+                                </div>
+                                <button type="button" onclick="window.viewConstructionPhotosModal('${app.id}')" style="padding: 6px 12px; font-size: 0.88rem; font-weight: 700; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(21,128,61,0.15);">
+                                    <i class="fa-solid fa-eye"></i> 완료사진 확인
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                })()}
+
                 <div class="app-card-footer" style="display: flex; justify-content: flex-end; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e2e8f0; gap: 8px;">
                     <button class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 700; border-radius: 6px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; cursor: pointer;">
                         <i class="fa-solid fa-trash-can"></i> 신청취소
@@ -2156,6 +2188,38 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
                 })()}
+
+                <!-- 3. 시공 완료사진 확인 박스 (영업자 상단 신청내역) -->
+                ${(() => {
+                    const constPhotos = (app && Array.isArray(app.constructionPhotos)) ? app.constructionPhotos : [];
+                    let cCount = constPhotos.length;
+                    if (cCount === 0 && app && app.memo) {
+                        try {
+                            const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
+                            if (m && Array.isArray(m.constructionPhotos)) cCount = m.constructionPhotos.length;
+                            else if (m && Number(m.constPhotoCount) > 0) cCount = Number(m.constPhotoCount);
+                        } catch(e) {}
+                    }
+                    if (cCount === 0 && app && Number(app.constPhotoCount) > 0) {
+                        cCount = Number(app.constPhotoCount);
+                    }
+                    if (cCount === 0 && app.progressStatus !== '간판시공완료' && app.constructionStatus !== 'after_construction' && app.constructionStatus !== 'completed') {
+                        return '';
+                    }
+                    return `
+                        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px 14px; text-align: left; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span style="font-size: 1.0rem; font-weight: 700; color: #15803d;"><i class="fa-solid fa-camera-retro"></i> 시공 완료사진 ${cCount > 0 ? `(${cCount}장)` : ''}</span>
+                                    <div style="font-size: 0.82rem; color: #166534; margin-top: 2px;">시공업체 공사 완료 증빙</div>
+                                </div>
+                                <button type="button" onclick="window.viewConstructionPhotosModal('${app.id}')" style="padding: 5px 12px; font-size: 0.88rem; font-weight: 700; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fa-solid fa-eye"></i> 완료사진 확인
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                })()}
             `;
             userAppsContainer.appendChild(card);
         });
@@ -2306,7 +2370,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 })()}
 
-                <!-- 3. 실시간 진행상황 -->
+                <!-- 3. 시공 완료사진 확인 박스 (영업자 영업물건) -->
+                ${(() => {
+                    const constPhotos = (matchedApp && Array.isArray(matchedApp.constructionPhotos)) ? matchedApp.constructionPhotos : [];
+                    let cCount = constPhotos.length;
+                    if (cCount === 0 && matchedApp && matchedApp.memo) {
+                        try {
+                            const m = typeof matchedApp.memo === 'string' ? JSON.parse(matchedApp.memo) : matchedApp.memo;
+                            if (m && Array.isArray(m.constructionPhotos)) cCount = m.constructionPhotos.length;
+                            else if (m && Number(m.constPhotoCount) > 0) cCount = Number(m.constPhotoCount);
+                        } catch(e) {}
+                    }
+                    if (cCount === 0 && matchedApp && Number(matchedApp.constPhotoCount) > 0) {
+                        cCount = Number(matchedApp.constPhotoCount);
+                    }
+                    if (cCount === 0 && (matchedApp.progressStatus !== '간판시공완료' && (!item.statusObj || item.statusObj.progressStatus !== '간판시공완료') && matchedApp.constructionStatus !== 'after_construction' && matchedApp.constructionStatus !== 'completed')) {
+                        return '';
+                    }
+                    return `
+                        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px 12px; text-align: left; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span style="font-size: 0.98rem; font-weight: 700; color: #15803d;"><i class="fa-solid fa-camera-retro"></i> 시공 완료사진 ${cCount > 0 ? `(${cCount}장)` : ''}</span>
+                                    <div style="font-size: 0.82rem; color: #166534; margin-top: 2px;">시공업체 공사 완료 증빙</div>
+                                </div>
+                                <button type="button" onclick="window.viewConstructionPhotosModal('${targetAppId}')" style="padding: 4px 10px; font-size: 0.82rem; font-weight: 700; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fa-solid fa-eye"></i> 완료사진 확인
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                })()}
+
+                <!-- 4. 실시간 진행상황 -->
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <span style="font-size: 0.9rem; font-weight: 700; color: #475569;"><i class="fa-solid fa-signal" style="color: #2563eb;"></i> 실시간 진행상황</span>
                     <div style="display: flex; gap: 6px; align-items: center;">

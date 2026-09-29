@@ -3709,13 +3709,24 @@
       document.body.appendChild(modal);
     }
 
+    let currentRole = 'user';
+    try {
+      const au = (typeof activeUser === 'object' && activeUser && activeUser.role) ? activeUser : JSON.parse(localStorage.getItem('activeUser') || sessionStorage.getItem('activeUser') || '{}');
+      if (au && au.role) currentRole = au.role;
+    } catch(e) {}
+    const isAdmin = currentRole === 'admin';
+    const isConstructor = currentRole === 'constructor';
+    const canManagePhotos = (isAdmin || isConstructor);
+
     const photosHtml = cPhotos.map((src, idx) => `
       <div style="text-align: center; margin-bottom: 24px; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <span style="font-size: 1.0rem; font-weight: 700; color: #047857;"><i class="fa-solid fa-camera"></i> 시공 후 사진 #${idx + 1}</span>
+          ${canManagePhotos ? `
           <button type="button" onclick="window.deleteJobConstructionPhoto('${job ? job.id : id}', ${idx})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
             <i class="fa-solid fa-trash-can"></i> 이 사진 삭제
           </button>
+          ` : ''}
         </div>
         <img src="${(typeof sanitizeUrl === 'function' ? sanitizeUrl(src) : src)}" alt="시공 후 사진 #${idx + 1}" style="max-width: 100%; max-height: 65vh; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); object-fit: contain;">
       </div>
@@ -3735,8 +3746,8 @@
         </div>
         <div>${photosHtml}</div>
         <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px; flex-wrap: wrap; gap: 8px;">
-          ${cPhotos.length < 5 ? `
-            <label style="background: #10b981; color: #ffffff; border: 1px solid #059669; padding: 7px 14px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="시공 후 사진 추가 등록 (최대 5장, 300KB 자동 압축)">
+          ${(canManagePhotos && cPhotos.length < 5) ? `
+            <label style="background: #10b981; color: #ffffff; border: 1px solid #059669; padding: 7px 14px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="시공 후 사진 추가 등록 (최대 5장, 90KB 자동 압축)">
               <i class="fa-solid fa-cloud-arrow-up"></i> 시공 후 사진 추가 등록 (${cPhotos.length}/5)
               <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleJobPhotoUploadCommon('${id}', this.files); this.value='';">
             </label>
