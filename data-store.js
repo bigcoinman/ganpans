@@ -173,6 +173,7 @@
           const it = entry.item;
           return {
             id: it.id,
+            appRefId: it.appRefId || it.id,
             date: it.registeredAt || new Date().toISOString(),
             ownerName: it.name || '-',
             ownerPhone: it.phone || '',
@@ -181,6 +182,11 @@
             statusObj: it,
             receiptStatus: it.receiptStatus,
             progressStatus: it.progressStatus,
+            assignedConstructorId: it.assignedConstructorId || '',
+            assignedConstructorName: it.assignedConstructorName || '',
+            photos: it.photos || [],
+            photosCount: it.photosCount || 0,
+            hasPhoto: it.hasPhoto || false,
             assignedUser: entry.user
           };
         });
@@ -222,6 +228,7 @@
         if (isUserMatch) {
           myBizList.push({
             id: it.id,
+            appRefId: it.appRefId || it.id,
             date: it.registeredAt || new Date().toISOString(),
             ownerName: it.name || '-',
             ownerPhone: it.phone || '',
@@ -229,7 +236,12 @@
             storeAddress: it.address || '',
             statusObj: it,
             receiptStatus: it.receiptStatus,
-            progressStatus: it.progressStatus
+            progressStatus: it.progressStatus,
+            assignedConstructorId: it.assignedConstructorId || '',
+            assignedConstructorName: it.assignedConstructorName || '',
+            photos: it.photos || [],
+            photosCount: it.photosCount || 0,
+            hasPhoto: it.hasPhoto || false
           });
         }
       });
