@@ -109,7 +109,8 @@ graph TD
    - 단, 사용자가 명시적으로 지원사업 탈락(`rejected`)이나 포기(`giveup`)로 전이하는 경우에만 심사 상태가 탈락/포기로 연동된다.
 3. **제3원칙 (클린 슬레이트 시공 배정 및 배정 취소 원칙 - Clean Slate Assignment)**:
    - 시공사 배정 시 `assignedConstructorId`, `assignedConstructorName` 등이 `applications` 단일 원천에 즉시 기록되고 10초 상태 락(`_recentStatusUpdates`)에 등록된다.
-   - 최고관리자가 시공업체 진행현황에서 [배정취소]를 실행하는 경우, 시공사 정보 초기화뿐만 아니라 시안 사진 배열(`signDraftPhotos`), 시안 심사상태(`draftStatus`), 시안 승인일자(`draftApprovedAt`) 등 모든 시안 찌꺼기를 100% 완전 소멸(Clean Slate)하여 영업물건(미배정) 상태로 안전하게 복귀한다.
+   - 최고관리자가 시공업체 진행현황에서 [배정취소]를 실행하는 경우, 시공사 정보 초기화뿐만 아니라 시안 사진 배열(`signDraftPhotos`), 시안 심사상태(`draftStatus`), 시안 승인일자(`draftApprovedAt`), 시공완료 사진 배열(`constructionPhotos`), 세금계산서(`constructionInvoice`), 시공사진 카운트(`constPhotoCount`) 등 모든 시공 증빙 찌꺼기를 100% 완전 소멸(Clean Slate)하여 영업물건(미배정) 상태로 안전하게 복귀한다.
+   - 점주 대시보드 및 영업자 대시보드의 [시공 완료사진 확인] 박스는 실제 유효한 시공업체가 배정되어 있고(`hasAssignedConstructor`) 시공이 완료된 경우(`isCompleted && cCount > 0`)에만 노출되며, 배정 취소 시 0초 만에 완벽 소멸된다.
 4. **제4원칙 (사진 및 시안 카운트 영구 불변 보존 원칙 - Photo Count SSOT Preservation)**:
    - `toggleBizItem` (영업물건 승격/해제), `assignConstructorToBizItem`, `updateItemStatus` 등 모든 상태 전이 단계에서 `photoCount`는 절대 0으로 초기화되거나 덮어써지지 않으며, `Math.max(memo.photoCount, app.photosCount, ...)`를 통해 영구 보존된다.
    - 대시보드 목록의 다운로드 버튼은 로컬 카운트에 의존하여 `disabled` 처리하지 않고 항상 클릭 가능하며, 클릭 시 `ensureApplicationPhotosLoaded`를 통해 Supabase DB 단일 원천으로부터 즉시 온디맨드 로딩하여 사진 열람 및 다운로드를 100% 보장한다.

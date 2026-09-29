@@ -2187,8 +2187,8 @@ window.SupabaseSync = {
 
     const fullPayload = this.mapAppToDb(app);
     if (!fullPayload.image_url && app._clearPhotos !== true) delete fullPayload.image_url;
-    if ((!fullPayload.construction_photos || fullPayload.construction_photos.length === 0) && app._clearPhotos !== true) delete fullPayload.construction_photos;
-    if (!fullPayload.construction_invoice && app._clearPhotos !== true) delete fullPayload.construction_invoice;
+    if ((!fullPayload.construction_photos || fullPayload.construction_photos.length === 0) && app._clearPhotos !== true && app._clearConstPhotos !== true && !(Array.isArray(app.constructionPhotos) && app.constructionPhotos.length === 0 && !app.assignedConstructorId)) delete fullPayload.construction_photos;
+    if (!fullPayload.construction_invoice && app._clearPhotos !== true && app._clearConstPhotos !== true && !(app.constructionInvoice === null && !app.assignedConstructorId)) delete fullPayload.construction_invoice;
 
     try {
       const { error } = await window.supabaseClient.from('applications').upsert([fullPayload], { onConflict: 'id' });

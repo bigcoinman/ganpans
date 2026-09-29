@@ -1612,11 +1612,20 @@
         targetApp.signDraftPhotos = [];
         targetApp.draftStatus = 'pending';
         targetApp.draftApprovedAt = null;
+        targetApp.constructionPhotos = [];
+        targetApp.constructionInvoice = null;
+        targetApp.constPhotoCount = 0;
+        targetApp.completedAt = null;
         let mObj = {};
         try { mObj = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {}); } catch(e) {}
         delete mObj.signDraftPhotos;
         delete mObj.draftStatus;
         delete mObj.draftApprovedAt;
+        delete mObj.constructionPhotos;
+        delete mObj.constructionInvoice;
+        delete mObj.constPhotoCount;
+        delete mObj.draftCount;
+        delete mObj.completedAt;
         mObj.receiptStatus = targetApp.receiptStatus || mObj.receiptStatus || '접수완료';
         mObj.progressStatus = targetApp.progressStatus || mObj.progressStatus || '대상자선정';
         targetApp.memo = JSON.stringify(mObj);
@@ -1644,6 +1653,8 @@
             assigned_constructor_id: null,
             assigned_constructor_name: null,
             construction_status: 'before_construction',
+            construction_photos: [],
+            construction_invoice: null,
             memo: targetApp.memo
           }).catch(() => {});
         } else if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
@@ -1666,7 +1677,12 @@
                 constructionStatus: 'before_construction',
                 signDraftPhotos: [],
                 draftStatus: 'pending',
-                draftApprovedAt: null
+                draftApprovedAt: null,
+                constructionPhotos: [],
+                constructionInvoice: null,
+                constPhotoCount: 0,
+                completedAt: null,
+                memo: targetApp ? targetApp.memo : item.memo
               };
             }
             return item;
@@ -3818,6 +3834,11 @@
         delete memoObj.signDraftPhotos;
         delete memoObj.draftStatus;
         delete memoObj.draftApprovedAt;
+        delete memoObj.constructionPhotos;
+        delete memoObj.constructionInvoice;
+        delete memoObj.constPhotoCount;
+        delete memoObj.draftCount;
+        delete memoObj.completedAt;
         memoPayloadStr = JSON.stringify(memoObj);
 
         return {
@@ -3831,6 +3852,10 @@
           signDraftPhotos: [],
           draftStatus: 'pending',
           draftApprovedAt: null,
+          constructionPhotos: [],
+          constructionInvoice: null,
+          constPhotoCount: 0,
+          completedAt: null,
           memo: memoPayloadStr
         };
       }
@@ -3883,6 +3908,10 @@
               signDraftPhotos: [],
               draftStatus: 'pending',
               draftApprovedAt: null,
+              constructionPhotos: [],
+              constructionInvoice: null,
+              constPhotoCount: 0,
+              completedAt: null,
               memo: memoPayloadStr || it.memo
             };
           }
@@ -3910,6 +3939,8 @@
             assigned_constructor_id: null,
             assigned_constructor_name: null,
             construction_status: 'before_construction',
+            construction_photos: [],
+            construction_invoice: null,
             memo: memoPayloadStr
           });
           for (const uSync of usersToSync) {
@@ -3920,6 +3951,8 @@
             assigned_constructor_id: null,
             assigned_constructor_name: null,
             construction_status: 'before_construction',
+            construction_photos: [],
+            construction_invoice: null,
             memo: memoPayloadStr
           }).eq('id', String(app.id));
         }

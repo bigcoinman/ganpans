@@ -1471,8 +1471,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 ` : ''}
 
-                <!-- 3. 시공 완료사진 확인 박스 (점주 실시간 확인) -->
+                <!-- 3. 시공 완료사진 확인 박스 (점주 실시간 확인 - 시공사 배정 유효 및 시공완료 시에만 노출) -->
                 ${(() => {
+                    if (!hasAssignedConstructor) return '';
                     const constPhotos = (app && Array.isArray(app.constructionPhotos)) ? app.constructionPhotos : [];
                     let cCount = constPhotos.length;
                     let pStat = app.progressStatus || '';
@@ -1492,7 +1493,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         cCount = Number(app.constPhotoCount);
                     }
                     const isCompleted = (pStat === '간판시공완료' || cStat === 'after_construction' || cStat === 'completed');
-                    if (cCount === 0 && !isCompleted) {
+                    if (!isCompleted || cCount === 0) {
                         return '';
                     }
                     return `
@@ -2196,8 +2197,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 })()}
 
-                <!-- 3. 시공 완료사진 확인 박스 (영업자 상단 신청내역) -->
+                <!-- 3. 시공 완료사진 확인 박스 (영업자 상단 신청내역 - 시공사 배정 유효 및 시공완료 시에만 노출) -->
                 ${(() => {
+                    const hasAssignedConstructor = Boolean(
+                        app.assignedConstructorId && 
+                        app.assignedConstructorId !== 'none' && 
+                        app.assignedConstructorId !== '-' && 
+                        app.assignedConstructorId !== '미배정'
+                    );
+                    if (!hasAssignedConstructor) return '';
                     const constPhotos = (app && Array.isArray(app.constructionPhotos)) ? app.constructionPhotos : [];
                     let cCount = constPhotos.length;
                     let pStat = app.progressStatus || '';
@@ -2217,7 +2225,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         cCount = Number(app.constPhotoCount);
                     }
                     const isCompleted = (pStat === '간판시공완료' || cStat === 'after_construction' || cStat === 'completed');
-                    if (cCount === 0 && !isCompleted) {
+                    if (!isCompleted || cCount === 0) {
                         return '';
                     }
                     return `
@@ -2384,8 +2392,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 })()}
 
-                <!-- 3. 시공 완료사진 확인 박스 (영업자 영업물건) -->
+                <!-- 3. 시공 완료사진 확인 박스 (영업자 영업물건 - 시공사 배정 유효 및 시공완료 시에만 노출) -->
                 ${(() => {
+                    const hasAssignedConstructor = Boolean(
+                        (matchedApp && matchedApp.assignedConstructorId && matchedApp.assignedConstructorId !== 'none' && matchedApp.assignedConstructorId !== '-' && matchedApp.assignedConstructorId !== '미배정') ||
+                        (item && item.assignedConstructorId && item.assignedConstructorId !== 'none' && item.assignedConstructorId !== '-' && item.assignedConstructorId !== '미배정')
+                    );
+                    if (!hasAssignedConstructor) return '';
                     const constPhotos = (matchedApp && Array.isArray(matchedApp.constructionPhotos)) ? matchedApp.constructionPhotos : [];
                     let cCount = constPhotos.length;
                     let pStat = (matchedApp && matchedApp.progressStatus) || (item.statusObj && item.statusObj.progressStatus) || '';
@@ -2405,7 +2418,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         cCount = Number(matchedApp.constPhotoCount);
                     }
                     const isCompleted = (pStat === '간판시공완료' || cStat === 'after_construction' || cStat === 'completed');
-                    if (cCount === 0 && !isCompleted) {
+                    if (!isCompleted || cCount === 0) {
                         return '';
                     }
                     return `

@@ -182,6 +182,15 @@ assertRule(
 );
 
 assertRule(
+  '[BP-03] 시공사 배정 취소 시 시공완료사진 및 증빙 클린 슬레이트 100% 소멸 준수',
+  dataStoreCode.includes('delete memoObj.constructionPhotos') &&
+  dataStoreCode.includes('delete memoObj.constPhotoCount') &&
+  dataStoreCode.includes('constructionPhotos: []') &&
+  appCode.includes('!hasAssignedConstructor) return \'\''),
+  '시공사 배정 취소 시 시공완료사진 및 증빙을 완전 소멸시키는 클린 슬레이트 로직이 누락되었습니다!'
+);
+
+assertRule(
   '[BP-03] 설계도 보존법칙 (단일 일원화 준수 & 독자 캐시/이원화 분기 100% 부존재)',
   !dataStoreCode.includes('biz_items_cache') &&
   !dataStoreCode.includes('sales_apps_cache') &&
