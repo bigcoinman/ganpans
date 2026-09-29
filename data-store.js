@@ -1750,6 +1750,36 @@
         }
         return u;
       });
+
+      // 4-2) 비회원 점주 한몸 계정 정리: 삭제된 신청서가 비회원 건이고 남은 신청서가 없다면 비회원 계정도 함께 완전 소각
+      if (targetApp) {
+        const appOwnerPhone = String(targetApp.ownerPhone || targetApp.phone || '').replace(/[^0-9]/g, '');
+        const appUserId = String(targetApp.userId || targetApp.applicantUserId || '').trim();
+        const isTargetAutoPhone = Boolean(
+          appOwnerPhone && (appUserId === appOwnerPhone || String(appUserId).replace(/[^0-9]/g, '') === appOwnerPhone)
+        );
+
+        if (isTargetAutoPhone) {
+          const remainingOwnerApps = apps.filter(a => {
+            if (!a) return false;
+            const aPhone = String(a.ownerPhone || a.phone || '').replace(/[^0-9]/g, '');
+            const aUid = String(a.userId || a.applicantUserId || '').trim();
+            return aPhone === appOwnerPhone || aUid === appOwnerPhone;
+          });
+
+          if (remainingOwnerApps.length === 0) {
+            users = users.filter(u => {
+              if (!u || !u.id) return false;
+              const uId = String(u.id).toLowerCase();
+              const uPhone = String(u.phone || '').replace(/[^0-9]/g, '');
+              return uId !== appOwnerPhone.toLowerCase() && uPhone !== appOwnerPhone;
+            });
+            if (window.SupabaseSync && typeof window.SupabaseSync.deleteUser === 'function') {
+              window.SupabaseSync.deleteUser(appOwnerPhone, appOwnerPhone, false);
+            }
+          }
+        }
+      }
       this.saveUsers(users);
 
       // 5) Supabase DB 영구 삭제
@@ -1762,29 +1792,92 @@
       return { success: true };
     },
 
-    // --- 5. 회원 영구 탈퇴/삭제 (DB 직통 영구 삭제) ---
-    deleteUser: function (userId, btnEl, skipConfirm) {
+    // --- 5. 회원 영구 탈퇴/삭제 (DB 직통 영구 삭제 & 정회원/비회원 4중 방어 파이프라인) ---
+    deleteUser: async function (userId, btnEl, skipConfirm) {
       if (!userId) return { success: false };
       const targetId = String(userId).trim();
       if (!targetId) return { success: false };
       const targetLower = targetId.toLowerCase();
 
-      if (!skipConfirm && !confirm('[주의] 회원 ID [' + targetId + ']을(를) 정말로 강제 탈퇴/삭제 처리하시겠습니까?\n삭제 후 복구할 수 없습니다.')) {
-        return { success: false, cancelled: true };
+      // [방어막 1] 최고관리자(admin) 계정 영구 삭제 절대 차단
+      if (targetLower === 'admin') {
+        alert('최고관리자(admin) 계정은 삭제할 수 없습니다.');
+        return { success: false, blocked: true };
       }
 
-      // 1) 0초 즉각 DOM 제거
+      let rawUsers = (typeof this.getUsers === 'function') ? this.getUsers() : (JSON.parse(localStorage.getItem('users')) || []);
+      const targetUser = rawUsers.find(u => u && String(u.id).toLowerCase() === targetLower);
+      const targetPhone = targetUser ? String(targetUser.phone || '').trim() : '';
+      const targetDigits = targetPhone.replace(/[^0-9]/g, '');
+
+      // 비회원 점주 여부 판별 (id가 숫자만으로 구성되고 targetDigits와 일치하는 경우)
+      const isAutoPhoneAccount = Boolean(
+        targetUser &&
+        String(targetUser.id).replace(/[^0-9]/g, '') === String(targetUser.id) &&
+        targetDigits &&
+        String(targetUser.id) === targetDigits
+      );
+
+      // 연관된 신청서 목록 검색
+      let apps = (typeof this.getApplications === 'function') ? this.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
+      const matchedApps = apps.filter(a => {
+        if (!a) return false;
+        const aUid = String(a.userId || a.applicantUserId || '').toLowerCase();
+        const aPhone = String(a.ownerPhone || a.phone || '').replace(/[^0-9]/g, '');
+        return aUid === targetLower || (targetDigits && (aUid === targetDigits || aPhone === targetDigits));
+      });
+
+      let shouldDeleteApps = false;
+
+      if (isAutoPhoneAccount) {
+        // [비회원 점주 케이스: 한몸 일체형]
+        // 1. 진행 중인 영업물건 또는 시공 배정 물건이 있는지 확인 (실수 삭제 절대 방어)
+        const busyApp = matchedApps.find(a => 
+          a.isBizItem || 
+          (a.assignedConstructorId && String(a.assignedConstructorId).trim() !== '') ||
+          (a.constructionStatus && a.constructionStatus !== 'before_construction' && a.constructionStatus !== 'none') ||
+          (a.status && a.status !== 'pending' && a.status !== '심사대기' && a.status !== '심사 대기')
+        );
+
+        if (busyApp) {
+          alert('⚠️ [삭제 차단] 해당 회원은 현재 영업물건 또는 시공 진행 중인 신청서([' + (busyApp.storeName || busyApp.id) + '])가 연결되어 있어 삭제할 수 없습니다.\n먼저 해당 물건을 처리해 주세요.');
+          return { success: false, blocked: true };
+        }
+
+        const appCountText = matchedApps.length > 0 ? `\n(연계된 비회원 신청서 [${matchedApps.length}건]도 함께 영구 삭제됩니다)` : '';
+        if (!skipConfirm && !confirm(`[주의] 비회원 점주 [${targetId}] 계정을 정말로 영구 삭제하시겠습니까?${appCountText}\n삭제 후 복구할 수 없습니다.`)) {
+          return { success: false, cancelled: true };
+        }
+        shouldDeleteApps = true;
+      } else {
+        // [정회원 점주 / 영업자 / 시공사 케이스: 독립 분리 보존]
+        const roleName = targetUser?.role === 'business' ? '영업자' : (targetUser?.role === 'constructor' ? '시공사' : '정회원 점주');
+        if (!skipConfirm && !confirm(`[주의] ${roleName} [${targetId}] 계정을 정말로 강제 탈퇴/삭제 처리하시겠습니까?\n(접수된 신청서 물건 이력은 100% 안전 보존됩니다)\n삭제 후 복구할 수 없습니다.`)) {
+          return { success: false, cancelled: true };
+        }
+        shouldDeleteApps = false;
+      }
+
+      // [방어막 3] 버튼 비활성화 (광클/더블클릭 방어)
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.style.opacity = '0.5';
+      }
+
+      // 1) 0초 즉각 DOM 제거 (낙관적 UI)
       if (btnEl) {
         const row = btnEl.closest('tr') || btnEl.closest('.user-card-mob') || btnEl.closest('.admin-user-card-mob');
         if (row && row.parentNode) row.parentNode.removeChild(row);
       }
 
-      // 2) users 배열에서 직접 제거 (targetId 및 해당 유저의 전화번호 매칭건 전수 삭제)
-      let rawUsers = JSON.parse(localStorage.getItem('users')) || [];
-      const targetUser = rawUsers.find(u => String(u.id).toLowerCase() === targetLower);
-      const targetPhone = targetUser ? String(targetUser.phone || '').trim() : '';
-      const targetDigits = targetPhone.replace(/[^0-9]/g, '');
+      // 2) 비회원 신청서 동시 소각 처리
+      if (shouldDeleteApps && matchedApps.length > 0) {
+        const delAppIds = new Set(matchedApps.map(a => String(a.id)));
+        apps = apps.filter(a => !delAppIds.has(String(a.id)));
+        this.saveApplications(apps);
+      }
 
+      // 3) users 배열에서 직접 제거 (targetId 및 해당 유저의 전화번호 매칭건 전수 삭제)
       rawUsers = rawUsers.filter(u => {
         if (!u || !u.id) return false;
         const uId = String(u.id).toLowerCase();
@@ -1795,21 +1888,23 @@
       });
       this.saveUsers(rawUsers);
 
-      // 3) [SSOT] 로컬 블랙리스트 제거 — Supabase DB 삭제가 유일한 영구 삭제 수단
-
       // 4) 현재 로그인 세션이 삭제된 회원이면 즉시 세션 파기
       const active = this.getActiveUser();
       if (active) {
         const actId = String(active.id || '').toLowerCase();
-        if (actId === targetLower) {
+        if (actId === targetLower || (targetDigits && String(active.phone || '').replace(/[^0-9]/g, '') === targetDigits)) {
           this.setActiveUser(null);
           if (typeof clearActiveUser === 'function') clearActiveUser();
         }
       }
 
-      // 5) Supabase DB 영구 삭제
+      // 5) Supabase DB 영구 삭제 (비동기 완료 대기)
       if (window.SupabaseSync && typeof window.SupabaseSync.deleteUser === 'function') {
-        window.SupabaseSync.deleteUser(targetId, targetPhone);
+        try {
+          await window.SupabaseSync.deleteUser(targetId, targetPhone, shouldDeleteApps);
+        } catch (e) {
+          console.error('[DataStore.deleteUser] Supabase sync error:', e);
+        }
       }
 
       alert('회원 [' + targetId + ']이(가) 정상적으로 탈퇴/삭제되었습니다.');

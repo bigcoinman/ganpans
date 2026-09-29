@@ -332,11 +332,11 @@ window.deleteApplicationAdminMob = function (appId, btnEl, event) {
 };
 
 // --- 모바일 통합 DataStore 브릿지 핸들러 ---
-window.deleteUserAdminMob = function (uid, btnEl, event) {
+window.deleteUserAdminMob = async function (uid, btnEl, event) {
     if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
     if (event && typeof event.preventDefault === 'function') event.preventDefault();
     if (window.DataStore && typeof window.DataStore.deleteUser === 'function') {
-        const res = window.DataStore.deleteUser(uid, btnEl);
+        const res = await window.DataStore.deleteUser(uid, btnEl);
         if (typeof window.renderAdminDashboardMob === 'function') {
             window.renderAdminDashboardMob(true);
         }

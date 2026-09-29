@@ -2116,8 +2116,8 @@ window.SupabaseSync = {
     return false;
   },
 
-  // 3. 회원 영구 삭제 (외래키 제약조건 23503 사전 방어 및 삭제 캐시 영구 관리)
-  async deleteUser(uid, phone) {
+  // 3. 회원 영구 삭제 (외래키 제약조건 23503 사전 방어 및 정회원/비회원 맞춤 처리)
+  async deleteUser(uid, phone, deleteApps = false) {
     if (!uid) return;
     const _sbUrl = (window.SUPABASE_URL) || 'https://bscgxtolcqyvrqtshtbc.supabase.co';
     const _sbKey = (window.SUPABASE_ANON_KEY) || 'sb_publishable_ZP1DPYvqNYsDY4WLrq2xww_-0i7FwtC';
@@ -2138,21 +2138,35 @@ window.SupabaseSync = {
       if (targetDigits) deleteIds.add(targetDigits);
 
       for (const id of deleteIds) {
-        // 1) applications 외래키 참조 해제 (user_id -> null)
-        await fetch(_sbUrl + '/rest/v1/applications?user_id=eq.' + encodeURIComponent(id), {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ user_id: null })
-        }).catch(() => {});
+        if (deleteApps) {
+          // 비회원 한몸 삭제: applications 테이블에서도 해당 비회원의 신청서 영구 DELETE
+          await fetch(_sbUrl + '/rest/v1/applications?user_id=eq.' + encodeURIComponent(id), {
+            method: 'DELETE',
+            headers
+          }).catch(() => {});
+          if (targetDigits) {
+            await fetch(_sbUrl + '/rest/v1/applications?phone=eq.' + encodeURIComponent(targetDigits), {
+              method: 'DELETE',
+              headers
+            }).catch(() => {});
+          }
+        } else {
+          // 정회원 분리 삭제: applications 외래키 참조만 안전하게 해제 (user_id -> null)
+          await fetch(_sbUrl + '/rest/v1/applications?user_id=eq.' + encodeURIComponent(id), {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ user_id: null })
+          }).catch(() => {});
+        }
 
-        // 2) inquiries 외래키 참조 해제 (user_id -> null)
+        // inquiries 외래키 참조 해제 (user_id -> null)
         await fetch(_sbUrl + '/rest/v1/inquiries?user_id=eq.' + encodeURIComponent(id), {
           method: 'PATCH',
           headers,
           body: JSON.stringify({ user_id: null })
         }).catch(() => {});
 
-        // 3) users 테이블에서 영구 DELETE
+        // users 테이블에서 영구 DELETE
         await fetch(_sbUrl + '/rest/v1/users?id=eq.' + encodeURIComponent(id), {
           method: 'DELETE',
           headers
@@ -2161,7 +2175,17 @@ window.SupabaseSync = {
 
       if (window.supabaseClient) {
         for (const id of deleteIds) {
+          if (deleteApps) {
+            await window.supabaseClient.from('applications').delete().eq('user_id', id).catch(() => {});
+            if (targetDigits) {
+              await window.supabaseClient.from('applications').delete().eq('phone', targetDigits).catch(() => {});
+            }
+          }
           await window.supabaseClient.from('users').delete().eq('id', id).catch(() => {});
+        }
+        if (targetDigits) {
+          await window.supabaseClient.from('users').delete().eq('phone', phone).catch(() => {});
+          await window.supabaseClient.from('users').delete().eq('phone', targetDigits).catch(() => {});
         }
       }
     } catch (e) {
@@ -2266,28 +2290,6 @@ window.SupabaseSync = {
       console.error('Supabase deleteApplication error:', e);
     }
   },
-
-  // 6-1. 회원 DB 완전 영구 삭제 (최고관리자 권한) — Supabase DB 삭제가 유일한 영구 삭제 수단
-  async deleteUser(userId, userPhone) {
-    if (!userId) return;
-    const targetId = String(userId).trim();
-    try {
-      if (window.supabaseClient) {
-        const { error } = await window.supabaseClient.from('users').delete().eq('id', targetId);
-        if (error) console.error('[SupabaseSync] deleteUser by id error:', error);
-        if (userPhone) {
-          const cleanPhone = String(userPhone).replace(/[^0-9]/g, '');
-          if (cleanPhone) {
-            await window.supabaseClient.from('users').delete().eq('phone', userPhone);
-            await window.supabaseClient.from('users').delete().eq('phone', cleanPhone);
-          }
-        }
-      }
-    } catch (e) {
-      console.error('Supabase deleteUser error:', e);
-    }
-  },
-
   // 범용 단일 레코드 저장/갱신 안전 래퍼
   async upsertRecord(table, record) {
     if (!record) return false;
