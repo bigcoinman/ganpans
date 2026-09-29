@@ -2307,12 +2307,8 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'biz-card-mob';
             card.style.cssText = 'background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);';
             card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div style="margin-bottom: 8px;">
                     <h5 style="font-size: 1.31rem; font-weight: 700; color: var(--text-primary); margin: 0;">${escapeHtml(item.storeName || '-')}</h5>
-                    <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
-                        ${receiptBadge}
-                        ${progressBadge}
-                    </div>
                 </div>
                 <p style="font-size: 1.03rem; color: var(--text-secondary); margin: 0 0 5px 0;">
                     <strong style="color: #475569;">신청일시:</strong> <span style="font-family: monospace; color: var(--text-primary); font-weight: 600;">${formatDateOnly(item.date)}</span>
