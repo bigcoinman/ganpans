@@ -2670,11 +2670,11 @@ window.SupabaseSync = {
               return false;
             });
             if (localApp) {
-              // 1) 최근 로컬에서 직접 상태/영업자 변경이 일어난 경우(10초 이내) Supabase 구형 데이터로 덮어쓰지 않고 로컬 최신 상태 보존 (동기화 레이스 컨디션 방어)
+              // 1) 최근 로컬에서 직접 상태/영업자 변경이 일어난 경우(30초 이내) Supabase 구형 데이터로 덮어쓰지 않고 로컬 최신 상태 보존 (동기화 레이스 컨디션 방어)
               const normObjKey = String(appObj.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
               const recentLocks = (window.DataStore && window.DataStore._recentStatusUpdates) || {};
               const lock = recentLocks[String(appObj.id)] || (normObjKey && recentLocks[normObjKey]);
-              const isLocalLockActive = Boolean(lock && (Date.now() - (lock.timestamp || 0) < 10000));
+              const isLocalLockActive = Boolean(lock && (Date.now() - (lock.timestamp || 0) < 30000));
 
               if (isLocalLockActive) {
                 const rStat = lock.receiptStatus !== undefined ? lock.receiptStatus : localApp.receiptStatus;
@@ -2704,6 +2704,20 @@ window.SupabaseSync = {
                 if (localApp.assignedConstructorId !== undefined) appObj.assignedConstructorId = localApp.assignedConstructorId;
                 if (localApp.assignedConstructorName !== undefined) appObj.assignedConstructorName = localApp.assignedConstructorName;
                 appObj.updatedAt = new Date().toISOString();
+              }
+
+              // [시공사 배정 정합성 영구 방어] 시공사가 이미 배정된 건은 진행상태가 '지원대기중'이나 '심사대기중'으로 다운그레이드되지 않도록 보장 (블루프린트 4단계 SSOT)
+              if (appObj.assignedConstructorId || localApp.assignedConstructorId) {
+                if (!appObj.progressStatus || appObj.progressStatus === '지원대기중' || appObj.progressStatus === '심사대기중' || appObj.progressStatus === 'pending' || appObj.progressStatus === 'none') {
+                  appObj.progressStatus = '대상자선정';
+                }
+                if (appObj.receiptStatus === '접수예정' || !appObj.receiptStatus) {
+                  appObj.receiptStatus = '접수완료';
+                }
+                if (!appObj.assignedConstructorId && localApp.assignedConstructorId) {
+                  appObj.assignedConstructorId = localApp.assignedConstructorId;
+                  appObj.assignedConstructorName = localApp.assignedConstructorName || '';
+                }
               }
               // 로컬 캐시된 고용량 사진 보존 vs 실서버 최신 변경 감지
               const serverPhotoCount = (() => {

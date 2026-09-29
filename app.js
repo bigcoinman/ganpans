@@ -3446,7 +3446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.style.marginBottom = '12px';
                     card.style.textAlign = 'left';
 
-                    const isSelectedOrBeyond = (item.progressStatus === '대상자선정' || item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판시공완료' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인' || item.progressStatus === '간판 시공 중' || item.progressStatus === '시공 완료');
+                    const isSelectedOrBeyond = Boolean(item.assignedConstructorId || item.progressStatus === '대상자선정' || item.progressStatus === '간판시공 준비중' || item.progressStatus === '간판시공완료' || item.progressStatus === '서류 심사 통과' || item.progressStatus === '현장 실사 중' || item.progressStatus === '지원금 최종 승인' || item.progressStatus === '간판 시공 중' || item.progressStatus === '시공 완료');
 
                     let constructorAssignHtml = '';
                     if (isSelectedOrBeyond) {
@@ -4436,91 +4436,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.assignConstructorToBizItemMob = assignConstructorToBizItemMob;
 
-    // 모바일 배정 시공사 변경 (초기화)
+    // 모바일 배정 시공사 변경 (DataStore SSOT 단일 원천 호출)
     function reassignConstructorItemMob(uid, itemId) {
-        let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function') ? window.DataStore.getApplications() : (JSON.parse(localStorage.getItem('applications')) || []);
-        let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
-        if (targetApp) {
-            targetApp.assignedConstructorId = null;
-            targetApp.assignedConstructorName = null;
-            targetApp.assignedConstructorCode = null;
-            targetApp.assignedConstructorPhone = null;
-            targetApp.constructionStatus = 'before_construction';
-            targetApp.assignedAt = null;
-            targetApp.signDraftPhotos = [];
-            targetApp.draftStatus = 'pending';
-            targetApp.draftApprovedAt = null;
-            let mObj = {};
-            try { mObj = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {}); } catch(e) {}
-            delete mObj.signDraftPhotos;
-            delete mObj.draftStatus;
-            delete mObj.draftApprovedAt;
-            targetApp.memo = JSON.stringify(mObj);
-
-            if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
-                window.DataStore.saveApplications(apps);
-            } else {
-                saveApplicationsSSOT(apps);
-            }
-            if (window.SupabaseSync) {
-                if (typeof window.SupabaseSync.updateApplication === 'function') {
-                    window.SupabaseSync.updateApplication(targetApp.id, {
-                        assigned_constructor_id: null,
-                        assigned_constructor_name: null,
-                        memo: targetApp.memo
-                    }).catch(() => {});
-                } else {
-                    window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
-                }
-            }
+        if (window.DataStore && typeof window.DataStore.reassignConstructorItem === 'function') {
+            const res = window.DataStore.reassignConstructorItem(uid, itemId);
+            if (typeof renderAdminDashboardMob === 'function') renderAdminDashboardMob(true);
+            if (typeof renderStatusTab === 'function') renderStatusTab();
+            return res;
         }
-
-        // 2) users.items 동기화
-        let curUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
-            ? window.DataStore.getUsers()
-            : (JSON.parse(localStorage.getItem('users')) || []);
-        curUsers = curUsers.map(u => {
-            if (String(u.id) === String(uid)) {
-                const updatedItems = (u.items || []).map(item => {
-                    if (String(item.id) === String(itemId)) {
-                        return {
-                            ...item,
-                            assignedConstructorId: null,
-                            assignedConstructorName: null,
-                            assignedConstructorCode: null,
-                            assignedConstructorPhone: null,
-                            constructionStatus: 'before_construction',
-                            signDraftPhotos: [],
-                            draftStatus: 'pending',
-                            draftApprovedAt: null
-                        };
-                    }
-                    return item;
-                });
-                return { ...u, items: updatedItems };
-            }
-            return u;
-        });
-
-        if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-            window.DataStore.saveUsers(curUsers);
-        } else {
-            saveUsersSSOT(curUsers);
-        }
-        if (window.SupabaseSync) {
-            const updatedUser = curUsers.find(u => String(u.id) === String(uid));
-            if (updatedUser) {
-                window.SupabaseSync.updateUser(uid, {
-                    items: updatedUser.items || []
-                }).catch(() => {});
-            }
-        }
-        renderStatusTab();
-
-        if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-            window.DataStore.notifyAll();
-        }
-        window.dispatchEvent(new CustomEvent('supabase-data-synced'));
     }
     window.reassignConstructorItemMob = reassignConstructorItemMob;
 

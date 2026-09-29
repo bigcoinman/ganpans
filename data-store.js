@@ -1406,6 +1406,8 @@
       memoObj.referrerCode = targetApp.referrerCode || '';
       memoObj.salespersonId = targetApp.salespersonId || '';
       memoObj.salespersonName = targetApp.salespersonName || '';
+      memoObj.receiptStatus = targetApp.receiptStatus || memoObj.receiptStatus || '접수예정';
+      memoObj.progressStatus = targetApp.progressStatus || memoObj.progressStatus || '지원대기중';
       if (targetApp.isBizItem !== undefined) memoObj.isBizItem = Boolean(targetApp.isBizItem === true || String(targetApp.isBizItem) === 'true');
       const existingCount = Math.max(
         Number(memoObj.photoCount) || 0,
@@ -1488,9 +1490,22 @@
       let targetApp = apps.find(a => String(a.id) === String(itemId) || String(a.appRefId) === String(itemId));
       if (targetApp) {
         targetApp.isBizItem = true;
+        // 시공사 배정 시 최소 대상자선정 단계 보장 (블루프린트 4단계 BP-CONSTRUCTOR-FLOW SSOT)
+        if (!targetApp.progressStatus || targetApp.progressStatus === '지원대기중' || targetApp.progressStatus === '심사대기중' || targetApp.progressStatus === 'pending' || targetApp.progressStatus === 'none') {
+          targetApp.progressStatus = '대상자선정';
+        }
+        if (targetApp.receiptStatus === '접수예정' || !targetApp.receiptStatus) {
+          targetApp.receiptStatus = '접수완료';
+        }
+
         let mObj = {};
         try { mObj = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {}); } catch(e) {}
         mObj.isBizItem = true;
+        mObj.receiptStatus = targetApp.receiptStatus;
+        mObj.progressStatus = targetApp.progressStatus;
+        if (targetApp.salespersonId) mObj.salespersonId = targetApp.salespersonId;
+        if (targetApp.salespersonName) mObj.salespersonName = targetApp.salespersonName;
+        if (targetApp.referrerCode) mObj.referrerCode = targetApp.referrerCode;
         targetApp.memo = JSON.stringify(mObj);
 
         targetApp.assignedConstructorId = String(constId);
@@ -1498,13 +1513,15 @@
         targetApp.constructionStatus = targetApp.constructionStatus && targetApp.constructionStatus !== 'none' ? targetApp.constructionStatus : 'before_construction';
         targetApp.assignedAt = new Date().toISOString();
 
-        // [레이스 컨디션 완벽 방어] 최신 상태 동기화 락 등록 (10초간 어떤 구형 DB 값도 덮어쓰지 못하도록 보장)
+        // [레이스 컨디션 완벽 방어] 최신 상태 동기화 락 등록 (30초간 어떤 구형 DB 값도 덮어쓰지 못하도록 보장)
         if (!this._recentStatusUpdates) this._recentStatusUpdates = {};
         const normTid = String(targetApp.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
         this._recentStatusUpdates[String(targetApp.id)] = {
           status: targetApp.status,
           receiptStatus: targetApp.receiptStatus,
           progressStatus: targetApp.progressStatus,
+          constructionStatus: targetApp.constructionStatus,
+          memo: targetApp.memo,
           timestamp: Date.now()
         };
         if (normTid) {
@@ -1541,6 +1558,8 @@
                 ...item,
                 assignedConstructorId: String(constId),
                 assignedConstructorName: constName,
+                receiptStatus: targetApp ? targetApp.receiptStatus : item.receiptStatus,
+                progressStatus: targetApp ? targetApp.progressStatus : item.progressStatus,
                 constructionStatus: item.constructionStatus || 'before_construction',
                 assignedAt: new Date().toISOString()
               };
@@ -1586,6 +1605,8 @@
         delete mObj.signDraftPhotos;
         delete mObj.draftStatus;
         delete mObj.draftApprovedAt;
+        mObj.receiptStatus = targetApp.receiptStatus || mObj.receiptStatus || '접수완료';
+        mObj.progressStatus = targetApp.progressStatus || mObj.progressStatus || '대상자선정';
         targetApp.memo = JSON.stringify(mObj);
 
         // [레이스 컨디션 완벽 방어] 최신 상태 동기화 락 등록
