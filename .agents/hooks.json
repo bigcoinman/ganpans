@@ -1,0 +1,12 @@
+{
+  "blueprint-guard": {
+    "enabled": true,
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node scripts/agent-hook-guard.js",
+        "timeout": 30
+      }
+    ]
+  }
+}
