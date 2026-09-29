@@ -326,7 +326,7 @@
 
         const normAid = String(app.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
         const recentLock = (this._recentStatusUpdates && (this._recentStatusUpdates[String(app.id)] || (normAid && this._recentStatusUpdates[normAid]))) || null;
-        const isLockActive = Boolean(recentLock && (Date.now() - (recentLock.timestamp || 0) < 4000));
+        const isLockActive = Boolean(recentLock && (Date.now() - (recentLock.timestamp || 0) < 10000));
         let rStatus = (isLockActive && recentLock.receiptStatus) ? recentLock.receiptStatus : (app.receiptStatus || '접수예정');
         let pStatus = (isLockActive && recentLock.progressStatus) ? recentLock.progressStatus : (app.progressStatus || '지원대기중');
 
@@ -1212,28 +1212,69 @@
 
       this.saveApplications(apps);
 
-      // 4) Supabase DB 비동기 백그라운드 저장 (단일 원천 applications 만 저장)
-      (async () => {
+      // users.items 내 매칭 항목의 상태(receiptStatus, progressStatus, status, constructionStatus) 양방향 동기화
+      let usersChanged = false;
+      const updatedUsers = users.map(u => {
+        if (u.items && Array.isArray(u.items)) {
+          let userItemModified = false;
+          const updatedItems = u.items.map(it => {
+            const itId = String(it.id || '').trim().toLowerCase();
+            const itRef = String(it.appRefId || '').trim().toLowerCase();
+            if (itId === targetIdStr.toLowerCase() || itRef === targetIdStr.toLowerCase() || (normTargetId && (itId.replace(/[^a-zA-Z0-9]/g, '') === normTargetId || itRef.replace(/[^a-zA-Z0-9]/g, '') === normTargetId))) {
+              userItemModified = true;
+              return {
+                ...it,
+                receiptStatus: targetApp ? targetApp.receiptStatus : it.receiptStatus,
+                progressStatus: targetApp ? targetApp.progressStatus : it.progressStatus,
+                status: targetApp ? targetApp.status : it.status,
+                constructionStatus: targetApp ? targetApp.constructionStatus : it.constructionStatus
+              };
+            }
+            return it;
+          });
+          if (userItemModified) {
+            usersChanged = true;
+            return { ...u, items: updatedItems };
+          }
+        }
+        return u;
+      });
+      if (usersChanged) {
+        this.saveUsers(updatedUsers);
+      }
+
+      // 4) Supabase DB 비동기 백그라운드 저장 (단일 원천 applications 및 users.items 순차 큐 저장으로 레이스 컨디션 완벽 방어)
+      if (!this._appSyncQueues) this._appSyncQueues = {};
+      const queueKey = String(targetApp ? targetApp.id : targetIdStr);
+      const prevPromise = this._appSyncQueues[queueKey] || Promise.resolve();
+      this._appSyncQueues[queueKey] = prevPromise.then(async () => {
         try {
           if (window.SupabaseSync) {
-            if (targetApp && typeof window.SupabaseSync.updateApplication === 'function') {
-              await window.SupabaseSync.updateApplication(targetApp.id, {
-                status: targetApp.status || 'approved',
-                receipt_status: targetApp.receiptStatus || '접수예정',
-                progress_status: targetApp.progressStatus || '지원대기중',
-                construction_status: targetApp.constructionStatus || 'before_construction',
-                sign_type: targetApp.signType || '',
-                referrer_code: targetApp.referrerCode || '',
-                memo: typeof targetApp.memo === 'object' ? JSON.stringify(targetApp.memo) : (targetApp.memo || '')
+            const freshApps = this.getApplications();
+            const curApp = freshApps.find(a => String(a.id) === queueKey || String(a.appRefId) === queueKey) || targetApp;
+            if (curApp && typeof window.SupabaseSync.updateApplication === 'function') {
+              await window.SupabaseSync.updateApplication(curApp.id, {
+                status: curApp.status || 'approved',
+                construction_status: curApp.constructionStatus || 'before_construction',
+                sign_type: curApp.signType || '',
+                referrer_code: curApp.referrerCode || '',
+                memo: typeof curApp.memo === 'object' ? JSON.stringify(curApp.memo) : (curApp.memo || '')
               });
-            } else if (targetApp && typeof window.SupabaseSync.upsertApplication === 'function') {
-              await window.SupabaseSync.upsertApplication(targetApp);
+            } else if (curApp && typeof window.SupabaseSync.upsertApplication === 'function') {
+              await window.SupabaseSync.upsertApplication(curApp);
+            }
+            if (usersChanged && typeof window.SupabaseSync.updateUser === 'function') {
+              const freshUsers = this.getUsers();
+              const matchedUsers = freshUsers.filter(u => u.items && u.items.some(it => String(it.id) === queueKey || String(it.appRefId) === queueKey));
+              for (const mu of matchedUsers) {
+                await window.SupabaseSync.updateUser(mu.id, { items: mu.items || [] });
+              }
             }
           }
         } catch (err) {
           console.warn('[DataStore] updateItemStatus sync notice:', err);
         }
-      })();
+      }).catch(() => {});
 
       // 5) 낙관적 In-place DOM 부분 갱신 (1회 클릭 즉시 반영 & 전체 DOM 재생성으로 인한 포커스 날아감 방지)
       if (typeof document !== 'undefined') {
@@ -1472,16 +1513,23 @@
 
         this.saveApplications(apps);
 
-        if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
-          window.SupabaseSync.updateApplication(targetApp.id, {
-            assigned_constructor_id: targetApp.assignedConstructorId,
-            assigned_constructor_name: targetApp.assignedConstructorName,
-            construction_status: targetApp.constructionStatus,
-            assigned_at: targetApp.assignedAt
-          }).catch(() => {});
-        } else if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
-          window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
-        }
+        if (!this._appSyncQueues) this._appSyncQueues = {};
+        const qKey = String(targetApp.id);
+        const prevP = this._appSyncQueues[qKey] || Promise.resolve();
+        this._appSyncQueues[qKey] = prevP.then(async () => {
+          const freshApps = this.getApplications();
+          const curApp = freshApps.find(a => String(a.id) === qKey || String(a.appRefId) === qKey) || targetApp;
+          if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
+            await window.SupabaseSync.updateApplication(curApp.id, {
+              assigned_constructor_id: curApp.assignedConstructorId,
+              assigned_constructor_name: curApp.assignedConstructorName,
+              construction_status: curApp.constructionStatus,
+              memo: curApp.memo
+            });
+          } else if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
+            await window.SupabaseSync.upsertApplication(curApp);
+          }
+        }).catch(() => {});
       }
 
       // 2) users.items 동기화
@@ -1563,7 +1611,6 @@
             assigned_constructor_id: null,
             assigned_constructor_name: null,
             construction_status: 'before_construction',
-            assigned_at: null,
             memo: targetApp.memo
           }).catch(() => {});
         } else if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
@@ -3820,7 +3867,6 @@
             assigned_constructor_id: null,
             assigned_constructor_name: null,
             construction_status: 'before_construction',
-            assigned_at: null,
             memo: memoPayloadStr
           });
           for (const uSync of usersToSync) {
@@ -3831,7 +3877,6 @@
             assigned_constructor_id: null,
             assigned_constructor_name: null,
             construction_status: 'before_construction',
-            assigned_at: null,
             memo: memoPayloadStr
           }).eq('id', String(app.id));
         }
@@ -4051,8 +4096,6 @@
       if (typeof window.SupabaseSync.updateApplication === 'function') {
         window.SupabaseSync.updateApplication(id, {
           construction_status: 'after_construction',
-          progress_status: '간판시공완료',
-          construction_completed_at: nowIso,
           memo: targetMemoStr
         });
       }

@@ -2223,9 +2223,7 @@ window.SupabaseSync = {
         'user_id', 'owner_name', 'phone', 'store_name', 'store_address',
         'sign_type', 'referrer_code', 'status', 'assigned_constructor_id',
         'assigned_constructor_name', 'construction_status', 'memo',
-        'image_url', 'construction_photos', 'construction_invoice', 'applied_at',
-        // [추가] 실제 사용 중이나 누락되어 있던 컬럼
-        'receipt_status', 'progress_status', 'assigned_at', 'construction_completed_at'
+        'image_url', 'construction_photos', 'construction_invoice', 'applied_at'
       ];
       const safePayload = {};
       for (const [k, v] of Object.entries(updateFields)) {
@@ -2521,7 +2519,7 @@ window.SupabaseSync = {
               const itIdStr = String(it.id || '').trim().toLowerCase();
               const normItId = itIdStr.replace(/[^a-zA-Z0-9]/g, '');
               const lock = recentLocks[it.id] || (normItId && recentLocks[normItId]);
-              if (lock && (Date.now() - (lock.timestamp || 0) < 4000)) {
+              if (lock && (Date.now() - (lock.timestamp || 0) < 10000)) {
                 return {
                   ...it,
                   receiptStatus: lock.receiptStatus || it.receiptStatus,
@@ -2666,11 +2664,11 @@ window.SupabaseSync = {
               return false;
             });
             if (localApp) {
-              // 1) 최근 로컬에서 직접 상태/영업자 변경이 일어난 경우(4초 이내) Supabase 구형 데이터로 덮어쓰지 않고 로컬 최신 상태 보존 (동기화 레이스 컨디션 방어)
+              // 1) 최근 로컬에서 직접 상태/영업자 변경이 일어난 경우(10초 이내) Supabase 구형 데이터로 덮어쓰지 않고 로컬 최신 상태 보존 (동기화 레이스 컨디션 방어)
               const normObjKey = String(appObj.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
               const recentLocks = (window.DataStore && window.DataStore._recentStatusUpdates) || {};
               const lock = recentLocks[String(appObj.id)] || (normObjKey && recentLocks[normObjKey]);
-              const isLocalLockActive = Boolean(lock && (Date.now() - (lock.timestamp || 0) < 4000));
+              const isLocalLockActive = Boolean(lock && (Date.now() - (lock.timestamp || 0) < 10000));
 
               if (isLocalLockActive) {
                 const rStat = lock.receiptStatus !== undefined ? lock.receiptStatus : localApp.receiptStatus;
