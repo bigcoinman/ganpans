@@ -14,6 +14,7 @@
 * **`[설계도-06] BP-APP-SHARE-INSTALL`**: 모바일 앱 공유(Web Share) 및 원클릭 홈 화면 바로가기(PWA) 설치 설계도 *(공식 확정)*
 * **`[설계도-07] BP-AUTH-RECOVERY`**: 로그인 팝업 내 아이디 찾기 및 비밀번호 재설정 단일 연동 설계도 *(공식 확정)*
 * **`[설계도-08] BP-TRAFFIC-DIET`**: 트래픽 다이어트 및 Supabase 대역폭(Egress) 영구 방어 설계도 *(공식 확정)*
+* **`[설계도-09] BP-CLEAN-PIPELINE`**: 땜빵 금지, 구형 찌꺼기 전수 삭제 및 단일 파이프라인(Clean Slate Single Pipeline) 보존 설계도 *(공식 확정)*
 
 ---
 
@@ -270,6 +271,29 @@ graph TD
 | **목록 동기화** | 전체 Base64 포함 조회 위험 | **사진 컬럼 100% 배제 (선별 텍스트)** | Egress 99% 원천 절감 |
 | **Realtime 동기화** | 이벤트 발화마다 즉시 재조회 | **300ms 디바운스 묶음 처리** | 소켓 폭풍 및 대역폭 누수 차단 |
 | **사진 재열람** | 매 열람마다 네트워크 다운로드 | **PhotoCacheManager 브라우저 캐싱** | 중복 조회 트래픽 0 바이트 |
+
+---
+
+## 📐 [설계도-09] BP-CLEAN-PIPELINE: 땜빵 금지, 구형 찌꺼기 전수 삭제 및 단일 파이프라인(Clean Slate Single Pipeline) 보존 설계도
+
+### 1. 3대 절대 헌법 원칙 (Absolute Constitutional Rules)
+1. **구형 레거시 및 이원화 분기문 전수 추적 삭제 (Zero Residue / Clean Slate)**:
+   - 수정 사항이 생겼을 때, 기존 흐름을 그대로 둔 채 옆에 우회로를 덧붙이는 땜빵 행위를 영구 엄격 금지한다.
+   - 반드시 관련된 구형 레거시 코드, 임시 분기문, 이중 조회 함수를 100% 전수 추적하여 삭제(도려내기)한 후, 가장 단순한 단 1개의 파이프라인으로 전면 재구축한다.
+2. **임시방편 우회 장치(락, 타이머, 우회 조건문) 영구 금지**:
+   - 눈앞의 증상만 모면하기 위한 임시 우회 락(`_recentStatusUpdates` 남용, 임의 플래그 덮어쓰기), 지연 타이머(`setTimeout`으로 재덮어쓰기), 화면 렌더링 중 독자 쿼리 발동을 일체 쓰지 않는다.
+   - 단일 진실의 원천(SSOT)에 따라 데이터가 1회 기록되면 전체 화면이 0초 만에 안정적으로 리렌더링되는 단순 무결 구조를 유지한다.
+3. **단일 클라우드 동기화 엔진 일원화 (Single SSOT Sync Engine)**:
+   - 모든 클라우드 동기화는 오직 `security-utils.js`의 `SupabaseSync.syncAllData()` 단 하나의 공식 파이프라인으로만 처리한다.
+   - 화면 함수(`renderAdminDashboardMob` 등) 내부에 독자적인 DB 조회(`client.from`)나 임의의 `fetch...Fresh` 유령 함수를 삽입하는 것을 영구 금지한다.
+
+### 2. 자동 검문소 (`verify-blueprint.js`) 영구 감시 규칙
+1. **[검문 1] 독자 직통 클라우드 조회 찌꺼기 100% 부존재 검증**:
+   - `fetchAndRenderAdminApplicationsFresh`, `fetchAndRenderAdminUsersFresh` 등 독자 조회 함수 부존재 검사.
+2. **[검문 2] 화면 렌더링 함수 내 독자 DB 쿼리 부존재 검증**:
+   - `renderAdminDashboardMob` 등 렌더링 함수 바디 내에 독자 Supabase 쿼리(`client.from`) 부존재 검사.
+3. **[검문 3] 렌더링 루프 재조회 우회 타이머 부존재 검증**:
+   - 화면 렌더링 함수 내에서 `skipSync`를 무시하고 비동기로 클라우드를 재조회하는 이중 쿼리 부존재 검사.
 
 ---
 

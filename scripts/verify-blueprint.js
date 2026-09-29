@@ -13,7 +13,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 console.log('========================================================');
-console.log('🛡️ [간판지원단] 8대 공식 설계도 자동 검문소 가동');
+console.log('🛡️ [간판지원단] 9대 공식 설계도 자동 검문소 가동');
 console.log('========================================================\n');
 
 let passed = true;
@@ -47,7 +47,7 @@ const secUtilsCode = fs.readFileSync('security-utils.js', 'utf8');
 
 console.log('\n--- [설계도 등록 확인] SYSTEM_BLUEPRINT.md 체계 검사 ---');
 assertRule(
-  'SYSTEM_BLUEPRINT.md 공식 8대 설계도 목차 등록',
+  'SYSTEM_BLUEPRINT.md 공식 9대 설계도 목차 등록',
   blueprintCode.includes('BP-SALES-DASHBOARD') && 
   blueprintCode.includes('BP-APPLY-ACCOUNT') && 
   blueprintCode.includes('BP-APP-LIFECYCLE') && 
@@ -55,7 +55,8 @@ assertRule(
   blueprintCode.includes('BP-ADMIN-SSOT') &&
   blueprintCode.includes('BP-APP-SHARE-INSTALL') &&
   blueprintCode.includes('BP-AUTH-RECOVERY') &&
-  blueprintCode.includes('BP-TRAFFIC-DIET'),
+  blueprintCode.includes('BP-TRAFFIC-DIET') &&
+  blueprintCode.includes('BP-CLEAN-PIPELINE'),
   '설계도 공식 목차가 누락되었습니다.'
 );
 
@@ -370,6 +371,29 @@ assertRule(
   '코드베이스 내에 구형 300 * 1024 찌꺼기 하드코딩이 잔존합니다!'
 );
 
+console.log('\n--- [설계도-09 검증] BP-CLEAN-PIPELINE (땜빵 금지, 찌꺼기 전수 삭제 및 단일 파이프라인) ---');
+assertRule(
+  '[BP-09] 독자 직통 클라우드 조회 찌꺼기 100% 부존재 준수',
+  !appCode.includes('fetchAndRenderAdminApplicationsFresh') && 
+  !appCode.includes('fetchAndRenderAdminUsersFresh'),
+  'app.js 내에 독자 클라우드 직통 조회 찌꺼기 함수가 잔존합니다!'
+);
+
+assertRule(
+  '[BP-09] 화면 렌더링 함수 내 독자 비동기 재조회 루프 100% 부존재 준수',
+  !appCode.includes('_isFetchingAppsFresh') && 
+  !appCode.includes('_isFetchingUsersFresh'),
+  'app.js 내에 화면 렌더링 중 덮어쓰기를 유발하는 우회 플래그 찌꺼기가 잔존합니다!'
+);
+
+assertRule(
+  '[BP-09] 단일 클라우드 동기화 파이프라인(SupabaseSync) 준수',
+  secUtilsCode.includes('async syncAllData(') && 
+  !appCode.includes('window.fetchAndRenderAdminApplicationsFresh') && 
+  !appCode.includes('window.fetchAndRenderAdminUsersFresh'),
+  '단일 동기화 파이프라인(SupabaseSync) 원칙을 위배하는 독자 전역 바인딩이 발견되었습니다!'
+);
+
 console.log('\n--- [이원화 금지 검사] 유령 코드 및 찌꺼기 패턴 검사 ---');
 const ghostPatterns = [
   'viewDraftModalForSales',
@@ -392,7 +416,7 @@ for (const pattern of ghostPatterns) {
 
 console.log('\n========================================================');
 if (passed) {
-  console.log('🎉 [검증 완료] 8대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
+  console.log('🎉 [검증 완료] 9대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
   console.log('   기존 기능 훼손 0건, 이원화 찌꺼기 0건 확인 완료.');
   console.log('========================================================\n');
   process.exit(0);
