@@ -3826,8 +3826,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <option value="completed" ${st === 'completed' ? 'selected' : ''}>5. 정산 종결</option>
                                 </select>
                             </div>
-                            <button type="button" onclick="window.cancelJobConstructorAssignment('${job.id}')" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 7px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;" title="시공 배정 취소 (시공업체 진행현황에서 제외하고 미배정 상태로 복귀)">
-                                <i class="fa-solid fa-xmark"></i> 배정 취소
+                            <button type="button" class="btn-cancel-job-constructor" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); window.cancelJobConstructorAssignment('${job.id}', event); return false;" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 7px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; touch-action: manipulation; -webkit-tap-highlight-color: transparent;" title="시공 배정 취소 (시공업체 진행현황에서 제외하고 미배정 상태로 복귀)">
+                                <i class="fa-solid fa-xmark" style="pointer-events: none;"></i> 배정 취소
                             </button>
                         </div>
                     `;

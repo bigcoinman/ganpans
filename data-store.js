@@ -718,13 +718,7 @@
         );
 
         if (hasAssignedConstructor) {
-          const constName = app.assignedConstructorName || '배정된 시공업체';
-          const confirmMsg = `[${app.storeName || '해당 업체'}] 건은 현재 시공업체(${constName})가 배정되어 진행 중인 물건입니다.\n\n시공업체 배정을 취소하고 영업물건 등록을 해제하시겠습니까?`;
-          if (!confirm(confirmMsg)) {
-            return { success: false, cancelled: true, message: '관리자 취소' };
-          }
-
-          // 관리자가 확인한 경우: 시공사 배정 및 시공 상태, 디자인 시안 찌꺼기 100% 완전 초기화 (Clean Slate)
+          // 최고관리자 원클릭 즉시 반영: 팝업창 없이 즉시 시공사 배정 및 시공 상태, 디자인 시안 찌꺼기 100% 완전 초기화 (Clean Slate)
           app.assignedConstructorId = null;
           app.assignedConstructorName = null;
           app.assignedConstructorCode = null;
@@ -3792,21 +3786,19 @@
     modal.style.display = 'flex';
   };
 
-  // --- 시공 배정 취소 (최고관리자 권한: 시공 진행현황에서 제외 & 영업물건 미배정 상태 복귀) ---
-  window.cancelJobConstructorAssignment = function (id) {
+  // --- 시공 배정 취소 (최고관리자 권한: 팝업창 없이 1회 클릭 0초 즉시 시공 진행현황 제외 & 영업물건 미배정 복귀) ---
+  window.cancelJobConstructorAssignment = function (id, e) {
+    if (e) {
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+    }
     let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
       ? window.DataStore.getApplications()
       : (JSON.parse(localStorage.getItem('applications')) || []);
     const app = apps.find(a => String(a.id) === String(id) || String(a.appRefId) === String(id));
     if (!app) {
-      alert('해당 시공 배정 물건을 찾을 수 없습니다: ' + id);
-      return;
+      return { success: false, error: '해당 시공 배정 물건을 찾을 수 없습니다: ' + id };
     }
-
-    const storeName = app.storeName || app.shopName || '해당 업체';
-    const constName = app.assignedConstructorName || '시공사';
-    const confirmMsg = `[${storeName}] 건의 시공업체(${constName}) 배정을 취소하시겠습니까?\n\n시공업체 진행현황에서 제외되며, 영업물건 진행상황(미배정) 상태로 되돌아갑니다.`;
-    if (!confirm(confirmMsg)) return;
 
     // 1) applications 단일 원천 시공 정보 및 시안 찌꺼기 완전 초기화
     let memoPayloadStr = null;
