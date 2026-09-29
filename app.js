@@ -1922,7 +1922,7 @@ document.addEventListener('DOMContentLoaded', () => {
             progressBadge = '<span style="background: #ede9fe; color: #6d28d9; border: 1.5px solid #c4b5fd; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-award"></i> 간판시공완료</span>';
         } else if (pStatus === '간판시공 준비중' || pStatus === 'in_construction' || pStatus === '시공준비') {
             progressBadge = '<span style="background: #fef9c3; color: #a16207; border: 1.5px solid #fef08a; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-screwdriver-wrench"></i> 간판시공 준비중</span>';
-        } else if (pStatus === '대상자선정' || pStatus === '선정' || pStatus === 'before_construction') {
+        } else if (pStatus === '대상자선정' || pStatus === '선정' || pStatus === '대상자 선정') {
             progressBadge = '<span style="background: #dcfce7; color: #15803d; border: 1.5px solid #86efac; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-check"></i> 대상자선정</span>';
         } else if (pStatus === '심사대기중' || pStatus === '심사대기') {
             progressBadge = '<span style="background: #fef3c7; color: #b45309; border: 1.5px solid #fde68a; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-magnifying-glass"></i> 심사대기중</span>';
@@ -3332,8 +3332,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     let curReceipt = String(item.receiptStatus || '접수예정').trim();
                     let curProgress = String(item.progressStatus || '지원대기중').trim();
 
-                    // 영문 및 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화
-                    if (curProgress === '대상자선정' || curProgress === '대상자 선정' || curProgress === '선정' || curProgress === '승인 완료' || curProgress === '승인완료' || curProgress === 'approved' || curProgress === 'before_construction') {
+                    // 영문 및 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화 (시공상태나 심사상태 혼입 원천 차단)
+                    if (curProgress === '대상자선정' || curProgress === '대상자 선정' || curProgress === '선정' || curProgress === '승인 완료' || curProgress === '승인완료') {
                         curProgress = '대상자선정';
                     } else if (curProgress === '간판시공 준비중' || curProgress === '간판 시공 준비중' || curProgress === 'in_construction' || curProgress === '시공준비') {
                         curProgress = '간판시공 준비중';

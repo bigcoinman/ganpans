@@ -338,12 +338,12 @@
 
         const normAid = String(app.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
         const recentLock = (this._recentStatusUpdates && (this._recentStatusUpdates[String(app.id)] || (normAid && this._recentStatusUpdates[normAid]))) || null;
-        const isLockActive = Boolean(recentLock && (Date.now() - (recentLock.timestamp || 0) < 10000));
+        const isLockActive = Boolean(recentLock && (Date.now() - (recentLock.timestamp || 0) < 30000));
         let rStatus = (isLockActive && recentLock.receiptStatus) ? recentLock.receiptStatus : (app.receiptStatus || '접수예정');
         let pStatus = (isLockActive && recentLock.progressStatus) ? recentLock.progressStatus : (app.progressStatus || '지원대기중');
 
-        // 영문 또는 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화
-        if (pStatus === '대상자선정' || pStatus === '대상자 선정' || pStatus === '선정' || pStatus === '승인 완료' || pStatus === '승인완료' || pStatus === 'approved' || pStatus === 'before_construction' || pStatus === '시공 전' || pStatus === '시공사 배정 (시공 전)' || pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인') {
+        // 영문 또는 비표준 상태값을 한글 표준 5대 상태값으로 엄격 정규화 (시공상태나 심사상태 혼입 원천 차단)
+        if (pStatus === '대상자선정' || pStatus === '대상자 선정' || pStatus === '선정' || pStatus === '승인 완료' || pStatus === '승인완료' || pStatus === '서류 심사 통과' || pStatus === '현장 실사 중' || pStatus === '지원금 최종 승인') {
           pStatus = '대상자선정';
         } else if (pStatus === '간판시공 준비중' || pStatus === '간판 시공 준비중' || pStatus === 'in_construction' || pStatus === '시공 준비중' || pStatus === '간판 시공 중' || pStatus === '시공준비') {
           pStatus = '간판시공 준비중';
@@ -1099,10 +1099,9 @@
               app.constructionStatus = 'before_construction';
               // [영구 불변 원칙] 신청서 본래의 심사 상태(app.status, 예: 'approved' 서류준비 & 접수대기)는 절대 pending으로 덮어쓰지 않고 100% 영구 보존!
             } else if (cleanVal === '접수완료' || cleanVal === '업체신청') {
-              // [규칙 2] 접수: '접수완료' 또는 '업체신청'으로 변경 시, 진행상태가 '지원대기중'이거나 미정이면 자동으로 '심사대기중'으로 기본 적용
-              // 만약 이미 '대상자선정' 등 더 진행된 상태라면 기존 진행상태를 절대 다운그레이드하지 않고 유지!
-              if (!app.progressStatus || app.progressStatus === '지원대기중' || app.progressStatus === 'none') {
-                app.progressStatus = '심사대기중';
+              // [규칙 2] 접수: '접수완료' 또는 '업체신청'으로 변경 시, 기존 진행상태가 미정이거나 없을 때만 기본값 세팅하고, 이미 설정된 상태는 100% 보존
+              if (!app.progressStatus || app.progressStatus === 'none') {
+                app.progressStatus = '지원대기중';
                 app.constructionStatus = 'before_construction';
                 // [영구 불변 원칙] 신청서 본래의 심사 상태(app.status) 영구 보존
               }
@@ -1260,22 +1259,21 @@
       // 4) Supabase DB 비동기 백그라운드 저장 (단일 원천 applications 및 users.items 순차 큐 저장으로 레이스 컨디션 완벽 방어)
       if (!this._appSyncQueues) this._appSyncQueues = {};
       const queueKey = String(targetApp ? targetApp.id : targetIdStr);
+      const payloadApp = targetApp ? JSON.parse(JSON.stringify(targetApp)) : null;
       const prevPromise = this._appSyncQueues[queueKey] || Promise.resolve();
       this._appSyncQueues[queueKey] = prevPromise.then(async () => {
         try {
-          if (window.SupabaseSync) {
-            const freshApps = this.getApplications();
-            const curApp = freshApps.find(a => String(a.id) === queueKey || String(a.appRefId) === queueKey) || targetApp;
-            if (curApp && typeof window.SupabaseSync.updateApplication === 'function') {
-              await window.SupabaseSync.updateApplication(curApp.id, {
-                status: curApp.status || 'approved',
-                construction_status: curApp.constructionStatus || 'before_construction',
-                sign_type: curApp.signType || '',
-                referrer_code: curApp.referrerCode || '',
-                memo: typeof curApp.memo === 'object' ? JSON.stringify(curApp.memo) : (curApp.memo || '')
+          if (window.SupabaseSync && payloadApp) {
+            if (typeof window.SupabaseSync.updateApplication === 'function') {
+              await window.SupabaseSync.updateApplication(payloadApp.id, {
+                status: payloadApp.status || 'approved',
+                construction_status: payloadApp.constructionStatus || 'before_construction',
+                sign_type: payloadApp.signType || '',
+                referrer_code: payloadApp.referrerCode || '',
+                memo: typeof payloadApp.memo === 'object' ? JSON.stringify(payloadApp.memo) : (payloadApp.memo || '')
               });
-            } else if (curApp && typeof window.SupabaseSync.upsertApplication === 'function') {
-              await window.SupabaseSync.upsertApplication(curApp);
+            } else if (typeof window.SupabaseSync.upsertApplication === 'function') {
+              await window.SupabaseSync.upsertApplication(payloadApp);
             }
             if (usersChanged && typeof window.SupabaseSync.updateUser === 'function') {
               const freshUsers = this.getUsers();
@@ -2274,6 +2272,7 @@
         if (typeof window.renderBizRegisteredItemsMob === 'function') window.renderBizRegisteredItemsMob();
         if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
         if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
+        if (typeof window.renderNormalDashboardMob === 'function') window.renderNormalDashboardMob();
 
         // 4. 시공사 화면: 파일 선택창 조작 중이거나 업로드 중일 때는 테이블 DOM 파괴 방지를 위해 안전 스킵 (In-place로 즉시 갱신됨)
         if (!isConstInputActive || isForced) {
