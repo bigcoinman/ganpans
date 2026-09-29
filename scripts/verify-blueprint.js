@@ -144,6 +144,19 @@ assertRule(
 );
 
 assertRule(
+  '[BP-03] assignConstructorToBizItem 내 memo.receiptStatus & memo.progressStatus 동기화 보존 준수',
+  dataStoreCode.includes('mObj.receiptStatus = targetApp.receiptStatus') &&
+  dataStoreCode.includes('mObj.progressStatus = targetApp.progressStatus'),
+  '시공사 배정 시 memo 컬럼의 접수/진행상태 동기화 코드가 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-03] reassignConstructorItemMob DataStore.reassignConstructorItem SSOT 단일 원천 호출 준수',
+  appCode.includes('DataStore.reassignConstructorItem(uid, itemId)'),
+  '모바일 시공사 변경 함수가 DataStore 단일 원천을 호출하지 않습니다!'
+);
+
+assertRule(
   '[BP-03] toggleBizItem 사진 카운트 0 리셋 방어 및 영구 보존(preservedPhotoCount) 준수',
   dataStoreCode.includes('preservedPhotoCount') &&
   !dataStoreCode.includes('memoObj.photoCount = photosList.length;'),
