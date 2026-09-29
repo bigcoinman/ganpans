@@ -3309,8 +3309,14 @@
           let mObj = {};
           try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch (e) {}
           mObj.constPhotoCount = merged.length;
+          // [설계도-04 시안 승인 상태 보존] 점주/관리자 시안 승인 상태 및 시안 사진 100% 보존
+          if (app.draftStatus && !mObj.draftStatus) mObj.draftStatus = app.draftStatus;
+          if (app.draftApprovedAt && !mObj.draftApprovedAt) mObj.draftApprovedAt = app.draftApprovedAt;
+          if (Array.isArray(app.signDraftPhotos) && app.signDraftPhotos.length > 0 && (!mObj.signDraftPhotos || mObj.signDraftPhotos.length === 0)) {
+            mObj.signDraftPhotos = app.signDraftPhotos;
+          }
           const targetMemoStr = JSON.stringify(mObj);
-          return { ...app, constructionPhotos: merged, memo: targetMemoStr };
+          return { ...app, constructionPhotos: merged, constPhotoCount: merged.length, memo: targetMemoStr };
         }
         return app;
       });
@@ -3334,8 +3340,13 @@
               let mObj = {};
               try { mObj = typeof item.memo === 'string' ? JSON.parse(item.memo) : (item.memo || {}); } catch (e) {}
               mObj.constPhotoCount = merged.length;
+              if (item.draftStatus && !mObj.draftStatus) mObj.draftStatus = item.draftStatus;
+              if (item.draftApprovedAt && !mObj.draftApprovedAt) mObj.draftApprovedAt = item.draftApprovedAt;
+              if (Array.isArray(item.signDraftPhotos) && item.signDraftPhotos.length > 0 && (!mObj.signDraftPhotos || mObj.signDraftPhotos.length === 0)) {
+                mObj.signDraftPhotos = item.signDraftPhotos;
+              }
               targetMemoForUser = JSON.stringify(mObj);
-              return { ...item, constructionPhotos: merged, memo: targetMemoForUser };
+              return { ...item, constructionPhotos: merged, constPhotoCount: merged.length, memo: targetMemoForUser };
             }
             return item;
           });
@@ -3354,7 +3365,43 @@
 
       if (window.SupabaseSync) {
         const app = apps.find(a => String(a.id) === String(id));
-        const memoToSend = (app && app.memo) ? app.memo : targetMemoForUser;
+        let memoToSend = (app && app.memo) ? app.memo : targetMemoForUser;
+
+        // [SSOT 보호] Supabase DB의 최신 memo를 조회하여 점주의 시안 승인 상태('owner_approved')가 덮어써지지 않도록 병합
+        if (window.supabaseClient && typeof window.supabaseClient.from === 'function') {
+          try {
+            const { data: dbRow } = await window.supabaseClient
+              .from('applications')
+              .select('memo')
+              .eq('id', String(id))
+              .maybeSingle();
+            if (dbRow && dbRow.memo) {
+              const serverMemo = typeof dbRow.memo === 'string' ? JSON.parse(dbRow.memo) : dbRow.memo;
+              let localMemo = {};
+              try { localMemo = typeof memoToSend === 'string' ? JSON.parse(memoToSend) : (memoToSend || {}); } catch (eM) {}
+              if (serverMemo.draftStatus && (serverMemo.draftStatus === 'owner_approved' || serverMemo.draftStatus === 'admin_approved')) {
+                localMemo.draftStatus = serverMemo.draftStatus;
+                localMemo.draftApprovedAt = serverMemo.draftApprovedAt || localMemo.draftApprovedAt;
+              }
+              if (Array.isArray(serverMemo.signDraftPhotos) && serverMemo.signDraftPhotos.length > 0 && (!localMemo.signDraftPhotos || localMemo.signDraftPhotos.length === 0)) {
+                localMemo.signDraftPhotos = serverMemo.signDraftPhotos;
+              }
+              localMemo.constPhotoCount = merged.length;
+              memoToSend = JSON.stringify(localMemo);
+              if (app) {
+                app.memo = memoToSend;
+                if (localMemo.draftStatus) app.draftStatus = localMemo.draftStatus;
+                if (localMemo.draftApprovedAt) app.draftApprovedAt = localMemo.draftApprovedAt;
+                if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
+                  window.DataStore.saveApplications(apps);
+                }
+              }
+            }
+          } catch (eDbMemo) {
+            console.warn('[handleJobPhotoUploadCommon] DB memo merge fallback:', eDbMemo);
+          }
+        }
+
         if (typeof window.SupabaseSync.updateApplication === 'function') {
           window.SupabaseSync.updateApplication(id, { construction_photos: merged, memo: memoToSend });
         }
@@ -3407,8 +3454,13 @@
         let mObj = {};
         try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch (e) {}
         mObj.constPhotoCount = remainingCount;
+        if (app.draftStatus && !mObj.draftStatus) mObj.draftStatus = app.draftStatus;
+        if (app.draftApprovedAt && !mObj.draftApprovedAt) mObj.draftApprovedAt = app.draftApprovedAt;
+        if (Array.isArray(app.signDraftPhotos) && app.signDraftPhotos.length > 0 && (!mObj.signDraftPhotos || mObj.signDraftPhotos.length === 0)) {
+          mObj.signDraftPhotos = app.signDraftPhotos;
+        }
         targetMemoStr = JSON.stringify(mObj);
-        return { ...app, constructionPhotos: updated, memo: targetMemoStr };
+        return { ...app, constructionPhotos: updated, constPhotoCount: remainingCount, memo: targetMemoStr };
       }
       return app;
     });
@@ -3434,7 +3486,12 @@
             let mObj = {};
             try { mObj = typeof item.memo === 'string' ? JSON.parse(item.memo) : (item.memo || {}); } catch (e) {}
             mObj.constPhotoCount = remainingCount;
-            return { ...item, constructionPhotos: updated, memo: JSON.stringify(mObj) };
+            if (item.draftStatus && !mObj.draftStatus) mObj.draftStatus = item.draftStatus;
+            if (item.draftApprovedAt && !mObj.draftApprovedAt) mObj.draftApprovedAt = item.draftApprovedAt;
+            if (Array.isArray(item.signDraftPhotos) && item.signDraftPhotos.length > 0 && (!mObj.signDraftPhotos || mObj.signDraftPhotos.length === 0)) {
+              mObj.signDraftPhotos = item.signDraftPhotos;
+            }
+            return { ...item, constructionPhotos: updated, constPhotoCount: remainingCount, memo: JSON.stringify(mObj) };
           }
           return item;
         });

@@ -1493,7 +1493,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         cCount = Number(app.constPhotoCount);
                     }
                     const isCompleted = (pStat === '간판시공완료' || cStat === 'after_construction' || cStat === 'completed');
-                    if (!isCompleted || cCount === 0) {
+                    if (cCount === 0 && !isCompleted) {
                         return '';
                     }
                     return `
@@ -2199,7 +2199,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         cCount = Number(app.constPhotoCount);
                     }
                     const isCompleted = (pStat === '간판시공완료' || cStat === 'after_construction' || cStat === 'completed');
-                    if (!isCompleted || cCount === 0) {
+                    if (cCount === 0 && !isCompleted) {
                         return '';
                     }
                     return `
@@ -2388,7 +2388,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         cCount = Number(matchedApp.constPhotoCount);
                     }
                     const isCompleted = (pStat === '간판시공완료' || cStat === 'after_construction' || cStat === 'completed');
-                    if (!isCompleted || cCount === 0) {
+                    if (cCount === 0 && !isCompleted) {
                         return '';
                     }
                     return `
