@@ -1909,6 +1909,7 @@ window.SupabaseSync = {
     let salespersonId = '';
     let salespersonName = '';
     let photoCount = 0;
+    let constPhotoCount = 0;
     let signDraftPhotos = [];
     let draftStatus = 'pending';
     let draftApprovedAt = null;
@@ -1933,6 +1934,10 @@ window.SupabaseSync = {
             isDirectHeadquarters = true;
           }
           if (parsedMemo.photoCount !== undefined) photoCount = Number(parsedMemo.photoCount) || 0;
+          if (parsedMemo.constPhotoCount !== undefined) constPhotoCount = Number(parsedMemo.constPhotoCount) || 0;
+          if (parsedMemo.constructionPhotos && Array.isArray(parsedMemo.constructionPhotos)) {
+            constPhotoCount = Math.max(constPhotoCount, parsedMemo.constructionPhotos.length);
+          }
           if (parsedMemo.signDraftPhotos && Array.isArray(parsedMemo.signDraftPhotos)) signDraftPhotos = parsedMemo.signDraftPhotos;
           if (parsedMemo.draftStatus) draftStatus = parsedMemo.draftStatus;
           if (parsedMemo.draftApprovedAt) draftApprovedAt = parsedMemo.draftApprovedAt;
@@ -2048,6 +2053,7 @@ window.SupabaseSync = {
       signDraftPhotos: signDraftPhotos || [],
       draftStatus: draftStatus || 'pending',
       draftApprovedAt: draftApprovedAt || null,
+      constPhotoCount: constPhotoCount,
       constructionPhotos: Array.isArray(dbApp.construction_photos) ? dbApp.construction_photos : [],
       invoicePhotos: dbApp.construction_invoice ? [dbApp.construction_invoice] : []
     };
@@ -2737,6 +2743,7 @@ window.SupabaseSync = {
               const isPhotoLockActive = Boolean(photoLock && (Date.now() - (photoLock.timestamp || 0) < 10000));
               if (isPhotoLockActive && Array.isArray(photoLock.constructionPhotos)) {
                 appObj.constructionPhotos = photoLock.constructionPhotos;
+                appObj.constPhotoCount = photoLock.constructionPhotos.length;
               } else {
                 let serverConstPhotos = sa.construction_photos;
                 if ((!serverConstPhotos || !Array.isArray(serverConstPhotos) || serverConstPhotos.length === 0) && sa.memo) {
@@ -2746,6 +2753,21 @@ window.SupabaseSync = {
                   } catch (e) {}
                 }
                 appObj.constructionPhotos = Array.isArray(serverConstPhotos) ? serverConstPhotos : [];
+                // 서버 memo의 constPhotoCount 보존 (설계도-08 트래픽 방어 쿼리 준수)
+                let memoConstCount = 0;
+                if (sa.memo) {
+                  try {
+                    const m = typeof sa.memo === 'string' ? JSON.parse(sa.memo) : sa.memo;
+                    memoConstCount = Number(m.constPhotoCount || m.constructionPhotoCount) || 0;
+                    if (Array.isArray(m.constructionPhotos)) memoConstCount = Math.max(memoConstCount, m.constructionPhotos.length);
+                  } catch(e) {}
+                }
+                const resolvedConstCount = Math.max(
+                  appObj.constructionPhotos.length,
+                  memoConstCount,
+                  Number(appObj.constPhotoCount) || 0
+                );
+                appObj.constPhotoCount = resolvedConstCount;
               }
               if (localApp.invoicePhotos && localApp.invoicePhotos.length > 0 && (!appObj.invoicePhotos || appObj.invoicePhotos.length === 0)) {
                 appObj.invoicePhotos = localApp.invoicePhotos;

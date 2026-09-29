@@ -1475,17 +1475,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${(() => {
                     const constPhotos = (app && Array.isArray(app.constructionPhotos)) ? app.constructionPhotos : [];
                     let cCount = constPhotos.length;
-                    if (cCount === 0 && app && app.memo) {
+                    let pStat = app.progressStatus || '';
+                    let cStat = app.constructionStatus || '';
+                    if (app && app.memo) {
                         try {
                             const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
-                            if (m && Array.isArray(m.constructionPhotos)) cCount = m.constructionPhotos.length;
-                            else if (m && Number(m.constPhotoCount) > 0) cCount = Number(m.constPhotoCount);
+                            if (m) {
+                                if (Array.isArray(m.constructionPhotos)) cCount = Math.max(cCount, m.constructionPhotos.length);
+                                if (Number(m.constPhotoCount) > 0) cCount = Math.max(cCount, Number(m.constPhotoCount));
+                                if (!pStat && m.progressStatus) pStat = m.progressStatus;
+                                if (!cStat && m.constructionStatus) cStat = m.constructionStatus;
+                            }
                         } catch(e) {}
                     }
                     if (cCount === 0 && app && Number(app.constPhotoCount) > 0) {
                         cCount = Number(app.constPhotoCount);
                     }
-                    if (cCount === 0 && app.progressStatus !== '간판시공완료' && app.constructionStatus !== 'after_construction' && app.constructionStatus !== 'completed') {
+                    const isCompleted = (pStat === '간판시공완료' || cStat === 'after_construction' || cStat === 'completed');
+                    if (cCount === 0 && !isCompleted) {
                         return '';
                     }
                     return `
@@ -2193,17 +2200,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${(() => {
                     const constPhotos = (app && Array.isArray(app.constructionPhotos)) ? app.constructionPhotos : [];
                     let cCount = constPhotos.length;
-                    if (cCount === 0 && app && app.memo) {
+                    let pStat = app.progressStatus || '';
+                    let cStat = app.constructionStatus || '';
+                    if (app && app.memo) {
                         try {
                             const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
-                            if (m && Array.isArray(m.constructionPhotos)) cCount = m.constructionPhotos.length;
-                            else if (m && Number(m.constPhotoCount) > 0) cCount = Number(m.constPhotoCount);
+                            if (m) {
+                                if (Array.isArray(m.constructionPhotos)) cCount = Math.max(cCount, m.constructionPhotos.length);
+                                if (Number(m.constPhotoCount) > 0) cCount = Math.max(cCount, Number(m.constPhotoCount));
+                                if (!pStat && m.progressStatus) pStat = m.progressStatus;
+                                if (!cStat && m.constructionStatus) cStat = m.constructionStatus;
+                            }
                         } catch(e) {}
                     }
                     if (cCount === 0 && app && Number(app.constPhotoCount) > 0) {
                         cCount = Number(app.constPhotoCount);
                     }
-                    if (cCount === 0 && app.progressStatus !== '간판시공완료' && app.constructionStatus !== 'after_construction' && app.constructionStatus !== 'completed') {
+                    const isCompleted = (pStat === '간판시공완료' || cStat === 'after_construction' || cStat === 'completed');
+                    if (cCount === 0 && !isCompleted) {
                         return '';
                     }
                     return `
@@ -2374,17 +2388,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${(() => {
                     const constPhotos = (matchedApp && Array.isArray(matchedApp.constructionPhotos)) ? matchedApp.constructionPhotos : [];
                     let cCount = constPhotos.length;
-                    if (cCount === 0 && matchedApp && matchedApp.memo) {
+                    let pStat = (matchedApp && matchedApp.progressStatus) || (item.statusObj && item.statusObj.progressStatus) || '';
+                    let cStat = (matchedApp && matchedApp.constructionStatus) || '';
+                    if (matchedApp && matchedApp.memo) {
                         try {
                             const m = typeof matchedApp.memo === 'string' ? JSON.parse(matchedApp.memo) : matchedApp.memo;
-                            if (m && Array.isArray(m.constructionPhotos)) cCount = m.constructionPhotos.length;
-                            else if (m && Number(m.constPhotoCount) > 0) cCount = Number(m.constPhotoCount);
+                            if (m) {
+                                if (Array.isArray(m.constructionPhotos)) cCount = Math.max(cCount, m.constructionPhotos.length);
+                                if (Number(m.constPhotoCount) > 0) cCount = Math.max(cCount, Number(m.constPhotoCount));
+                                if (!pStat && m.progressStatus) pStat = m.progressStatus;
+                                if (!cStat && m.constructionStatus) cStat = m.constructionStatus;
+                            }
                         } catch(e) {}
                     }
                     if (cCount === 0 && matchedApp && Number(matchedApp.constPhotoCount) > 0) {
                         cCount = Number(matchedApp.constPhotoCount);
                     }
-                    if (cCount === 0 && (matchedApp.progressStatus !== '간판시공완료' && (!item.statusObj || item.statusObj.progressStatus !== '간판시공완료') && matchedApp.constructionStatus !== 'after_construction' && matchedApp.constructionStatus !== 'completed')) {
+                    const isCompleted = (pStat === '간판시공완료' || cStat === 'after_construction' || cStat === 'completed');
+                    if (cCount === 0 && !isCompleted) {
                         return '';
                     }
                     return `
