@@ -2842,9 +2842,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: sa.created_at
                 });
 
+            const localApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
+                ? window.DataStore.getApplications()
+                : (JSON.parse(localStorage.getItem('applications')) || []);
+            const recentLocks = (window.DataStore && window.DataStore._recentStatusUpdates) || {};
+
             const freshApps = supaApps
                 .map(mapper)
-                .filter(a => a && a.id);
+                .filter(a => a && a.id)
+                .map(appObj => {
+                    const normObjId = String(appObj.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                    const localApp = localApps.find(la => {
+                        if (!la) return false;
+                        const laid = String(la.id || '').trim().toLowerCase();
+                        const laref = String(la.appRefId || '').trim().toLowerCase();
+                        const objid = String(appObj.id || '').trim().toLowerCase();
+                        if (laid === objid || laref === objid) return true;
+                        if (normObjId && (laid.replace(/[^a-zA-Z0-9]/g, '') === normObjId || laref.replace(/[^a-zA-Z0-9]/g, '') === normObjId)) return true;
+                        return false;
+                    });
+                    if (localApp) {
+                        const lock = recentLocks[String(appObj.id)] || (normObjId && recentLocks[normObjId]);
+                        const isLockActive = Boolean(lock && (Date.now() - (lock.timestamp || 0) < 30000));
+                        if (isLockActive) {
+                            if (lock.status !== undefined) appObj.status = lock.status;
+                            if (lock.receiptStatus !== undefined) appObj.receiptStatus = lock.receiptStatus;
+                            if (lock.progressStatus !== undefined) appObj.progressStatus = lock.progressStatus;
+                            if (lock.isBizItem !== undefined) appObj.isBizItem = lock.isBizItem;
+                            if (lock.memo !== undefined) appObj.memo = lock.memo;
+                            if (lock.assignedConstructorId !== undefined) appObj.assignedConstructorId = lock.assignedConstructorId;
+                            if (lock.assignedConstructorName !== undefined) appObj.assignedConstructorName = lock.assignedConstructorName;
+                            if (lock.constructionStatus !== undefined) appObj.constructionStatus = lock.constructionStatus;
+                            if (lock.salespersonId !== undefined) appObj.salespersonId = lock.salespersonId;
+                            if (lock.salespersonName !== undefined) appObj.salespersonName = lock.salespersonName;
+                            if (lock.referrerCode !== undefined) {
+                                appObj.referrerCode = lock.referrerCode;
+                                appObj.referrer_code = lock.referrerCode;
+                            }
+                        } else {
+                            if (localApp.isBizItem !== undefined && appObj.isBizItem === undefined) appObj.isBizItem = localApp.isBizItem;
+                        }
+                    }
+                    return appObj;
+                });
 
             if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
                 window.DataStore.saveApplications(freshApps);
@@ -3024,8 +3064,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // 0) Render All Users list (회원정보관리)
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');
         if (allUsersListMob) {
-            // [PC/모바일 공통 100% 직통 최신 조회] skipSync 여부와 무관하게 최신 회원 목록 클라우드 직통 조회
-            if (typeof fetchAndRenderAdminUsersFresh === 'function' && !window._isFetchingUsersFresh) {
+            // [PC/모바일 공통 100% 직통 최신 조회] skipSync가 아닐 때만 백그라운드 클라우드 직통 조회 (낙관적 UI 즉시 보존)
+            if (!skipSync && typeof fetchAndRenderAdminUsersFresh === 'function' && !window._isFetchingUsersFresh) {
                 window._isFetchingUsersFresh = true;
                 fetchAndRenderAdminUsersFresh().finally(() => {
                     setTimeout(() => { window._isFetchingUsersFresh = false; }, 1500);
@@ -3187,8 +3227,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3) Render Applications list (신청서목록)
         const appsList = document.getElementById('admin-apps-list-mob');
         if (appsList) {
-            // [PC/모바일 공통 100% 직통 최신 조회] skipSync 여부와 무관하게 최신 신청서 목록 클라우드 직통 조회
-            if (typeof fetchAndRenderAdminApplicationsFresh === 'function' && !window._isFetchingAppsFresh) {
+            // [PC/모바일 공통 100% 직통 최신 조회] skipSync가 아닐 때만 백그라운드 클라우드 직통 조회 (낙관적 UI 즉시 보존)
+            if (!skipSync && typeof fetchAndRenderAdminApplicationsFresh === 'function' && !window._isFetchingAppsFresh) {
                 window._isFetchingAppsFresh = true;
                 fetchAndRenderAdminApplicationsFresh().finally(() => {
                     setTimeout(() => { window._isFetchingAppsFresh = false; }, 1500);
@@ -3302,8 +3342,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button type="button" class="btn btn-sm btn-edit-app-mob" data-id="${app.id}" onclick="window.openEditApplicationModal('${app.id}')" style="padding: 6px 10px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; height: 36px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="신청 업체 정보 수정">
                                 <i class="fa-solid fa-pen-to-square"></i> 수정
                             </button>
-                            <button type="button" class="btn btn-sm btn-toggle-bizitem-mob" data-id="${app.id}" onclick="window.toggleBizItemMob('${app.id}', this)" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; height: 36px; ${(app.isBizItem === true || String(app.isBizItem) === 'true') ? 'background: #0284c7; color: white; border: none;' : 'background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;'}">
-                                <i class="fa-solid ${(app.isBizItem === true || String(app.isBizItem) === 'true') ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> ${(app.isBizItem === true || String(app.isBizItem) === 'true') ? '영업물건 등록됨' : '영업물건으로 변경'}
+                            <button type="button" class="btn btn-sm btn-toggle-bizitem-mob" data-id="${app.id}" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); window.toggleBizItemMob('${app.id}', this); return false;" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; font-weight: 700; height: 36px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; ${(app.isBizItem === true || String(app.isBizItem) === 'true') ? 'background: #0284c7; color: white; border: none;' : 'background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;'}" title="영업물건 토글">
+                                <i class="fa-solid ${(app.isBizItem === true || String(app.isBizItem) === 'true') ? 'fa-toggle-on' : 'fa-toggle-off'}" style="pointer-events: none;"></i> ${(app.isBizItem === true || String(app.isBizItem) === 'true') ? '영업물건 등록됨' : '영업물건으로 변경'}
                             </button>
                             <button type="button" class="btn btn-secondary btn-sm btn-delete-app-mob" data-id="${app.id}" onclick="window.deleteApplicationAdminMob('${app.id}', this, event)" style="padding: 6px 10px; font-size: 0.85rem; border: 1px solid #fecaca; color: #dc2626; background: #fee2e2; border-radius: 6px; height: 36px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
                         </div>

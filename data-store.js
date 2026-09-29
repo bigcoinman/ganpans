@@ -751,12 +751,12 @@
           btnEl.style.background = '#0284c7';
           btnEl.style.color = '#ffffff';
           btnEl.style.border = 'none';
-          btnEl.innerHTML = '<i class="fa-solid fa-toggle-on"></i> 영업물건 등록됨';
+          btnEl.innerHTML = '<i class="fa-solid fa-toggle-on" style="pointer-events: none;"></i> 영업물건 등록됨';
         } else {
           btnEl.style.background = '#f8fafc';
           btnEl.style.color = '#475569';
           btnEl.style.border = '1px solid #cbd5e1';
-          btnEl.innerHTML = '<i class="fa-solid fa-toggle-off"></i> 영업물건으로 변경';
+          btnEl.innerHTML = '<i class="fa-solid fa-toggle-off" style="pointer-events: none;"></i> 영업물건으로 변경';
         }
       }
 
@@ -954,13 +954,21 @@
         });
       }
 
-      // [레이스 컨디션 완벽 방어] 최신 상태 동기화 락 등록 (10초간 어떤 구형 DB 값도 덮어쓰지 못하도록 보장)
+      // [레이스 컨디션 완벽 방어] 최신 상태 동기화 락 등록 (30초간 어떤 구형 DB 값도 덮어쓰지 못하도록 보장)
       if (!this._recentStatusUpdates) this._recentStatusUpdates = {};
       const normAid = String(app.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
       this._recentStatusUpdates[String(app.id)] = {
         status: app.status,
         receiptStatus: app.receiptStatus,
         progressStatus: app.progressStatus,
+        isBizItem: app.isBizItem,
+        memo: app.memo,
+        salespersonId: app.salespersonId || '',
+        salespersonName: app.salespersonName || '',
+        referrerCode: app.referrerCode || '',
+        assignedConstructorId: app.assignedConstructorId || null,
+        assignedConstructorName: app.assignedConstructorName || null,
+        constructionStatus: app.constructionStatus || 'before_construction',
         timestamp: Date.now()
       };
       if (normAid) {
