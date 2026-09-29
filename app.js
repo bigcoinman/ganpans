@@ -4493,14 +4493,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ${draftStatusBadge}
                             </div>
                             <input type="file" class="const-draft-input-mob" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.85rem; width: 100%;">
-                            ${draftPhotos.length > 0 ? `<button type="button" onclick="window.viewDraftModal('${job.id}')" style="margin-top: 6px; padding: 6px 12px; font-size: 0.86rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;"><i class="fa-solid fa-eye"></i> 등록된 시안 확인 및 삭제 (${draftPhotos.length}장)</button>` : ''}
+                            <div class="draft-btn-wrap" style="margin-top: 6px;">
+                                ${draftPhotos.length > 0 ? `<button type="button" onclick="window.viewDraftModal('${job.id}')" style="padding: 6px 12px; font-size: 0.86rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;"><i class="fa-solid fa-eye"></i> 등록된 시안 확인 및 삭제 (${draftPhotos.length}장)</button>` : ''}
+                            </div>
                         </div>
 
                         <!-- 2. 시공 후 사진 업로드 (300KB 이하 자동 압축, 최대 5장) -->
                         <div class="phone-form-group" style="margin-bottom: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px;">
                             <label style="font-size: 0.90rem; font-weight: 700; color: #15803d; display: block; margin-bottom: 6px;"><i class="fa-solid fa-camera"></i> 시공 후 사진 증빙 (${afterCount}/5장)</label>
                             <input type="file" class="const-photo-input-mob" data-id="${job.id}" accept="image/*" multiple style="font-size: 0.85rem; width: 100%;">
-                            ${afterCount > 0 ? `<button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="margin-top: 6px; padding: 6px 12px; font-size: 0.86rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;"><i class="fa-solid fa-eye"></i> 시공 후 사진 확인 및 삭제 (${afterCount}장)</button>` : ''}
+                            <div class="photo-btn-wrap" style="margin-top: 6px;">
+                                ${afterCount > 0 ? `<button type="button" onclick="window.viewConstructionPhotosModal('${job.id}')" style="padding: 6px 12px; font-size: 0.86rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;"><i class="fa-solid fa-eye"></i> 시공 후 사진 확인 및 삭제 (${afterCount}장)</button>` : ''}
+                            </div>
                         </div>
                         
                         <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 8px;">

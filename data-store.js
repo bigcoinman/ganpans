@@ -2785,22 +2785,25 @@
         } else if (maxBadge) {
           maxBadge.remove();
         }
-        // 3. 등록된 시안 확인 및 삭제 버튼 영역
+        // 3. 기존 버튼 찌꺼기 전수 삭제 및 등록된 시안 확인 버튼 단일 갱신 (Clean Slate SSOT)
+        box.querySelectorAll('button[onclick*="viewDraftModal"]').forEach(b => {
+          if (!b.closest('.draft-btn-wrap')) b.remove();
+        });
         let btnWrap = box.querySelector('.draft-btn-wrap');
         if (draftCount > 0) {
           if (!btnWrap) {
             btnWrap = document.createElement('div');
             btnWrap.className = 'draft-btn-wrap';
-            btnWrap.style.cssText = 'margin-top: 5px; display: flex; align-items: center; justify-content: space-between;';
+            btnWrap.style.cssText = 'margin-top: 6px;';
             input.insertAdjacentElement('afterend', btnWrap);
           }
           btnWrap.innerHTML = `
-            <button type="button" onclick="window.viewDraftModal('${id}')" style="padding: 5px 10px; font-size: 0.86rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;">
+            <button type="button" onclick="window.viewDraftModal('${id}')" style="padding: 6px 12px; font-size: 0.86rem; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
               <i class="fa-solid fa-eye"></i> 등록된 시안 확인 및 삭제 (${draftCount}장)
             </button>
           `;
         } else if (btnWrap) {
-          btnWrap.remove();
+          btnWrap.innerHTML = '';
         }
       }
     });
@@ -3222,21 +3225,25 @@
         if (lbl) {
           lbl.innerHTML = `<i class="fa-solid fa-camera"></i> 시공 후 사진 증빙 (${photoCount}/5)`;
         }
+        // 기존 버튼 찌꺼기 전수 삭제 및 시공 후 사진 확인 버튼 단일 갱신 (Clean Slate SSOT)
+        box.querySelectorAll('button[onclick*="viewConstructionPhotosModal"]').forEach(b => {
+          if (!b.closest('.photo-btn-wrap')) b.remove();
+        });
         let btnWrap = box.querySelector('.photo-btn-wrap');
         if (photoCount > 0) {
           if (!btnWrap) {
             btnWrap = document.createElement('div');
             btnWrap.className = 'photo-btn-wrap';
-            btnWrap.style.cssText = 'margin-top: 5px; display: flex; align-items: center; justify-content: space-between;';
+            btnWrap.style.cssText = 'margin-top: 6px;';
             input.insertAdjacentElement('afterend', btnWrap);
           }
           btnWrap.innerHTML = `
-            <button type="button" onclick="window.viewConstructionPhotosModal('${id}')" style="padding: 5px 10px; font-size: 0.86rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;">
+            <button type="button" onclick="window.viewConstructionPhotosModal('${id}')" style="padding: 6px 12px; font-size: 0.86rem; background: #dcfce7; color: #15803d; border: 1px solid #86efac; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
               <i class="fa-solid fa-eye"></i> 시공 후 사진 확인 및 삭제 (${photoCount}장)
             </button>
           `;
         } else if (btnWrap) {
-          btnWrap.remove();
+          btnWrap.innerHTML = '';
         }
       }
     });
