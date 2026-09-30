@@ -2495,7 +2495,7 @@ window.SupabaseSync = {
 
       // --- A. 회원(Users) Supabase 클라우드 원천 직접 수집 (대역폭 99% 절감 컬럼 선별 조회) ---
       let usersChanged = false;
-      const userColumns = 'id, name, email, phone, address, role, biz_code, const_code, conversion_status, pending_business_name, pending_license_number, items, created_at';
+      const userColumns = 'id, name, email, phone, address, role, biz_code, const_code, conversion_status, pending_business_name, pending_license_number, password_hash, items, created_at';
       let supaUsers = null;
       let usersErr = null;
       try {
@@ -2514,12 +2514,23 @@ window.SupabaseSync = {
       }
       if (!usersErr && Array.isArray(supaUsers)) {
         const recentUserLocks = (window.DataStore && window.DataStore._recentUserUpdates) || {};
+        let localUsers = [];
+        try {
+          localUsers = JSON.parse(oldUsersStr);
+        } catch (e) { localUsers = []; }
         // [SSOT] Supabase에서 미반환 row(role!=='deleted')만 유효 — 로컬 블랙리스트 불필요
         const freshUsers = supaUsers
           .map(su => this.mapDbToUser(su))
           .filter(u => u && u.id && u.role !== 'deleted')
           .map(u => {
             const uId = String(u.id).trim().toLowerCase();
+            // 로컬에 이미 비밀번호가 존재하는데 Supabase에서 pw가 비어있는 경우 기존 로컬 비밀번호 안전 보존
+            if (!u.pw && Array.isArray(localUsers)) {
+              const localMatch = localUsers.find(lu => lu && String(lu.id).trim().toLowerCase() === uId);
+              if (localMatch && localMatch.pw) {
+                u.pw = localMatch.pw;
+              }
+            }
             const uLock = recentUserLocks[uId];
             if (uLock && (Date.now() - (uLock.timestamp || 0) < 6000)) {
               if (uLock.role !== undefined) u.role = uLock.role;
@@ -2582,8 +2593,7 @@ window.SupabaseSync = {
         });
 
         // 최고관리자(admin) 계정 필수 존재 보장 (기존 수정된 개인정보 100% 보존 승계)
-        const localUsers = JSON.parse(localStorage.getItem('users')) || [];
-        const existingLocalAdmin = localUsers.find(u => String(u.id).toLowerCase() === 'admin');
+        const existingLocalAdmin = Array.isArray(localUsers) ? localUsers.find(u => u && String(u.id).toLowerCase() === 'admin') : null;
         const adminUser = existingLocalAdmin ? {
           ...existingLocalAdmin,
           role: 'admin'

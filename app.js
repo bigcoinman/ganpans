@@ -7531,39 +7531,9 @@ function initWizard() {
         loginNoticeId = loggedUser.id;
         loginNoticePw = ''; // 기존 비밀번호 유지
         isNewAccount = false;
-
-        const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
-        const curUserIdx = users.findIndex(u => String(u.id).toLowerCase() === String(loggedUser.id).toLowerCase());
-        if (curUserIdx !== -1) {
-          const curUser = users[curUserIdx];
-          // [방안 1 + 방안 2 영구 준수]
-          // 주소: 기존 회원 주소가 이미 존재하면 100% 보존(덮어쓰기 금지), 비어있을 때만 매장 주소로 보완
-          const finalUserAddress = (curUser.address && String(curUser.address).trim()) ? curUser.address : (storeAddress || '');
-          // 전화번호: 가입 인증 수단(아이디/비번 찾기) 보호를 위해 기존 번호가 있으면 100% 보존, 비어있을 때만 보완
-          const finalUserPhone = (curUser.phone && String(curUser.phone).trim()) ? curUser.phone : (ownerPhone || '');
-          const finalUserEmail = (curUser.email && String(curUser.email).trim()) ? curUser.email : (enteredEmail || '');
-
-          users[curUserIdx] = {
-            ...curUser,
-            name: curUser.name || ownerName,
-            phone: finalUserPhone,
-            email: finalUserEmail,
-            address: finalUserAddress
-          };
-          if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-            window.DataStore.saveUsers(users);
-          } else {
-            safeSetStorage('users', users);
-          }
-          if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
-            window.SupabaseSync.updateUser(loggedUser.id, {
-              name: curUser.name || ownerName,
-              phone: finalUserPhone,
-              email: finalUserEmail,
-              address: finalUserAddress
-            }).catch(() => {});
-          }
-        }
+        // [SSOT 영구 원칙: 지원신청서는 매장 지원 신청일 뿐 회원 프로필 수정 폼이 아님]
+        // 로그인된 점주 회원의 계정 정보(주소, 전화번호, 비밀번호 등)는 100% 불변 보존하며 일체 덮어쓰지 않는다.
+        // 신청서에 작성된 매장 주소, 대표자 연락처는 오직 지원신청서(applications) 데이터에만 안전하게 보관된다.
       } else {
         // 2. 비회원 신청이거나 영업자/관리자 대리 신청:
         // [영구 절대 헌법: 로그인된 영업자/관리자 계정은 1%도 건드리지 않고 100% 완벽 보존]
@@ -7579,38 +7549,10 @@ function initWizard() {
           const existing = users[existingIdx];
           userId = existing.id;
           loginNoticeId = existing.id;
-          const hasExistingPw = Boolean(existing.pw || existing.password_hash);
-          loginNoticePw = hasExistingPw ? '' : autoPw;
-          isNewAccount = !hasExistingPw;
-
-          const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
-          // [방안 1 + 방안 2 영구 준수]
-          const finalUserAddress = (existing.address && String(existing.address).trim()) ? existing.address : (storeAddress || '');
-          const finalUserPhone = (existing.phone && String(existing.phone).trim()) ? existing.phone : (ownerPhone || '');
-          const finalUserEmail = (existing.email && String(existing.email).trim()) ? existing.email : (enteredEmail || '');
-
-          users[existingIdx] = {
-            ...existing,
-            name: existing.name || ownerName,
-            phone: finalUserPhone,
-            email: finalUserEmail,
-            address: finalUserAddress,
-            ...(hasExistingPw ? {} : { pw: hashedPassword })
-          };
-          if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
-            window.DataStore.saveUsers(users);
-          } else {
-            safeSetStorage('users', users);
-          }
-          if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
-            window.SupabaseSync.updateUser(existing.id, { 
-              name: existing.name || ownerName,
-              phone: finalUserPhone, 
-              email: finalUserEmail,
-              address: finalUserAddress,
-              ...(hasExistingPw ? {} : { password_hash: hashedPassword })
-            }).catch(() => {});
-          }
+          loginNoticePw = ''; // 기존 가입 회원 계정이 매칭되었으므로 기존 비밀번호 100% 유지 (재설정/덮어쓰기 영구 금지)
+          isNewAccount = false;
+          // [SSOT 영구 원칙: 이미 가입된 회원의 계정 정보(주소, 전화번호, 비밀번호 등) 100% 불변 보존]
+          // 신청서에 작성된 매장 주소, 대표자 연락처는 오직 지원신청서(applications) 데이터에만 안전하게 보관된다.
         } else {
           // 3. 신규 점주 비회원: 점주 전화번호 기반 신규 점주 계정 자동 생성
           userId = phoneDigits;
