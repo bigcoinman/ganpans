@@ -3976,6 +3976,13 @@ if (typeof window !== 'undefined') {
           : (JSON.parse(localStorage.getItem('users')) || []);
         const existIdx = curUsers.findIndex(u => String(u.id).toLowerCase() === restoredUserId.toLowerCase());
         if (existIdx !== -1) {
+          const ex = curUsers[existIdx];
+          user = {
+            ...ex,
+            ...user,
+            address: (ex.address && String(ex.address).trim()) ? ex.address : (user.address || ''),
+            phone: (ex.phone && String(ex.phone).trim()) ? ex.phone : (user.phone || '')
+          };
           curUsers[existIdx] = user;
         } else {
           curUsers.push(user);

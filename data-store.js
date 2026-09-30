@@ -2154,13 +2154,17 @@
           );
           const isCustomRegisteredUser = !isAutoPhoneAccount;
 
+          // [방안 1 + 방안 2 결합 원칙 영구 준수]
+          const finalOwnerAddress = (targetOwner.address && String(targetOwner.address).trim()) ? targetOwner.address : (newApp.storeAddress || '');
+          const finalOwnerPhone = (targetOwner.phone && String(targetOwner.phone).trim()) ? targetOwner.phone : (newPhone || '');
+
           if (isCustomRegisteredUser) {
-            // [원칙 1] 본인 아이디로 직접 가입한 정회원: 아이디(id)와 비밀번호(pw)는 100% 절대 불변 유지하고, 연락처(phone) 및 대표자명만 안전하게 갱신!
+            // [원칙 1] 본인 아이디로 직접 가입한 정회원: 아이디(id), 비밀번호(pw), 연락처(phone), 주소(address)는 100% 절대 불변 보존! (공백일 때만 보완)
             users[ownerUserIdx] = {
               ...targetOwner,
-              phone: newPhone,
-              name: newApp.ownerName || targetOwner.name,
-              address: newApp.storeAddress || targetOwner.address
+              phone: finalOwnerPhone,
+              name: targetOwner.name || newApp.ownerName,
+              address: finalOwnerAddress
             };
             usersUpdated = true;
           } else {
@@ -2199,8 +2203,8 @@
                 ...targetOwner,
                 id: newPhoneDigits,
                 phone: newPhone,
-                name: newApp.ownerName || targetOwner.name,
-                address: newApp.storeAddress || targetOwner.address,
+                name: targetOwner.name || newApp.ownerName,
+                address: finalOwnerAddress,
                 pw: newHashedPw
               };
               usersUpdated = true;
