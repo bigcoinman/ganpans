@@ -380,8 +380,14 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
         window.PhotoCacheManager.invalidate(app.id).catch(() => {});
       }
     } else if (existingPhotos.length > 0 && (expectedCount === 0 || existingPhotos.length >= expectedCount)) {
-      let needConstPhotos = Boolean(options && options.needConstructionPhotos);
-      if (!needConstPhotos && app.memo) {
+      const hasAssignedConst = Boolean(app.assignedConstructorId && app.assignedConstructorId !== 'none' && app.assignedConstructorId !== '미배정');
+      if (!hasAssignedConst) {
+        app.constructionPhotos = [];
+        app.constPhotoCount = 0;
+        app.invoicePhotos = [];
+      }
+      let needConstPhotos = hasAssignedConst && Boolean(options && options.needConstructionPhotos);
+      if (!needConstPhotos && hasAssignedConst && app.memo) {
         try {
           const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
           if (Number(m.constPhotoCount) > 0 && (!app.constructionPhotos || app.constructionPhotos.length === 0)) {
@@ -401,8 +407,9 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
     try {
       const cached = await PhotoCacheManager.get(app.id, expectedCount);
       if (cached && Array.isArray(cached.photos) && cached.photos.length > 0 && (expectedCount === 0 || cached.photos.length >= expectedCount)) {
-        let needConstPhotos = Boolean(options && options.needConstructionPhotos);
-        if (!needConstPhotos && app.memo) {
+        const hasAssignedConst = Boolean(app.assignedConstructorId && app.assignedConstructorId !== 'none' && app.assignedConstructorId !== '미배정');
+        let needConstPhotos = hasAssignedConst && Boolean(options && options.needConstructionPhotos);
+        if (!needConstPhotos && hasAssignedConst && app.memo) {
           try {
             const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
             if (Number(m.constPhotoCount) > 0 && (!cached.constructionPhotos || cached.constructionPhotos.length === 0)) {
@@ -410,12 +417,18 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
             }
           } catch(e) {}
         }
-        if (!needConstPhotos || (cached.constructionPhotos && cached.constructionPhotos.length > 0)) {
+        if (!needConstPhotos || (hasAssignedConst && cached.constructionPhotos && cached.constructionPhotos.length > 0)) {
           app.photos = cached.photos;
           app.photosCount = cached.photos.length;
           app.fileData = cached.fileData || cached.photos[0];
-          if (cached.constructionPhotos) app.constructionPhotos = cached.constructionPhotos;
-          if (cached.invoicePhotos) app.invoicePhotos = cached.invoicePhotos;
+          if (hasAssignedConst) {
+            if (cached.constructionPhotos) app.constructionPhotos = cached.constructionPhotos;
+            if (cached.invoicePhotos) app.invoicePhotos = cached.invoicePhotos;
+          } else {
+            app.constructionPhotos = [];
+            app.constPhotoCount = 0;
+            app.invoicePhotos = [];
+          }
           return app;
         }
       }
@@ -500,18 +513,25 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
         app.photosCount = photos.length;
         app.hasPhoto = photos.length > 0;
         app.fileData = fileData;
-        if (Array.isArray(data.construction_photos)) {
+        const hasAssignedConst = Boolean(app.assignedConstructorId && app.assignedConstructorId !== 'none' && app.assignedConstructorId !== '미배정');
+        if (hasAssignedConst && Array.isArray(data.construction_photos)) {
           app.constructionPhotos = data.construction_photos;
+        } else if (!hasAssignedConst) {
+          app.constructionPhotos = [];
+          app.constPhotoCount = 0;
         }
-        if (data.construction_invoice) {
+        if (hasAssignedConst && data.construction_invoice) {
           app.invoicePhotos = [data.construction_invoice];
+        } else if (!hasAssignedConst) {
+          app.invoicePhotos = [];
         }
         if (data.memo) {
           try {
             const m = typeof data.memo === 'string' ? JSON.parse(data.memo) : data.memo;
-            if (m && Array.isArray(m.signDraftPhotos) && m.signDraftPhotos.length > 0) app.signDraftPhotos = m.signDraftPhotos;
-            if (m && m.draftStatus) app.draftStatus = m.draftStatus;
-            if (m && m.draftApprovedAt) app.draftApprovedAt = m.draftApprovedAt;
+            if (hasAssignedConst && m && Array.isArray(m.signDraftPhotos) && m.signDraftPhotos.length > 0) app.signDraftPhotos = m.signDraftPhotos;
+            else if (!hasAssignedConst) app.signDraftPhotos = [];
+            if (m && m.draftStatus) app.draftStatus = hasAssignedConst ? m.draftStatus : 'pending';
+            if (m && m.draftApprovedAt) app.draftApprovedAt = hasAssignedConst ? m.draftApprovedAt : null;
 
             // [영구 자가 치유 SSOT] 실제 사진이 존재하는데 memo.photoCount가 0 또는 불일치하면 백그라운드에서 즉시 DB 정상 동기화
             if (photos.length > 0 && Number(m.photoCount) !== photos.length && window.supabaseClient) {
