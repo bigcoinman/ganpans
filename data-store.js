@@ -1532,6 +1532,14 @@
         targetApp.assignedConstructorName = constName;
         targetApp.constructionStatus = targetApp.constructionStatus && targetApp.constructionStatus !== 'none' ? targetApp.constructionStatus : 'before_construction';
         targetApp.assignedAt = new Date().toISOString();
+        // [신규 배정 Clean Slate] 새로운 시공사 배정 시 이전 시공사의 시공완료 사진 찌꺼기 100% 소멸
+        targetApp.constructionPhotos = [];
+        targetApp.constPhotoCount = 0;
+        targetApp.constructionInvoice = null;
+        delete mObj.constructionPhotos;
+        delete mObj.constructionInvoice;
+        mObj.constPhotoCount = 0;
+        targetApp.memo = JSON.stringify(mObj);
 
         // [레이스 컨디션 완벽 방어] 최신 상태 동기화 락 등록 (30초간 어떤 구형 DB 값도 덮어쓰지 못하도록 보장)
         if (!this._recentStatusUpdates) this._recentStatusUpdates = {};
@@ -1541,11 +1549,20 @@
           receiptStatus: targetApp.receiptStatus,
           progressStatus: targetApp.progressStatus,
           constructionStatus: targetApp.constructionStatus,
+          assignedConstructorId: String(constId),
+          assignedConstructorName: constName,
+          constructionPhotos: [],
+          constPhotoCount: 0,
           memo: targetApp.memo,
           timestamp: Date.now()
         };
         if (normTid) {
           this._recentStatusUpdates[normTid] = this._recentStatusUpdates[String(targetApp.id)];
+        }
+
+        if (window.PhotoCacheManager && typeof window.PhotoCacheManager.invalidate === 'function') {
+          window.PhotoCacheManager.invalidate(targetApp.id);
+          if (normTid) window.PhotoCacheManager.invalidate(normTid);
         }
 
         this.saveApplications(apps);
@@ -1561,7 +1578,10 @@
               assigned_constructor_id: curApp.assignedConstructorId,
               assigned_constructor_name: curApp.assignedConstructorName,
               construction_status: curApp.constructionStatus,
-              memo: curApp.memo
+              construction_photos: [],
+              construction_invoice: null,
+              memo: curApp.memo,
+              _clearConstPhotos: true
             });
           } else if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
             await window.SupabaseSync.upsertApplication(curApp);
@@ -1581,6 +1601,9 @@
                 receiptStatus: targetApp ? targetApp.receiptStatus : item.receiptStatus,
                 progressStatus: targetApp ? targetApp.progressStatus : item.progressStatus,
                 constructionStatus: item.constructionStatus || 'before_construction',
+                constructionPhotos: [],
+                constPhotoCount: 0,
+                constructionInvoice: null,
                 assignedAt: new Date().toISOString()
               };
             }
@@ -1645,6 +1668,11 @@
           status: targetApp.status,
           receiptStatus: targetApp.receiptStatus,
           progressStatus: targetApp.progressStatus,
+          assignedConstructorId: null,
+          assignedConstructorName: null,
+          constructionStatus: 'before_construction',
+          constructionPhotos: [],
+          constPhotoCount: 0,
           timestamp: Date.now()
         };
         if (normAid) this._recentStatusUpdates[normAid] = this._recentStatusUpdates[String(targetApp.id)];
@@ -1652,6 +1680,15 @@
         if (this._recentDraftUpdates) {
           delete this._recentDraftUpdates[String(targetApp.id)];
           if (normAid) delete this._recentDraftUpdates[normAid];
+        }
+        if (this._recentPhotoUpdates) {
+          delete this._recentPhotoUpdates[String(targetApp.id)];
+          if (normAid) delete this._recentPhotoUpdates[normAid];
+        }
+
+        if (window.PhotoCacheManager && typeof window.PhotoCacheManager.invalidate === 'function') {
+          window.PhotoCacheManager.invalidate(targetApp.id);
+          if (normAid) window.PhotoCacheManager.invalidate(normAid);
         }
 
         this.saveApplications(apps);
@@ -1663,7 +1700,8 @@
             construction_status: 'before_construction',
             construction_photos: [],
             construction_invoice: null,
-            memo: targetApp.memo
+            memo: targetApp.memo,
+            _clearConstPhotos: true
           }).catch(() => {});
         } else if (window.SupabaseSync && typeof window.SupabaseSync.upsertApplication === 'function') {
           window.SupabaseSync.upsertApplication(targetApp).catch(() => {});
@@ -3989,8 +4027,9 @@
     if (!app) {
       return { success: false, error: '해당 시공 배정 물건을 찾을 수 없습니다: ' + id };
     }
+    const storeName = (app && (app.storeName || app.shopName)) || id;
 
-    // 1) applications 단일 원천 시공 정보 및 시안 찌꺼기 완전 초기화
+    // 1) applications 단일 원천 시공 정보 및 시안/시공사진 찌꺼기 100% 완전 초기화 (Clean Slate SSOT)
     let memoPayloadStr = null;
     apps = apps.map(a => {
       if (String(a.id) === String(id) || String(a.appRefId) === String(id)) {
@@ -4006,6 +4045,7 @@
         delete memoObj.constPhotoCount;
         delete memoObj.draftCount;
         delete memoObj.completedAt;
+        memoObj.constPhotoCount = 0;
         memoPayloadStr = JSON.stringify(memoObj);
 
         return {
@@ -4023,20 +4063,26 @@
           constructionInvoice: null,
           constPhotoCount: 0,
           completedAt: null,
-          memo: memoPayloadStr
+          memo: memoPayloadStr,
+          _clearConstPhotos: true
         };
       }
       return a;
     });
 
-    // [레이스 컨디션 방어] 시공 배정 취소 최신 상태 락 등록 및 시안 락 소멸
+    // [레이스 컨디션 방어] 시공 배정 취소 최신 상태 락 등록 및 시안/시공사진 락 소멸
+    const normAppId = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (window.DataStore) {
       if (!window.DataStore._recentStatusUpdates) window.DataStore._recentStatusUpdates = {};
-      const normAppId = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
       window.DataStore._recentStatusUpdates[String(id)] = {
         status: app.status,
         receiptStatus: app.receiptStatus,
         progressStatus: app.progressStatus,
+        assignedConstructorId: null,
+        assignedConstructorName: null,
+        constructionStatus: 'before_construction',
+        constructionPhotos: [],
+        constPhotoCount: 0,
         timestamp: Date.now()
       };
       if (normAppId) window.DataStore._recentStatusUpdates[normAppId] = window.DataStore._recentStatusUpdates[String(id)];
@@ -4045,6 +4091,16 @@
         delete window.DataStore._recentDraftUpdates[String(id)];
         if (normAppId) delete window.DataStore._recentDraftUpdates[normAppId];
       }
+      if (window.DataStore._recentPhotoUpdates) {
+        delete window.DataStore._recentPhotoUpdates[String(id)];
+        if (normAppId) delete window.DataStore._recentPhotoUpdates[normAppId];
+      }
+    }
+
+    // 브라우저 CacheStorage 사진 캐시 소각
+    if (window.PhotoCacheManager && typeof window.PhotoCacheManager.invalidate === 'function') {
+      window.PhotoCacheManager.invalidate(id);
+      if (normAppId) window.PhotoCacheManager.invalidate(normAppId);
     }
 
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
@@ -4098,7 +4154,7 @@
       localStorage.setItem('users', JSON.stringify(curUsers));
     }
 
-    // 3) Supabase 클라우드 비동기 동기화
+    // 3) Supabase 클라우드 비동기 동기화 (배정 및 시공완료 사진 100% 완전 소멸)
     (async () => {
       try {
         if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
@@ -4108,7 +4164,8 @@
             construction_status: 'before_construction',
             construction_photos: [],
             construction_invoice: null,
-            memo: memoPayloadStr
+            memo: memoPayloadStr,
+            _clearConstPhotos: true
           });
           for (const uSync of usersToSync) {
             await window.SupabaseSync.updateUser(uSync.id, { items: uSync.items });

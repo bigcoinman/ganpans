@@ -2050,12 +2050,12 @@ window.SupabaseSync = {
       assignedConstructorId: dbApp.assigned_constructor_id || '',
       assignedConstructorName: dbApp.assigned_constructor_name || '',
       constructionStatus: dbApp.construction_status || 'none',
-      signDraftPhotos: signDraftPhotos || [],
-      draftStatus: draftStatus || 'pending',
-      draftApprovedAt: draftApprovedAt || null,
-      constPhotoCount: constPhotoCount,
-      constructionPhotos: Array.isArray(dbApp.construction_photos) ? dbApp.construction_photos : [],
-      invoicePhotos: dbApp.construction_invoice ? [dbApp.construction_invoice] : []
+      signDraftPhotos: (dbApp.assigned_constructor_id && dbApp.assigned_constructor_id !== 'none' && dbApp.assigned_constructor_id !== '미배정') ? (signDraftPhotos || []) : [],
+      draftStatus: (dbApp.assigned_constructor_id && dbApp.assigned_constructor_id !== 'none' && dbApp.assigned_constructor_id !== '미배정') ? (draftStatus || 'pending') : 'pending',
+      draftApprovedAt: (dbApp.assigned_constructor_id && dbApp.assigned_constructor_id !== 'none' && dbApp.assigned_constructor_id !== '미배정') ? (draftApprovedAt || null) : null,
+      constPhotoCount: (dbApp.assigned_constructor_id && dbApp.assigned_constructor_id !== 'none' && dbApp.assigned_constructor_id !== '미배정') ? constPhotoCount : 0,
+      constructionPhotos: (dbApp.assigned_constructor_id && dbApp.assigned_constructor_id !== 'none' && dbApp.assigned_constructor_id !== '미배정') && Array.isArray(dbApp.construction_photos) ? dbApp.construction_photos : [],
+      invoicePhotos: (dbApp.assigned_constructor_id && dbApp.assigned_constructor_id !== 'none' && dbApp.assigned_constructor_id !== '미배정') && dbApp.construction_invoice ? [dbApp.construction_invoice] : []
     };
   },
 
@@ -2783,6 +2783,18 @@ window.SupabaseSync = {
               }
               if (localApp.invoicePhotos && localApp.invoicePhotos.length > 0 && (!appObj.invoicePhotos || appObj.invoicePhotos.length === 0)) {
                 appObj.invoicePhotos = localApp.invoicePhotos;
+              }
+
+              // [클린 슬레이트 SSOT] 시공사 미배정 또는 배정 취소 시 시공완료 증빙 및 시안 찌꺼기 100% 완전 소멸
+              const hasValidAssignedConst = Boolean(
+                (appObj.assignedConstructorId && appObj.assignedConstructorId !== 'none' && appObj.assignedConstructorId !== '-' && appObj.assignedConstructorId !== '미배정') ||
+                (appObj.assignedConstructorName && appObj.assignedConstructorName !== '미배정' && appObj.assignedConstructorName !== '-' && appObj.assignedConstructorName !== 'none')
+              );
+              if (!hasValidAssignedConst) {
+                appObj.constructionPhotos = [];
+                appObj.constPhotoCount = 0;
+                appObj.invoicePhotos = [];
+                appObj.signDraftPhotos = [];
               }
 
               // 간판 디자인 시안 최신 락 및 서버 memo 동기화 (설계도-04 BP-CONSTRUCTOR-FLOW SSOT 단일 기준)
