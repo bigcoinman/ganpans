@@ -602,6 +602,13 @@
             constructionPhotos: (() => {
               const hasValidConst = Boolean(app.assignedConstructorId && app.assignedConstructorId !== 'none' && app.assignedConstructorId !== '미배정' && cName !== '미배정');
               if (!hasValidConst) return [];
+              if (this._recentPhotoUpdates) {
+                const normK = String(app.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                const pL = this._recentPhotoUpdates[String(app.id)] || (normK && this._recentPhotoUpdates[normK]);
+                if (pL && (Date.now() - (pL.timestamp || 0) < 30000)) {
+                  return Array.isArray(pL.constructionPhotos) ? pL.constructionPhotos : [];
+                }
+              }
               let cList = app.constructionPhotos || app.afterPhotos || [];
               if ((!cList || cList.length === 0) && app.memo) {
                 try {
@@ -614,6 +621,13 @@
             constPhotoCount: (() => {
               const hasValidConst = Boolean(app.assignedConstructorId && app.assignedConstructorId !== 'none' && app.assignedConstructorId !== '미배정' && cName !== '미배정');
               if (!hasValidConst) return 0;
+              if (this._recentPhotoUpdates) {
+                const normK = String(app.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                const pL = this._recentPhotoUpdates[String(app.id)] || (normK && this._recentPhotoUpdates[normK]);
+                if (pL && (Date.now() - (pL.timestamp || 0) < 30000)) {
+                  return Number(pL.constPhotoCount) || 0;
+                }
+              }
               let cList = app.constructionPhotos || app.afterPhotos || [];
               let cnt = Array.isArray(cList) ? cList.length : 0;
               if (app.memo) {
@@ -3235,15 +3249,10 @@
       });
     }
 
-    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-      window.DataStore.notifyAll(true);
-    }
-    if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
-    if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
-    if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
+    window._justUpdatedDraftTime = Date.now();
 
     if (remainingCount > 0) {
-      window.viewDraftModal(id);
+      window.viewDraftModal(id, true);
     } else {
       if (typeof window.closeDraftModal === 'function') window.closeDraftModal();
       else { const modal = document.getElementById('modal-view-draft-preview'); if (modal) modal.style.display = 'none'; }
@@ -3252,6 +3261,10 @@
       } else {
         alert('모든 간판 디자인 시안이 삭제되었습니다.');
       }
+    }
+
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
     }
   };
 
@@ -3585,21 +3598,39 @@
     }
   };
 
-  // --- 시공 후 현장 사진 개별 삭제 ---
+  // --- 시공 후 현장 사진 개별 삭제 (1회 클릭 즉시 반영 & In-place UI 갱신 & 좀비 부활 원천 차단) ---
   window.deleteJobConstructionPhoto = function (id, photoIndex) {
-    if (!confirm(`시공 후 사진 #${photoIndex + 1}을(를) 삭제하시겠습니까?`)) return;
+    window.isInteractingWithForm = true;
+    window._isConstUploading = true;
+
+    if (!confirm(`시공 후 사진 #${photoIndex + 1}을(를) 삭제하시겠습니까?`)) {
+      setTimeout(() => {
+        window.isInteractingWithForm = false;
+        window._isConstUploading = false;
+      }, 500);
+      return;
+    }
+
+    // 직전 삭제 갱신 타임스탬프 기록 (handleRealtimeSyncMob의 이중 모달 재호출 방어)
+    window._justUpdatedConstPhotoTime = Date.now();
 
     let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
       ? window.DataStore.getApplications()
       : (JSON.parse(localStorage.getItem('applications')) || []);
     let remainingCount = 0;
     let targetMemoStr = '';
+    let updatedPhotos = [];
 
     apps = apps.map(app => {
       if (String(app.id) === String(id)) {
         let existing = app.constructionPhotos || app.afterPhotos || [];
-        const updated = existing.filter((_, idx) => idx !== photoIndex);
-        remainingCount = updated.length;
+        if ((!existing || existing.length === 0) && window.DataStore && window.DataStore._recentPhotoUpdates) {
+          const normK = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          const pL = window.DataStore._recentPhotoUpdates[String(id)] || (normK && window.DataStore._recentPhotoUpdates[normK]);
+          if (pL && Array.isArray(pL.constructionPhotos)) existing = pL.constructionPhotos;
+        }
+        updatedPhotos = existing.filter((_, idx) => idx !== photoIndex);
+        remainingCount = updatedPhotos.length;
         let mObj = {};
         try { mObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {}); } catch (e) {}
         mObj.constPhotoCount = remainingCount;
@@ -3609,15 +3640,15 @@
           mObj.signDraftPhotos = app.signDraftPhotos;
         }
         targetMemoStr = JSON.stringify(mObj);
-        return { ...app, constructionPhotos: updated, constPhotoCount: remainingCount, memo: targetMemoStr, _clearConstPhotos: remainingCount === 0 };
+        return { ...app, constructionPhotos: updatedPhotos, constPhotoCount: remainingCount, memo: targetMemoStr, _clearConstPhotos: remainingCount === 0 };
       }
       return app;
     });
 
-    // [레이스 컨디션 방어] 사진 삭제 후 최신 사진 락 등록 및 캐시 무효화
+    // [레이스 컨디션 & 좀비 부활 방어] 사진 삭제 후 최신 사진 락 등록 (30초간 syncAllData 및 온디맨드 재조회의 구형 덮어쓰기 차단)
     if (window.DataStore && window.DataStore._recentPhotoUpdates) {
       const normKey = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-      const pLock = { constructionPhotos: (apps.find(a => String(a.id) === String(id)) || {}).constructionPhotos || [], constPhotoCount: remainingCount, timestamp: Date.now() };
+      const pLock = { constructionPhotos: updatedPhotos, constPhotoCount: remainingCount, timestamp: Date.now() };
       window.DataStore._recentPhotoUpdates[String(id)] = pLock;
       if (normKey) window.DataStore._recentPhotoUpdates[normKey] = pLock;
     }
@@ -3642,6 +3673,11 @@
           if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
             userChanged = true;
             let existing = item.constructionPhotos || item.afterPhotos || [];
+            if ((!existing || existing.length === 0) && window.DataStore && window.DataStore._recentPhotoUpdates) {
+              const normK = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+              const pL = window.DataStore._recentPhotoUpdates[String(id)] || (normK && window.DataStore._recentPhotoUpdates[normK]);
+              if (pL && Array.isArray(pL.constructionPhotos)) existing = pL.constructionPhotos;
+            }
             const updated = existing.filter((_, idx) => idx !== photoIndex);
             let mObj = {};
             try { mObj = typeof item.memo === 'string' ? JSON.parse(item.memo) : (item.memo || {}); } catch (e) {}
@@ -3669,11 +3705,15 @@
       localStorage.setItem('users', JSON.stringify(curUsers));
     }
 
+    // [In-place UI 0초 즉각 갱신] 전체 DOM 파괴 없이 외부 카드의 시공 후 사진 장수 뱃지 즉각 동기화
+    if (typeof window.updateJobPhotoUIInPlace === 'function') {
+      window.updateJobPhotoUIInPlace(id, updatedPhotos);
+    }
+
     if (window.SupabaseSync) {
-      const app = apps.find(a => String(a.id) === String(id));
       if (typeof window.SupabaseSync.updateApplication === 'function') {
         window.SupabaseSync.updateApplication(id, {
-          construction_photos: app ? (app.constructionPhotos || []) : [],
+          construction_photos: updatedPhotos,
           memo: targetMemoStr,
           _clearConstPhotos: remainingCount === 0
         });
@@ -3683,16 +3723,9 @@
       });
     }
 
-    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
-      window.DataStore.notifyAll(true);
-    }
-    if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
-    if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
-    if (typeof window.renderManagerConstProgress === 'function') window.renderManagerConstProgress();
-    if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
-
+    // 모달 동적 인플레이스 리프레시 또는 종료
     if (remainingCount > 0) {
-      window.viewConstructionPhotosModal(id);
+      window.viewConstructionPhotosModal(id, true);
     } else {
       if (typeof window.closeConstPhotosModal === 'function') {
         window.closeConstPhotosModal();
@@ -3706,6 +3739,16 @@
         alert('모든 시공 후 사진이 삭제되었습니다.');
       }
     }
+
+    // 단일 전체 동기화 브로드캐스트 (중복 4회 렌더링 찌꺼기 전수 삭제 및 단일 파이프라인)
+    if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+      window.DataStore.notifyAll(true);
+    }
+
+    setTimeout(() => {
+      window.isInteractingWithForm = false;
+      window._isConstUploading = false;
+    }, 1000);
   };
 
   // --- 간판 디자인 시안 모달 닫기 ---
@@ -3878,14 +3921,29 @@
       (app && app.assignedConstructorId && app.assignedConstructorId !== 'none' && app.assignedConstructorId !== '미배정')
     );
 
-    let cPhotos = hasValidConstructor
-      ? ((job && Array.isArray(job.constructionPhotos) && job.constructionPhotos.length > 0)
-        ? job.constructionPhotos
-        : (app && Array.isArray(app.constructionPhotos) && app.constructionPhotos.length > 0 ? app.constructionPhotos : []))
-      : [];
+    // [최신 락 우선 검사 - 좀비 부활 원천 차단]
+    let isPhotoLockActive = false;
+    let lockedPhotos = null;
+    if (window.DataStore && window.DataStore._recentPhotoUpdates) {
+      const normK = String(id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const pL = window.DataStore._recentPhotoUpdates[String(id)] || (normK && window.DataStore._recentPhotoUpdates[normK]);
+      if (pL && (Date.now() - (pL.timestamp || 0) < 30000)) {
+        isPhotoLockActive = true;
+        lockedPhotos = Array.isArray(pL.constructionPhotos) ? pL.constructionPhotos : [];
+      }
+    }
 
-    // 2) 로컬에 시공 후 사진이 없으면 Supabase 클라우드에서 해당 건의 최신 construction_photos를 직접 온디맨드 단일 조회
-    if (cPhotos.length === 0 && hasValidConstructor) {
+    let cPhotos = [];
+    if (isPhotoLockActive) {
+      cPhotos = lockedPhotos;
+    } else if (hasValidConstructor) {
+      cPhotos = (job && Array.isArray(job.constructionPhotos) && job.constructionPhotos.length > 0)
+        ? job.constructionPhotos
+        : (app && Array.isArray(app.constructionPhotos) && app.constructionPhotos.length > 0 ? app.constructionPhotos : []);
+    }
+
+    // 2) 로컬에 시공 후 사진이 없고, 최근 로컬 사진 삭제/수정 락이 없을 때만 Supabase 클라우드에서 온디맨드 단일 조회
+    if (cPhotos.length === 0 && hasValidConstructor && !isPhotoLockActive) {
       try {
         let remoteRow = null;
         if (window.supabaseClient) {
@@ -4006,7 +4064,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <span style="font-size: 1.0rem; font-weight: 700; color: #047857;"><i class="fa-solid fa-camera"></i> 시공 후 사진 #${idx + 1}</span>
           ${canManagePhotos ? `
-          <button type="button" onclick="window.deleteJobConstructionPhoto('${job ? job.id : id}', ${idx})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          <button type="button" onclick="window.deleteJobConstructionPhoto('${id}', ${idx})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 12px; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
             <i class="fa-solid fa-trash-can"></i> 이 사진 삭제
           </button>
           ` : ''}

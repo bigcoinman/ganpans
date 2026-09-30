@@ -2772,7 +2772,7 @@ window.SupabaseSync = {
               }
               // 최신 시공사진 락 및 서버 SSOT 동기화 (설계도-04 BP-CONSTRUCTOR-FLOW SSOT 단일 기준)
               const photoLock = (window.DataStore && window.DataStore._recentPhotoUpdates && (window.DataStore._recentPhotoUpdates[String(appObj.id)] || (normObjKey && window.DataStore._recentPhotoUpdates[normObjKey])));
-              const isPhotoLockActive = Boolean(photoLock && (Date.now() - (photoLock.timestamp || 0) < 10000));
+              const isPhotoLockActive = Boolean(photoLock && (Date.now() - (photoLock.timestamp || 0) < 30000));
               if (isPhotoLockActive && Array.isArray(photoLock.constructionPhotos)) {
                 appObj.constructionPhotos = photoLock.constructionPhotos;
                 appObj.constPhotoCount = photoLock.constructionPhotos.length;
@@ -3103,14 +3103,16 @@ window.SupabaseSync = {
       this.initRealtimeSubscription();
     }, 200);
 
-    // 탭 포커스 / 활성화 시 즉시 0초 동기화
+    // 탭 포커스 / 활성화 시 즉시 0초 동기화 (폼 조작 또는 업로드/삭제 중 기습 동기화 충돌 방어)
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
+          if (window.isInteractingWithForm || window._isConstUploading) return;
           this.syncAllData();
         }
       });
       window.addEventListener('focus', () => {
+        if (window.isInteractingWithForm || window._isConstUploading) return;
         this.syncAllData();
       });
     }

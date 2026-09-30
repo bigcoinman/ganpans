@@ -5542,14 +5542,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window._currentOpenDraftModalId && typeof window.viewDraftModal === 'function') {
             const m = document.getElementById('modal-view-draft-preview');
             if (m && m.style.display !== 'none') {
-                window.viewDraftModal(window._currentOpenDraftModalId, true);
+                if (!window._justUpdatedDraftTime || (Date.now() - window._justUpdatedDraftTime >= 1500)) {
+                    window.viewDraftModal(window._currentOpenDraftModalId, true);
+                }
             }
         }
         // 시공 후 사진 확인 모달이 열려 있는 상태라면 0초 동적 리프레시 (In-place Refresh)
         if (window._currentOpenConstModalId && typeof window.viewConstructionPhotosModal === 'function') {
             const mc = document.getElementById('modal-view-const-photos-preview');
             if (mc && mc.style.display !== 'none') {
-                window.viewConstructionPhotosModal(window._currentOpenConstModalId, true);
+                if (!window._justUpdatedConstPhotoTime || (Date.now() - window._justUpdatedConstPhotoTime >= 1500)) {
+                    window.viewConstructionPhotosModal(window._currentOpenConstModalId, true);
+                }
             }
         }
     };
