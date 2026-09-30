@@ -93,6 +93,19 @@ assertRule(
 );
 
 assertRule(
+  '[BP-02] 일반회원(점주) 가입 정보 100% 영구 보존 원칙 (신청서 통한 프로필 덮어쓰기 찌꺼기 부존재)',
+  !appCode.includes('finalUserAddress') && !appCode.includes('finalUserPhone'),
+  '신청서 작성 시 회원 프로필을 덮어쓰는 찌꺼기 변수(finalUserAddress/finalUserPhone)가 발견되었습니다!'
+);
+
+assertRule(
+  '[BP-02] 신청서 데이터의 완전 독립 분리 저장 원칙 (users 프로필 100% 불변 보존)',
+  appCode.includes('로그인된 점주 회원의 계정 정보(주소, 전화번호, 비밀번호 등)는 100% 불변 보존') &&
+  appCode.includes('이미 가입된 회원의 계정 정보(주소, 전화번호, 비밀번호 등) 100% 불변 보존'),
+  '신청서 작성 시 회원 프로필을 불변 보존하는 단일 원칙 주석 및 보호 장치가 누락되었습니다!'
+);
+
+assertRule(
   '[BP-02] 신규 점주 임시 비밀번호 정상 노출 보존 (isExistingAccount 엄격 분리)',
   appCode.includes('const isExistingAccount = Boolean(isOwnerSelf || !isNewAccount || !loginNoticePw);'),
   '신규 점주 임시 비밀번호가 증발하는 찌꺼기 코드가 남아있습니다!'
@@ -413,7 +426,9 @@ const ghostPatterns = [
   'find_pw_cache',
   'max_size = 1200',
   'fetchAndRenderAdminApplicationsFresh',
-  'fetchAndRenderAdminUsersFresh'
+  'fetchAndRenderAdminUsersFresh',
+  'finalUserAddress',
+  'finalUserPhone'
 ];
 for (const pattern of ghostPatterns) {
   assertRule(

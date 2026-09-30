@@ -7517,7 +7517,7 @@ function initWizard() {
       let loginNoticePw = '';
       let isNewAccount = false;
 
-      // 1. 현재 로그인한 사용자가 일반회원(점주) 본인인 경우에만 본인 프로필 정보 보강
+      // 1. 현재 로그인한 사용자가 일반회원(점주) 본인인 경우: 계정 프로필 100% 불변 보존 (신청서 통한 프로필 수정 영구 금지)
       const isOwnerSelf = Boolean(
         loggedUser && 
         (loggedUser.role === 'normal' || loggedUser.role === 'user' || !loggedUser.role) &&
