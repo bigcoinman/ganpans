@@ -1105,11 +1105,12 @@
               app.constructionStatus = 'before_construction';
               // [영구 불변 원칙] 신청서 본래의 심사 상태(app.status, 예: 'approved' 서류준비 & 접수대기)는 절대 pending으로 덮어쓰지 않고 100% 영구 보존!
             } else if (cleanVal === '접수완료' || cleanVal === '업체신청') {
-              // [규칙 2] 접수: '접수완료' 또는 '업체신청'으로 변경 시, 기존 진행상태가 미정이거나 없을 때만 기본값 세팅하고, 이미 설정된 상태는 100% 보존
-              if (!app.progressStatus || app.progressStatus === 'none') {
-                app.progressStatus = '지원대기중';
+              // [규칙 2] 접수: '접수완료' 또는 '업체신청'으로 변경 시, 진행상태가 '지원대기중'이거나 미정이면 자동으로 '심사대기중'으로 기본 적용!
+              // 만약 이미 '대상자선정' 등 더 진행된 상태라면 기존 진행상태를 절대 다운그레이드하지 않고 유지!
+              if (!app.progressStatus || app.progressStatus === '지원대기중' || app.progressStatus === 'none') {
+                app.progressStatus = '심사대기중';
                 app.constructionStatus = 'before_construction';
-                // [영구 불변 원칙] 신청서 본래의 심사 상태(app.status) 영구 보존
+                // [영구 불변 원칙] 신청서 본래의 심사 상태(app.status, 예: 'approved' 서류준비 & 접수대기)는 절대 pending으로 덮어쓰지 않고 100% 영구 보존!
               }
             }
           } else {
@@ -1182,6 +1183,8 @@
           initProgress = '지원대기중';
         } else if (type === 'progress') {
           initProgress = cleanVal;
+        } else if (initReceipt === '접수완료' || initReceipt === '업체신청') {
+          initProgress = (!sourceItem.progressStatus || sourceItem.progressStatus === '지원대기중' || sourceItem.progressStatus === 'none') ? '심사대기중' : sourceItem.progressStatus;
         } else {
           initProgress = sourceItem.progressStatus || '지원대기중';
         }
