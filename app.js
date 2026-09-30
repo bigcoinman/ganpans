@@ -7535,12 +7535,20 @@ function initWizard() {
         const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
         const curUserIdx = users.findIndex(u => String(u.id).toLowerCase() === String(loggedUser.id).toLowerCase());
         if (curUserIdx !== -1) {
+          const curUser = users[curUserIdx];
+          // [방안 1 + 방안 2 영구 준수]
+          // 주소: 기존 회원 주소가 이미 존재하면 100% 보존(덮어쓰기 금지), 비어있을 때만 매장 주소로 보완
+          const finalUserAddress = (curUser.address && String(curUser.address).trim()) ? curUser.address : (storeAddress || '');
+          // 전화번호: 가입 인증 수단(아이디/비번 찾기) 보호를 위해 기존 번호가 있으면 100% 보존, 비어있을 때만 보완
+          const finalUserPhone = (curUser.phone && String(curUser.phone).trim()) ? curUser.phone : (ownerPhone || '');
+          const finalUserEmail = (curUser.email && String(curUser.email).trim()) ? curUser.email : (enteredEmail || '');
+
           users[curUserIdx] = {
-            ...users[curUserIdx],
-            name: ownerName || users[curUserIdx].name,
-            phone: ownerPhone || users[curUserIdx].phone,
-            email: enteredEmail || users[curUserIdx].email || '',
-            address: storeAddress || users[curUserIdx].address
+            ...curUser,
+            name: curUser.name || ownerName,
+            phone: finalUserPhone,
+            email: finalUserEmail,
+            address: finalUserAddress
           };
           if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
             window.DataStore.saveUsers(users);
@@ -7549,10 +7557,10 @@ function initWizard() {
           }
           if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
             window.SupabaseSync.updateUser(loggedUser.id, {
-              name: ownerName || users[curUserIdx].name,
-              phone: ownerPhone || users[curUserIdx].phone,
-              email: enteredEmail || users[curUserIdx].email || '',
-              address: storeAddress || users[curUserIdx].address
+              name: curUser.name || ownerName,
+              phone: finalUserPhone,
+              email: finalUserEmail,
+              address: finalUserAddress
             }).catch(() => {});
           }
         }
@@ -7576,13 +7584,17 @@ function initWizard() {
           isNewAccount = !hasExistingPw;
 
           const enteredEmail = document.getElementById('owner-email')?.value.trim() || '';
+          // [방안 1 + 방안 2 영구 준수]
+          const finalUserAddress = (existing.address && String(existing.address).trim()) ? existing.address : (storeAddress || '');
+          const finalUserPhone = (existing.phone && String(existing.phone).trim()) ? existing.phone : (ownerPhone || '');
+          const finalUserEmail = (existing.email && String(existing.email).trim()) ? existing.email : (enteredEmail || '');
 
           users[existingIdx] = {
             ...existing,
-            name: ownerName || existing.name,
-            phone: ownerPhone,
-            email: enteredEmail || existing.email || '',
-            address: storeAddress || existing.address,
+            name: existing.name || ownerName,
+            phone: finalUserPhone,
+            email: finalUserEmail,
+            address: finalUserAddress,
             ...(hasExistingPw ? {} : { pw: hashedPassword })
           };
           if (window.DataStore && typeof window.DataStore.saveUsers === 'function') {
@@ -7592,10 +7604,10 @@ function initWizard() {
           }
           if (window.SupabaseSync && typeof window.SupabaseSync.updateUser === 'function') {
             window.SupabaseSync.updateUser(existing.id, { 
-              name: ownerName || existing.name,
-              phone: ownerPhone, 
-              email: enteredEmail || existing.email || '',
-              address: storeAddress || existing.address,
+              name: existing.name || ownerName,
+              phone: finalUserPhone, 
+              email: finalUserEmail,
+              address: finalUserAddress,
               ...(hasExistingPw ? {} : { password_hash: hashedPassword })
             }).catch(() => {});
           }
