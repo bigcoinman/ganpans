@@ -292,11 +292,12 @@ const PhotoCacheManager = {
     if (!result && this.memoryFallback.has(key)) {
       result = this.memoryFallback.get(key);
     }
-    // 캐시 정밀 검증: 기대 사진 장수(expectedCount)가 주어졌는데 캐시된 장수가 미달하면 stale로 판단하여 null 반환 (DB 재조회 유도)
-    if (result && typeof expectedCount === 'number' && expectedCount > 0) {
+    // 캐시 정밀 검증: 기대 사진 장수(expectedCount)가 주어졌는데 캐시된 장수가 불일치하면 stale로 판단하여 null 반환 (DB 재조회 유도)
+    if (result && typeof expectedCount === 'number') {
+      if (expectedCount === 0) return null;
       const cachedCount = Array.isArray(result.photos) ? result.photos.length : (result.fileData ? 1 : 0);
-      if (cachedCount < expectedCount) {
-        console.log(`[PhotoCacheManager] 🔄 캐시 만료 감지 (${appId}): 캐시=${cachedCount}장 < 최신=${expectedCount}장 -> DB 실시간 재조회`);
+      if (cachedCount !== expectedCount) {
+        console.log(`[PhotoCacheManager] 🔄 캐시 만료 감지 (${appId}): 캐시=${cachedCount}장 != 최신=${expectedCount}장 -> DB 실시간 재조회`);
         return null;
       }
     }
@@ -369,17 +370,29 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
 
   // forceReload가 아닌 경우에만 기존 메모리/캐시 확인
   if (!forceReload) {
+    if (expectedCount === 0) {
+      app.photos = [];
+      app.photosCount = 0;
+      app.hasPhoto = false;
+      app.fileData = '';
+      app.fileName = '업로드 파일 없음';
+      if (window.PhotoCacheManager) {
+        window.PhotoCacheManager.invalidate(app.id).catch(() => {});
+      }
+      return app;
+    }
+
     // 1. 이미 메모리나 객체 내에 유효한 사진 데이터가 로드되어 있는 경우
     let existingPhotos = extractValidPhotos(app);
-    // 만약 기대 장수가 있고, 기존 로드된 사진이 기대 장수보다 적다면(stale) 기존 사진을 폐기하고 실서버 재조회!
-    if (expectedCount > 0 && existingPhotos.length < expectedCount) {
-      console.log(`[PhotoCache] 🔄 사진 개수 불일치 감지 (${app.id}): 로컬=${existingPhotos.length}장 < 기대=${expectedCount}장 -> 실서버 DB 최신 원본 재조회`);
+    // 만약 기대 장수가 있고, 기존 로드된 사진 장수와 기대 장수가 불일치한다면(stale) 기존 사진을 폐기하고 실서버 재조회!
+    if (expectedCount > 0 && existingPhotos.length !== expectedCount) {
+      console.log(`[PhotoCache] 🔄 사진 개수 불일치 감지 (${app.id}): 로컬=${existingPhotos.length}장 != 기대=${expectedCount}장 -> 실서버 DB 최신 원본 재조회`);
       existingPhotos = [];
       app.photos = [];
       if (window.PhotoCacheManager) {
         window.PhotoCacheManager.invalidate(app.id).catch(() => {});
       }
-    } else if (existingPhotos.length > 0 && (expectedCount === 0 || existingPhotos.length >= expectedCount)) {
+    } else if (existingPhotos.length > 0 && existingPhotos.length === expectedCount) {
       const hasAssignedConst = Boolean(app.assignedConstructorId && app.assignedConstructorId !== 'none' && app.assignedConstructorId !== '미배정');
       if (!hasAssignedConst) {
         app.constructionPhotos = [];
@@ -406,7 +419,7 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
     // 2. 브라우저 영구 CacheStorage 확인 (수파베이스 호출 0회, 0 Byte 초고속 로드)
     try {
       const cached = await PhotoCacheManager.get(app.id, expectedCount);
-      if (cached && Array.isArray(cached.photos) && cached.photos.length > 0 && (expectedCount === 0 || cached.photos.length >= expectedCount)) {
+      if (cached && Array.isArray(cached.photos) && cached.photos.length > 0 && cached.photos.length === expectedCount) {
         const hasAssignedConst = Boolean(app.assignedConstructorId && app.assignedConstructorId !== 'none' && app.assignedConstructorId !== '미배정');
         let needConstPhotos = hasAssignedConst && Boolean(options && options.needConstructionPhotos);
         if (!needConstPhotos && hasAssignedConst && app.memo) {
@@ -902,6 +915,7 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
   app.fileName = newFileName;
   app.image_url = newImageUrl;
   app.memo = updatedMemoStr;
+  app._clearPhotos = !hasPhoto;
 
   let allApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
     ? window.DataStore.getApplications()
@@ -917,6 +931,7 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
       fileName: newFileName,
       image_url: newImageUrl,
       memo: updatedMemoStr,
+      _clearPhotos: !hasPhoto,
       updatedAt: new Date().toISOString()
     };
     if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
@@ -926,7 +941,7 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
     }
   }
 
-  // users.items도 동기화
+  // users.items도 완벽 동기화 (파일명, memo, 사진 상태 전수 반영)
   let allUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
     ? window.DataStore.getUsers()
     : (JSON.parse(localStorage.getItem('users')) || []);
@@ -940,7 +955,11 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
           photos: photos,
           photosCount: newCount,
           hasPhoto: hasPhoto,
-          fileData: newFileData
+          fileData: newFileData,
+          fileName: newFileName,
+          image_url: newImageUrl,
+          memo: updatedMemoStr,
+          _clearPhotos: !hasPhoto
         };
         userItemsChanged = true;
       }
@@ -955,14 +974,18 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
     }
   }
 
-  // PhotoCacheManager 최신화
+  // PhotoCacheManager 최신화 또는 영구 폐기
   if (window.PhotoCacheManager) {
-    await window.PhotoCacheManager.set(app.id, {
-      photos: photos,
-      fileData: newFileData,
-      constructionPhotos: app.constructionPhotos || [],
-      invoicePhotos: app.invoicePhotos || []
-    });
+    if (hasPhoto) {
+      await window.PhotoCacheManager.set(app.id, {
+        photos: photos,
+        fileData: newFileData,
+        constructionPhotos: app.constructionPhotos || [],
+        invoicePhotos: app.invoicePhotos || []
+      });
+    } else {
+      await window.PhotoCacheManager.invalidate(app.id);
+    }
   }
 
   // 7. Supabase 비동기 백그라운드 DB 갱신 (Q7)
@@ -979,14 +1002,17 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
         else console.log(`[PhotoDelete] ✅ Supabase DB 사진 삭제 완료 (${app.id}): 잔여 ${newCount}장`);
       });
 
-    // users.items 동기화
+    // users.items 동기화 (updated_at 컬럼 배제 -> 400 에러 원천 차단)
     if (userItemsChanged) {
       allUsers.forEach(u => {
         if (u.items && u.items.some(it => String(it.id) === String(appId) || String(it.appRefId) === String(appId))) {
           window.supabaseClient.from('users')
-            .update({ items: u.items, updated_at: new Date().toISOString() })
+            .update({ items: u.items })
             .eq('id', String(u.id))
-            .catch(() => {});
+            .then(({ error: uErr }) => {
+              if (uErr) console.warn('[PhotoDelete] users.items sync warning:', uErr.message);
+              else console.log(`[PhotoDelete] ✅ Supabase users.items 사진 동기화 완료 (${u.id})`);
+            });
         }
       });
     }
@@ -1002,16 +1028,27 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
     if (typeof showToast === 'function') showToast('현장 사진이 모두 삭제되었습니다.');
   }
 
-  // 전역 대시보드 0초 실시간 리렌더링 (Q8: 최고관리자, 영업자, 점주 화면 동시 갱신)
-  if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob();
+  // 전역 대시보드 0초 실시간 리렌더링 및 동기화 브로드캐스트 (최고관리자, 영업자, 점주 화면 동시 갱신)
+  if (window.DataStore && typeof window.DataStore.notifyAll === 'function') {
+    window.DataStore.notifyAll(true);
+  }
+  if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
   if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
   if (typeof window.renderBizItemsMob === 'function') window.renderBizItemsMob();
-  if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob();
+  if (typeof window.renderBizRegisteredItemsMob === 'function') window.renderBizRegisteredItemsMob();
+  if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
   if (typeof window.renderAdminDashboard === 'function') window.renderAdminDashboard();
   if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
   if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
   if (typeof window.renderConstructorDashboard === 'function') window.renderConstructorDashboard();
-  if (window.DataStore && typeof window.DataStore.notifyAll === 'function') window.DataStore.notifyAll();
+  if (typeof window !== 'undefined') {
+    if (typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('supabase-data-synced', { detail: { appId: app.id, photoCount: newCount } }));
+    }
+    try {
+      localStorage.setItem('ganpan_cross_tab_sync', String(Date.now()));
+    } catch (eStorage) {}
+  }
 }
 window.deleteApplicationSinglePhoto = deleteApplicationSinglePhoto;
 
@@ -2756,28 +2793,34 @@ window.SupabaseSync = {
               })();
               const localPhotosCount = Array.isArray(localApp.photos) ? localApp.photos.length : 0;
 
-              // 만약 서버의 photoCount가 로컬 사진 장수보다 많다면(상대방이 새로 등록/추가한 경우),
-              // 구형 로컬 캐시를 폐기하고 캐시스토리지를 무효화하여 온디맨드 최신 조회를 유도
-              if (serverPhotoCount > localPhotosCount) {
+              // [SSOT 단일 기준] 최고관리자 및 실서버(sa.memo.photoCount) 기준 100% 추종 (좀비 부활 원천 차단)
+              if (serverPhotoCount === 0) {
+                // 실서버에서 사진이 0장으로 완전히 삭제되었거나 미등록인 경우: 로컬 잔재 및 캐시 100% 완전 소멸
                 appObj.photos = [];
-                appObj.photosCount = serverPhotoCount;
-                appObj.hasPhoto = serverPhotoCount > 0;
+                appObj.fileData = '';
+                appObj.fileName = '업로드 파일 없음';
+                appObj.photosCount = 0;
+                appObj.hasPhoto = false;
                 if (window.PhotoCacheManager) {
                   window.PhotoCacheManager.invalidate(appObj.id).catch(() => {});
                 }
-              } else if (localApp.photos && localApp.photos.length > 0 && (!appObj.photos || appObj.photos.length === 0)) {
-                appObj.photos = localApp.photos;
-                appObj.fileData = localApp.fileData || localApp.photos[0];
-                appObj.fileName = localApp.fileName || appObj.fileName;
-              }
-              const existingLocalCount = Math.max(
-                Number(localApp.photosCount) || 0,
-                Number(localApp.photos_count) || 0,
-                (Array.isArray(localApp.photos) ? localApp.photos.length : 0),
-                serverPhotoCount
-              );
-              if (existingLocalCount > (Number(appObj.photosCount) || 0)) {
-                appObj.photosCount = existingLocalCount;
+              } else if (serverPhotoCount !== localPhotosCount) {
+                // 실서버의 사진 장수와 로컬 장수가 다른 경우 (예: 2장에서 1장으로 부분 삭제, 또는 신규 추가)
+                // 로컬 구형 캐시를 무효화하고 서버 사진 장수를 100% 정밀 추종
+                appObj.photos = [];
+                appObj.fileData = '';
+                appObj.fileName = `${appObj.storeName || '신청점포'}_현장사진_${serverPhotoCount}장`;
+                appObj.photosCount = serverPhotoCount;
+                appObj.hasPhoto = true;
+                if (window.PhotoCacheManager) {
+                  window.PhotoCacheManager.invalidate(appObj.id).catch(() => {});
+                }
+              } else {
+                // 사진 장수가 일치하는 경우: 기존 로컬 사진 데이터 보존
+                appObj.photos = localApp.photos || [];
+                appObj.fileData = localApp.fileData || (appObj.photos[0] || '');
+                appObj.fileName = localApp.fileName || `${appObj.storeName || '신청점포'}_현장사진_${serverPhotoCount}장`;
+                appObj.photosCount = serverPhotoCount;
                 appObj.hasPhoto = true;
               }
               // 최신 시공사진 락 및 서버 SSOT 동기화 (설계도-04 BP-CONSTRUCTOR-FLOW SSOT 단일 기준)

@@ -1711,24 +1711,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const memoPhotoCount = (() => {
             try {
                 const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
-                return (m && m.photoCount) ? Number(m.photoCount) : 0;
-            } catch(e) { return 0; }
+                if (m && typeof m.photoCount === 'number') return Number(m.photoCount);
+                if (m && typeof m.photo_count === 'number') return Number(m.photo_count);
+                return null;
+            } catch(e) { return null; }
         })();
-        const explicitCount = Math.max(
-            photoList.length,
-            Number(app.photosCount) || 0,
-            Number(app.photos_count) || 0,
-            memoPhotoCount
-        );
+        // [SSOT 우선권] memo.photoCount가 명시되어 있다면 (0이든 N이든) 최고관리자/실서버의 절대 기준으로 삼음
+        let explicitCount = 0;
+        if (memoPhotoCount !== null) {
+            explicitCount = memoPhotoCount;
+        } else {
+            explicitCount = Math.max(
+                photoList.length,
+                Number(app.photosCount) || 0,
+                Number(app.photos_count) || 0
+            );
+        }
         const firstPhoto = (photoList.length > 0) ? photoList[0] : (app.fileData || (app.image_url && (app.image_url.startsWith('data:') || app.image_url.startsWith('[') || app.image_url.startsWith('http') || app.image_url.startsWith('blob:')) ? app.image_url : ''));
+        const hasValidUrl = Boolean(firstPhoto && firstPhoto !== '업로드 파일 없음' && (firstPhoto.startsWith('data:') || firstPhoto.startsWith('[') || firstPhoto.startsWith('http') || firstPhoto.startsWith('blob:')));
+        
+        // explicitCount가 0이거나 유효한 사진/카운트가 없으면 무조건 hasPhoto = false, count = 0 (유령 사진 1장 판정 원천 차단)
         const hasPhoto = Boolean(
-            explicitCount > 0 ||
-            app.hasPhoto ||
-            (firstPhoto && firstPhoto !== '업로드 파일 없음' && (firstPhoto.startsWith('data:') || firstPhoto.startsWith('[') || firstPhoto.startsWith('http') || firstPhoto.startsWith('blob:'))) ||
-            (app.fileName && app.fileName !== '업로드 파일 없음' && String(app.fileName).trim() !== '') ||
-            (app.file_name && app.file_name !== '업로드 파일 없음' && String(app.file_name).trim() !== '')
+            explicitCount > 0 &&
+            (photoList.length > 0 || hasValidUrl || app.hasPhoto === true || (app.fileName && app.fileName !== '업로드 파일 없음' && String(app.fileName).trim() !== ''))
         );
-        const finalCount = explicitCount > 0 ? explicitCount : (hasPhoto ? 1 : 0);
+        const finalCount = hasPhoto ? Math.max(explicitCount, photoList.length, 1) : 0;
         return {
             count: finalCount,
             hasPhoto: hasPhoto,

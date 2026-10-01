@@ -363,20 +363,23 @@
           rStatus = '접수예정';
         }
 
-        const existingPhotoCount = Math.max(
-          Number(app.photosCount) || 0,
-          Number(app.photos_count) || 0,
-          (() => {
-            try {
-              const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
-              return Number(m.photoCount || m.photosCount) || 0;
-            } catch(e) { return 0; }
-          })(),
-          (Array.isArray(app.photos) ? app.photos.length : 0),
-          (app.fileData ? 1 : 0)
-        );
-        const photosList = (app.photos && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
-        const finalPhotosCount = existingPhotoCount > 0 ? existingPhotoCount : photosList.length;
+        const memoPhotoCount = (() => {
+          try {
+            const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+            if (m && typeof m.photoCount === 'number') return Number(m.photoCount);
+            if (m && typeof m.photo_count === 'number') return Number(m.photo_count);
+            return null;
+          } catch(e) { return null; }
+        })();
+        const photosList = (Array.isArray(app.photos) && app.photos.length > 0) ? app.photos : (app.fileData ? [app.fileData] : []);
+        const explicitCount = (memoPhotoCount !== null)
+          ? memoPhotoCount
+          : Math.max(
+              Number(app.photosCount) || 0,
+              Number(app.photos_count) || 0,
+              photosList.length
+            );
+        const finalPhotosCount = explicitCount > 0 ? explicitCount : 0;
 
         const itemObj = {
           id: String(app.id),
@@ -387,7 +390,8 @@
           photosCount: finalPhotosCount,
           receiptStatus: rStatus,
           progressStatus: pStatus,
-          photos: photosList,
+          photos: finalPhotosCount > 0 ? photosList : [],
+          hasPhoto: finalPhotosCount > 0,
           registeredAt: app.appliedAt || app.createdAt || new Date().toISOString(),
           assignedConstructorId: app.assignedConstructorId || '',
           assignedConstructorName: app.assignedConstructorName || ''
