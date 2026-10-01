@@ -1034,6 +1034,7 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
   }
   if (typeof window.renderAdminDashboardMob === 'function') window.renderAdminDashboardMob(true);
   if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
+  if (typeof window.renderNormalDashboardMob === 'function') window.renderNormalDashboardMob();
   if (typeof window.renderBizItemsMob === 'function') window.renderBizItemsMob();
   if (typeof window.renderBizRegisteredItemsMob === 'function') window.renderBizRegisteredItemsMob();
   if (typeof window.renderConstructorDashboardMob === 'function') window.renderConstructorDashboardMob(true);
@@ -1227,6 +1228,7 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
         if (typeof window.renderBizItemsListMob === 'function') window.renderBizItemsListMob();
         if (typeof window.renderBizRegisteredTable === 'function') window.renderBizRegisteredTable();
         if (typeof window.renderUserApplicationsMob === 'function') window.renderUserApplicationsMob();
+        if (typeof window.renderNormalDashboardMob === 'function') window.renderNormalDashboardMob();
         if (typeof window.renderUserApplicationsList === 'function') window.renderUserApplicationsList();
         if (typeof window.renderBusinessDashboard === 'function') window.renderBusinessDashboard();
         if (typeof window.renderBusinessDashboardMob === 'function') window.renderBusinessDashboardMob();

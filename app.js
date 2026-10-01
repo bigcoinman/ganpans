@@ -1439,15 +1439,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
 
-                <!-- 1. 현장사진 확인 영역 (점주 확인/다운로드) -->
+                <!-- 1. 현장사진 확인 및 등록 영역 (점주 본인 등록/확인 SSOT) -->
                 ${hasPhoto ? `
-                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 8px;">
-                        <span style="font-size: 0.88rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 현장사진</span>
-                        <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${photoCount} }); return false;" style="padding: 5px 12px; font-size: 0.82rem; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(37,99,235,0.2);">
-                            <i class="fa-solid fa-images"></i> 사진 확인 (${photoCount}장)
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; margin-bottom: 8px;">
+                        <span style="font-size: 0.88rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 현장사진 (${photoCount}장)</span>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${photoCount} }); return false;" style="padding: 6px 12px; font-size: 0.82rem; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(37,99,235,0.2);" title="현장사진 확인">
+                                <i class="fa-solid fa-images"></i> 사진 확인 (${photoCount}장)
+                            </button>
+                            <button type="button" onclick="window.handleApplicationPhotoUploadMob && window.handleApplicationPhotoUploadMob('${app.id}'); return false;" style="padding: 6px 10px; font-size: 0.8rem; font-weight: 700; background: #16a34a; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(22,163,74,0.2);" title="현장사진 추가/변경">
+                                <i class="fa-solid fa-plus"></i> 추가
+                            </button>
+                        </div>
+                    </div>
+                ` : `
+                    <div style="background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.88rem; font-weight: 700; color: #b45309;"><i class="fa-solid fa-camera"></i> 현장사진</span>
+                            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-size: 0.76rem; font-weight: 700; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px;">
+                                <i class="fa-solid fa-triangle-exclamation"></i> 사진 등록 필요
+                            </span>
+                        </div>
+                        <button type="button" onclick="window.handleApplicationPhotoUploadMob && window.handleApplicationPhotoUploadMob('${app.id}'); return false;" style="padding: 7px 14px; font-size: 0.84rem; font-weight: 700; background: #16a34a; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(22,163,74,0.25);" title="현장사진 촬영 또는 갤러리 업로드">
+                            <i class="fa-solid fa-camera"></i> 현장사진 등록
                         </button>
                     </div>
-                ` : ''}
+                `}
 
                 <!-- 2. 간판 디자인 시안 확인 및 점주 승인 박스 (설계도-03 BP-APP-LIFECYCLE SSOT) -->
                 ${showDraftBox ? `
@@ -1978,6 +1995,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('사진 업로드 엔진이 준비되지 않았습니다. 새로고침 후 다시 시도해주세요.');
         }
     }
+    window.handleApplicationPhotoUploadMob = handleApplicationPhotoUploadMob;
 
     // 1. 내 온라인 간편 지원 신청 내역 (모바일 카드)
     function renderUserApplicationsMob() {
