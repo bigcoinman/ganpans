@@ -1073,11 +1073,15 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
   } else {
     fileInput.multiple = true;
   }
+  // [업로드 보호 락 Rule#2] 동일 파일 재선택 시에도 change 이벤트가 100% 발화되도록 미리 초기화
+  fileInput.value = '';
 
   fileInput.onchange = async (e) => {
     const rawFiles = Array.from(e.target.files || []);
     if (rawFiles.length === 0) return;
 
+    // [업로드 보호 락 Rule#2] 사진 선택 순간부터 완료까지 백그라운드 동기화 DOM 파괴 원천 차단
+    window._isPhotoUploading = true;
     try {
       // 1. 신규 선택된 이미지 파일들 압축 및 Base64 변환
       const newPhotos = [];
@@ -1242,12 +1246,15 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
         localStorage.setItem('ganpan_cross_tab_sync', String(Date.now()));
       } catch (eEvt) {}
 
-      e.target.value = ''; // 초기화
+      e.target.value = '';
       alert(`현장사진 총 ${finalPhotos.length}장이 안전하게 등록되었습니다.`);
     } catch (err) {
       console.error('handleApplicationPhotoUploadProcess error:', err);
       alert('사진 등록 처리 중 오류가 발생했습니다: ' + err.message);
       e.target.value = '';
+    } finally {
+      // [업로드 보호 락 Rule#2] 업로드 완료 후 락 해제 (성공/실패 모두 반드시 해제)
+      window._isPhotoUploading = false;
     }
   };
 

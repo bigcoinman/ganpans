@@ -1257,33 +1257,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Render User Header Profile
         document.getElementById('status-user-name').textContent = `${activeUser.name}님 (${activeUser.id})`;
+        // [업로드 보호 락 Rule#2] 현장사진 업로드 중이면 화면 DOM 파괴 원체 차단
+        if (window._isPhotoUploading) return;
+
         const roleBadge = document.getElementById('status-user-role-badge');
 
-        // Hide all containers first
+        // 사용자 권한 확정 후 현재 확성화된 컨테이너만 유지, 나머지 숨기기 (꺜박임 0건 박멸)
+        const targetRole = activeUser.role;
         const normalContainer = document.getElementById('status-normal-container');
         const businessContainer = document.getElementById('status-business-container');
         const adminContainer = document.getElementById('status-admin-container');
         const constructorContainer = document.getElementById('status-constructor-container');
 
-        if (normalContainer) normalContainer.style.display = 'none';
-        if (businessContainer) businessContainer.style.display = 'none';
-        if (adminContainer) adminContainer.style.display = 'none';
-        if (constructorContainer) constructorContainer.style.display = 'none';
+        const isNormalRole = (targetRole !== 'admin' && targetRole !== 'business' && targetRole !== 'constructor');
+        const shouldShowNormal = isNormalRole;
+        const shouldShowBusiness = (targetRole === 'business');
+        const shouldShowAdmin = (targetRole === 'admin');
+        const shouldShowConstructor = (targetRole === 'constructor');
+
+        // 현재 노출된 컨테이너와 대상 컨테이너가 다를 때만 표시 전환 (핀픽 꺜박임 제거)
+        if (normalContainer) normalContainer.style.display = shouldShowNormal ? 'block' : 'none';
+        if (businessContainer) businessContainer.style.display = shouldShowBusiness ? 'block' : 'none';
+        if (adminContainer) adminContainer.style.display = shouldShowAdmin ? 'block' : 'none';
+        if (constructorContainer) constructorContainer.style.display = shouldShowConstructor ? 'block' : 'none';
 
         if (activeUser.role === 'admin') {
             roleBadge.textContent = '최고관리자';
             roleBadge.style.background = 'var(--grad-primary)';
-            if (adminContainer) adminContainer.style.display = 'block';
             renderAdminDashboardMob(skipAdminSync);
         } else if (activeUser.role === 'business') {
             roleBadge.textContent = `영업자 코드: ${activeUser.bizCode || ''}`;
             roleBadge.style.background = 'var(--accent-secondary)';
-            if (businessContainer) businessContainer.style.display = 'block';
             renderBusinessDashboardMob();
         } else if (activeUser.role === 'constructor') {
             roleBadge.textContent = `시공사 코드: ${activeUser.constCode || ''}`;
             roleBadge.style.background = 'var(--accent-success)';
-            if (constructorContainer) constructorContainer.style.display = 'block';
             renderConstructorDashboardMob();
         } else {
             if (activeUser.conversionStatus === 'pending') {
@@ -1296,7 +1304,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 roleBadge.textContent = '일반 회원';
                 roleBadge.style.background = 'var(--accent-primary)';
             }
-            if (normalContainer) normalContainer.style.display = 'block';
             renderNormalDashboardMob();
         }
     }
@@ -5528,6 +5535,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 홈 화면에서 앱으로 다시 복귀했을 때 (visibility / focus) 백그라운드 자동 동기화
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
+            // [업로드 보호 락 Rule#2] 현장사진 업로드 중이면 백그라운드 동기화 스킵 (레이스 컨디션 방지)
+            if (window._isPhotoUploading) return;
             const elapsed = Date.now() - lastRefreshTime;
             // 복귀 시 마지막 갱신 후 10초 이상 지났으면 조용히 최신 데이터 갱신
             if (elapsed > 10000) {
@@ -5537,6 +5546,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('focus', () => {
+        // [업로드 보호 락 Rule#2] 현장사진 업로드 중이면 백그라운드 동기화 스킵 (레이스 컨디션 방지)
+        if (window._isPhotoUploading) return;
         const elapsed = Date.now() - lastRefreshTime;
         if (elapsed > 15000) {
             triggerAppRefresh(true);
