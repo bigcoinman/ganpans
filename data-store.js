@@ -649,6 +649,12 @@
             hasPhoto: Boolean(app.hasPhoto || (app.photos && app.photos.length > 0) || app.fileData),
             fileData: app.fileData || '',
             fileName: app.fileName || '',
+            photoUpdatedAt: app.photoUpdatedAt || (() => {
+              try {
+                const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+                return Number(m.photoUpdatedAt) || (m.photoUpdatedAt ? new Date(m.photoUpdatedAt).getTime() : 0);
+              } catch(e) { return 0; }
+            })(),
             createdAt: app.appliedAt || app.createdAt || new Date().toISOString()
           };
 

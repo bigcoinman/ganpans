@@ -1423,7 +1423,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const showDraftBox = isBizItem && hasAssignedConstructor && (draftCount > 0);
 
             // 현장사진 정보 복원
-            const { count: photoCount, hasPhoto } = (typeof getAppPhotoInfo === 'function') ? getAppPhotoInfo(app) : { count: 0, hasPhoto: false };
+            const { count: photoCount, hasPhoto, photoUpdatedAt: oUpdatedAt } = (typeof getAppPhotoInfo === 'function') ? getAppPhotoInfo(app) : { count: 0, hasPhoto: false, photoUpdatedAt: 0 };
 
             card.innerHTML = `
                 <div class="app-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
@@ -1451,7 +1451,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; margin-bottom: 8px;">
                         <span style="font-size: 0.88rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 현장사진 (${photoCount}장)</span>
                         <div style="display: flex; gap: 6px; align-items: center;">
-                            <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${photoCount} }); return false;" style="padding: 6px 12px; font-size: 0.82rem; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(37,99,235,0.2);" title="현장사진 확인">
+                            <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${photoCount}, expectedUpdatedAt: ${oUpdatedAt || 0} }); return false;" style="padding: 6px 12px; font-size: 0.82rem; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(37,99,235,0.2);" title="현장사진 확인">
                                 <i class="fa-solid fa-images"></i> 사진 확인 (${photoCount}장)
                             </button>
                             <button type="button" onclick="window.handleApplicationPhotoUploadMob && window.handleApplicationPhotoUploadMob('${app.id}'); return false;" style="padding: 6px 10px; font-size: 0.8rem; font-weight: 700; background: #16a34a; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(22,163,74,0.2);" title="현장사진 추가/변경">
@@ -1740,6 +1740,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return null;
             } catch(e) { return null; }
         })();
+        const memoPhotoUpdatedAt = (() => {
+            try {
+                const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
+                return Number(m.photoUpdatedAt) || (m.photoUpdatedAt ? new Date(m.photoUpdatedAt).getTime() : 0);
+            } catch(e) { return 0; }
+        })();
+        const resolvedPhotoUpdatedAt = memoPhotoUpdatedAt || Number(app.photoUpdatedAt) || 0;
+
         // [SSOT 우선권] memo.photoCount가 명시되어 있다면 (0이든 N이든) 최고관리자/실서버의 절대 기준으로 삼음
         let explicitCount = 0;
         if (memoPhotoCount !== null) {
@@ -1764,7 +1772,8 @@ document.addEventListener('DOMContentLoaded', () => {
             count: finalCount,
             hasPhoto: hasPhoto,
             photos: photoList,
-            firstPhoto: firstPhoto
+            firstPhoto: firstPhoto,
+            photoUpdatedAt: resolvedPhotoUpdatedAt
         };
     }
 
@@ -2115,7 +2124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userAppsContainer.innerHTML = '';
         displayApps.forEach(app => {
             const statusBadge = getAppStatusBadgeHtmlMob(app);
-            const { count, hasPhoto } = getAppPhotoInfo(app);
+            const { count, hasPhoto, photoUpdatedAt: bUpdatedAt } = getAppPhotoInfo(app);
 
             const isNormalUser = Boolean(activeUser && activeUser.role !== 'business' && activeUser.role !== 'admin' && activeUser.role !== 'constructor');
             const needPhotoBadge = (!hasPhoto && isNormalUser)
@@ -2125,10 +2134,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 : '';
 
             const downloadBtn = hasPhoto
-                ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${count} }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}">
+                ? `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${count}, expectedUpdatedAt: ${bUpdatedAt || 0} }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${count > 1 ? `현장사진 ${count}장 개별 다운로드` : '현장사진 다운로드'}">
                     <i class="fa-solid ${count > 1 ? 'fa-images' : 'fa-download'}" style="font-size: 0.76rem; color: #2563eb;"></i> ${count > 1 ? `사진 (${count}장)` : '다운로드'}
                 </button>`
-                : `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: 0 }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; color: #94a3b8; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="현장사진 미등록 상태">
+                : `<button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: 0, expectedUpdatedAt: ${bUpdatedAt || 0} }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; color: #94a3b8; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="현장사진 미등록 상태">
                     <i class="fa-solid fa-camera" style="font-size: 0.76rem; color: #94a3b8;"></i> 사진 없음
                 </button>`;
 
@@ -2332,7 +2341,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 : (JSON.parse(localStorage.getItem('applications')) || []);
             const matchedApp = rawApps.find(a => String(a.id) === String(item.id) || (item.statusObj && String(item.statusObj.appRefId) === String(a.id))) || item;
 
-            const { count: pCount } = getAppPhotoInfo(matchedApp);
+            const { count: pCount, photoUpdatedAt: itemUpdatedAt } = getAppPhotoInfo(matchedApp);
             const targetAppId = matchedApp.id || item.id;
 
             const card = document.createElement('div');
@@ -2358,7 +2367,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-size: 0.88rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 현장사진</span>
                     ${pCount > 0 ? `
-                        <button type="button" onclick="window.downloadApplicationPhotos('${targetAppId}', { expectedCount: ${pCount} }); return false;" style="padding: 5px 12px; font-size: 0.82rem; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(37,99,235,0.2);">
+                        <button type="button" onclick="window.downloadApplicationPhotos('${targetAppId}', { expectedCount: ${pCount}, expectedUpdatedAt: ${itemUpdatedAt || 0} }); return false;" style="padding: 5px 12px; font-size: 0.82rem; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(37,99,235,0.2);">
                             사진 확인 (${pCount}장)
                         </button>
                     ` : `
@@ -3171,7 +3180,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // 현장사진 UI (PC 대시보드와 동일한 상하/좌우 2단 버튼 구조)
                     let fileAttachmentHtml = '';
-                    const { count: finalCount, hasPhoto } = getAppPhotoInfo(app);
+                    const { count: finalCount, hasPhoto, photoUpdatedAt: aUpdatedAt } = getAppPhotoInfo(app);
 
                     fileAttachmentHtml = `
                         <div style="margin-top: 10px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -3184,11 +3193,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <i class="fa-solid fa-camera" style="font-size: 0.8rem;"></i> 사진 등록
                                 </button>
                                 ${hasPhoto ? `
-                                    <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${finalCount} }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${finalCount > 1 ? `현장사진 ${finalCount}장 개별 다운로드` : '현장사진 다운로드'}">
+                                    <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: ${finalCount}, expectedUpdatedAt: ${aUpdatedAt || 0} }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="${finalCount > 1 ? `현장사진 ${finalCount}장 개별 다운로드` : '현장사진 다운로드'}">
                                         <i class="fa-solid ${finalCount > 1 ? 'fa-images' : 'fa-download'}" style="font-size: 0.76rem; color: #2563eb;"></i> ${finalCount > 1 ? `사진 (${finalCount}장)` : '다운로드'}
                                     </button>
                                 ` : `
-                                    <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: 0 }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 600; color: #94a3b8; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="현장사진 미등록 상태">
+                                    <button type="button" onclick="window.downloadApplicationPhotos('${app.id}', { expectedCount: 0, expectedUpdatedAt: ${aUpdatedAt || 0} }); return false;" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 12px; font-size: 0.82rem; font-weight: 600; color: #94a3b8; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; height: 32px; box-sizing: border-box;" title="현장사진 미등록 상태">
                                         <i class="fa-solid fa-camera" style="font-size: 0.76rem; color: #94a3b8;"></i> 사진 없음
                                     </button>
                                 `}
@@ -4558,7 +4567,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
 
-            const { count: pCount } = getAppPhotoInfo(job);
+            const { count: pCount, photoUpdatedAt: pUpdatedAt } = getAppPhotoInfo(job);
 
             card.innerHTML = `
                 <div class="app-card-header">
@@ -4568,7 +4577,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="app-card-body-row" style="display: flex; justify-content: space-between; align-items: center; background: #eff6ff; padding: 6px 10px; border-radius: 6px; margin: 4px 0 6px 0; border: 1px solid #bfdbfe;">
                     <span style="font-size: 0.88rem; font-weight: 700; color: #1e40af;"><i class="fa-solid fa-camera"></i> 점주 현장사진</span>
                     ${pCount > 0 ? `
-                        <button type="button" onclick="window.downloadApplicationPhotos('${job.id}', { expectedCount: ${pCount} }); return false;" style="padding: 5px 12px; font-size: 0.86rem; background: #2563eb; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                        <button type="button" onclick="window.downloadApplicationPhotos('${job.id}', { expectedCount: ${pCount}, expectedUpdatedAt: ${pUpdatedAt || 0} }); return false;" style="padding: 5px 12px; font-size: 0.86rem; background: #2563eb; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
                             사진 확인 (${pCount}장)
                         </button>
                     ` : `

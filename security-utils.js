@@ -272,7 +272,7 @@ const PhotoCacheManager = {
   CACHE_NAME: 'ganpan-photo-cache-v1',
   memoryFallback: new Map(),
 
-  async get(appId, expectedCount = null) {
+  async get(appId, expectedCount = null, expectedUpdatedAt = null) {
     if (!appId) return null;
     const key = `app_photo_${String(appId).trim()}`;
     let result = null;
@@ -292,7 +292,16 @@ const PhotoCacheManager = {
     if (!result && this.memoryFallback.has(key)) {
       result = this.memoryFallback.get(key);
     }
-    // 캐시 정밀 검증: 기대 사진 장수(expectedCount)가 주어졌는데 캐시된 장수가 불일치하면 stale로 판단하여 null 반환 (DB 재조회 유도)
+    // 캐시 정밀 검증 1: 타임스탬프(expectedUpdatedAt)가 주어졌는데 캐시 시각보다 최신이면 stale 판단 (DB 실시간 재조회)
+    if (result && expectedUpdatedAt) {
+      const expTime = Number(expectedUpdatedAt) || (typeof expectedUpdatedAt === 'string' ? new Date(expectedUpdatedAt).getTime() : 0);
+      const cachedTime = Number(result.photoUpdatedAt) || (result.photoUpdatedAt ? new Date(result.photoUpdatedAt).getTime() : 0);
+      if (expTime > 0 && (!cachedTime || expTime > cachedTime)) {
+        console.log(`[PhotoCacheManager] 🔄 캐시 만료 감지 (${appId}): 캐시시각=${cachedTime} < 최신시각=${expTime} -> DB 실시간 재조회`);
+        return null;
+      }
+    }
+    // 캐시 정밀 검증 2: 기대 사진 장수(expectedCount)가 주어졌는데 캐시된 장수가 불일치하면 stale로 판단하여 null 반환 (DB 재조회 유도)
     if (result && typeof expectedCount === 'number') {
       if (expectedCount === 0) return null;
       const cachedCount = Array.isArray(result.photos) ? result.photos.length : (result.fileData ? 1 : 0);
@@ -307,6 +316,9 @@ const PhotoCacheManager = {
   async set(appId, photoData) {
     if (!appId || !photoData) return;
     const key = `app_photo_${String(appId).trim()}`;
+    if (!photoData.photoUpdatedAt) {
+      photoData.photoUpdatedAt = Date.now();
+    }
     this.memoryFallback.set(key, photoData);
     if (typeof caches !== 'undefined') {
       try {
@@ -351,13 +363,15 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
 
   const forceReload = Boolean(options && options.forceReload);
 
-  // 최신 기대 사진 장수 계산 (메타데이터 기준)
+  // 최신 기대 사진 메타데이터 계산 (장수 및 수정시각 기준)
   let memoCount = 0;
+  let memoUpdatedAt = 0;
   if (app.memo) {
     try {
       const m = typeof app.memo === 'string' ? JSON.parse(app.memo) : app.memo;
       if (m && typeof m.photoCount === 'number') memoCount = Number(m.photoCount);
       else if (m && typeof m.photo_count === 'number') memoCount = Number(m.photo_count);
+      if (m && m.photoUpdatedAt) memoUpdatedAt = Number(m.photoUpdatedAt) || (m.photoUpdatedAt ? new Date(m.photoUpdatedAt).getTime() : 0);
     } catch (eM) {}
   }
   let expectedCount = Math.max(
@@ -367,12 +381,18 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
     Number(app.photoCount) || 0,
     memoCount
   );
+  let expectedUpdatedAt = Math.max(
+    (options && options.expectedUpdatedAt) ? (Number(options.expectedUpdatedAt) || 0) : 0,
+    Number(app.photoUpdatedAt) || 0,
+    memoUpdatedAt
+  );
 
   // forceReload가 아닌 경우에만 기존 메모리/캐시 확인
   if (!forceReload) {
     if (expectedCount === 0) {
       app.photos = [];
       app.photosCount = 0;
+      app.photoUpdatedAt = expectedUpdatedAt;
       app.hasPhoto = false;
       app.fileData = '';
       app.fileName = '업로드 파일 없음';
@@ -384,9 +404,12 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
 
     // 1. 이미 메모리나 객체 내에 유효한 사진 데이터가 로드되어 있는 경우
     let existingPhotos = extractValidPhotos(app);
-    // 만약 기대 장수가 있고, 기존 로드된 사진 장수와 기대 장수가 불일치한다면(stale) 기존 사진을 폐기하고 실서버 재조회!
-    if (expectedCount > 0 && existingPhotos.length !== expectedCount) {
-      console.log(`[PhotoCache] 🔄 사진 개수 불일치 감지 (${app.id}): 로컬=${existingPhotos.length}장 != 기대=${expectedCount}장 -> 실서버 DB 최신 원본 재조회`);
+    const localPhotoTime = Number(app.photoUpdatedAt) || 0;
+    const isPhotoStaleByTime = Boolean(expectedUpdatedAt > 0 && (!localPhotoTime || expectedUpdatedAt > localPhotoTime));
+
+    // 만약 기대 장수가 불일치하거나, 기대 수정시각이 로컬보다 최신인 경우(stale) 기존 사진을 폐기하고 실서버 재조회!
+    if ((expectedCount > 0 && existingPhotos.length !== expectedCount) || isPhotoStaleByTime) {
+      console.log(`[PhotoCache] 🔄 사진 변경 감지 (${app.id}): 로컬=${existingPhotos.length}장(시각:${localPhotoTime}) vs 최신=${expectedCount}장(시각:${expectedUpdatedAt}) -> 실서버 DB 최신 원본 재조회`);
       existingPhotos = [];
       app.photos = [];
       if (window.PhotoCacheManager) {
@@ -411,6 +434,7 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
       if (!needConstPhotos) {
         app.photos = existingPhotos;
         app.photosCount = existingPhotos.length;
+        app.photoUpdatedAt = expectedUpdatedAt || localPhotoTime;
         app.fileData = existingPhotos[0];
         return app;
       }
@@ -418,7 +442,7 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
 
     // 2. 브라우저 영구 CacheStorage 확인 (수파베이스 호출 0회, 0 Byte 초고속 로드)
     try {
-      const cached = await PhotoCacheManager.get(app.id, expectedCount);
+      const cached = await PhotoCacheManager.get(app.id, expectedCount, expectedUpdatedAt);
       if (cached && Array.isArray(cached.photos) && cached.photos.length > 0 && cached.photos.length === expectedCount) {
         const hasAssignedConst = Boolean(app.assignedConstructorId && app.assignedConstructorId !== 'none' && app.assignedConstructorId !== '미배정');
         let needConstPhotos = hasAssignedConst && Boolean(options && options.needConstructionPhotos);
@@ -561,11 +585,14 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
         }
 
         // 브라우저 영구 CacheStorage에 저장하여 차후 수파베이스 호출 0회 보장
+        const finalPhotoUpdateTime = expectedUpdatedAt || Date.now();
+        app.photoUpdatedAt = finalPhotoUpdateTime;
         try {
           if (photos.length > 0 || (app.constructionPhotos && app.constructionPhotos.length > 0)) {
             await PhotoCacheManager.set(app.id, {
               photos: app.photos,
               fileData: app.fileData,
+              photoUpdatedAt: finalPhotoUpdateTime,
               constructionPhotos: app.constructionPhotos || [],
               invoicePhotos: app.invoicePhotos || []
             });
@@ -581,6 +608,7 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
           localApps[idx].photos = app.photos;
           localApps[idx].fileData = app.fileData;
           localApps[idx].photosCount = app.photosCount;
+          localApps[idx].photoUpdatedAt = finalPhotoUpdateTime;
           localApps[idx].hasPhoto = app.hasPhoto;
           if (app.constructionPhotos) localApps[idx].constructionPhotos = app.constructionPhotos;
           if (app.invoicePhotos) localApps[idx].invoicePhotos = app.invoicePhotos;
@@ -894,12 +922,14 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
   const newFileName = hasPhoto ? `${app.storeName || '신청점포'}_현장사진_${newCount}장` : '업로드 파일 없음';
   const newImageUrl = hasPhoto ? (newCount === 1 ? photos[0] : JSON.stringify(photos)) : null;
 
-  // 5. memo 객체 업데이트 (Q2, Q9: 별도 메모 텍스트 없이 photoCount만 정밀 갱신)
+  // 5. memo 객체 업데이트 (Q2, Q9: 별도 메모 텍스트 없이 photoCount와 photoUpdatedAt 정밀 갱신)
+  const deleteTime = Date.now();
   let memoObj = {};
   try {
     memoObj = typeof app.memo === 'string' ? JSON.parse(app.memo) : (app.memo || {});
   } catch (e) { memoObj = {}; }
 
+  memoObj.photoUpdatedAt = deleteTime;
   if (hasPhoto) {
     memoObj.photoCount = newCount;
   } else {
@@ -910,6 +940,7 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
   // 6. 로컬 앱 객체 및 DataStore / localStorage 즉시 갱신 (0초 낙관적 UI)
   app.photos = photos;
   app.photosCount = newCount;
+  app.photoUpdatedAt = deleteTime;
   app.hasPhoto = hasPhoto;
   app.fileData = newFileData;
   app.fileName = newFileName;
@@ -926,6 +957,7 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
       ...allApps[appIdx],
       photos: photos,
       photosCount: newCount,
+      photoUpdatedAt: deleteTime,
       hasPhoto: hasPhoto,
       fileData: newFileData,
       fileName: newFileName,
@@ -954,6 +986,7 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
           ...u.items[itIdx],
           photos: photos,
           photosCount: newCount,
+          photoUpdatedAt: deleteTime,
           hasPhoto: hasPhoto,
           fileData: newFileData,
           fileName: newFileName,
@@ -980,6 +1013,7 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
       await window.PhotoCacheManager.set(app.id, {
         photos: photos,
         fileData: newFileData,
+        photoUpdatedAt: deleteTime,
         constructionPhotos: app.constructionPhotos || [],
         invoicePhotos: app.invoicePhotos || []
       });
@@ -1145,12 +1179,15 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
         targetApp.fileName = (rawFiles[0] && rawFiles[0].name) ? rawFiles[0].name : `현장사진_${appId}.jpg`;
         targetApp.hasPhoto = finalPhotos.length > 0;
 
+        const uploadTime = Date.now();
         let memoObj = {};
         try {
           memoObj = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {});
         } catch (eM) { memoObj = {}; }
         memoObj.photoCount = finalPhotos.length;
+        memoObj.photoUpdatedAt = uploadTime;
         targetApp.memo = JSON.stringify(memoObj);
+        targetApp.photoUpdatedAt = uploadTime;
 
         if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
           window.DataStore.saveApplications(curApps);
@@ -1165,6 +1202,7 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
         : (JSON.parse(localStorage.getItem('users')) || []);
       let itemUpdated = false;
       let updatedUsers = [];
+      const uploadTimeForUsers = Date.now();
       usersList.forEach(u => {
         if (u.items && Array.isArray(u.items)) {
           let userModified = false;
@@ -1172,6 +1210,7 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
             if (String(item.id) === String(appId) || String(item.appRefId) === String(appId)) {
               item.photos = finalPhotos;
               item.photosCount = finalPhotos.length;
+              item.photoUpdatedAt = uploadTimeForUsers;
               if (finalPhotos.length > 0) item.fileData = finalPhotos[0];
               item.hasPhoto = finalPhotos.length > 0;
               itemUpdated = true;
@@ -1199,7 +1238,8 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
         try {
           await window.PhotoCacheManager.set(appId, {
             photos: finalPhotos,
-            fileData: finalPhotos[0] || ''
+            fileData: finalPhotos[0] || '',
+            photoUpdatedAt: uploadTimeForUsers
           });
         } catch (eCache) {}
       }
@@ -2794,42 +2834,54 @@ window.SupabaseSync = {
 
               // [SSOT 보존] 최고관리자가 설정한 progressStatus 및 receiptStatus를 절대 임의 변조하지 않음 (단일 진실의 원천 100% 보존)
               // 로컬 캐시된 고용량 사진 보존 vs 실서버 최신 변경 감지
-              const serverPhotoCount = (() => {
+              const serverPhotoMeta = (() => {
                 try {
                   const m = typeof sa.memo === 'string' ? JSON.parse(sa.memo) : (sa.memo || {});
-                  return Number(m.photoCount || m.photo_count) || 0;
-                } catch (e) { return 0; }
+                  const pCount = Number(m.photoCount || m.photo_count) || 0;
+                  const pTime = Number(m.photoUpdatedAt) || (m.photoUpdatedAt ? new Date(m.photoUpdatedAt).getTime() : 0);
+                  return { count: pCount, updatedAt: pTime };
+                } catch (e) { return { count: 0, updatedAt: 0 }; }
               })();
+              const serverPhotoCount = serverPhotoMeta.count;
+              const serverPhotoUpdatedAt = serverPhotoMeta.updatedAt;
               const localPhotosCount = Array.isArray(localApp.photos) ? localApp.photos.length : 0;
+              const localPhotoUpdatedAt = Number(localApp.photoUpdatedAt) || 0;
 
-              // [SSOT 단일 기준] 최고관리자 및 실서버(sa.memo.photoCount) 기준 100% 추종 (좀비 부활 원천 차단)
+              // [SSOT 단일 기준] 최고관리자 및 실서버(sa.memo) 기준 100% 추종 (좀비 부활 원천 차단)
               if (serverPhotoCount === 0) {
                 // 실서버에서 사진이 0장으로 완전히 삭제되었거나 미등록인 경우: 로컬 잔재 및 캐시 100% 완전 소멸
                 appObj.photos = [];
                 appObj.fileData = '';
                 appObj.fileName = '업로드 파일 없음';
                 appObj.photosCount = 0;
+                appObj.photoUpdatedAt = serverPhotoUpdatedAt;
                 appObj.hasPhoto = false;
                 if (window.PhotoCacheManager) {
                   window.PhotoCacheManager.invalidate(appObj.id).catch(() => {});
                 }
-              } else if (serverPhotoCount !== localPhotosCount) {
-                // 실서버의 사진 장수와 로컬 장수가 다른 경우 (예: 2장에서 1장으로 부분 삭제, 또는 신규 추가)
-                // 로컬 구형 캐시를 무효화하고 서버 사진 장수를 100% 정밀 추종
+              } else if (
+                serverPhotoCount !== localPhotosCount ||
+                (serverPhotoUpdatedAt > 0 && localPhotoUpdatedAt > 0 && serverPhotoUpdatedAt > localPhotoUpdatedAt) ||
+                (serverPhotoUpdatedAt > 0 && !localPhotoUpdatedAt && localPhotosCount > 0)
+              ) {
+                // 실서버 사진 장수와 로컬 장수가 다르거나, 서버 사진 수정시각이 로컬보다 최신인 경우:
+                // 로컬 구형 캐시 찌꺼기를 무조건 완전 무효화하고 서버 사진 메타데이터로 즉시 갱신
                 appObj.photos = [];
                 appObj.fileData = '';
                 appObj.fileName = `${appObj.storeName || '신청점포'}_현장사진_${serverPhotoCount}장`;
                 appObj.photosCount = serverPhotoCount;
+                appObj.photoUpdatedAt = serverPhotoUpdatedAt;
                 appObj.hasPhoto = true;
                 if (window.PhotoCacheManager) {
                   window.PhotoCacheManager.invalidate(appObj.id).catch(() => {});
                 }
               } else {
-                // 사진 장수가 일치하는 경우: 기존 로컬 사진 데이터 보존
+                // 사진 장수와 수정시각이 모두 일치하는 경우: 기존 로컬 사진 데이터 보존
                 appObj.photos = localApp.photos || [];
                 appObj.fileData = localApp.fileData || (appObj.photos[0] || '');
                 appObj.fileName = localApp.fileName || `${appObj.storeName || '신청점포'}_현장사진_${serverPhotoCount}장`;
                 appObj.photosCount = serverPhotoCount;
+                appObj.photoUpdatedAt = serverPhotoUpdatedAt || localPhotoUpdatedAt;
                 appObj.hasPhoto = true;
               }
               // 최신 시공사진 락 및 서버 SSOT 동기화 (설계도-04 BP-CONSTRUCTOR-FLOW SSOT 단일 기준)
