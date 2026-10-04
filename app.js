@@ -7703,6 +7703,7 @@ function initWizard() {
         loginNoticePw = '';
       }
 
+      const applyPhotoTime = photos.length > 0 ? now.getTime() : 0;
       const memoPayload = {
         isBizItem: false,
         receiptStatus: '접수예정',
@@ -7711,7 +7712,8 @@ function initWizard() {
         salespersonId: assignedSalespersonId || '',
         salespersonName: assignedSalespersonName || (finalReferrerCode ? '' : '본사직접접수'),
         referrerCode: finalReferrerCode,
-        photoCount: photos.length
+        photoCount: photos.length,
+        photoUpdatedAt: applyPhotoTime
       };
 
       const newApp = {
@@ -7731,6 +7733,7 @@ function initWizard() {
         fileData,
         photos,
         photosCount: photos.length,
+        photoUpdatedAt: applyPhotoTime,
         hasPhoto: photos.length > 0,
         memo: JSON.stringify(memoPayload),
         appliedAt: now.toISOString(),
@@ -7751,6 +7754,13 @@ function initWizard() {
       safeSetStorage('applications', apps);
       if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
         window.DataStore.saveApplications(apps);
+      }
+      if (photos.length > 0 && window.PhotoCacheManager) {
+        window.PhotoCacheManager.set(customId, {
+          photos: photos,
+          fileData: fileData || '',
+          photoUpdatedAt: applyPhotoTime
+        }).catch(() => {});
       }
 
       if (window.KakaoNotifier && typeof window.KakaoNotifier.notifyApplication === 'function') {
