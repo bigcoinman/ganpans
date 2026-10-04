@@ -282,6 +282,14 @@ assertRule(
   'data-store.js 내에 특정 1명 유저만 동기화하고 누락시키는 updatedUid 찌꺼기가 남아있습니다!'
 );
 
+assertRule(
+  '[BP-04] 점주/관리자 시안 승인 시 constructionStatus in_construction 0초 일원화 동기화 준수',
+  dataStoreCode.includes('toggleDraftApproval') &&
+  dataStoreCode.includes("'in_construction' : a.constructionStatus") &&
+  dataStoreCode.includes("'in_construction' : it.constructionStatus"),
+  '시안 승인 시 로컬 applications 및 users.items의 constructionStatus in_construction 동기화 로직이 누락되었습니다!'
+);
+
 console.log('\n--- [설계도-05 검증] 권한 분리 및 공용 모달 단일화 ---');
 
 assertRule(

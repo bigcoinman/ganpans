@@ -144,17 +144,18 @@ graph TD
 
 ---
 
-## 📐 [설계도-04] BP-CONSTRUCTOR-FLOW: 시공사 배정, 시안 업로드/삭제 및 시공 완료 증빙 설계도
+## 📐 [설계도-04] BP-CONSTRUCTOR-FLOW: 시공사 배정, 시안 업로드/삭제 및 시공 완료 증빙 설계도 *(공식 확정)*
 
-* **노출 대상**: 최고관리자가 본인 시공사 코드(`constCode`)로 배정한 물건만 노출 (`getConstructionJobs`).
+* **노출 대상**: 최고관리자가 본인 시공사 코드(`constCode`)로 배정한 물건만 노출 (`DataStore.getConstructionJobs`).
 * **핵심 라이프사이클**:
-  1. **시공사 배정**: 최고관리자가 영업물건에서 시공사를 배정하는 즉시 시공사 대시보드 및 영업물건에 실시간 노출.
-  2. **간판 디자인 시안 업로드/삭제**: 최대 5장, 90KB 이하 초경량 자동 압축 병렬 업로드 및 개별/전체 즉각 삭제.
-  3. **점주 시안 승인권 단독 보유 & 모니터링**: 점주 본인이 마이페이지 또는 시안 모달에서 [시안 승인 / 마음에 듭니다] 클릭 시 `draftStatus: 'owner_approved'` 확정. (관리자는 필요시 직권확정 가능)
+  1. **시공사 배정**: 최고관리자가 영업물건에서 시공사를 배정하는 즉시 시공사 대시보드 및 영업물건에 실시간 노출 (`assignedConstructorId`, `constructionStatus: 'before_construction'`).
+  2. **간판 디자인 시안 업로드/삭제**: 최대 5장, 90KB 이하 초경량 자동 압축 병렬 업로드 및 개별/전체 즉각 삭제 (`signDraftPhotos`, `constructionStatus: 'design_draft'`).
+  3. **점주 시안 승인권 단독 보유 & 간판제작 착수**: 점주 본인이 마이페이지 또는 시안 모달에서 [시안 승인 / 마음에 듭니다] 클릭 시 `draftStatus: 'owner_approved'` 확정 및 `constructionStatus: 'in_construction'`으로 0초 전 사용자 동시 전이. (관리자는 필요시 직권확정 가능)
   4. **시공 완료 사진(최대 5장) 및 세금계산서 업로드**: 시공 완료 보고 (`constructionStatus: 'after_construction'`, `progressStatus: '간판시공완료'`).
   5. **최고관리자 최종 정산 종결**: 증빙 확인 후 정산 완료 (`constructionStatus: 'completed'`).
+  6. **시공 배정 취소 시 클린 슬레이트 소멸**: 시공 배정 취소 시 시안 및 시공사진/계산서 증빙 100% 완전 소멸 (Clean Slate) 후 영업물건(미배정) 복귀.
 
-### [설계도-04] 5대 절대 원칙 (Absolute Principles)
+### 1. 명확한 원칙 (Clear & Absolute Principles)
 
 1. **제1원칙 (최고관리자/DB 절대 단일 원천 원칙 - Draft & Construction Photos SSOT Single Origin)**:
    - 디자인 시안 사진(`signDraftPhotos`), 심사상태(`draftStatus`), 시공 후 현장사진(`constructionPhotos`)은 오직 최고관리자 DB(`applications`)만이 유일무이한 단일 진실의 원천(SSOT)이다.
@@ -164,16 +165,63 @@ graph TD
    - 시공사 또는 관리자가 시안이나 시공 후 사진을 1장 또는 전체 삭제하는 즉시, `applications`와 해당 물건을 공유하는 모든 사용자(`users.items` - 영업자, 시공사, 관리자)의 저장소에서 동일 인덱스의 사진이 0초 만에 동시 소멸한다.
    - 단 1명의 유저만 저장하고 넘어가는 단편 코드(`updatedUid`)를 영구 금지하고, 관련 유저 전원(`usersToSync`)을 배열로 수집하여 Supabase 클라우드에 비동기 백그라운드로 100% 동시 저장한다. (시안 업로드/삭제, 시공사진 업로드/삭제, 간판종류 변경, 시공상태 전이, 시공완료보고 전체 적용)
 
-3. **제3원칙 (0초 동적 모달 인플레이스 리프레시 원칙 - In-place Modal Auto Refresh)**:
+3. **제3원칙 (0초 동적 모달 인플레이스 사일런트 리프레시 원칙 - In-place Modal Silent Refresh)**:
    - 최고관리자나 점주가 `[시안 확인 및 삭제]` 모달(`modal-view-draft-preview`) 또는 `[시공 후 사진 확인 및 삭제]` 모달(`modal-view-const-photos-preview`)을 열어놓고 있는 상태에서 사진이 추가/삭제되거나 상태가 변경되면, 모달을 닫고 다시 열 필요 없이 모달 내부 DOM이 0초 만에 실시간으로 자동 갱신(`viewDraftModal(id, true)`, `viewConstructionPhotosModal(id, true)`)된다.
-   - 잔여 사진이 0장이 되면 안내와 함께 모달이 안전하게 자동 종료(`closeDraftModal()`, `closeConstPhotosModal()`)된다.
+   - 잔여 사진이 0장이 되면 안내 토스트와 함께 모달이 안전하게 자동 종료(`closeDraftModal()`, `closeConstPhotosModal()`)된다.
 
-4. **제4원칙 (크로스 탭 & Realtime 전방위 동기화 원칙 - Cross-Tab & Realtime Sync)**:
+4. **제4원칙 (크로스 탭 & Realtime 전방위 0초 동기화 원칙 - Cross-Tab & Realtime Sync)**:
    - 시공사가 시안/시공 증빙을 변경하는 즉시 `storage` 이벤트(`ganpan_cross_tab_sync`)와 Supabase Realtime WebSocket을 동시에 발화하여, 동일 기기의 다른 탭(관리자 ↔ 시공사 ↔ 영업자)과 다른 기기(점주 모바일) 모두 0초 만에 완벽 동기화 리렌더링된다.
 
 5. **제5원칙 (초경량 자동 압축 & 단일 온디맨드 조회 원칙 - Strict Compression & On-demand Fetch)**:
    - 모든 시안 및 시공 사진 업로드는 `compressImageToBase64` 단일 함수를 통해 90KB 이하(최대 1200px)로 강제 압축 후 등록한다.
    - 목록 조회 시에는 고용량 사진 필드를 배제하여 대역폭 Egress 누수를 99% 차단하고, 사진 확대/모달 확인 시에만 온디맨드로 조회한다.
+
+6. **제6원칙 (점주 단독 시안 승인권 및 간판제작 착수 즉시 동기화 원칙 - Owner Approval & Construction Transition SSOT)**:
+   - 간판 디자인 시안의 실소비자 승인 권한(`window.approveDraftByOwner`)은 실소비자인 점주 본인에게 단독 부여된다.
+   - 점주가 시안을 승인(`owner_approved`)하거나 관리자가 직권 확정(`admin_approved`)하는 즉시, `constructionStatus`는 `before_construction` / `design_draft`에서 **`in_construction` (간판 제작·시공 착수)**으로 0초 만에 낙관적 갱신(Optimistic Update)되며, 로컬 `applications`, `users.items`, `_recentStatusUpdates` 락 및 Supabase DB에 100% 동일하게 일원화 반영된다.
+
+---
+
+### 2. 시공사 배정 및 시안·시공 증빙 7단계 상세 공정 매트릭스
+| 공정 단계 | 수행 주체 | 핵심 동작 및 트리거 | 4대 권한 화면 반영 결과 | DB 및 스토리지 저장 규격 |
+| :--- | :--- | :--- | :--- | :--- |
+| **① 시공사 배정** | 최고관리자 | 영업물건 진행상황에서 시공사 선택 (`assignConstructorToBizItem`) | 시공사 대시보드에 즉시 배정건 노출, 영업자 대시보드에 시공사명 노출 | `assignedConstructorId`, `constructionStatus: 'before_construction'` |
+| **② 시안 등록** | 시공사 | 간판 디자인 시안 파일 선택 (`handleJobDraftUploadCommon`) | 최대 5장 등록, 4대 화면 모달에서 시안 확인 가능 | 90KB 이하 자동압축 Base64, `signDraftPhotos: [...]`, `constructionStatus: 'design_draft'` |
+| **③ 시안 개별/전체 삭제** | 시공사/관리자 | 시안 모달에서 [이 시안 삭제] / [전체 삭제] 클릭 | 사일런트 리프레시 0초 반영, 0장 시 모달 자동 종료 | `applications` & `usersToSync` 배열 동시 소멸 (Clean Slate) |
+| **④ 점주 시안 승인** | 점주 (관리자 직권) | 마이페이지/모달에서 [시안 승인 / 마음에 듭니다] 클릭 (`approveDraftByOwner`) | 점주 승인 배지 즉시 점등, 시공사 화면에 제작 착수 표시 | `draftStatus: 'owner_approved'`, `constructionStatus: 'in_construction'` |
+| **⑤ 시공완료 증빙 등록** | 시공사 | 시공 후 사진(최대 5장) 및 계산서 업로드 (`handleJobPhotoUploadCommon`) | 시공사 및 관리자 화면에 사진 장수 뱃지 즉시 갱신 | 90KB 이하 자동압축 Base64, `constructionPhotos: [...]` |
+| **⑥ 시공완료 보고** | 시공사 | [시공 완료 보고] 버튼 클릭 (`reportJobCompletionCommon`) | 관리자 화면에 시공완료 및 최종 정산 검수 대기 표시 | `constructionStatus: 'after_construction'`, `progressStatus: '간판시공완료'` |
+| **⑦ 최고관리자 정산 종결** | 최고관리자 | 증빙 사진/계산서 검수 후 [정산 완료] 선택 (`updateJobConstructionStatusCommon`) | 전 화면 정산 완료 상태 동기화, 사업 공정 최종 완료 종결 | `constructionStatus: 'completed'` |
+| **[예외] 시공 배정 취소** | 최고관리자 | [배정취소] 클릭 (`cancelJobConstructorAssignment`) | 시공사 목록에서 제외, 영업물건(미배정) 상태로 복귀 | 시안/시공사진/계산서 증빙 100% 완전 소멸 (`_clearConstPhotos: true`) |
+
+---
+
+### 3. 설계도 보존법칙 (모든 설계도는 일원화 할 것 - 이원화 절대 금지)
+1. **시안 모달 단일 일원화 (`viewDraftModal` 단일 함수)**:
+   - 점주 마이페이지, 영업자 상단 신청내역, 영업자 하단 영업물건, 시공사 진행현황, 최고관리자 대시보드 5개 영역 모두 오직 `window.viewDraftModal` 단일 함수만을 호출하며, 권한별 독자 모달(`viewDraftModalMob`, `viewDraftModalForSales` 등) 생성을 영구 엄격 금지한다.
+2. **시공 후 사진 모달 단일 일원화 (`viewConstructionPhotosModal` 단일 함수)**:
+   - 4대 권한 화면의 시공 후 사진 확인 및 삭제는 오직 `window.viewConstructionPhotosModal` 단일 함수로 일원화한다.
+3. **전 관련 사용자(`usersToSync`) 동시 저장 단일 파이프라인**:
+   - 시안 업로드/삭제, 시공사진 업로드/삭제, 간판종류 변경, 시공상태 전이 시 단 1명의 유저만 저장하고 넘어가는 단편 코드(`updatedUid`)를 영구 금지하고, 관련 유저 전원(`usersToSync`)을 배열로 수집하여 Supabase 클라우드에 비동기 백그라운드로 100% 동시 저장한다.
+4. **좀비 부활 금지 단일 파이프라인**:
+   - 사진 삭제 시 로컬 캐시나 `users.items`에서 삭제된 사진을 되살려내는 일체의 코드(`prevItem.signDraftPhotos`, `!appObj.constructionPhotos` 복원 등)를 영구 배제하고 오직 최신 `applications`만을 100% 절대 추종한다.
+5. **시공 배정 취소 시 클린 슬레이트 완전 소멸 (Clean Slate)**:
+   - 최고관리자가 [배정취소] 또는 [재배정] 실행 시, 이전 시공사의 시안(`signDraftPhotos`), 시공사진(`constructionPhotos`), 세금계산서(`constructionInvoice`), 사진 카운트(`constPhotoCount`), 승인 상태(`draftStatus: 'pending'`) 등 모든 시공 증빙 찌꺼기를 100% 완전 소각한다.
+
+---
+
+### 4. 자동 검문소 (검증망) 영구 감시 규칙 (Automated Blueprint Guard Rules)
+배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 10대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
+1. **[검문 1] 시안 SSOT 단일 기준 준수**: `local.length > server.length` 판정문 100% 부존재 검증.
+2. **[검문 2] 시안 삭제 시 좀비 사진 부활 방어**: `prevItem.signDraftPhotos` 복원 코드 100% 부존재 검증.
+3. **[검문 3] 시안 및 시공 상태 변경 시 전 관련 사용자 동시 저장**: `usersToSync` 수집 및 `SupabaseSync.updateUser` 동시 저장 준수.
+4. **[검문 4] 시안 확인 모달 인플레이스 사일런트 리프레시 지원**: `closeDraftModal` 및 `isSilentRefresh` 모달 자동 갱신 검증.
+5. **[검문 5] 크로스 탭 0초 동기화 리스너 장착 준수**: `ganpan_cross_tab_sync` 스토리지 이벤트 동기화 검증.
+6. **[검문 6] 영업자 하단 카드 시안 SSOT 단일 기준 연결 준수**: `item.signDraftPhotos` 이원화 fallback 부존재 검증.
+7. **[검문 7] 시공사진 삭제 시 좀비 사진 부활 방어**: `!appObj.constructionPhotos` 복원 코드 100% 부존재 검증.
+8. **[검문 8] 시공사진 모달 인플레이스 사일런트 리프레시 지원**: `closeConstPhotosModal` 및 `isSilentRefresh` 모달 자동 갱신 검증.
+9. **[검문 9] 시공 사진/상태/간판종류 전수 usersToSync 적용**: `updatedUid` 단편 찌꺼기 100% 부존재 검증.
+10. **[검문 10] 점주/관리자 시안 승인 시 constructionStatus in_construction 0초 일원화 동기화 준수**: 점주 승인 즉시 로컬 및 서버 `constructionStatus`의 `in_construction` 전이 일치 검증.
 
 ---
 
