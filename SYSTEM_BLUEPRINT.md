@@ -242,16 +242,60 @@ graph TD
 
 ---
 
-## 📐 [설계도-05] BP-ADMIN-SSOT: 최고관리자 대시보드 절대 단일 원천(SSOT) 설계도
+## 📐 [설계도-05] BP-ADMIN-SSOT: 최고관리자 대시보드 절대 단일 원천(SSOT) 및 6대 표준 메뉴 설계도
 
-* **최고관리자 6대 표준 메뉴**:
-  1. `회원 정보 관리` (전체 가입 회원 명부 및 권한 전환)
-  2. `신청서 목록` (온라인 간편 지원 신청 접수건 관리 - 심사 상태, 담당 영업자 지정, 영업물건 승인)
-  3. `영업물건 진행상황` (공단 접수 영업물건 관리 및 시공사 배정)
-  4. `시공업체 진행현황` (전체 시공 배정건 공정 및 정산 관리)
-  5. `3초 간편 문의 목록` (간편 상담 문의 접수)
-  6. `팝업창 관리` (메인 공지 팝업)
-* **부존재 일치 의무**: 최고관리자 화면에 없는 건은 하위 화면(영업자/시공사/점주)에 절대 노출 금지.
+### 1. 명확한 원칙 (Clear & Absolute Principles)
+1. **최고관리자 절대 단일 진실의 원천(SSOT) 헌법 (Admin Absolute SSOT Law)**:
+   - 간판지원단 플랫폼의 모든 데이터(`applications`, `users`, `inquiries`, `popups`)의 유일무이한 단일 진실의 원천은 '최고관리자 대시보드'이다.
+   - 영업자, 시공사, 일반점주 등 모든 하위 권한 화면은 독자적인 데이터를 소유할 수 없으며, 오직 최고관리자 대시보드의 데이터를 실시간 100% 그대로 추종한다.
+2. **부존재 일치 의무 (Non-existence Sync Law)**:
+   - 최고관리자 대시보드에 존재하지 않는 건(최고관리자가 삭제한 신청서, 영업물건 등록을 해제한 건, 삭제된 회원)은 하위 대시보드(영업자/시공사/점주)에서도 **0초 만에 완벽하게 0건(완전 부존재)**이어야 한다.
+   - 과거 캐시나 독자 배열 잔재로 인해 관리자 화면에 없는 건이 하위 화면에 노출되는 것을 영구 엄격 금지한다.
+3. **2대 독립 라이프사이클 절대 분리 원칙 (Independent Lifecycle Separation Law)**:
+   - 좌측 [신청서 목록]의 고유 심사 상태(`app.status`: `pending`, `approved`, `unqualified`, `rejected`, `giveup`)와 우측 [영업물건 진행상황]의 공정 단계(`receiptStatus`: `업체신청`/`접수예정`/`접수완료`, `progressStatus`: `지원대기중`/`심사대기중`/`대상자선정`/`간판시공 준비중`/`간판시공완료`)는 상호 간섭할 수 없는 완전 독립 라이프사이클을 유지한다.
+   - 우측 공정 상태가 변경되거나 시공사가 배정되더라도 좌측 심사 상태가 침범되거나 임의 롤백(`pending`)되는 것을 원천 차단한다.
+4. **영업자 매칭 3+1 단일 식별 헌법 (Permanent Salesperson Identification SSOT)**:
+   - 3대 신청 경로(영업자 직접 신청, 비회원 점주 코드 입력 신청, 회원 업주 코드 입력 신청) 모두 `referrerCode(bizCode)`로 단일 식별된다.
+   - 최고관리자가 대시보드에서 신청서의 담당 영업자를 직권 수정/변경(`openAssignBizUserModal`)하는 경우, 변경된 영업자 코드가 즉시 반영되며 해당 영업자 대시보드로 실시간 0초 귀속 연동된다.
+5. **원클릭 즉각 반응 & 모바일 폼 보호 (Interaction Lock & Optimistic UI)**:
+   - 상태 변경, 영업물건 토글, 영업자 변경 등 관리자 조작 시 0초 만에 화면 UI를 즉시 갱신하고, Supabase 클라우드 저장은 비동기 백그라운드로 안전하게 수행한다.
+   - 관리자가 드롭다운(`SELECT`)이나 텍스트입력(`INPUT`, `TEXTAREA`)을 조작 중일 때는 백그라운드 동기화로 인한 화면 전체 DOM 재생성을 엄격히 차단한다.
+
+---
+
+### 2. 최고관리자 6대 표준 메뉴 및 상세 공정 매트릭스
+| 번호 | 표준 메뉴명 | 탭 식별자 | 핵심 역할 및 기능 | 연계 하위 화면 및 SSOT 동기화 규칙 |
+| :--- | :--- | :--- | :--- | :--- |
+| **1** | **회원 정보 관리** | `users` | 전체 회원 명부 조회, 실시간 검색, 일반/영업자/시공사/관리자 등급 관리, 회원 영구 삭제 | `role: 'deleted'` 처리 시 즉시 명부 배제 및 세션 동기화 |
+| **2** | **영업자 승인 및 시공사 승인** | `requests`, `constructors` | 회원 등급 전환 신청 건 승인 및 반려 (`approveUserConversionMob`, `rejectUserConversionMob`) | 승인 시 고유 식별코드(`B-XXXXXX`, `C-XXXXXX`) 발급, 즉시 해당 전용 대시보드 권한 개방 |
+| **3** | **신청서 목록** (좌측 배치) | `apps` | 온라인 간편 지원 접수건 5대 심사 상태 관리, 담당 영업자 직권 변경, 현장사진 확인/등록, 영업물건 토글 | `app.status` 5대 심사 상태 관리, 영업자 마이페이지 상단 "내 신청내역"과 0초 동기화 |
+| **4** | **영업물건 진행상황** (우측 배치) | `items` | 공단 접수 영업물건 관리, 접수 3종 및 진행 5종 상태 조작, 시공사 배정 | `isBizItem === true`인 건만 추출, 영업자 하단 "내 영업물건 현황"과 100% 동기화 |
+| **5** | **시공업체 진행현황** (전체 시공 배정건) | `const-progress` | 시공사 배정건 공정 관리(시공 5단계), 간판종류 지정, 디자인 시안 검수/직권확정, 시공사진 검증, 배정 취소 | 시공사 대시보드와 100% 양방향 동기화, 배정 취소 시 클린슬레이트 소각 |
+| **6** | **3초 간편문의 & 팝업창 관리** | `inquiries`, `popups` | 간편 문의 접수건 상담 완료/대기 토글 및 삭제, 실시간 메인 공지 팝업 등록/수정/삭제 | 메인 홈 팝업 및 문의 접수 파이프라인과 실시간 직통 연동 |
+
+---
+
+### 3. 설계도 보존법칙 (모든 설계도는 일원화 할 것 - 이원화 절대 금지)
+1. **단일 반응형 웹(`Single Responsive Web`) 100% 일원화**:
+   - PC웹과 모바일 웹의 분리 또는 이원화 분기 코드를 영구 배제하고, `renderAdminDashboardMob` 단일 렌더러와 `window.switchAdminTab` 단일 탭 제어 엔진으로 100% 일원화한다.
+2. **독자 클라우드 재조회 및 독자 캐시 영구 금지 (Zero Dual Fetch & Zero Dual Cache)**:
+   - `fetchAndRenderAdminApplicationsFresh`, `fetchAndRenderAdminUsersFresh` 등 화면별 독자 클라우드 재조회 찌꺼기를 영구 배제하고, 오직 `SupabaseSync.syncAllData` 단일 파이프라인 및 `DataStore` SSOT 원본만을 직접 읽고 갱신한다.
+3. **독자 데이터 복제 배열 영구 금지**:
+   - `users.items`로 독자 복제본을 만들지 않고 오직 `applications` 단일 테이블을 단일 원천으로 하여 `getAdminBizItems()` 및 `getConstructionJobs()`를 동적으로 산출한다.
+4. **공용 모달 단일화**:
+   - 시안 크게보기는 `window.viewDraftModal`, 사진 다운로드/확인은 `window.downloadApplicationPhotos` 단일 공용 함수만을 호출한다.
+
+---
+
+### 4. 자동 검문소 (검증망) 영구 감시 규칙 (Automated Blueprint Guard Rules)
+배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 7대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
+1. **[검문 1] 최고관리자 단일 탭 전환 엔진 준수**: `app.js` 내 `window.switchAdminTab` 단일 함수 구비 및 표준 메뉴 식별자 분기 검증.
+2. **[검문 2] 최고관리자 단일 렌더러 일원화 준수**: `app.js` 내 `renderAdminDashboardMob` 단일 렌더러 장착 및 독자 렌더러 찌꺼기 부존재 검증.
+3. **[검문 3] 영업물건 SSOT 단일 추출 엔진 준수**: `data-store.js` 내 `DataStore.getAdminBizItems`의 `isBizItem` 단일 원천 검증.
+4. **[검문 4] 시공업체 진행현황 SSOT 단일 추출 준수**: `data-store.js` 내 `DataStore.getConstructionJobs` 단일 추출 엔진 검증.
+5. **[검문 5] 최고관리자 직권 영업자 변경 SSOT 연동 준수**: `window.openAssignBizUserModal` 및 `reassignSalesperson` 단일 파이프라인 검증.
+6. **[검문 6] 시안 크게보기 단일 공용 함수 준수**: `window.viewDraftModal` 호출 일원화 검증.
+7. **[검문 7] 사진 확인/다운로드 단일 공용 함수 준수**: `window.downloadApplicationPhotos` 호출 일원화 검증.
 
 ---
 

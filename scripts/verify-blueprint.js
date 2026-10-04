@@ -312,16 +312,50 @@ assertRule(
   '시공사진 추가 등록 시 실서버 DB 사전 조회 또는 누적 병합(concat) 로직이 누락되었습니다!'
 );
 
-console.log('\n--- [설계도-05 검증] 권한 분리 및 공용 모달 단일화 ---');
+console.log('\n--- [설계도-05 검증] BP-ADMIN-SSOT (최고관리자 대시보드 절대 단일 원천 및 6대 표준 메뉴) ---');
 
 assertRule(
-  '[BP-공통] 시안 크게보기 단일 공용 함수(viewDraftModal) 호출 준수',
+  '[BP-05] 최고관리자 단일 탭 전환 엔진(switchAdminTab) 준수',
+  appCode.includes('window.switchAdminTab = function') &&
+  appCode.includes('admin-panel-users-mob'),
+  '최고관리자 단일 탭 전환 엔진(window.switchAdminTab)이 누락되었습니다.'
+);
+
+assertRule(
+  '[BP-05] 최고관리자 단일 렌더러(renderAdminDashboardMob) 일원화 준수',
+  appCode.includes('function renderAdminDashboardMob(') &&
+  !appCode.includes('function renderAdminDashboard('),
+  '최고관리자 렌더러가 단일 일원화되지 않았거나 구형 이원화 함수가 존재합니다.'
+);
+
+assertRule(
+  '[BP-05] 영업물건 진행상황 SSOT 단일 추출 엔진(DataStore.getAdminBizItems) 준수',
+  dataStoreCode.includes('getAdminBizItems: function') &&
+  dataStoreCode.includes('const isApprovedBizItem = Boolean'),
+  '영업물건 진행상황 SSOT 단일 추출 엔진(DataStore.getAdminBizItems)이 누락되었습니다.'
+);
+
+assertRule(
+  '[BP-05] 시공업체 진행현황 SSOT 단일 추출 엔진(DataStore.getConstructionJobs) 준수',
+  dataStoreCode.includes('getConstructionJobs: function') &&
+  dataStoreCode.includes('resolveSalesperson'),
+  '시공업체 진행현황 SSOT 단일 추출 엔진(DataStore.getConstructionJobs)이 누락되었습니다.'
+);
+
+assertRule(
+  '[BP-05] 최고관리자 직권 영업자 변경 SSOT 연동(openAssignBizUserModal) 준수',
+  appCode.includes('window.openAssignBizUserModal'),
+  '최고관리자 직권 영업자 변경 모달(window.openAssignBizUserModal) 연동이 누락되었습니다.'
+);
+
+assertRule(
+  '[BP-05] 시안 크게보기 단일 공용 함수(viewDraftModal) 호출 준수',
   appCode.includes('window.viewDraftModal'),
   '시안 크게보기 공용 모달이 누락되었습니다.'
 );
 
 assertRule(
-  '[BP-공통] 사진 다운로드/확인 단일 공용 함수(downloadApplicationPhotos) 호출 준수',
+  '[BP-05] 사진 다운로드/확인 단일 공용 함수(downloadApplicationPhotos) 호출 준수',
   appCode.includes('window.downloadApplicationPhotos'),
   '사진 확인 공용 함수가 누락되었습니다.'
 );
