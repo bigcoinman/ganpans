@@ -2821,7 +2821,8 @@
       ? window.DataStore.getUsers()
       : (JSON.parse(localStorage.getItem('users')) || []);
     let targetMemoStr = '';
-    const approvedTime = (newDraftStatus === 'admin_approved' || newDraftStatus === 'owner_approved') ? new Date().toISOString() : null;
+    const isApproved = (newDraftStatus === 'admin_approved' || newDraftStatus === 'owner_approved');
+    const approvedTime = isApproved ? new Date().toISOString() : null;
 
     apps = apps.map(a => {
       if (String(a.id) === String(id)) {
@@ -2831,7 +2832,10 @@
         mObj.draftApprovedAt = approvedTime;
         if (a.signDraftPhotos && Array.isArray(a.signDraftPhotos)) mObj.signDraftPhotos = a.signDraftPhotos;
         targetMemoStr = JSON.stringify(mObj);
-        return { ...a, draftStatus: newDraftStatus, draftApprovedAt: approvedTime, memo: targetMemoStr };
+        const updatedConstStatus = isApproved
+          ? (!a.constructionStatus || a.constructionStatus === 'before_construction' || a.constructionStatus === 'design_draft' ? 'in_construction' : a.constructionStatus)
+          : (newDraftStatus === 'pending' && a.constructionStatus === 'in_construction' ? 'design_draft' : a.constructionStatus);
+        return { ...a, draftStatus: newDraftStatus, draftApprovedAt: approvedTime, constructionStatus: updatedConstStatus, memo: targetMemoStr };
       }
       return a;
     });
@@ -2846,6 +2850,7 @@
           status: targetApp.status,
           receiptStatus: targetApp.receiptStatus,
           progressStatus: targetApp.progressStatus,
+          constructionStatus: targetApp.constructionStatus,
           timestamp: Date.now()
         };
         window.DataStore._recentDraftUpdates[String(id)] = {
@@ -2873,7 +2878,10 @@
         const updatedItems = u.items.map(it => {
           if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
             userChanged = true;
-            return { ...it, draftStatus: newDraftStatus, draftApprovedAt: approvedTime, memo: targetMemoStr || it.memo };
+            const updatedConstStatus = isApproved
+              ? (!it.constructionStatus || it.constructionStatus === 'before_construction' || it.constructionStatus === 'design_draft' ? 'in_construction' : it.constructionStatus)
+              : (newDraftStatus === 'pending' && it.constructionStatus === 'in_construction' ? 'design_draft' : it.constructionStatus);
+            return { ...it, draftStatus: newDraftStatus, draftApprovedAt: approvedTime, constructionStatus: updatedConstStatus, memo: targetMemoStr || it.memo };
           }
           return it;
         });
@@ -2891,14 +2899,14 @@
     }
 
     if (window.SupabaseSync) {
+      const targetApp = apps.find(a => String(a.id) === String(id));
       if (typeof window.SupabaseSync.updateApplication === 'function') {
         window.SupabaseSync.updateApplication(id, {
-          construction_status: (newDraftStatus === 'admin_approved' || newDraftStatus === 'owner_approved') ? 'in_construction' : undefined,
+          construction_status: targetApp ? targetApp.constructionStatus : (isApproved ? 'in_construction' : undefined),
           memo: targetMemoStr
         });
       } else {
-        const app = apps.find(a => String(a.id) === String(id));
-        if (app) window.SupabaseSync.upsertApplication(app);
+        if (targetApp) window.SupabaseSync.upsertApplication(targetApp);
       }
       usersToSync.forEach(uSync => {
         window.SupabaseSync.updateUser(uSync.id, { items: uSync.items || [] });

@@ -149,10 +149,13 @@ for (let cycle = 1; cycle <= 5; cycle++) {
 
   loadedApps = window.DataStore.getApplications();
   assert.strictEqual(loadedApps[0].draftStatus, 'owner_approved', `[Cycle ${cycle}] 4단계: 점주 시안 승인(owner_approved)`);
+  assert.strictEqual(loadedApps[0].constructionStatus, 'in_construction', `[Cycle ${cycle}] 4단계: 시안 승인 즉시 constructionStatus='in_construction'`);
   curUsers = window.DataStore.getUsers();
   assert.strictEqual(curUsers.find(u => u.id === 'b001').items[0].draftStatus, 'owner_approved', `[Cycle ${cycle}] 영업자 items 승인상태 동기화`);
+  assert.strictEqual(curUsers.find(u => u.id === 'b001').items[0].constructionStatus, 'in_construction', `[Cycle ${cycle}] 영업자 items constructionStatus in_construction`);
   assert.strictEqual(curUsers.find(u => u.id === 'C-001').items[0].draftStatus, 'owner_approved', `[Cycle ${cycle}] 시공사 items 승인상태 동기화`);
-  console.log(`  ✅ [통과] 4단계: 점주 시안 승인(owner_approved) ➔ applications & 영업자/시공사 items 0초 동시 반영`);
+  assert.strictEqual(curUsers.find(u => u.id === 'C-001').items[0].constructionStatus, 'in_construction', `[Cycle ${cycle}] 시공사 items constructionStatus in_construction`);
+  console.log(`  ✅ [통과] 4단계: 점주 시안 승인(owner_approved) ➔ applications & 영업자/시공사 items 0초 동시 반영 (constructionStatus: in_construction)`);
 
   // 5단계: 시공 완료 보고 (reportJobCompletionCommon)
   // 먼저 시공 사진 2장 등록
