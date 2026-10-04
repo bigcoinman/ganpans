@@ -52,6 +52,10 @@
 5. **신규 비회원 점주 임시 비밀번호 보존 원칙**:
    - 신규 비회원 점주 건인 경우에만 점주 휴대폰번호 기반 계정이 신규 채번(`isNewAccount: true`)되고, 채번된 임시 비밀번호(`g-XXXXXXXX`)를 팝업창에 100% 정확하게 출력한다.
    - 이미 가입된 계정인 경우에는 임시 비밀번호 발급이나 재설정이 원천 차단되며, 기존 계정 안내 문구만 노출된다.
+6. **신규 신청서 현장사진 타임스탬프(`photoUpdatedAt`) 최초 접수 0초 각인 및 캐싱 원칙 (Initial Photo Timestamp SSOT)**:
+   - 신규 온라인 신청서 접수 시 현장사진이 첨부된 경우, 신청 접수 시각(`applyPhotoTime = now.getTime()`)을 `photoUpdatedAt`으로 즉시 발행하여 `memoPayload`와 `newApp`에 영구 기록한다.
+   - 동시에 `PhotoCacheManager.set`에 즉시 캐싱하여, 접수 직후 마이페이지 [신청내역]에서 점주가 사진을 열람할 때 Supabase 클라우드 재다운로드 없이 0바이트(0ms)로 즉시 조회하도록 보장한다.
+   - 사진이 미등록된 채로 접수된 후 점주 대시보드에서 등록하거나 추가/교체하는 경우에도 `handleApplicationPhotoUploadProcess`를 통해 100% 동일한 타임스탬프 파이프라인을 탑승한다.
 
 ### 2. 신청 완료 팝업 안내 분기 기준 매트릭스
 | 신청자 상황 | 점주 계정 신규 여부 | 팝업창 아이디 표시 | 팝업창 비밀번호 표시 |
@@ -70,12 +74,13 @@
    - 가입 회원의 비밀번호는 [설계도-07]의 [비밀번호 재설정] 경로 외에는 그 어떤 이유로도 자동 재발급되거나 덮어써질 수 없다.
 
 ### 4. 자동 검문소 (검증망) 영구 감시 규칙 (Automated Blueprint Guard Rules)
-배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 5대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
+배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 6대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
 1. **[검문 1] 영업자 대리 신청 시 영업자 계정 덮어쓰기 방어**: `isOwnerSelf` 판정식 및 영업자 프로필 보존 검증.
 2. **[검문 2] 로그인 점주 신청 시 회원 프로필 덮어쓰기 찌꺼기 100% 부존재 검증**: `isOwnerSelf` 분기 내 `finalUserAddress`, `updateUser` 찌꺼기 0건 검사.
 3. **[검문 3] 기존 회원 매칭 신청 시 회원 프로필 덮어쓰기 찌꺼기 100% 부존재 검증**: `existingIdx !== -1` 분기 내 프로필 덮어쓰기 및 임시비밀번호 재발급 찌꺼기 0건 검사.
 4. **[검문 4] 신규 점주 임시 비밀번호 정상 노출 보존**: `isExistingAccount` 분기 및 `loginNoticePw` 정상 매핑 검사.
 5. **[검문 5] 신청서 userId 점주 ID 귀속 원칙**: `userId`의 점주 ID 귀속 및 `registeredBy` 분리 기록 검사.
+6. **[검문 6] 신규 신청서 접수 시 photoUpdatedAt 타임스탬프 탑재 및 PhotoCacheManager 캐싱 준수**: `app.js`의 `applyForm` 제출 로직 내 `applyPhotoTime`, `memoPayload.photoUpdatedAt`, `PhotoCacheManager.set` 탑재 검증.
 
 ---
 
@@ -134,10 +139,11 @@ graph TD
    - 시공사 배정 시 `assignedConstructorId`, `assignedConstructorName` 등이 `applications` 단일 원천에 즉시 기록되고 10초 상태 락(`_recentStatusUpdates`)에 등록된다.
    - 최고관리자가 시공업체 진행현황에서 [배정취소]를 실행하는 경우, 시공사 정보 초기화뿐만 아니라 시안 사진 배열(`signDraftPhotos`), 시안 심사상태(`draftStatus`), 시안 승인일자(`draftApprovedAt`), 시공완료 사진 배열(`constructionPhotos`), 세금계산서(`constructionInvoice`), 시공사진 카운트(`constPhotoCount`) 등 모든 시공 증빙 찌꺼기를 100% 완전 소멸(Clean Slate)하여 영업물건(미배정) 상태로 안전하게 복귀한다.
    - 점주 대시보드 및 영업자 대시보드의 [시공 완료사진 확인] 박스는 실제 유효한 시공업체가 배정되어 있고(`hasAssignedConstructor`) 시공이 완료된 경우(`isCompleted && cCount > 0`)에만 노출되며, 배정 취소 시 0초 만에 완벽 소멸된다.
-4. **제4원칙 (사진 및 시안 카운트 영구 불변 보존 원칙 - Photo Count SSOT Preservation)**:
+4. **제4원칙 (사진 및 시안 카운트·수정시각(photoUpdatedAt) 영구 불변 보존 원칙 - Photo Count & Timestamp SSOT Preservation)**:
    - `toggleBizItem` (영업물건 승격/해제), `assignConstructorToBizItem`, `updateItemStatus` 등 모든 상태 전이 단계에서 `photoCount`는 절대 0으로 초기화되거나 덮어써지지 않으며, `Math.max(memo.photoCount, app.photosCount, ...)`를 통해 영구 보존된다.
+   - 신청서가 최초 접수될 때 부여된 사진 수정시각(`photoUpdatedAt`)과 업로드/삭제 시 갱신되는 타임스탬프는 7단계 생명주기 전체에 걸쳐 1비트도 유실되지 않고 영구 보존되며, 시공사 배정 시 시공사 대시보드로 100% 온전하게 인계된다.
    - 대시보드 목록의 다운로드 버튼은 로컬 카운트에 의존하여 `disabled` 처리하지 않고 항상 클릭 가능하며, 클릭 시 `ensureApplicationPhotosLoaded`를 통해 Supabase DB 단일 원천으로부터 즉시 온디맨드 로딩하여 사진 열람 및 다운로드를 100% 보장한다.
-   - 최고관리자만 사진 모달창(`showPhotoDownloadModal`) 내 각 사진 우측 상단 `[삭제 🗑️]` 버튼을 통해 잘못 등록된 특정 1장만 선별 삭제할 수 있으며(`window.deleteApplicationSinglePhoto`), 삭제 시 남은 사진과 `photoCount`가 0초 실시간으로 일원화 갱신된다. 모든 사진이 삭제되어 0장이 된 경우 점주 대시보드에는 `[현장 사진 재등록 필요]` 배지가 표시된다.
+   - 최고관리자만 사진 모달창(`showPhotoDownloadModal`) 내 각 사진 우측 상단 `[삭제 🗑️]` 버튼을 통해 잘못 등록된 특정 1장만 선별 삭제할 수 있으며(`window.deleteApplicationSinglePhoto`), 삭제 시 남은 사진과 `photoCount`, `photoUpdatedAt`이 0초 실시간으로 일원화 갱신된다. 모든 사진이 삭제되어 0장이 된 경우 점주 대시보드에는 `[현장 사진 재등록 필요]` 배지가 표시된다.
 5. **제5원칙 (4대 권한 0초 실시간 동시 연동 및 단일 바인딩 원칙 - Realtime Sync & Single Binding)**:
    - 최고관리자 ↔ 영업자 ↔ 시공업체 ↔ 일반 점주 4대 권한 화면은 `DataStore.notifyAll(true)` 및 `_recentStatusUpdates` 락에 의해 단일 반응형 웹 내에서 0초 실시간으로 100% 동시 동기화된다.
    - 모바일 대시보드 헤더 및 버튼에 인라인 핸들러(`onclick`)와 JS `addEventListener`를 중복 바인딩하여 2회 연속 충돌 발화되는 현상을 영구 차단한다.
@@ -319,7 +325,7 @@ graph TD
    - 대시보드 목록(전체 신청서 목록, 영업물건 목록 등)을 동기화하거나 정기 폴링할 때는 무거운 Base64 사진 컬럼(`image_url`, `construction_photos`, `construction_invoice`)을 **100% 제외하고 텍스트 메타데이터만 선별 조회(`select('id, user_id, ...')`)**하여 대역폭 전송량을 99% 이상 절감한다.
 3. **사진 온디맨드 단일 조회 및 영구/세션 캐싱 (Zero Duplicate Fetch)**:
    - 사진 데이터는 사용자가 [사진 보기], [모달 열기], [시안 다운로드] 버튼을 직접 클릭했을 때만 해당 1건에 대해 개별 쿼리(`eq('id', appId)`)로 단일 조회하여 가져온다.
-   - 한 번 불러온 사진은 브라우저 캐시(`PhotoCacheManager`, 세션/로컬스토리지)에 보관하여, 같은 사진을 반복 열람할 때 Supabase 통신 없이 **트래픽 0바이트(0ms 즉시 표시)**로 렌더링한다.
+   - 한 번 불러온 사진(신규 신청서 접수 시 첨부된 사진 포함)은 브라우저 캐시(`PhotoCacheManager`, 세션/로컬스토리지)에 보관하여, 같은 사진을 반복 열람할 때 Supabase 통신 없이 **트래픽 0바이트(0ms 즉시 표시)**로 렌더링한다.
 4. **Realtime WebSocket 대역폭 누수 차단 (Debounce 300ms)**:
    - Supabase Realtime WebSocket `postgres_changes` 이벤트 발생 시, 단시간 내 다중 이벤트 발화로 인한 연쇄 전체 동기화를 차단하기 위해 **300ms 디바운스(Debounce)**를 필수로 장착한다.
 5. **Fallback 쿼리 경량화 고정 (Zero Full Row Fallback)**:

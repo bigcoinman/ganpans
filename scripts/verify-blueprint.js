@@ -117,6 +117,14 @@ assertRule(
   '신청서 userId가 점주가 아닌 영업자 ID로 오기입되는 오류가 발견되었습니다!'
 );
 
+assertRule(
+  '[BP-02] 신규 신청서 접수 시 photoUpdatedAt 타임스탬프 탑재 및 PhotoCacheManager 캐싱 준수',
+  appCode.includes('applyPhotoTime') &&
+  appCode.includes('photoUpdatedAt: applyPhotoTime') &&
+  appCode.includes('window.PhotoCacheManager.set(customId'),
+  '신규 신청서 접수 시 photoUpdatedAt 타임스탬프 탑재 또는 PhotoCacheManager 캐싱 로직이 누락되었습니다!'
+);
+
 console.log('\n--- [설계도-03 검증] BP-APP-LIFECYCLE (신청서 7단계 생명주기 및 락 방어) ---');
 assertRule(
   '[BP-03] 일반 점주 대시보드: 시안 승인(마음에 듭니다) 버튼 100% 보존',

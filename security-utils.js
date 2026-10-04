@@ -1202,7 +1202,6 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
         : (JSON.parse(localStorage.getItem('users')) || []);
       let itemUpdated = false;
       let updatedUsers = [];
-      const uploadTimeForUsers = Date.now();
       usersList.forEach(u => {
         if (u.items && Array.isArray(u.items)) {
           let userModified = false;
@@ -1210,7 +1209,7 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
             if (String(item.id) === String(appId) || String(item.appRefId) === String(appId)) {
               item.photos = finalPhotos;
               item.photosCount = finalPhotos.length;
-              item.photoUpdatedAt = uploadTimeForUsers;
+              item.photoUpdatedAt = uploadTime;
               if (finalPhotos.length > 0) item.fileData = finalPhotos[0];
               item.hasPhoto = finalPhotos.length > 0;
               itemUpdated = true;
@@ -1239,7 +1238,7 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
           await window.PhotoCacheManager.set(appId, {
             photos: finalPhotos,
             fileData: finalPhotos[0] || '',
-            photoUpdatedAt: uploadTimeForUsers
+            photoUpdatedAt: uploadTime
           });
         } catch (eCache) {}
       }
