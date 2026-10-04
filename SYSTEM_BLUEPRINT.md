@@ -190,6 +190,10 @@ graph TD
    - 시공업체 대시보드(`DataStore.getConstructionJobs`)에 표시되는 점주 현장사진은 오직 최고관리자 및 실서버 `applications.memo.photoUpdatedAt`을 단일 기준으로 추종한다.
    - 점주나 관리자가 사진을 교체(동일 장수 1장 ➔ 1장 교체 포함)하여 `photoUpdatedAt`이 갱신된 경우, 시공업체 화면의 `downloadApplicationPhotos` 호출 시 `expectedUpdatedAt`을 전달하여 로컬 브라우저의 구형 사진 캐시(`PhotoCacheManager`)를 0초 만에 강제 만료(무효화)시키고 Supabase DB로부터 최신 사진을 온디맨드로 즉시 재조회한다.
    - 이를 통해 시공업체 화면에서 잘못 업로드되었던 과거 사진이 계속 노출되는 캐시 잠김 현상을 원천 차단한다.
+8. **제8원칙 (시공 후 사진 및 시안 추가 등록 시 실서버 DB 사전 조회 ➔ 100% 누적 병합(Cumulative Merge) 원칙 - Cumulative Photo Merge SSOT)**:
+   - `handleJobPhotoUploadCommon` 및 `handleJobDraftUploadCommon` 실행 시, 로컬 메모리 캐시에 의존하지 않고 반드시 Supabase DB 실서버의 현재 등록 사진을 단 1회 직접 온디맨드 조회(`select('construction_photos, memo')` / `select('memo')`)하여 기존 등록본을 완벽히 확보한다.
+   - 실서버 기존 사진 뒤에 신규 사진을 안전하게 이어붙여(`existingList.concat(newPhotos)`), 최대 5장 슬롯 한도 내에서 누적 병합(Cumulative Merge) 처리 후 원자적(Atomic)으로 저장한다.
+   - 이를 통해 시공업체 폰과 최고관리자 PC 등 다중 기기 간에 누가 먼저 올리고 나중에 추가하든 단 1장의 사진 유실이나 덮어쓰기 파괴 없이 100% 누적 보존을 영구 보장한다.
 
 ---
 
@@ -222,7 +226,7 @@ graph TD
 ---
 
 ### 4. 자동 검문소 (검증망) 영구 감시 규칙 (Automated Blueprint Guard Rules)
-배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 11대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
+배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 12대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
 1. **[검문 1] 시안 SSOT 단일 기준 준수**: `local.length > server.length` 판정문 100% 부존재 검증.
 2. **[검문 2] 시안 삭제 시 좀비 사진 부활 방어**: `prevItem.signDraftPhotos` 복원 코드 100% 부존재 검증.
 3. **[검문 3] 시안 및 시공 상태 변경 시 전 관련 사용자 동시 저장**: `usersToSync` 수집 및 `SupabaseSync.updateUser` 동시 저장 준수.
@@ -234,6 +238,7 @@ graph TD
 9. **[검문 9] 시공 사진/상태/간판종류 전수 usersToSync 적용**: `updatedUid` 단편 찌꺼기 100% 부존재 검증.
 10. **[검문 10] 점주/관리자 시안 승인 시 constructionStatus in_construction 0초 일원화 동기화 준수**: 점주 승인 즉시 로컬 및 서버 `constructionStatus`의 `in_construction` 전이 일치 검증.
 11. **[검문 11] 시공업체 대시보드 점주 현장사진 타임스탬프(photoUpdatedAt) SSOT 연동 준수**: `data-store.js`의 `getConstructionJobs` 내 `photoUpdatedAt` 탑재 및 `app.js`의 `renderConstructorDashboardMob` 내 `expectedUpdatedAt` 전달 검증.
+12. **[검문 12] 시공사진 및 시안 추가 등록 시 실서버 DB 사전 조회 및 누적 병합(concat) 준수**: `data-store.js`의 `handleJobPhotoUploadCommon` 및 `handleJobDraftUploadCommon` 내 Supabase DB 사전 조회(`supabaseClient.from('applications').select`) 및 `concat` 누적 병합 로직 탑재 검증.
 
 ---
 
@@ -334,6 +339,9 @@ graph TD
    - `PhotoCacheManager`는 불필요한 네트워크 대역폭(Egress)을 방어하기 위해 브라우저 세션/로컬 스토리지를 활용하되, 캐시 유효성을 검사할 때 사진 장수(`count`)뿐만 아니라 `expectedUpdatedAt > cached.photoUpdatedAt` 수정 시각을 필수로 대조한다.
    - 사진 장수가 1장으로 동일하더라도 사진 내용이 교체되면 타임스탬프 대조를 통해 구형 캐시를 즉시 파기하고 최신본을 단 1회 온디맨드로 안전하게 조회한다.
    - 이를 통해 "대역폭 누수 차단(99% 절감)"과 "최신 데이터 0초 동기화"를 단 1비트의 충돌 없이 100% 양립시킨다.
+7. **사진 등록 시 실서버 최신본 사전 조회 및 누적 병합 원칙 (Pre-upload DB Fetch & Merge)**:
+   - 목록 동기화 시 대역폭 절감을 위해 사진 데이터를 제외(Column Selection)하더라도, 사용자가 사진을 '추가 등록'하는 쓰기(Write) 시점에는 Supabase DB의 기존 사진을 온디맨드로 실시간 1회 조회하여 기존 등록본을 100% 확보한 뒤 누적 병합(Merge)한다.
+   - 이를 통해 '네트워크 트래픽 99% 절감'과 '다중 기기 등록 시 덮어쓰기 데이터 유실 방어'를 충돌 없이 완벽히 양립시킨다.
 
 ### 2. 설계도 보존법칙 (모든 설계도는 일원화 할 것 - 이원화 절대 금지)
 1. **단일 압축 엔진(`compressImageFile` / `compressImageToBase64`) 일원화**:
@@ -344,12 +352,13 @@ graph TD
    - 사진 데이터를 다루기 위한 별도의 로컬 복제 테이블이나 독자 캐시 배열을 생성하지 않고, 오직 `PhotoCacheManager` 및 `applications` SSOT 원본만을 직접 읽고 갱신한다.
 
 ### 3. 자동 검문소 (검증망) 영구 감시 규칙 (Automated Blueprint Guard Rules)
-배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 5대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
+배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 6대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
 1. **[검문 1] 이미지 압축 기본 규격 검증**: `compressImageFile` 및 `compressImageToBase64` 기본값이 `90 * 1024`(90KB), `max_size = 800`으로 설정되어 있는지 검사.
 2. **[검문 2] 목록 동기화 시 사진 배제 쿼리 검증**: `security-utils.js` 내 applications 조회 쿼리에서 `image_url` 배제 선별 쿼리가 유지되고 있는지 검사.
 3. **[검문 3] Fallback 쿼리 select('*') 부존재 검증**: fallback 쿼리에서 `select('*')`가 0건인지 전수 검사.
 4. **[검문 4] Realtime 300ms 디바운스 엔진 검증**: WebSocket 변경 감지 시 `triggerDebouncedSync` 및 `setTimeout(..., 300)` 탑재 여부 검사.
 5. **[검문 5] PhotoCacheManager photoUpdatedAt 타임스탬프 기반 캐시 무효화 준수**: `security-utils.js` 내 `PhotoCacheManager.get` 및 `ensureApplicationPhotosLoaded`의 `expectedUpdatedAt` 검증 코드 탑재 검사.
+6. **[검문 6] 사진 추가 등록 시 실서버 DB 사전 조회 및 누적 병합 준수**: `data-store.js`의 `handleJobPhotoUploadCommon` 내 Supabase DB 사전 조회(`supabaseClient.from('applications').select`) 및 누적 병합 로직 탑재 검사.
 
 ### 4. 사진 규격 및 대역폭 최적화 매트릭스
 | 구분 | 기존 규격 (트래픽 폭증기) | **[설계도-08] 확정 규격 (영구 방어)** | 최적화 효과 |

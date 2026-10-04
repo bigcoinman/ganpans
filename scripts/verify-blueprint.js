@@ -305,6 +305,13 @@ assertRule(
   '시공업체 대시보드에서 점주 현장사진 타임스탬프(photoUpdatedAt) SSOT 연동 또는 expectedUpdatedAt 전달이 누락되었습니다!'
 );
 
+assertRule(
+  '[BP-04] 시공사진 및 시안 추가 등록 시 실서버 DB 사전 조회 및 누적 병합(concat) 준수',
+  dataStoreCode.includes("select('construction_photos, memo')") &&
+  dataStoreCode.includes('existingList.concat(uploadedBase64List)'),
+  '시공사진 추가 등록 시 실서버 DB 사전 조회 또는 누적 병합(concat) 로직이 누락되었습니다!'
+);
+
 console.log('\n--- [설계도-05 검증] 권한 분리 및 공용 모달 단일화 ---');
 
 assertRule(
@@ -422,6 +429,13 @@ assertRule(
   secUtilsCode.includes('expTime > cachedTime') &&
   secUtilsCode.includes('expectedUpdatedAt > localPhotoTime'),
   'PhotoCacheManager 또는 ensureApplicationPhotosLoaded 내 photoUpdatedAt 타임스탬프 캐시 만료 검증 로직이 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-08] 사진 추가 등록 시 실서버 DB 사전 조회 및 누적 병합 준수',
+  dataStoreCode.includes("select('construction_photos, memo')") &&
+  dataStoreCode.includes('existingList.concat(uploadedBase64List)'),
+  '사진 추가 등록 시 실서버 DB 사전 조회 또는 누적 병합(concat) 로직이 누락되었습니다!'
 );
 
 console.log('\n--- [설계도-09 검증] BP-CLEAN-PIPELINE (땜빵 금지, 찌꺼기 전수 삭제 및 단일 파이프라인) ---');

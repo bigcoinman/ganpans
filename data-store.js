@@ -2999,9 +2999,32 @@
       let apps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
         ? window.DataStore.getApplications()
         : (JSON.parse(localStorage.getItem('applications')) || []);
+      // 1. [방안 A SSOT 대원칙] 실서버 Supabase DB로부터 현재 등록된 최신 시안 사진 및 memo 단 1회 직접 온디맨드 조회 (덮어쓰기 파괴 원천 차단)
+      let serverRow = null;
+      if (window.supabaseClient && typeof window.supabaseClient.from === 'function') {
+        try {
+          const { data: dbData } = await window.supabaseClient
+            .from('applications')
+            .select('memo')
+            .eq('id', String(id))
+            .maybeSingle();
+          if (dbData) serverRow = dbData;
+        } catch (eDbFetch) {
+          console.warn('[handleJobDraftUploadCommon] Supabase direct fetch warn:', eDbFetch);
+        }
+      }
+
       const targetApp = apps.find(a => String(a.id) === String(id));
       let existingList = [];
-      if (targetApp) {
+      if (serverRow && serverRow.memo) {
+        try {
+          const sm = typeof serverRow.memo === 'string' ? JSON.parse(serverRow.memo) : serverRow.memo;
+          if (Array.isArray(sm.signDraftPhotos) && sm.signDraftPhotos.length > 0) {
+            existingList = sm.signDraftPhotos;
+          }
+        } catch (eM) {}
+      }
+      if (existingList.length === 0 && targetApp) {
         existingList = targetApp.signDraftPhotos || targetApp.designPhotos || [];
         if (existingList.length === 0 && targetApp.memo) {
           try {
@@ -3438,8 +3461,35 @@
         ? window.DataStore.getApplications()
         : (JSON.parse(localStorage.getItem('applications')) || []);
       const targetApp = apps.find(a => String(a.id) === String(id));
+
+      // 1. [방안 A SSOT 대원칙] 실서버 Supabase DB로부터 현재 등록된 최신 시공사진 및 memo 단 1회 직접 온디맨드 조회 (덮어쓰기 파괴 원천 차단)
+      let serverRow = null;
+      if (window.supabaseClient && typeof window.supabaseClient.from === 'function') {
+        try {
+          const { data: dbData } = await window.supabaseClient
+            .from('applications')
+            .select('construction_photos, memo')
+            .eq('id', String(id))
+            .maybeSingle();
+          if (dbData) serverRow = dbData;
+        } catch (eDbFetch) {
+          console.warn('[handleJobPhotoUploadCommon] Supabase direct fetch warn:', eDbFetch);
+        }
+      }
+
       let existingList = [];
-      if (targetApp) {
+      if (serverRow && Array.isArray(serverRow.construction_photos) && serverRow.construction_photos.length > 0) {
+        existingList = serverRow.construction_photos;
+      } else if (targetApp && Array.isArray(targetApp.constructionPhotos) && targetApp.constructionPhotos.length > 0) {
+        existingList = targetApp.constructionPhotos;
+      } else if (serverRow && serverRow.memo) {
+        try {
+          const sm = typeof serverRow.memo === 'string' ? JSON.parse(serverRow.memo) : serverRow.memo;
+          if (Array.isArray(sm.constructionPhotos) && sm.constructionPhotos.length > 0) {
+            existingList = sm.constructionPhotos;
+          }
+        } catch (eM) {}
+      } else if (targetApp) {
         existingList = targetApp.constructionPhotos || targetApp.afterPhotos || [];
       }
 
