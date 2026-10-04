@@ -1881,6 +1881,9 @@ window.SupabaseSync = {
       salespersonName: app.salespersonName !== undefined ? app.salespersonName : (existingMemo.salespersonName || ''),
       photoCount: validCount
     };
+    if (app.photoUpdatedAt) {
+      memoPayload.photoUpdatedAt = Number(app.photoUpdatedAt) || (app.photoUpdatedAt ? new Date(app.photoUpdatedAt).getTime() : 0);
+    }
     if (app.signDraftPhotos && Array.isArray(app.signDraftPhotos) && app.signDraftPhotos.length > 0) {
       memoPayload.signDraftPhotos = app.signDraftPhotos;
     }
@@ -1970,6 +1973,9 @@ window.SupabaseSync = {
       salespersonName: app.salespersonName !== undefined ? app.salespersonName : (existingMemo.salespersonName || ''),
       photoCount: validCount
     };
+    if (app.photoUpdatedAt) {
+      memoPayload.photoUpdatedAt = Number(app.photoUpdatedAt) || (app.photoUpdatedAt ? new Date(app.photoUpdatedAt).getTime() : 0);
+    }
     if (app.signDraftPhotos && Array.isArray(app.signDraftPhotos) && app.signDraftPhotos.length > 0) {
       memoPayload.signDraftPhotos = app.signDraftPhotos;
     }
@@ -2015,6 +2021,7 @@ window.SupabaseSync = {
     let salespersonId = '';
     let salespersonName = '';
     let photoCount = 0;
+    let photoUpdatedAt = 0;
     let constPhotoCount = 0;
     let signDraftPhotos = [];
     let draftStatus = 'pending';
@@ -2040,6 +2047,9 @@ window.SupabaseSync = {
             isDirectHeadquarters = true;
           }
           if (parsedMemo.photoCount !== undefined) photoCount = Number(parsedMemo.photoCount) || 0;
+          if (parsedMemo.photoUpdatedAt !== undefined) {
+            photoUpdatedAt = Number(parsedMemo.photoUpdatedAt) || (parsedMemo.photoUpdatedAt ? new Date(parsedMemo.photoUpdatedAt).getTime() : 0);
+          }
           if (parsedMemo.constPhotoCount !== undefined) constPhotoCount = Number(parsedMemo.constPhotoCount) || 0;
           if (parsedMemo.constructionPhotos && Array.isArray(parsedMemo.constructionPhotos)) {
             constPhotoCount = Math.max(constPhotoCount, parsedMemo.constructionPhotos.length);
@@ -2143,6 +2153,7 @@ window.SupabaseSync = {
       fileData: fileData,
       photos: photos,
       photosCount: photoCount,
+      photoUpdatedAt: photoUpdatedAt,
       hasPhoto: hasPhoto,
       appliedAt: dbApp.applied_at || dbApp.created_at || new Date().toISOString(),
       status: dbApp.status || 'pending',

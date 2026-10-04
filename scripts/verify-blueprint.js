@@ -290,6 +290,13 @@ assertRule(
   '시안 승인 시 로컬 applications 및 users.items의 constructionStatus in_construction 동기화 로직이 누락되었습니다!'
 );
 
+assertRule(
+  '[BP-04] 시공업체 대시보드 점주 현장사진 타임스탬프(photoUpdatedAt) SSOT 연동 준수',
+  dataStoreCode.includes('photoUpdatedAt: app.photoUpdatedAt') &&
+  appCode.includes('expectedUpdatedAt: ${pUpdatedAt || 0}'),
+  '시공업체 대시보드에서 점주 현장사진 타임스탬프(photoUpdatedAt) SSOT 연동 또는 expectedUpdatedAt 전달이 누락되었습니다!'
+);
+
 console.log('\n--- [설계도-05 검증] 권한 분리 및 공용 모달 단일화 ---');
 
 assertRule(
@@ -399,6 +406,14 @@ assertRule(
   '[BP-08] 구형 300KB 하드코딩 찌꺼기 100% 부존재 준수',
   !secUtilsCode.includes('300 * 1024') && !appCode.includes('300 * 1024') && !dataStoreCode.includes('300 * 1024'),
   '코드베이스 내에 구형 300 * 1024 찌꺼기 하드코딩이 잔존합니다!'
+);
+
+assertRule(
+  '[BP-08] PhotoCacheManager photoUpdatedAt 타임스탬프 기반 캐시 무효화 준수',
+  secUtilsCode.includes('result.photoUpdatedAt') &&
+  secUtilsCode.includes('expTime > cachedTime') &&
+  secUtilsCode.includes('expectedUpdatedAt > localPhotoTime'),
+  'PhotoCacheManager 또는 ensureApplicationPhotosLoaded 내 photoUpdatedAt 타임스탬프 캐시 만료 검증 로직이 누락되었습니다!'
 );
 
 console.log('\n--- [설계도-09 검증] BP-CLEAN-PIPELINE (땜빵 금지, 찌꺼기 전수 삭제 및 단일 파이프라인) ---');

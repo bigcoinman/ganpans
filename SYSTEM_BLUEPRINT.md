@@ -180,6 +180,11 @@ graph TD
    - 간판 디자인 시안의 실소비자 승인 권한(`window.approveDraftByOwner`)은 실소비자인 점주 본인에게 단독 부여된다.
    - 점주가 시안을 승인(`owner_approved`)하거나 관리자가 직권 확정(`admin_approved`)하는 즉시, `constructionStatus`는 `before_construction` / `design_draft`에서 **`in_construction` (간판 제작·시공 착수)**으로 0초 만에 낙관적 갱신(Optimistic Update)되며, 로컬 `applications`, `users.items`, `_recentStatusUpdates` 락 및 Supabase DB에 100% 동일하게 일원화 반영된다.
 
+7. **제7원칙 (시공업체 대시보드 점주 현장사진 타임스탬프(`photoUpdatedAt`) SSOT 추종 및 캐시 자동 무효화 원칙 - Constructor Photo Timestamp SSOT)**:
+   - 시공업체 대시보드(`DataStore.getConstructionJobs`)에 표시되는 점주 현장사진은 오직 최고관리자 및 실서버 `applications.memo.photoUpdatedAt`을 단일 기준으로 추종한다.
+   - 점주나 관리자가 사진을 교체(동일 장수 1장 ➔ 1장 교체 포함)하여 `photoUpdatedAt`이 갱신된 경우, 시공업체 화면의 `downloadApplicationPhotos` 호출 시 `expectedUpdatedAt`을 전달하여 로컬 브라우저의 구형 사진 캐시(`PhotoCacheManager`)를 0초 만에 강제 만료(무효화)시키고 Supabase DB로부터 최신 사진을 온디맨드로 즉시 재조회한다.
+   - 이를 통해 시공업체 화면에서 잘못 업로드되었던 과거 사진이 계속 노출되는 캐시 잠김 현상을 원천 차단한다.
+
 ---
 
 ### 2. 시공사 배정 및 시안·시공 증빙 7단계 상세 공정 매트릭스
@@ -211,7 +216,7 @@ graph TD
 ---
 
 ### 4. 자동 검문소 (검증망) 영구 감시 규칙 (Automated Blueprint Guard Rules)
-배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 10대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
+배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 11대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
 1. **[검문 1] 시안 SSOT 단일 기준 준수**: `local.length > server.length` 판정문 100% 부존재 검증.
 2. **[검문 2] 시안 삭제 시 좀비 사진 부활 방어**: `prevItem.signDraftPhotos` 복원 코드 100% 부존재 검증.
 3. **[검문 3] 시안 및 시공 상태 변경 시 전 관련 사용자 동시 저장**: `usersToSync` 수집 및 `SupabaseSync.updateUser` 동시 저장 준수.
@@ -222,6 +227,7 @@ graph TD
 8. **[검문 8] 시공사진 모달 인플레이스 사일런트 리프레시 지원**: `closeConstPhotosModal` 및 `isSilentRefresh` 모달 자동 갱신 검증.
 9. **[검문 9] 시공 사진/상태/간판종류 전수 usersToSync 적용**: `updatedUid` 단편 찌꺼기 100% 부존재 검증.
 10. **[검문 10] 점주/관리자 시안 승인 시 constructionStatus in_construction 0초 일원화 동기화 준수**: 점주 승인 즉시 로컬 및 서버 `constructionStatus`의 `in_construction` 전이 일치 검증.
+11. **[검문 11] 시공업체 대시보드 점주 현장사진 타임스탬프(photoUpdatedAt) SSOT 연동 준수**: `data-store.js`의 `getConstructionJobs` 내 `photoUpdatedAt` 탑재 및 `app.js`의 `renderConstructorDashboardMob` 내 `expectedUpdatedAt` 전달 검증.
 
 ---
 
@@ -318,6 +324,10 @@ graph TD
    - Supabase Realtime WebSocket `postgres_changes` 이벤트 발생 시, 단시간 내 다중 이벤트 발화로 인한 연쇄 전체 동기화를 차단하기 위해 **300ms 디바운스(Debounce)**를 필수로 장착한다.
 5. **Fallback 쿼리 경량화 고정 (Zero Full Row Fallback)**:
    - 선별 조회가 실패하는 예외 상황의 fallback 쿼리에서도 `select('*')` 사용을 영구 금지하며, 반드시 사진 컬럼을 제외한 메타데이터 컬럼 목록으로만 쿼리한다.
+6. **사진 캐시 무효화 시 사진 장수 및 수정시각(`photoUpdatedAt`) 동시 대조 원칙 (Timestamp-based Cache Invalidation)**:
+   - `PhotoCacheManager`는 불필요한 네트워크 대역폭(Egress)을 방어하기 위해 브라우저 세션/로컬 스토리지를 활용하되, 캐시 유효성을 검사할 때 사진 장수(`count`)뿐만 아니라 `expectedUpdatedAt > cached.photoUpdatedAt` 수정 시각을 필수로 대조한다.
+   - 사진 장수가 1장으로 동일하더라도 사진 내용이 교체되면 타임스탬프 대조를 통해 구형 캐시를 즉시 파기하고 최신본을 단 1회 온디맨드로 안전하게 조회한다.
+   - 이를 통해 "대역폭 누수 차단(99% 절감)"과 "최신 데이터 0초 동기화"를 단 1비트의 충돌 없이 100% 양립시킨다.
 
 ### 2. 설계도 보존법칙 (모든 설계도는 일원화 할 것 - 이원화 절대 금지)
 1. **단일 압축 엔진(`compressImageFile` / `compressImageToBase64`) 일원화**:
@@ -328,11 +338,12 @@ graph TD
    - 사진 데이터를 다루기 위한 별도의 로컬 복제 테이블이나 독자 캐시 배열을 생성하지 않고, 오직 `PhotoCacheManager` 및 `applications` SSOT 원본만을 직접 읽고 갱신한다.
 
 ### 3. 자동 검문소 (검증망) 영구 감시 규칙 (Automated Blueprint Guard Rules)
-배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 4대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
+배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 5대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
 1. **[검문 1] 이미지 압축 기본 규격 검증**: `compressImageFile` 및 `compressImageToBase64` 기본값이 `90 * 1024`(90KB), `max_size = 800`으로 설정되어 있는지 검사.
 2. **[검문 2] 목록 동기화 시 사진 배제 쿼리 검증**: `security-utils.js` 내 applications 조회 쿼리에서 `image_url` 배제 선별 쿼리가 유지되고 있는지 검사.
 3. **[검문 3] Fallback 쿼리 select('*') 부존재 검증**: fallback 쿼리에서 `select('*')`가 0건인지 전수 검사.
 4. **[검문 4] Realtime 300ms 디바운스 엔진 검증**: WebSocket 변경 감지 시 `triggerDebouncedSync` 및 `setTimeout(..., 300)` 탑재 여부 검사.
+5. **[검문 5] PhotoCacheManager photoUpdatedAt 타임스탬프 기반 캐시 무효화 준수**: `security-utils.js` 내 `PhotoCacheManager.get` 및 `ensureApplicationPhotosLoaded`의 `expectedUpdatedAt` 검증 코드 탑재 검사.
 
 ### 4. 사진 규격 및 대역폭 최적화 매트릭스
 | 구분 | 기존 규격 (트래픽 폭증기) | **[설계도-08] 확정 규격 (영구 방어)** | 최적화 효과 |
