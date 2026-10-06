@@ -508,44 +508,8 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
           }
         }
 
-        // image_url에 사진이 없는 경우 users.items 로컬 및 원격 2중 fallback 복원
-        if (photos.length === 0) {
-          try {
-            const localUsers = (window.DataStore && typeof window.DataStore.getUsers === 'function')
-              ? window.DataStore.getUsers()
-              : (JSON.parse(localStorage.getItem('users')) || []);
-            for (const u of localUsers) {
-              if (u.items && Array.isArray(u.items)) {
-                const matchedItem = u.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
-                if (matchedItem && Array.isArray(matchedItem.photos) && matchedItem.photos.length > 0) {
-                  photos = matchedItem.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:') || p.length > 100));
-                  fileData = photos[0] || '';
-                  break;
-                }
-              }
-            }
-          } catch (eUserFallback) {}
-        }
-
-        // 원격 Supabase users 테이블에서 추가 Fallback 탐색
-        if (photos.length === 0 && window.supabaseClient) {
-          try {
-            const { data: supaUsers } = await window.supabaseClient.from('users').select('id, items').not('items', 'is', null);
-            if (Array.isArray(supaUsers)) {
-              for (const su of supaUsers) {
-                if (su.items && Array.isArray(su.items)) {
-                  const mItem = su.items.find(it => String(it.id) === String(app.id) || String(it.appRefId) === String(app.id));
-                  if (mItem && Array.isArray(mItem.photos) && mItem.photos.length > 0) {
-                    photos = mItem.photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:') || p.startsWith('http') || p.startsWith('blob:') || p.length > 100));
-                    fileData = photos[0] || '';
-                    break;
-                  }
-                }
-              }
-            }
-          } catch (eRemoteUserFallback) {}
-        }
-
+        // [설계도-08 / 설계도-09 SSOT 절대 원칙]
+        // applications.image_url이 단일 진실의 원천(SSOT)이며, users.items 전수 검색 Fallback 및 좀비 부활 영구 완전 박멸!
         app.photos = photos;
         app.photosCount = photos.length;
         app.hasPhoto = photos.length > 0;
@@ -570,7 +534,7 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
             if (m && m.draftStatus) app.draftStatus = hasAssignedConst ? m.draftStatus : 'pending';
             if (m && m.draftApprovedAt) app.draftApprovedAt = hasAssignedConst ? m.draftApprovedAt : null;
 
-            // [영구 자가 치유 SSOT] 실제 사진이 존재하는데 memo.photoCount가 0 또는 불일치하면 백그라운드에서 즉시 DB 정상 동기화
+            // [영구 자가 치유 SSOT] 실제 사진 수와 memo.photoCount를 100% 양방향 일치화
             if (photos.length > 0 && Number(m.photoCount) !== photos.length && window.supabaseClient) {
               m.photoCount = photos.length;
               window.supabaseClient.from('applications')
@@ -579,6 +543,15 @@ async function ensureApplicationPhotosLoaded(appOrId, options = {}) {
                 .then(({ error: healErr }) => {
                   if (healErr) console.warn('[PhotoSSOT] Memo self-healing warn:', healErr.message);
                   else console.log(`[PhotoSSOT] ✅ 사진 개수 불일치 자동 치유 완료 (${app.id}): memo.photoCount = ${photos.length}`);
+                });
+            } else if (photos.length === 0 && Number(m.photoCount) > 0 && window.supabaseClient) {
+              delete m.photoCount;
+              window.supabaseClient.from('applications')
+                .update({ memo: JSON.stringify(m) })
+                .eq('id', String(app.id))
+                .then(({ error: healErr }) => {
+                  if (healErr) console.warn('[PhotoSSOT] Memo 0 count self-healing warn:', healErr.message);
+                  else console.log(`[PhotoSSOT] ✅ 사진 0장 동기화 자동 치유 완료 (${app.id}): memo.photoCount 삭제`);
                 });
             }
           } catch (eM) {}
@@ -1037,6 +1010,7 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
       });
 
     // users.items 동기화 (updated_at 컬럼 배제 -> 400 에러 원천 차단)
+    // [설계도-03 제4원칙 / 설계도-05 제2원칙 전 사용자 items 동시 완전 소각]
     if (userItemsChanged) {
       allUsers.forEach(u => {
         if (u.items && u.items.some(it => String(it.id) === String(appId) || String(it.appRefId) === String(appId))) {
@@ -1050,6 +1024,30 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
         }
       });
     }
+
+    // 추가 안전망: DB의 users 테이블에서 appId를 가진 레코드(admin 포함)가 있다면 사진 잔재 전수 소각
+    window.supabaseClient.from('users').select('id, items').not('items', 'is', null).then(({ data: dbUsers }) => {
+      if (Array.isArray(dbUsers)) {
+        dbUsers.forEach(du => {
+          if (du.items && Array.isArray(du.items)) {
+            let duChanged = false;
+            du.items.forEach(it => {
+              if (String(it.id) === String(appId) || String(it.appRefId) === String(appId)) {
+                it.photos = photos;
+                it.photosCount = newCount;
+                it.hasPhoto = hasPhoto;
+                it.fileData = newFileData;
+                it.photoUpdatedAt = deleteTime;
+                duChanged = true;
+              }
+            });
+            if (duChanged) {
+              window.supabaseClient.from('users').update({ items: du.items }).eq('id', String(du.id)).catch(() => {});
+            }
+          }
+        });
+      }
+    }).catch(() => {});
   }
 
   // 8. 모달 UI 및 대시보드 0초 즉각 갱신 (Q1, Q3, Q8)
@@ -1143,35 +1141,32 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
       const loadedApp = await ensureApplicationPhotosLoaded(appId, { forceReload: true });
       const existingPhotos = extractValidPhotos(loadedApp);
 
-      // 3. 기존 사진 유무에 따른 보존/추가/교체 분기
+      // 3. 기존 사진 유무에 따른 보존/추가/교체 분기 (모바일 친화적 단일 선택)
       let finalPhotos = [];
       if (existingPhotos.length > 0) {
         const isAppend = confirm(
           `현재 등록된 현장사진이 ${existingPhotos.length}장 있습니다.\n\n` +
           `[확인] : 기존 사진 뒤에 추가하기 (총 ${existingPhotos.length + newPhotos.length}장)\n` +
-          `[취소] : 기존 사진을 모두 지우고 새로 선택한 ${newPhotos.length}장으로 전체 교체하기`
+          `[취소] : 기존 사진을 지우고 새로 선택한 ${newPhotos.length}장으로 전체 교체하기`
         );
         if (isAppend) {
           finalPhotos = existingPhotos.concat(newPhotos);
         } else {
-          const doReplace = confirm(
-            `⚠️ 주의: 기존 사진 ${existingPhotos.length}장을 삭제하고 새 사진 ${newPhotos.length}장으로 교체하시겠습니까?`
-          );
-          if (!doReplace) {
-            e.target.value = '';
-            return;
-          }
-          finalPhotos = newPhotos;
+          finalPhotos = newPhotos; // 바로 교체! 이중 confirm으로 인한 모바일 차단 방어
         }
       } else {
+        // 기존 사진이 0장일 때는 팝업 없이 즉시 직통 등록!
         finalPhotos = newPhotos;
       }
+
+      const uploadTime = Date.now();
 
       // 4. 로컬 applications 동기화 (원자적 갱신)
       let curApps = (window.DataStore && typeof window.DataStore.getApplications === 'function')
         ? window.DataStore.getApplications()
         : (JSON.parse(localStorage.getItem('applications')) || []);
-      const targetApp = curApps.find(a => String(a.id) === String(appId));
+      let targetApp = curApps.find(a => String(a.id) === String(appId));
+      let memoObj = {};
       if (targetApp) {
         targetApp.photos = finalPhotos;
         targetApp.photosCount = finalPhotos.length;
@@ -1179,16 +1174,17 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
         targetApp.fileName = (rawFiles[0] && rawFiles[0].name) ? rawFiles[0].name : `현장사진_${appId}.jpg`;
         targetApp.hasPhoto = finalPhotos.length > 0;
 
-        const uploadTime = Date.now();
-        let memoObj = {};
         try {
           memoObj = typeof targetApp.memo === 'string' ? JSON.parse(targetApp.memo) : (targetApp.memo || {});
         } catch (eM) { memoObj = {}; }
-        memoObj.photoCount = finalPhotos.length;
-        memoObj.photoUpdatedAt = uploadTime;
-        targetApp.memo = JSON.stringify(memoObj);
-        targetApp.photoUpdatedAt = uploadTime;
+      }
+      memoObj.photoCount = finalPhotos.length;
+      memoObj.photoUpdatedAt = uploadTime;
+      const photoMemoStr = JSON.stringify(memoObj);
 
+      if (targetApp) {
+        targetApp.memo = photoMemoStr;
+        targetApp.photoUpdatedAt = uploadTime;
         if (window.DataStore && typeof window.DataStore.saveApplications === 'function') {
           window.DataStore.saveApplications(curApps);
         } else {
@@ -1245,22 +1241,45 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
 
       // 7. Supabase DB 영구 동기화 (image_url 및 memo 비동기 백그라운드)
       const photoJson = JSON.stringify(finalPhotos);
-      const photoMemo = targetApp ? targetApp.memo : JSON.stringify({ photoCount: finalPhotos.length });
 
       if (window.SupabaseSync && typeof window.SupabaseSync.updateApplication === 'function') {
         window.SupabaseSync.updateApplication(appId, {
           image_url: photoJson,
-          memo: photoMemo
+          memo: photoMemoStr
         }).catch(e => console.warn('Supabase photo update err:', e));
-      } else if (window.supabaseClient) {
-        try {
-          await window.supabaseClient.from('applications').update({
-            image_url: photoJson,
-            memo: photoMemo
-          }).eq('id', appId);
-        } catch (dbErr) {
-          console.warn('Supabase direct photo update err:', dbErr);
-        }
+      }
+      if (window.supabaseClient) {
+        window.supabaseClient.from('applications').update({
+          image_url: photoJson,
+          memo: photoMemoStr
+        }).eq('id', String(appId)).then(({ error: dbErr }) => {
+          if (dbErr) console.warn('Supabase direct photo update err:', dbErr);
+          else console.log(`[PhotoUpload] ✅ Supabase DB 사진 저장 성공 (${appId}): 총 ${finalPhotos.length}장`);
+        }).catch(dbErr => console.warn('Supabase direct photo update catch:', dbErr));
+
+        // DB users 테이블(admin 포함)에도 최신 사진 일괄 동기화
+        window.supabaseClient.from('users').select('id, items').not('items', 'is', null).then(({ data: dbUsers }) => {
+          if (Array.isArray(dbUsers)) {
+            dbUsers.forEach(du => {
+              if (du.items && Array.isArray(du.items)) {
+                let duChanged = false;
+                du.items.forEach(it => {
+                  if (String(it.id) === String(appId) || String(it.appRefId) === String(appId)) {
+                    it.photos = finalPhotos;
+                    it.photosCount = finalPhotos.length;
+                    it.hasPhoto = finalPhotos.length > 0;
+                    if (finalPhotos.length > 0) it.fileData = finalPhotos[0];
+                    it.photoUpdatedAt = uploadTime;
+                    duChanged = true;
+                  }
+                });
+                if (duChanged) {
+                  window.supabaseClient.from('users').update({ items: du.items }).eq('id', String(du.id)).catch(() => {});
+                }
+              }
+            });
+          }
+        }).catch(() => {});
       }
 
       // 8. 6대 화면 0초 동시 렌더링 및 전역 실시간 브로드캐스트 (SSOT)

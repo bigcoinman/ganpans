@@ -139,11 +139,12 @@ graph TD
    - 시공사 배정 시 `assignedConstructorId`, `assignedConstructorName` 등이 `applications` 단일 원천에 즉시 기록되고 10초 상태 락(`_recentStatusUpdates`)에 등록된다.
    - 최고관리자가 시공업체 진행현황에서 [배정취소]를 실행하는 경우, 시공사 정보 초기화뿐만 아니라 시안 사진 배열(`signDraftPhotos`), 시안 심사상태(`draftStatus`), 시안 승인일자(`draftApprovedAt`), 시공완료 사진 배열(`constructionPhotos`), 세금계산서(`constructionInvoice`), 시공사진 카운트(`constPhotoCount`) 등 모든 시공 증빙 찌꺼기를 100% 완전 소멸(Clean Slate)하여 영업물건(미배정) 상태로 안전하게 복귀한다.
    - 점주 대시보드 및 영업자 대시보드의 [시공 완료사진 확인] 박스는 실제 유효한 시공업체가 배정되어 있고(`hasAssignedConstructor`) 시공이 완료된 경우(`isCompleted && cCount > 0`)에만 노출되며, 배정 취소 시 0초 만에 완벽 소멸된다.
-4. **제4원칙 (사진 및 시안 카운트·수정시각(photoUpdatedAt) 영구 불변 보존 원칙 - Photo Count & Timestamp SSOT Preservation)**:
-   - `toggleBizItem` (영업물건 승격/해제), `assignConstructorToBizItem`, `updateItemStatus` 등 모든 상태 전이 단계에서 `photoCount`는 절대 0으로 초기화되거나 덮어써지지 않으며, `Math.max(memo.photoCount, app.photosCount, ...)`를 통해 영구 보존된다.
-   - 신청서가 최초 접수될 때 부여된 사진 수정시각(`photoUpdatedAt`)과 업로드/삭제 시 갱신되는 타임스탬프는 7단계 생명주기 전체에 걸쳐 1비트도 유실되지 않고 영구 보존되며, 시공사 배정 시 시공사 대시보드로 100% 온전하게 인계된다.
+4. **제4원칙 (사진 및 시안 카운트·수정시각(photoUpdatedAt) 영구 불변 보존 및 삭제 시 클린 슬레이트 원칙 - Photo Count & Timestamp SSOT Preservation & Clean Slate Deletion)**:
+   - `toggleBizItem` (영업물건 승격/해제), `assignConstructorToBizItem`, `updateItemStatus` 등 모든 정상 상태 전이 단계에서 `photoCount`는 절대 0으로 초기화되거나 덮어써지지 않으며, `Math.max(memo.photoCount, app.photosCount, ...)`를 통해 영구 보존된다.
+   - **[명시적 삭제 시 클린 슬레이트 예외]**: 최고관리자가 사진 모달창(`showPhotoDownloadModal`) 내 각 사진 우측 상단 `[삭제 🗑️]` 버튼을 통해 사진을 삭제하여 남은 사진이 0장이 된 경우(`window.deleteApplicationSinglePhoto`), `Math.max` 보존 규칙의 명백한 예외로서 `image_url = null`, `memo.photoCount = 0`, `photoUpdatedAt = now`로 0초 만에 100% 일원화 갱신된다.
+   - **[전체 사용자 items 동시 소각]**: 사진 삭제 즉시 `applications`뿐만 아니라 최고관리자(`admin`)를 포함하여 해당 물건을 참조하는 모든 사용자(`users.items` - 영업자, 시공사, 관리자)의 저장소에서도 해당 사진 데이터가 0초 만에 동시 완전 소각(Clean Slate)된다.
+   - **[점주 모바일 원클릭 재등록 파이프라인]**: 모든 사진이 삭제되어 0장이 된 경우 점주 대시보드에는 `[현장 사진 재등록 필요]` 배지가 표시되며, 점주가 사진을 재등록할 때는 불필요한 이중 confirm 다이얼로그나 차단 없이 신규 선택한 사진이 1회 터치로 안전하게 즉시 DB에 100% 업로드된다.
    - 대시보드 목록의 다운로드 버튼은 로컬 카운트에 의존하여 `disabled` 처리하지 않고 항상 클릭 가능하며, 클릭 시 `ensureApplicationPhotosLoaded`를 통해 Supabase DB 단일 원천으로부터 즉시 온디맨드 로딩하여 사진 열람 및 다운로드를 100% 보장한다.
-   - 최고관리자만 사진 모달창(`showPhotoDownloadModal`) 내 각 사진 우측 상단 `[삭제 🗑️]` 버튼을 통해 잘못 등록된 특정 1장만 선별 삭제할 수 있으며(`window.deleteApplicationSinglePhoto`), 삭제 시 남은 사진과 `photoCount`, `photoUpdatedAt`이 0초 실시간으로 일원화 갱신된다. 모든 사진이 삭제되어 0장이 된 경우 점주 대시보드에는 `[현장 사진 재등록 필요]` 배지가 표시된다.
 5. **제5원칙 (4대 권한 0초 실시간 동시 연동 및 단일 바인딩 원칙 - Realtime Sync & Single Binding)**:
    - 최고관리자 ↔ 영업자 ↔ 시공업체 ↔ 일반 점주 4대 권한 화면은 `DataStore.notifyAll(true)` 및 `_recentStatusUpdates` 락에 의해 단일 반응형 웹 내에서 0초 실시간으로 100% 동시 동기화된다.
    - 모바일 대시보드 헤더 및 버튼에 인라인 핸들러(`onclick`)와 JS `addEventListener`를 중복 바인딩하여 2회 연속 충돌 발화되는 현상을 영구 차단한다.
@@ -386,6 +387,9 @@ graph TD
 7. **사진 등록 시 실서버 최신본 사전 조회 및 누적 병합 원칙 (Pre-upload DB Fetch & Merge)**:
    - 목록 동기화 시 대역폭 절감을 위해 사진 데이터를 제외(Column Selection)하더라도, 사용자가 사진을 '추가 등록'하는 쓰기(Write) 시점에는 Supabase DB의 기존 사진을 온디맨드로 실시간 1회 조회하여 기존 등록본을 100% 확보한 뒤 누적 병합(Merge)한다.
    - 이를 통해 '네트워크 트래픽 99% 절감'과 '다중 기기 등록 시 덮어쓰기 데이터 유실 방어'를 충돌 없이 완벽히 양립시킨다.
+8. **현장사진 users 테이블 Fallback 완전 박멸 및 좀비 부활 영구 금지 (Zero Dual Fallback & Zero Zombie Photo)**:
+   - `ensureApplicationPhotosLoaded`는 오직 `applications` 단일 테이블만 직접 조회하며, `applications.image_url`이 `null`이거나 비어있을 때 `users` 테이블 전체를 전수 쿼리하여 과거 사진을 되살려내는 어떠한 Fallback 코드도 영구 엄격 금지한다.
+   - 최고관리자가 사진을 삭제하여 `image_url`이 `null`이 된 경우, 그 어떤 로컬 캐시나 `users.items`에서도 과거 사진을 역복원할 수 없으며 0장(부존재)이 100% 절대 확정된다.
 
 ### 2. 설계도 보존법칙 (모든 설계도는 일원화 할 것 - 이원화 절대 금지)
 1. **단일 압축 엔진(`compressImageFile` / `compressImageToBase64`) 일원화**:
@@ -422,6 +426,7 @@ graph TD
 1. **구형 레거시 및 이원화 분기문 전수 추적 삭제 (Zero Residue / Clean Slate)**:
    - 수정 사항이 생겼을 때, 기존 흐름을 그대로 둔 채 옆에 우회로를 덧붙이는 땜빵 행위를 영구 엄격 금지한다.
    - 반드시 관련된 구형 레거시 코드, 임시 분기문, 이중 조회 함수를 100% 전수 추적하여 삭제(도려내기)한 후, 가장 단순한 단 1개의 파이프라인으로 전면 재구축한다.
+   - 특히 `users` 테이블에서 삭제된 사진을 역복원하는 좀비 부활 코드 및 모바일에서 업로드를 차단하는 다중 confirm 팝업 등의 찌꺼기를 영구 배제한다.
 2. **임시방편 우회 장치(락, 타이머, 우회 조건문) 영구 금지**:
    - 눈앞의 증상만 모면하기 위한 임시 우회 락(`_recentStatusUpdates` 남용, 임의 플래그 덮어쓰기), 지연 타이머(`setTimeout`으로 재덮어쓰기), 화면 렌더링 중 독자 쿼리 발동을 일체 쓰지 않는다.
    - 단일 진실의 원천(SSOT)에 따라 데이터가 1회 기록되면 전체 화면이 0초 만에 안정적으로 리렌더링되는 단순 무결 구조를 유지한다.
