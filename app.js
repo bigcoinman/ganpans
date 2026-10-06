@@ -299,24 +299,6 @@ window.deleteInquiryAdminMob = function (id, e) {
         }
         return res;
     }
-    if (!confirm('정말로 이 간편 문의 내역을 영구 삭제하시겠습니까?')) return;
-    let currentInquiries = JSON.parse(localStorage.getItem('inquiries')) || [];
-    currentInquiries = currentInquiries.filter(i => String(i.id) !== String(id));
-    saveInquiriesSSOT(currentInquiries);
-    try {
-        let delInqIds = JSON.parse(localStorage.getItem('deleted_inquiry_ids') || '[]');
-        if (!delInqIds.includes(String(id))) {
-            delInqIds.push(String(id));
-            localStorage.setItem('deleted_inquiry_ids', JSON.stringify(delInqIds));
-        }
-    } catch (eStorage) {}
-    if (window.SupabaseSync && typeof window.SupabaseSync.deleteInquiry === 'function') {
-        window.SupabaseSync.deleteInquiry(id);
-    }
-    alert('간편 문의 내역이 성공적으로 삭제되었습니다.');
-    if (typeof window.renderAdminDashboardMob === 'function') {
-        window.renderAdminDashboardMob(true);
-    }
 };
 
 window.deleteApplicationAdminMob = function (appId, btnEl, event) {
@@ -580,7 +562,7 @@ window.openInstallModalMob = function (e) {
     }
 };
 
-window.openAuthModal = function (initialTab = 'login') {
+function openAuthModal(initialTab = 'login') {
     const authModal = document.getElementById('auth-modal');
     if (authModal) {
         authModal.classList.add('active');
@@ -588,7 +570,8 @@ window.openAuthModal = function (initialTab = 'login') {
             window.switchAuthTab(initialTab);
         }
     }
-};
+}
+window.openAuthModal = openAuthModal;
 
 window.handleHeaderAuthClickMob = function (e) {
     if (e) {
@@ -611,28 +594,6 @@ window.handleHeaderAuthClickMob = function (e) {
     }
 };
 
-window.openGlobalSearchModal = function () {
-    const globalSearchModal = document.getElementById('global-search-modal');
-    if (!globalSearchModal) return;
-    const user = typeof getActiveUser === 'function' ? getActiveUser() : null;
-    const searchAuthBlock = document.getElementById('search-auth-block');
-    const searchContentArea = document.getElementById('search-content-area');
-    const globalSearchInput = document.getElementById('global-search-input');
-    const searchResultsArea = document.getElementById('search-results-area');
-
-    if (!user) {
-        if (searchAuthBlock) searchAuthBlock.style.display = 'block';
-        if (searchContentArea) searchContentArea.style.display = 'none';
-    } else {
-        if (searchAuthBlock) searchAuthBlock.style.display = 'none';
-        if (searchContentArea) searchContentArea.style.display = 'block';
-        if (typeof window.setSearchModeMob === 'function') window.setSearchModeMob('name');
-        if (globalSearchInput) globalSearchInput.value = '';
-        if (searchResultsArea) searchResultsArea.innerHTML = '';
-        setTimeout(() => { if (globalSearchInput) globalSearchInput.focus(); }, 150);
-    }
-    globalSearchModal.classList.add('active');
-};
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -1031,16 +992,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function openAuthModal(initialTab = 'login') {
-        const authModal = document.getElementById('auth-modal');
-        if (authModal) {
-            authModal.classList.add('active');
-            if (typeof window.switchAuthTab === 'function') {
-                window.switchAuthTab(initialTab);
-            }
-        }
-    }
-    window.openAuthModal = openAuthModal;
 
     // --- Mobile Auth Modal Close Interceptor (Supports Touch & Click) ---
     const authCloseBtn = document.getElementById('auth-close-btn');
@@ -1850,20 +1801,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Salesperson Dashboard ---
-    function formatDateOnly(dateString) {
-        if (!dateString) return '-';
-        try {
-            const d = new Date(dateString);
-            if (isNaN(d.getTime())) return String(dateString).split('T')[0] || '-';
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${y}.${m}.${day}`;
-        } catch (e) {
-            return String(dateString).split('T')[0] || '-';
-        }
-    }
 
     function getAppStatusBadgeHtmlMob(statusObj) {
         let status = '';

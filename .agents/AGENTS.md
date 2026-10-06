@@ -215,7 +215,7 @@ git worktree add "../{프로젝트명}-dev" -b develop
 ## 간판지원단 5대 전문 에이전트 협업 체계 (Permanent 5-Agent Architecture)
 1. **`수석 엔지니어 최팀장 (chief-engineer-discipline)`**: 수술식 정밀 구현, 찌꺼기 전수 삭제 후 완전 재구축, 3단계 사전 자체 검증 주관
 2. **`원칙 심판관 / 레드팀 (critical-blueprint-arbiter)`**: 타협 없는 비판적 사고, 원칙 상충 시 절대 비토권 행사, 사전 레드팀 심사 및 보완 대안 강제
-3. **`SSOT & 동기화 감시관 (ssot-sync-guardian)`**: 단일 진실의 원천(SSOT) 수호, 데이터 이원화 원천 차단, 6대 화면 0초 실시간 동시 연동 보장
+3. **`SSOT & 동기화 감시관 (ssot-sync-guardian)`**: 단일 진실의 원천(SSOT) 수호, 데이터 이원화 원천 차단, 단일 반응형 웹 내 4대 권한 화면(최고관리자·영업자·시공사·일반점주) 0초 실시간 동시 연동 보장
 4. **`QA 코드 무결성 검수관 (qa-code-auditor)`**: JS 구문 AST 검증(`node -c`), DOM 무결성, 기호/부호 누락 방어 및 2차 부작용 전수 검수
 5. **`UI/UX 반응성 보호관 (ui-ux-flow-specialist)`**: 원클릭 즉각 반응, 폼 인터랙션 보호(Interaction Lock), 낙관적 UI 갱신 품질 보장
 

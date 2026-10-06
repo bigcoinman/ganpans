@@ -19,7 +19,8 @@ description: 코드 수정 전후 구문 문법 무결성 검사, 기호/부호 
 
 ## 🔍 감사(Audit) 실행 명령어
 ```bash
-node -c script.js app.js dashboard.js security-utils.js data-store.js
+node -c app.js data-store.js security-utils.js supabase-config.js kakao-notify.js ai-assistant.js
+node scripts/verify-blueprint.js
 node verify-integrity.js
 ```
 
