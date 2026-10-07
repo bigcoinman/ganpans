@@ -482,6 +482,17 @@ assertRule(
   'users.items 내에 Base64 사진 배열을 복제·저장하는 찌꺼기 코드가 발견되었습니다!'
 );
 
+assertRule(
+  '[BP-08] 4대 업로드/재업로드 전 경로 90KB 강제 압축(Universal Upload Compression) 100% 탑재 준수',
+  appCode.includes('compressImageToBase64(file, 90 * 1024)') &&
+  secUtilsCode.includes('handleApplicationPhotoUploadProcess') &&
+  secUtilsCode.includes('compressImageToBase64(file, 90 * 1024)') &&
+  dataStoreCode.includes('handleJobDraftUploadCommon') &&
+  dataStoreCode.includes('handleJobPhotoUploadCommon') &&
+  dataStoreCode.includes('compressImageToBase64(file, 90 * 1024)'),
+  '4대 업로드/재업로드 경로 중 90KB 강제 압축이 누락된 경로가 발견되었습니다!'
+);
+
 console.log('\n--- [설계도-09 검증] BP-CLEAN-PIPELINE (땜빵 금지, 찌꺼기 전수 삭제 및 단일 파이프라인) ---');
 assertRule(
   '[BP-09] 독자 직통 클라우드 조회 찌꺼기 100% 부존재 준수',

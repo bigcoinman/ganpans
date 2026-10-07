@@ -143,7 +143,7 @@ graph TD
    - `toggleBizItem` (영업물건 승격/해제), `assignConstructorToBizItem`, `updateItemStatus` 등 모든 정상 상태 전이 단계에서 `photoCount`는 절대 0으로 초기화되거나 덮어써지지 않으며, `Math.max(memo.photoCount, app.photosCount, ...)`를 통해 영구 보존된다.
    - **[명시적 삭제 시 클린 슬레이트 예외]**: 최고관리자가 사진 모달창(`showPhotoDownloadModal`) 내 각 사진 우측 상단 `[삭제 🗑️]` 버튼을 통해 사진을 삭제하여 남은 사진이 0장이 된 경우(`window.deleteApplicationSinglePhoto`), `Math.max` 보존 규칙의 명백한 예외로서 `image_url = null`, `memo.photoCount = 0`, `photoUpdatedAt = now`로 0초 만에 100% 일원화 갱신된다.
    - **[전체 사용자 items 동시 소각]**: 사진 삭제 즉시 `applications`뿐만 아니라 최고관리자(`admin`)를 포함하여 해당 물건을 참조하는 모든 사용자(`users.items` - 영업자, 시공사, 관리자)의 저장소에서도 해당 사진 데이터가 0초 만에 동시 완전 소각(Clean Slate)된다.
-   - **[점주 모바일 원클릭 재등록 파이프라인]**: 모든 사진이 삭제되어 0장이 된 경우 점주 대시보드에는 `[현장 사진 재등록 필요]` 배지가 표시되며, 점주가 사진을 재등록할 때는 불필요한 이중 confirm 다이얼로그나 차단 없이 신규 선택한 사진이 1회 터치로 안전하게 즉시 DB에 100% 업로드된다.
+   - **[점주 모바일 원클릭 재등록 및 4대 경로 90KB 강제 압축 준수]**: 모든 사진이 삭제되어 0장이 된 경우 점주 대시보드에는 `[현장 사진 재등록 필요]` 배지가 표시되며, 점주가 사진을 재등록하거나 영업자·관리자가 현장사진을 재업로드/추가할 때 신규 선택한 사진은 `[설계도-08]`의 90KB 강제 자동 압축(`compressImageToBase64(file, 90 * 1024)`)을 100% 통과하여 안전하게 즉시 DB에 업로드된다.
    - 대시보드 목록의 다운로드 버튼은 로컬 카운트에 의존하여 `disabled` 처리하지 않고 항상 클릭 가능하며, 클릭 시 `ensureApplicationPhotosLoaded`를 통해 Supabase DB 단일 원천으로부터 즉시 온디맨드 로딩하여 사진 열람 및 다운로드를 100% 보장한다.
 5. **제5원칙 (4대 권한 0초 실시간 동시 연동 및 단일 바인딩 원칙 - Realtime Sync & Single Binding)**:
    - 최고관리자 ↔ 영업자 ↔ 시공업체 ↔ 일반 점주 4대 권한 화면은 `DataStore.notifyAll(true)` 및 `_recentStatusUpdates` 락에 의해 단일 반응형 웹 내에서 0초 실시간으로 100% 동시 동기화된다.
@@ -194,7 +194,7 @@ graph TD
 8. **제8원칙 (시공 후 사진 및 시안 추가 등록 시 실서버 DB 사전 조회 ➔ 100% 누적 병합(Cumulative Merge) 원칙 - Cumulative Photo Merge SSOT)**:
    - `handleJobPhotoUploadCommon` 및 `handleJobDraftUploadCommon` 실행 시, 로컬 메모리 캐시에 의존하지 않고 반드시 Supabase DB 실서버의 현재 등록 사진을 단 1회 직접 온디맨드 조회(`select('construction_photos, memo')` / `select('memo')`)하여 기존 등록본을 완벽히 확보한다.
    - 실서버 기존 사진 뒤에 신규 사진을 안전하게 이어붙여(`existingList.concat(newPhotos)`), 최대 5장 슬롯 한도 내에서 누적 병합(Cumulative Merge) 처리 후 원자적(Atomic)으로 저장한다.
-   - 이를 통해 시공업체 폰과 최고관리자 PC 등 다중 기기 간에 누가 먼저 올리고 나중에 추가하든 단 1장의 사진 유실이나 덮어쓰기 파괴 없이 100% 누적 보존을 영구 보장한다.
+   - 이를 통해 시공업체 폰과 최고관리자 PC 등 다중 기기 간에 누가 먼저 올리고 나중에 추가하든 단 1장의 사진 유실이나 덮어쓰기 파괴 없이 100% 누적 보존을 영구 보장하며, 등록/삭제 후 재업로드되는 모든 시안 및 시공사진은 `[설계도-08]`의 90KB 강제 자동 압축(`compressImageToBase64(file, 90 * 1024)`)을 100% 필수로 준수한다.
 
 ---
 
@@ -394,6 +394,13 @@ graph TD
    - `users.items`는 오직 영업물건의 텍스트 메타데이터(`id, storeName, receiptStatus, progressStatus, constructionStatus, memo, photosCount, photoUpdatedAt`)만 초경량으로 보관한다.
    - `photos`, `fileData`, `image_url`, `signDraftPhotos`, `constructionPhotos` 등 일체의 Base64 이미지 데이터를 `users` 테이블 및 `users.items`에 저장하거나 복제하는 행위를 100% 영구 엄격 금지한다.
    - `mapUserToDb` 및 `updateUser` 시 `items` 내에 존재하는 모든 이미지 배열 및 Base64 데이터를 자동 정화(Sanitize)하여, 1회 회원 목록 조회 시 페이로드가 3KB 이하(99.5% 절감)로 유지되도록 영구 방어한다.
+10. **5대 역할 및 4대 업로드/재업로드 전 경로 100% 강제 압축 전수 매트릭스 (Universal Upload Compression SSOT)**:
+   - 비회원, 일반점주(회원), 영업자, 시공업체, 최고관리자 등 시스템 내에서 이미지가 업로드되는 모든 경로는 예외 없이 `security-utils.js`의 `compressImageFile(file, 90 * 1024)` / `compressImageToBase64(file, 90 * 1024)` 단일 엔진을 통과하여 **긴 변 최대 800px, 파일당 90KB 이하**로 강제 압축된다.
+   - **경로 ① [신규 간편 지원신청 시 업로드]**: 비회원 신청, 점주(회원) 직접 신청, 영업자 대리 접수를 불문하고 신청 폼(`store-photo`, `store-photo-camera`)을 통해 등록되는 모든 현장사진은 100% 90KB 이하로 강제 압축 (`app.js` 7180행).
+   - **경로 ② [신청 후 현장사진 삭제 및 재업로드]**: 점주 마이페이지, 영업자 대시보드, 최고관리자 대시보드에서 기존 사진 삭제 후 재업로드 또는 추가 등록 시 `handleApplicationPhotoUploadMob` ➔ `handleApplicationPhotoUploadProcess` 단일 함수를 통해 100% 90KB 이하로 강제 압축 (`security-utils.js` 1103행).
+   - **경로 ③ [시공업체 디자인 시안 및 시공완료 사진 업로드]**: 시공업체가 모바일 대시보드에서 등록하는 디자인 시안(`handleJobDraftUploadCommon`) 및 시공 후 사진(`handleJobPhotoUploadCommon`)은 100% 90KB 이하로 강제 압축 (`data-store.js` 3059행, 3531행).
+   - **경로 ④ [디자인 시안 및 시공완료 사진 삭제 후 재업로드]**: 시공업체 또는 최고관리자가 시안이나 시공완료 사진을 삭제한 후 다시 올리거나 추가 등록할 때도 동일한 공용 함수(`handleJobDraftUploadCommon`, `handleJobPhotoUploadCommon`)를 통해 100% 90KB 이하로 강제 압축 (`app.js` 3538행, 3611행, 4473행, 4482행).
+   - 시스템 내에 위 4대 경로 외에 임의의 원본 사진 우회 업로드 통로 생성을 100% 영구 엄격 금지한다.
 
 ### 2. 설계도 보존법칙 (모든 설계도는 일원화 할 것 - 이원화 절대 금지)
 1. **단일 압축 엔진(`compressImageFile` / `compressImageToBase64`) 일원화**:
@@ -404,7 +411,7 @@ graph TD
    - 사진 데이터를 다루기 위한 별도의 로컬 복제 테이블이나 독자 캐시 배열을 생성하지 않고, 오직 `PhotoCacheManager` 및 `applications` SSOT 원본만을 직접 읽고 갱신한다.
 
 ### 3. 자동 검문소 (검증망) 영구 감시 규칙 (Automated Blueprint Guard Rules)
-배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 7대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
+배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 8대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
 1. **[검문 1] 이미지 압축 기본 규격 검증**: `compressImageFile` 및 `compressImageToBase64` 기본값이 `90 * 1024`(90KB), `max_size = 800`으로 설정되어 있는지 검사.
 2. **[검문 2] 목록 동기화 시 사진 배제 쿼리 검증**: `security-utils.js` 내 applications 조회 쿼리에서 `image_url` 배제 선별 쿼리가 유지되고 있는지 검사.
 3. **[검문 3] Fallback 쿼리 select('*') 부존재 검증**: fallback 쿼리에서 `select('*')`가 0건인지 전수 검사.
@@ -412,6 +419,7 @@ graph TD
 5. **[검문 5] PhotoCacheManager photoUpdatedAt 타임스탬프 기반 캐시 무효화 준수**: `security-utils.js` 내 `PhotoCacheManager.get` 및 `ensureApplicationPhotosLoaded`의 `expectedUpdatedAt` 검증 코드 탑재 검사.
 6. **[검문 6] 사진 추가 등록 시 실서버 DB 사전 조회 및 누적 병합 준수**: `data-store.js`의 `handleJobPhotoUploadCommon` 내 Supabase DB 사전 조회(`supabaseClient.from('applications').select`) 및 누적 병합 로직 탑재 검사.
 7. **[검문 7] users.items 내 Base64 사진 저장 찌꺼기 100% 부존재 검증**: `security-utils.js` 내에서 `users.items`로 `photos` 및 `fileData` Base64를 복제·저장하는 찌꺼기 코드가 0건인지 전수 검사.
+8. **[검문 8] 4대 업로드/재업로드 전 경로 90KB 강제 압축(Universal Upload Compression) 탑재 검증**: 신규 신청, 현장사진 재업로드, 시안 업로드/재업로드, 시공완료사진 업로드/재업로드 4대 경로 전수 `compressImageToBase64(file, 90 * 1024)` 장착 여부 검사.
 
 ### 4. 사진 규격 및 대역폭 최적화 매트릭스
 | 구분 | 기존 규격 (트래픽 폭증기) | **[설계도-08] 확정 규격 (영구 방어)** | 최적화 효과 |
@@ -419,6 +427,7 @@ graph TD
 | **최대 해상도** | 긴 변 1,200px | **긴 변 800px** (모바일 Retina 2배 해상도) | 선명도 100% 유지 + 면적 55% 축소 |
 | **파일당 최대 용량** | 300 KB | **80 ~ 90 KB 이하 (품질 0.70)** | 파일당 70% 용량 다이어트 |
 | **신청서(3장 기준)** | 약 900 KB ~ 1.2 MB | **약 200 ~ 250 KB 이하** | 1건당 Egress 75% 절감 |
+| **4대 업로드/재업로드 전 경로** | 일부 경로 누락 위험 | **모든 역할·모든 재업로드 100% 강제 압축 (90KB)** | 대역폭 누수 원천 봉쇄 |
 | **목록 동기화** | 전체 Base64 포함 조회 위험 | **사진 컬럼 100% 배제 (선별 텍스트)** | Egress 99% 원천 절감 |
 | **회원 목록 동기화** | users.items에 사진 복제 누적(550KB) | **users.items 내 사진 100% 배제 (3KB 이하)** | 페이로드 99.5% 다이어트 |
 | **Realtime 동기화** | 이벤트 발화마다 즉시 재조회 | **300ms 디바운스 묶음 처리** | 소켓 폭풍 및 대역폭 누수 차단 |
