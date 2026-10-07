@@ -3051,12 +3051,12 @@
         }
       }
 
-      // 2. 90KB 이하 초고속 병렬(Promise.all) 자동 압축
+      // 2. 100KB 이하 초고속 병렬(Promise.all) 자동 압축 (디자인 시안)
       const uploadedBase64List = (await Promise.all(filesToUpload.map(async (file) => {
         let base64 = null;
         if (typeof compressImageToBase64 === 'function') {
           try {
-            base64 = await compressImageToBase64(file, 90 * 1024);
+            base64 = await compressImageToBase64(file, 100 * 1024);
           } catch (eComp) {
             console.warn('[handleJobDraftUploadCommon] compress error fallback:', eComp);
           }
@@ -3523,12 +3523,12 @@
       const availableSlots = 5 - existingList.length;
       const filesToUpload = fileList.slice(0, availableSlots);
 
-      // 초고속 병렬 압축 (90KB 이하)
+      // 초고속 병렬 압축 (150KB 이하 - 시공완료 증빙)
       const uploadedBase64List = (await Promise.all(filesToUpload.map(async (file) => {
         let base64 = null;
         if (typeof compressImageToBase64 === 'function') {
           try {
-            base64 = await compressImageToBase64(file, 90 * 1024);
+            base64 = await compressImageToBase64(file, 150 * 1024);
           } catch (eComp) {
             console.warn('[handleJobPhotoUploadCommon] compress error:', eComp);
           }

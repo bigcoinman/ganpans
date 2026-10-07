@@ -431,9 +431,9 @@ assertRule(
 
 console.log('\n--- [설계도-08 검증] BP-TRAFFIC-DIET (트래픽 다이어트 및 Supabase 대역폭 영구 방어) ---');
 assertRule(
-  '[BP-08] 이미지 압축 엔진 기본 규격 (800px, 90KB) 준수',
-  secUtilsCode.includes('maxSizeBytes = 90 * 1024') && secUtilsCode.includes('max_size = 800'),
-  'security-utils.js 내 compressImageFile 기본 규격(800px, 90KB)이 훼손되었습니다!'
+  '[BP-08] 이미지 압축 엔진 기본 규격 (1,000px, 150KB) 준수',
+  secUtilsCode.includes('maxSizeBytes = 150 * 1024') && secUtilsCode.includes('max_size = 1000'),
+  'security-utils.js 내 compressImageFile 기본 규격(1000px, 150KB)이 훼손되었습니다!'
 );
 
 assertRule(
@@ -455,10 +455,11 @@ assertRule(
 );
 
 assertRule(
-  '[BP-08] 신규 신청 및 시공사진 업로드 90KB 압축 파라미터 준수',
-  appCode.includes('compressImageToBase64(file, 90 * 1024)') &&
-  dataStoreCode.includes('compressImageToBase64(file, 90 * 1024)'),
-  '신청서 또는 시안/시공사진 업로드 시 90KB 압축 파라미터가 누락되었습니다!'
+  '[BP-08] 신규 신청 150KB 및 시안 100KB / 시공사진 150KB 압축 파라미터 준수',
+  appCode.includes('compressImageToBase64(file, 150 * 1024)') &&
+  dataStoreCode.includes('compressImageToBase64(file, 100 * 1024)') &&
+  dataStoreCode.includes('compressImageToBase64(file, 150 * 1024)'),
+  '신청서(150KB) 또는 시안(100KB)/시공사진(150KB) 압축 파라미터가 누락되었습니다!'
 );
 
 assertRule(
@@ -493,14 +494,15 @@ assertRule(
 );
 
 assertRule(
-  '[BP-08] 4대 업로드/재업로드 전 경로 90KB 강제 압축(Universal Upload Compression) 100% 탑재 준수',
-  appCode.includes('compressImageToBase64(file, 90 * 1024)') &&
+  '[BP-08] 4대 업로드/재업로드 전 경로 차등 압축(시안 100KB, 현장/시공사진 150KB) 100% 탑재 준수',
+  appCode.includes('compressImageToBase64(file, 150 * 1024)') &&
   secUtilsCode.includes('handleApplicationPhotoUploadProcess') &&
-  secUtilsCode.includes('compressImageToBase64(file, 90 * 1024)') &&
+  secUtilsCode.includes('compressImageToBase64(file, 150 * 1024)') &&
   dataStoreCode.includes('handleJobDraftUploadCommon') &&
+  dataStoreCode.includes('compressImageToBase64(file, 100 * 1024)') &&
   dataStoreCode.includes('handleJobPhotoUploadCommon') &&
-  dataStoreCode.includes('compressImageToBase64(file, 90 * 1024)'),
-  '4대 업로드/재업로드 경로 중 90KB 강제 압축이 누락된 경로가 발견되었습니다!'
+  dataStoreCode.includes('compressImageToBase64(file, 150 * 1024)'),
+  '4대 업로드/재업로드 경로 중 용도별 강제 압축 규격이 누락된 경로가 발견되었습니다!'
 );
 
 console.log('\n--- [설계도-09 검증] BP-CLEAN-PIPELINE (땜빵 금지, 찌꺼기 전수 삭제 및 단일 파이프라인) ---');

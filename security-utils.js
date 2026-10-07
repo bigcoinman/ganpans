@@ -1100,7 +1100,7 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
       for (const file of rawFiles) {
         let base64Data = '';
         if (typeof compressImageToBase64 === 'function') {
-          base64Data = await compressImageToBase64(file, 90 * 1024);
+          base64Data = await compressImageToBase64(file, 150 * 1024);
         } else {
           base64Data = await new Promise((resolve) => {
             const reader = new FileReader();
@@ -1507,8 +1507,8 @@ function formatUserDate(dateStr) {
 }
 window.formatUserDate = formatUserDate;
 
-// 7. 실시간 사진 촬영본 및 이미지 파일 80~90KB 이하 초경량 강제 자동 축소/압축 유틸리티 (대역폭 다이어트 최적화)
-function compressImageFile(file, maxSizeBytes = 90 * 1024) {
+// 7. 실시간 사진 촬영본 및 이미지 파일 150KB 이하 고선명 강제 자동 축소/압축 유틸리티 (대역폭 다이어트 & 선명도 최적화)
+function compressImageFile(file, maxSizeBytes = 150 * 1024) {
   return new Promise((resolve) => {
     if (!file || !file.type || !file.type.startsWith('image/')) {
       resolve(file);
@@ -1523,8 +1523,8 @@ function compressImageFile(file, maxSizeBytes = 90 * 1024) {
         let width = img.width;
         let height = img.height;
 
-        // 해상도 최적화 (긴 변 기준 최대 800px - 모바일 Retina 2배율 선명도 100% 유지 및 80~90KB 초경량화)
-        const max_size = 800;
+        // 해상도 최적화 (긴 변 기준 최대 1,000px - 모바일 Retina 및 대형 화면 선명도 100% 보존)
+        const max_size = 1000;
         if (width > max_size || height > max_size) {
           if (width > height) {
             height = Math.round(height * (max_size / width));
@@ -1540,12 +1540,12 @@ function compressImageFile(file, maxSizeBytes = 90 * 1024) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        let quality = 0.70;
+        let quality = 0.75;
         let dataUrl = canvas.toDataURL('image/jpeg', quality);
         let approximateSize = Math.round((dataUrl.length - 22) * 3 / 4);
 
-        // 90KB 이하가 될 때까지 화질 품질(quality)을 단계적으로 축소 (강제 초경량 다이어트)
-        const targetMax = maxSizeBytes || (90 * 1024);
+        // 목표 용량 이하가 될 때까지 화질 품질(quality)을 단계적으로 축소
+        const targetMax = maxSizeBytes || (150 * 1024);
         while (approximateSize > targetMax && quality > 0.2) {
           quality -= 0.08;
           dataUrl = canvas.toDataURL('image/jpeg', quality);
@@ -1577,7 +1577,7 @@ function compressImageFile(file, maxSizeBytes = 90 * 1024) {
   });
 }
 
-function compressImageToBase64(file, maxSizeBytes = 90 * 1024) {
+function compressImageToBase64(file, maxSizeBytes = 150 * 1024) {
   return compressImageFile(file, maxSizeBytes).then((compressedFile) => {
     if (compressedFile && compressedFile.dataUrl) {
       return compressedFile.dataUrl;

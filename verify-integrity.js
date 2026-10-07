@@ -96,18 +96,18 @@ const indexHtmlContent = fs.readFileSync(path.join(__dirname, 'index.html'), 'ut
 const indexHasCount = indexHtmlContent.includes('id="apply-photo-count"');
 console.log(`- index.html apply-photo-count 요소 존재: ${indexHasCount ? '정상 ✅' : '누락 ❌'}`);
 
-// 2) 90KB 고효율 압축 파이프라인 적용 여부 (BP-08 트래픽 다이어트 공식 기준)
-const secUtils90KB = secUtilsContent.includes('90 * 1024');
-const app90KB = appContent.includes('90 * 1024');
+// 2) 150KB 고효율 압축 파이프라인 적용 여부 (BP-08 트래픽 다이어트 공식 기준)
+const secUtils150KB = secUtilsContent.includes('150 * 1024');
+const app150KB = appContent.includes('150 * 1024');
 
-console.log(`- security-utils.js 90KB 압축 기준 적용: ${secUtils90KB ? '정상 ✅' : '누락 ❌'}`);
-console.log(`- app.js 90KB 압축 파이프라인 적용: ${app90KB ? '정상 ✅' : '누락 ❌'}`);
+console.log(`- security-utils.js 150KB 압축 기준 적용: ${secUtils150KB ? '정상 ✅' : '누락 ❌'}`);
+console.log(`- app.js 150KB 압축 파이프라인 적용: ${app150KB ? '정상 ✅' : '누락 ❌'}`);
 
 // 3) 대역폭 99% 절감 컬럼 선별 조회(Column Selection) 적용 여부
 const bandwidthOptimized = secUtilsContent.includes("select('id, user_id, owner_name, phone, store_name, store_address, sign_type, referrer_code, status, assigned_constructor_id, assigned_constructor_name, construction_status, memo, applied_at, created_at')");
 console.log(`- security-utils.js 목록 동기화 시 대역폭 99% 절감 선별 조회 적용: ${bandwidthOptimized ? '정상 ✅' : '누락 ❌'}`);
 
-if (!indexHasCount || !secUtils90KB || !app90KB || !bandwidthOptimized) {
+if (!indexHasCount || !secUtils150KB || !app150KB || !bandwidthOptimized) {
     allPass = false;
 }
 

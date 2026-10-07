@@ -7177,7 +7177,7 @@ function initWizard() {
         let base64 = '';
         if (typeof compressImageToBase64 === 'function') {
           try {
-            base64 = await compressImageToBase64(file, 90 * 1024);
+            base64 = await compressImageToBase64(file, 150 * 1024);
           } catch (compErr) {
             console.warn('[app.js] compressImageToBase64 fallback:', compErr);
           }
