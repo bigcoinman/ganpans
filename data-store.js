@@ -4118,7 +4118,13 @@
                 const newItems = u.items.map(it => {
                   if (String(it.id) === String(id) || String(it.appRefId) === String(id)) {
                     userChanged = true;
-                    return { ...it, constructionPhotos: cPhotos };
+                    const cleanIt = { ...it, constPhotoCount: cPhotos.length };
+                    delete cleanIt.constructionPhotos;
+                    delete cleanIt.signDraftPhotos;
+                    delete cleanIt.photos;
+                    delete cleanIt.fileData;
+                    delete cleanIt.image_url;
+                    return cleanIt;
                   }
                   return it;
                 });

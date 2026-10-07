@@ -195,6 +195,13 @@ graph TD
    - `handleJobPhotoUploadCommon` 및 `handleJobDraftUploadCommon` 실행 시, 로컬 메모리 캐시에 의존하지 않고 반드시 Supabase DB 실서버의 현재 등록 사진을 단 1회 직접 온디맨드 조회(`select('construction_photos, memo')` / `select('memo')`)하여 기존 등록본을 완벽히 확보한다.
    - 실서버 기존 사진 뒤에 신규 사진을 안전하게 이어붙여(`existingList.concat(newPhotos)`), 최대 5장 슬롯 한도 내에서 누적 병합(Cumulative Merge) 처리 후 원자적(Atomic)으로 저장한다.
    - 이를 통해 시공업체 폰과 최고관리자 PC 등 다중 기기 간에 누가 먼저 올리고 나중에 추가하든 단 1장의 사진 유실이나 덮어쓰기 파괴 없이 100% 누적 보존을 영구 보장하며, 등록/삭제 후 재업로드되는 모든 시안 및 시공사진은 `[설계도-08]`의 90KB 강제 자동 압축(`compressImageToBase64(file, 90 * 1024)`)을 100% 필수로 준수한다.
+9. **제9원칙 (최고관리자 & 시공업체 시안 및 시공완료 사진 삭제 시 무결성 클린 슬레이트 완전 소멸 원칙 - Zero-Residue Photo Deletion SSOT)**:
+   - 최고관리자(`admin`) 또는 시공업체(`constructor`) 중 누가 시안(`deleteJobDraftPhoto`, `deleteJobDraftAll`)이나 시공완료 사진(`deleteJobConstructionPhoto`)을 삭제하더라도:
+     1) **단일 원천 SSOT 소멸**: `applications` 테이블의 `signDraftPhotos` / `construction_photos` 및 `memo` JSON에서 해당 사진이 0초 만에 영구 소멸된다. (시공사진이 0장이 되면 `_clearConstPhotos: true`로 DB 컬럼 완전 소각).
+     2) **관련 사용자 items Base64 영구 소각**: 영업자·시공사·관리자 등 모든 관련 유저의 `users.items`에서 사진 Base64 속성(`signDraftPhotos`, `constructionPhotos`)을 100% 완전 소각(Clean Slate)하며, 오직 경량 카운트(`draftCount`, `constPhotoCount`) 메타데이터 숫자만 유지한다.
+     3) **조회 모달 복제 찌꺼기 방어**: 시공완료 사진 열람 모달(`viewConstructionPhotosModal`) 등 단순 조회 시에도 `users.items`로 사진 Base64가 복제되는 것을 영구 차단한다 (`[설계도-08] Zero Image in users.items` 준수).
+     4) **30초 동기화 락 및 좀비 부활 원천 차단**: 30초 유효 락(`_recentDraftUpdates`, `_recentPhotoUpdates`) 및 브라우저 캐시 무효화(`PhotoCacheManager.invalidate`)를 통해 백그라운드 폴링이나 구형 캐시로 인한 사진 역복원을 100% 차단한다.
+     5) **UI 사일런트 리프레시**: 잔여 사진이 남아있을 때는 모달이 인플레이스로 리프레시되고, 0장이 되면 모달이 자동 종료되며 4대 권한 화면의 카운트 뱃지가 0초 만에 일원화 갱신된다.
 
 ---
 

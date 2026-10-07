@@ -312,6 +312,16 @@ assertRule(
   '시공사진 추가 등록 시 실서버 DB 사전 조회 또는 누적 병합(concat) 로직이 누락되었습니다!'
 );
 
+assertRule(
+  '[BP-04] 시안 및 시공사진 삭제 시 클린 슬레이트 완전 소멸 및 열람 모달 users.items 사진 복제 찌꺼기 100% 부존재 준수',
+  dataStoreCode.includes('deleteJobDraftPhoto') &&
+  dataStoreCode.includes('deleteJobDraftAll') &&
+  dataStoreCode.includes('deleteJobConstructionPhoto') &&
+  !dataStoreCode.includes('return { ...it, constructionPhotos: cPhotos };') &&
+  dataStoreCode.includes('_clearConstPhotos: remainingCount === 0'),
+  '시안/시공사진 삭제 시 클린 슬레이트 파이프라인 또는 열람 모달 내 users.items 복제 찌꺼기가 발견되었습니다!'
+);
+
 console.log('\n--- [설계도-05 검증] BP-ADMIN-SSOT (최고관리자 대시보드 절대 단일 원천 및 6대 표준 메뉴) ---');
 
 assertRule(
