@@ -3121,13 +3121,19 @@
           const updatedItems = u.items.map(item => {
             if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
               userChanged = true;
-              return {
+              const cleanItem = {
                 ...item,
-                signDraftPhotos: merged,
+                draftCount: merged.length,
                 draftStatus: 'pending',
                 constructionStatus: item.constructionStatus === 'before_construction' ? 'design_draft' : item.constructionStatus,
                 memo: targetMemoStr || item.memo
               };
+              delete cleanItem.signDraftPhotos;
+              delete cleanItem.photos;
+              delete cleanItem.fileData;
+              delete cleanItem.image_url;
+              delete cleanItem.constructionPhotos;
+              return cleanItem;
             }
             return item;
           });
@@ -3261,12 +3267,18 @@
             userChanged = true;
             let existing = item.signDraftPhotos || item.designPhotos || [];
             const updated = existing.filter((_, idx) => idx !== photoIndex);
-            return {
+            const cleanItem = {
               ...item,
-              signDraftPhotos: updated,
+              draftCount: updated.length,
               draftStatus: updated.length === 0 ? 'pending' : item.draftStatus,
               memo: targetMemoStr || item.memo
             };
+            delete cleanItem.signDraftPhotos;
+            delete cleanItem.photos;
+            delete cleanItem.fileData;
+            delete cleanItem.image_url;
+            delete cleanItem.constructionPhotos;
+            return cleanItem;
           }
           return item;
         });
@@ -3364,12 +3376,18 @@
         const updatedItems = u.items.map(item => {
           if (String(item.id) === String(id) || String(item.appRefId) === String(id)) {
             userChanged = true;
-            return {
+            const cleanItem = {
               ...item,
-              signDraftPhotos: [],
+              draftCount: 0,
               draftStatus: 'pending',
               memo: targetMemoStr || item.memo
             };
+            delete cleanItem.signDraftPhotos;
+            delete cleanItem.photos;
+            delete cleanItem.fileData;
+            delete cleanItem.image_url;
+            delete cleanItem.constructionPhotos;
+            return cleanItem;
           }
           return item;
         });
@@ -3576,11 +3594,21 @@
               mObj.constPhotoCount = merged.length;
               if (item.draftStatus && !mObj.draftStatus) mObj.draftStatus = item.draftStatus;
               if (item.draftApprovedAt && !mObj.draftApprovedAt) mObj.draftApprovedAt = item.draftApprovedAt;
-              if (Array.isArray(item.signDraftPhotos) && item.signDraftPhotos.length > 0 && (!mObj.signDraftPhotos || mObj.signDraftPhotos.length === 0)) {
-                mObj.signDraftPhotos = item.signDraftPhotos;
-              }
+              delete mObj.signDraftPhotos;
+              delete mObj.constructionPhotos;
+              delete mObj.photos;
               targetMemoForUser = JSON.stringify(mObj);
-              return { ...item, constructionPhotos: merged, constPhotoCount: merged.length, memo: targetMemoForUser };
+              const cleanItem = {
+                ...item,
+                constPhotoCount: merged.length,
+                memo: targetMemoForUser
+              };
+              delete cleanItem.constructionPhotos;
+              delete cleanItem.signDraftPhotos;
+              delete cleanItem.photos;
+              delete cleanItem.fileData;
+              delete cleanItem.image_url;
+              return cleanItem;
             }
             return item;
           });
@@ -3756,10 +3784,20 @@
             mObj.constPhotoCount = remainingCount;
             if (item.draftStatus && !mObj.draftStatus) mObj.draftStatus = item.draftStatus;
             if (item.draftApprovedAt && !mObj.draftApprovedAt) mObj.draftApprovedAt = item.draftApprovedAt;
-            if (Array.isArray(item.signDraftPhotos) && item.signDraftPhotos.length > 0 && (!mObj.signDraftPhotos || mObj.signDraftPhotos.length === 0)) {
-              mObj.signDraftPhotos = item.signDraftPhotos;
-            }
-            return { ...item, constructionPhotos: updated, constPhotoCount: remainingCount, memo: JSON.stringify(mObj) };
+            delete mObj.signDraftPhotos;
+            delete mObj.constructionPhotos;
+            delete mObj.photos;
+            const cleanItem = {
+              ...item,
+              constPhotoCount: remainingCount,
+              memo: JSON.stringify(mObj)
+            };
+            delete cleanItem.constructionPhotos;
+            delete cleanItem.signDraftPhotos;
+            delete cleanItem.photos;
+            delete cleanItem.fileData;
+            delete cleanItem.image_url;
+            return cleanItem;
           }
           return item;
         });

@@ -472,6 +472,16 @@ assertRule(
   '사진 추가 등록 시 실서버 DB 사전 조회 또는 누적 병합(concat) 로직이 누락되었습니다!'
 );
 
+assertRule(
+  '[BP-08] users.items 내 Base64 사진 저장 찌꺼기 100% 부존재 준수 (Zero Image in users.items)',
+  !secUtilsCode.includes('it.photos = finalPhotos') &&
+  !secUtilsCode.includes('item.photos = finalPhotos') &&
+  secUtilsCode.includes('cleanItemForDiet') &&
+  !dataStoreCode.includes('item, signDraftPhotos: merged') &&
+  !dataStoreCode.includes('item, constructionPhotos: merged'),
+  'users.items 내에 Base64 사진 배열을 복제·저장하는 찌꺼기 코드가 발견되었습니다!'
+);
+
 console.log('\n--- [설계도-09 검증] BP-CLEAN-PIPELINE (땜빵 금지, 찌꺼기 전수 삭제 및 단일 파이프라인) ---');
 assertRule(
   '[BP-09] 독자 직통 클라우드 조회 찌꺼기 100% 부존재 준수',

@@ -957,16 +957,18 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
       if (itIdx !== -1) {
         u.items[itIdx] = {
           ...u.items[itIdx],
-          photos: photos,
           photosCount: newCount,
           photoUpdatedAt: deleteTime,
           hasPhoto: hasPhoto,
-          fileData: newFileData,
           fileName: newFileName,
-          image_url: newImageUrl,
-          memo: updatedMemoStr,
-          _clearPhotos: !hasPhoto
+          memo: updatedMemoStr
         };
+        delete u.items[itIdx].photos;
+        delete u.items[itIdx].fileData;
+        delete u.items[itIdx].image_url;
+        delete u.items[itIdx].signDraftPhotos;
+        delete u.items[itIdx].constructionPhotos;
+        delete u.items[itIdx]._clearPhotos;
         userItemsChanged = true;
       }
     }
@@ -1009,13 +1011,15 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
         else console.log(`[PhotoDelete] ✅ Supabase DB 사진 삭제 완료 (${app.id}): 잔여 ${newCount}장`);
       });
 
-    // users.items 동기화 (updated_at 컬럼 배제 -> 400 에러 원천 차단)
-    // [설계도-03 제4원칙 / 설계도-05 제2원칙 전 사용자 items 동시 완전 소각]
+    // users.items 동기화 (경량 메타데이터만)
     if (userItemsChanged) {
       allUsers.forEach(u => {
         if (u.items && u.items.some(it => String(it.id) === String(appId) || String(it.appRefId) === String(appId))) {
+          const cleanItems = (window.SupabaseSync && typeof window.SupabaseSync.cleanItemForDiet === 'function')
+            ? u.items.map(it => window.SupabaseSync.cleanItemForDiet(it))
+            : u.items;
           window.supabaseClient.from('users')
-            .update({ items: u.items })
+            .update({ items: cleanItems })
             .eq('id', String(u.id))
             .then(({ error: uErr }) => {
               if (uErr) console.warn('[PhotoDelete] users.items sync warning:', uErr.message);
@@ -1024,30 +1028,6 @@ async function deleteApplicationSinglePhoto(appId, photoIndex) {
         }
       });
     }
-
-    // 추가 안전망: DB의 users 테이블에서 appId를 가진 레코드(admin 포함)가 있다면 사진 잔재 전수 소각
-    window.supabaseClient.from('users').select('id, items').not('items', 'is', null).then(({ data: dbUsers }) => {
-      if (Array.isArray(dbUsers)) {
-        dbUsers.forEach(du => {
-          if (du.items && Array.isArray(du.items)) {
-            let duChanged = false;
-            du.items.forEach(it => {
-              if (String(it.id) === String(appId) || String(it.appRefId) === String(appId)) {
-                it.photos = photos;
-                it.photosCount = newCount;
-                it.hasPhoto = hasPhoto;
-                it.fileData = newFileData;
-                it.photoUpdatedAt = deleteTime;
-                duChanged = true;
-              }
-            });
-            if (duChanged) {
-              window.supabaseClient.from('users').update({ items: du.items }).eq('id', String(du.id)).catch(() => {});
-            }
-          }
-        });
-      }
-    }).catch(() => {});
   }
 
   // 8. 모달 UI 및 대시보드 0초 즉각 갱신 (Q1, Q3, Q8)
@@ -1203,11 +1183,14 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
           let userModified = false;
           u.items.forEach(item => {
             if (String(item.id) === String(appId) || String(item.appRefId) === String(appId)) {
-              item.photos = finalPhotos;
               item.photosCount = finalPhotos.length;
               item.photoUpdatedAt = uploadTime;
-              if (finalPhotos.length > 0) item.fileData = finalPhotos[0];
               item.hasPhoto = finalPhotos.length > 0;
+              delete item.photos;
+              delete item.fileData;
+              delete item.image_url;
+              delete item.signDraftPhotos;
+              delete item.constructionPhotos;
               itemUpdated = true;
               userModified = true;
             }
@@ -1222,7 +1205,7 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
           localStorage.setItem('users', JSON.stringify(usersList));
         }
 
-        // Supabase DB users 테이블 클라우드 동기화 (영업자 물건에 사진 영구 보장)
+        // Supabase DB users 테이블 클라우드 동기화 (경량 메타데이터만)
         if (window.SupabaseSync && typeof window.SupabaseSync.upsertUser === 'function') {
           updatedUsers.forEach(u => window.SupabaseSync.upsertUser(u).catch(() => {}));
         }
@@ -1256,30 +1239,6 @@ async function handleApplicationPhotoUploadProcess(appId, options = {}) {
           if (dbErr) console.warn('Supabase direct photo update err:', dbErr);
           else console.log(`[PhotoUpload] ✅ Supabase DB 사진 저장 성공 (${appId}): 총 ${finalPhotos.length}장`);
         }).catch(dbErr => console.warn('Supabase direct photo update catch:', dbErr));
-
-        // DB users 테이블(admin 포함)에도 최신 사진 일괄 동기화
-        window.supabaseClient.from('users').select('id, items').not('items', 'is', null).then(({ data: dbUsers }) => {
-          if (Array.isArray(dbUsers)) {
-            dbUsers.forEach(du => {
-              if (du.items && Array.isArray(du.items)) {
-                let duChanged = false;
-                du.items.forEach(it => {
-                  if (String(it.id) === String(appId) || String(it.appRefId) === String(appId)) {
-                    it.photos = finalPhotos;
-                    it.photosCount = finalPhotos.length;
-                    it.hasPhoto = finalPhotos.length > 0;
-                    if (finalPhotos.length > 0) it.fileData = finalPhotos[0];
-                    it.photoUpdatedAt = uploadTime;
-                    duChanged = true;
-                  }
-                });
-                if (duChanged) {
-                  window.supabaseClient.from('users').update({ items: du.items }).eq('id', String(du.id)).catch(() => {});
-                }
-              }
-            });
-          }
-        }).catch(() => {});
       }
 
       // 8. 6대 화면 0초 동시 렌더링 및 전역 실시간 브로드캐스트 (SSOT)
@@ -1784,22 +1743,48 @@ window.SupabaseSync = {
   isSyncing: false,
   autoSyncTimer: null,
 
+  // [설계도-08 BP-TRAFFIC-DIET 제9원칙] items 내 Base64 이미지 및 중복 사진 찌꺼기 100% 완전 소각 엔진
+  cleanItemForDiet(item) {
+    if (!item || typeof item !== 'object') return item;
+    const cleanItem = { ...item };
+    const count = (Array.isArray(item.photos) && item.photos.length > 0)
+      ? item.photos.length
+      : (item.fileData ? 1 : (Number(item.photosCount) || 0));
+    const constCount = (Array.isArray(item.constructionPhotos) && item.constructionPhotos.length > 0)
+      ? item.constructionPhotos.length
+      : (Number(item.constPhotoCount) || 0);
+
+    delete cleanItem.photos;
+    delete cleanItem.fileData;
+    delete cleanItem.image_url;
+    delete cleanItem.signDraftPhotos;
+    delete cleanItem.constructionPhotos;
+    delete cleanItem._clearPhotos;
+
+    cleanItem.photosCount = count;
+    cleanItem.hasPhoto = count > 0;
+    cleanItem.constPhotoCount = constCount;
+
+    if (cleanItem.memo && typeof cleanItem.memo === 'string') {
+      try {
+        const m = JSON.parse(cleanItem.memo);
+        let mChanged = false;
+        if (m.signDraftPhotos) { delete m.signDraftPhotos; mChanged = true; }
+        if (m.constructionPhotos) { delete m.constructionPhotos; mChanged = true; }
+        if (m.photos) { delete m.photos; mChanged = true; }
+        if (m.image_url) { delete m.image_url; mChanged = true; }
+        if (mChanged) cleanItem.memo = JSON.stringify(m);
+      } catch (e) {}
+    }
+    return cleanItem;
+  },
+
   // 사용자 객체를 Supabase DB 컬럼으로 매핑 (items 내부의 base64 사진 데이터 분리 경량화)
   mapUserToDb(user) {
     if (!user) return null;
     let safeItems = user.items || [];
     if (Array.isArray(safeItems)) {
-      safeItems = safeItems.map(item => {
-        if (!item || typeof item !== 'object') return item;
-        const count = (Array.isArray(item.photos) && item.photos.length > 0) ? item.photos.length : (item.fileData ? 1 : (item.photosCount || 0));
-        const cleanItem = { ...item };
-        // users 테이블 items 내부에 base64 사진이 중복 저장되는 것을 차단 (applications 테이블 SSOT로 단일화)
-        delete cleanItem.photos;
-        delete cleanItem.fileData;
-        cleanItem.photosCount = count;
-        cleanItem.hasPhoto = count > 0;
-        return cleanItem;
-      });
+      safeItems = safeItems.map(item => this.cleanItemForDiet(item));
     }
 
     return {
@@ -2218,6 +2203,9 @@ window.SupabaseSync = {
   async updateUser(uid, updateFields) {
     if (!window.supabaseClient || !uid) return false;
     try {
+      if (updateFields && Array.isArray(updateFields.items)) {
+        updateFields.items = updateFields.items.map(it => this.cleanItemForDiet(it));
+      }
       const { data, error } = await window.supabaseClient
         .from('users')
         .update(updateFields)
@@ -3080,11 +3068,9 @@ window.SupabaseSync = {
                     progressStatus: fa.progressStatus || '지원대기중',
                     status: fa.status || 'pending',
                     registeredAt: fa.appliedAt || new Date().toISOString(),
-                    photos: fa.photos || [],
                     photosCount: Number(fa.photosCount) || (Array.isArray(fa.photos) ? fa.photos.length : 0),
                     hasPhoto: Boolean(fa.hasPhoto || (fa.photosCount > 0)),
-                    fileData: fa.fileData || (fa.photos && fa.photos[0]) || '',
-                    signDraftPhotos: fa.signDraftPhotos || [],
+                    photoUpdatedAt: fa.photoUpdatedAt || 0,
                     draftStatus: fa.draftStatus || 'pending',
                     draftApprovedAt: fa.draftApprovedAt || null,
                     assignedConstructorId: fa.assignedConstructorId || null,
@@ -3092,18 +3078,19 @@ window.SupabaseSync = {
                     assignedConstructorCode: fa.assignedConstructorCode || null,
                     assignedConstructorPhone: fa.assignedConstructorPhone || null,
                     constructionStatus: fa.constructionStatus || 'none',
-                    constructionPhotos: Array.isArray(fa.constructionPhotos) ? fa.constructionPhotos : [],
                     constPhotoCount: Number(fa.constPhotoCount) || (Array.isArray(fa.constructionPhotos) ? fa.constructionPhotos.length : 0),
-                    memo: fa.memo || ''
+                    memo: (typeof this.cleanItemForDiet === 'function' ? this.cleanItemForDiet({ memo: fa.memo }).memo : '') || ''
                   };
                   if (existingIdx >= 0) {
                     const prevItem = targetUser.items[existingIdx];
-                    if ((!itemPayload.photos || itemPayload.photos.length === 0) && prevItem.photos && prevItem.photos.length > 0) {
-                      itemPayload.photos = prevItem.photos;
-                      itemPayload.fileData = prevItem.fileData || prevItem.photos[0];
-                    }
+                    delete prevItem.photos;
+                    delete prevItem.fileData;
+                    delete prevItem.image_url;
+                    delete prevItem.signDraftPhotos;
+                    delete prevItem.constructionPhotos;
+                    delete prevItem._clearPhotos;
                     itemPayload.photosCount = Math.max(itemPayload.photosCount, Number(prevItem.photosCount) || 0);
-                    // [설계도-04 SSOT] 시안 사진은 최신 applications(fa.signDraftPhotos) 단일 기준을 100% 추종하며, 삭제된 사진의 임의 부활을 엄격 금지
+                    // [설계도-04 SSOT] 시안 상태는 최신 applications 단일 기준을 100% 추종하며, 삭제된 사진의 임의 부활을 엄격 금지
                     if (!itemPayload.draftStatus && prevItem.draftStatus) itemPayload.draftStatus = prevItem.draftStatus;
                     if (!itemPayload.draftApprovedAt && prevItem.draftApprovedAt) itemPayload.draftApprovedAt = prevItem.draftApprovedAt;
                     targetUser.items[existingIdx] = { ...prevItem, ...itemPayload };

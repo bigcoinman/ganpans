@@ -390,6 +390,10 @@ graph TD
 8. **현장사진 users 테이블 Fallback 완전 박멸 및 좀비 부활 영구 금지 (Zero Dual Fallback & Zero Zombie Photo)**:
    - `ensureApplicationPhotosLoaded`는 오직 `applications` 단일 테이블만 직접 조회하며, `applications.image_url`이 `null`이거나 비어있을 때 `users` 테이블 전체를 전수 쿼리하여 과거 사진을 되살려내는 어떠한 Fallback 코드도 영구 엄격 금지한다.
    - 최고관리자가 사진을 삭제하여 `image_url`이 `null`이 된 경우, 그 어떤 로컬 캐시나 `users.items`에서도 과거 사진을 역복원할 수 없으며 0장(부존재)이 100% 절대 확정된다.
+9. **users 테이블 및 users.items 내 일체의 Base64 사진 데이터 보관 영구 엄격 금지 (Zero Image in users.items)**:
+   - `users.items`는 오직 영업물건의 텍스트 메타데이터(`id, storeName, receiptStatus, progressStatus, constructionStatus, memo, photosCount, photoUpdatedAt`)만 초경량으로 보관한다.
+   - `photos`, `fileData`, `image_url`, `signDraftPhotos`, `constructionPhotos` 등 일체의 Base64 이미지 데이터를 `users` 테이블 및 `users.items`에 저장하거나 복제하는 행위를 100% 영구 엄격 금지한다.
+   - `mapUserToDb` 및 `updateUser` 시 `items` 내에 존재하는 모든 이미지 배열 및 Base64 데이터를 자동 정화(Sanitize)하여, 1회 회원 목록 조회 시 페이로드가 3KB 이하(99.5% 절감)로 유지되도록 영구 방어한다.
 
 ### 2. 설계도 보존법칙 (모든 설계도는 일원화 할 것 - 이원화 절대 금지)
 1. **단일 압축 엔진(`compressImageFile` / `compressImageToBase64`) 일원화**:
@@ -400,13 +404,14 @@ graph TD
    - 사진 데이터를 다루기 위한 별도의 로컬 복제 테이블이나 독자 캐시 배열을 생성하지 않고, 오직 `PhotoCacheManager` 및 `applications` SSOT 원본만을 직접 읽고 갱신한다.
 
 ### 3. 자동 검문소 (검증망) 영구 감시 규칙 (Automated Blueprint Guard Rules)
-배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 6대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
+배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 7대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
 1. **[검문 1] 이미지 압축 기본 규격 검증**: `compressImageFile` 및 `compressImageToBase64` 기본값이 `90 * 1024`(90KB), `max_size = 800`으로 설정되어 있는지 검사.
 2. **[검문 2] 목록 동기화 시 사진 배제 쿼리 검증**: `security-utils.js` 내 applications 조회 쿼리에서 `image_url` 배제 선별 쿼리가 유지되고 있는지 검사.
 3. **[검문 3] Fallback 쿼리 select('*') 부존재 검증**: fallback 쿼리에서 `select('*')`가 0건인지 전수 검사.
 4. **[검문 4] Realtime 300ms 디바운스 엔진 검증**: WebSocket 변경 감지 시 `triggerDebouncedSync` 및 `setTimeout(..., 300)` 탑재 여부 검사.
 5. **[검문 5] PhotoCacheManager photoUpdatedAt 타임스탬프 기반 캐시 무효화 준수**: `security-utils.js` 내 `PhotoCacheManager.get` 및 `ensureApplicationPhotosLoaded`의 `expectedUpdatedAt` 검증 코드 탑재 검사.
 6. **[검문 6] 사진 추가 등록 시 실서버 DB 사전 조회 및 누적 병합 준수**: `data-store.js`의 `handleJobPhotoUploadCommon` 내 Supabase DB 사전 조회(`supabaseClient.from('applications').select`) 및 누적 병합 로직 탑재 검사.
+7. **[검문 7] users.items 내 Base64 사진 저장 찌꺼기 100% 부존재 검증**: `security-utils.js` 내에서 `users.items`로 `photos` 및 `fileData` Base64를 복제·저장하는 찌꺼기 코드가 0건인지 전수 검사.
 
 ### 4. 사진 규격 및 대역폭 최적화 매트릭스
 | 구분 | 기존 규격 (트래픽 폭증기) | **[설계도-08] 확정 규격 (영구 방어)** | 최적화 효과 |
@@ -415,6 +420,7 @@ graph TD
 | **파일당 최대 용량** | 300 KB | **80 ~ 90 KB 이하 (품질 0.70)** | 파일당 70% 용량 다이어트 |
 | **신청서(3장 기준)** | 약 900 KB ~ 1.2 MB | **약 200 ~ 250 KB 이하** | 1건당 Egress 75% 절감 |
 | **목록 동기화** | 전체 Base64 포함 조회 위험 | **사진 컬럼 100% 배제 (선별 텍스트)** | Egress 99% 원천 절감 |
+| **회원 목록 동기화** | users.items에 사진 복제 누적(550KB) | **users.items 내 사진 100% 배제 (3KB 이하)** | 페이로드 99.5% 다이어트 |
 | **Realtime 동기화** | 이벤트 발화마다 즉시 재조회 | **300ms 디바운스 묶음 처리** | 소켓 폭풍 및 대역폭 누수 차단 |
 | **사진 재열람** | 매 열람마다 네트워크 다운로드 | **PhotoCacheManager 브라우저 캐싱** | 중복 조회 트래픽 0 바이트 |
 
