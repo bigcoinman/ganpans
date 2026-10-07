@@ -678,51 +678,75 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Visitor Tracking (Mobile) ---
-    const trackVisitorMob = async () => {
-        const RESET_KEY = 'visitor_reset_flag_20260817';
-        if (localStorage.getItem(RESET_KEY) !== 'done') {
-            localStorage.removeItem('visitor_total');
-            localStorage.removeItem('visitor_today');
-            localStorage.removeItem('visitor_last_date');
-            localStorage.setItem(RESET_KEY, 'done');
+    // --- [설계도-10] BP-VISITOR-ANALYTICS: 서버 원자적(Atomic) 방문자 카운팅 파이프라인 ---
+    const trackVisitorSSOT = async () => {
+        const SESSION_KEY = 'ganpan_visitor_counted_v1';
+        const KST_TODAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+
+        // 대시보드 화면이 활성화되어 있을 때 0초 DOM 동기화 헬퍼
+        const updateVisitorStatUI = (today, total) => {
+            const visitorsStat = document.getElementById('admin-stat-visitors-mob');
+            const totalVisitorsStat = document.getElementById('admin-stat-total-visitors-mob');
+            if (visitorsStat && typeof today === 'number') visitorsStat.textContent = `${today}명`;
+            if (totalVisitorsStat && typeof total === 'number') totalVisitorsStat.textContent = `${total}명`;
+        };
+
+        // 1. 이미 이번 세션에서 카운트되었는지 확인 (세션 잠금: 새로고침/탭이동 무한 카운팅 방지)
+        if (sessionStorage.getItem(SESSION_KEY)) {
+            return;
         }
 
-        const todayStr = new Date().toISOString().split('T')[0];
-        let totalCount = parseInt(localStorage.getItem('visitor_total') || '0', 10);
-        let todayCount = parseInt(localStorage.getItem('visitor_today') || '0', 10);
-        const lastDate = localStorage.getItem('visitor_last_date');
+        // 세션 각인 (즉시 잠금)
+        sessionStorage.setItem(SESSION_KEY, 'true');
 
-        if (lastDate !== todayStr) {
-            todayCount = 0;
-            localStorage.setItem('visitor_last_date', todayStr);
-            localStorage.setItem('visitor_today', '0');
-        }
+        if (!window.supabaseClient) return;
 
-        if (!sessionStorage.getItem('visitor_session_counted_v2')) {
-            sessionStorage.setItem('visitor_session_counted_v2', 'true');
-            totalCount += 1;
-            todayCount += 1;
-            localStorage.setItem('visitor_total', totalCount.toString());
-            localStorage.setItem('visitor_today', todayCount.toString());
-            localStorage.setItem('visitor_last_date', todayStr);
+        try {
+            // 1순위: Supabase Postgres RPC 원자적 트랜잭션 호출 (동시접속 완전 무결 보장)
+            const { data, error } = await window.supabaseClient.rpc('increment_visitor_count');
+            if (!error && data && data.success) {
+                const today = Number(data.today_count) || 1;
+                const total = Number(data.total_count) || 1;
+                localStorage.setItem('site_stats_cache', JSON.stringify({ today, total, date: data.today_date }));
+                updateVisitorStatUI(today, total);
+                return;
+            }
 
-            if (window.supabaseClient) {
-                try {
-                    await window.supabaseClient.from('site_stats').upsert({
-                        id: 'visitor_counter',
-                        today_date: todayStr,
-                        today_count: todayCount,
-                        total_count: totalCount,
-                        updated_at: new Date().toISOString()
-                    });
-                } catch (err) {
-                    console.warn('Supabase visitor tracking notice:', err.message);
+            // 2순위: RPC 미지원 환경 대비 Server-Read-First 안전 폴백 (로컬스토리지 덮어쓰기 원천 배제)
+            const { data: currentData } = await window.supabaseClient
+                .from('site_stats')
+                .select('id, today_date, today_count, total_count')
+                .eq('id', 'visitor_counter')
+                .maybeSingle();
+
+            let nextToday = 1;
+            let nextTotal = 1;
+
+            if (currentData) {
+                nextTotal = (Number(currentData.total_count) || 0) + 1;
+                if (currentData.today_date === KST_TODAY) {
+                    nextToday = (Number(currentData.today_count) || 0) + 1;
+                } else {
+                    nextToday = 1;
                 }
             }
+
+            const payload = {
+                id: 'visitor_counter',
+                today_date: KST_TODAY,
+                today_count: nextToday,
+                total_count: nextTotal,
+                updated_at: new Date().toISOString()
+            };
+
+            await window.supabaseClient.from('site_stats').upsert(payload);
+            localStorage.setItem('site_stats_cache', JSON.stringify({ today: nextToday, total: nextTotal, date: KST_TODAY }));
+            updateVisitorStatUI(nextToday, nextTotal);
+        } catch (err) {
+            console.warn('[Visitor] 원자적 방문자 집계 처리 알림:', err.message);
         }
     };
-    trackVisitorMob();
+    trackVisitorSSOT();
 
     // --- Drawer Menu Selectors ---
     const drawerOverlay = document.getElementById('app-drawer-overlay');
@@ -2741,16 +2765,17 @@ document.addEventListener('DOMContentLoaded', () => {
         applications = JSON.parse(localStorage.getItem('applications')) || [];
         users = JSON.parse(localStorage.getItem('users')) || [];
 
-        const todayStr = new Date().toISOString().split('T')[0];
-        const lastDate = localStorage.getItem('visitor_last_date');
-        let todayCount = parseInt(localStorage.getItem('visitor_today') || '0', 10);
-        let totalCount = parseInt(localStorage.getItem('visitor_total') || '0', 10);
-
-        if (lastDate !== todayStr) {
-            todayCount = 0;
-            localStorage.setItem('visitor_today', '0');
-            localStorage.setItem('visitor_last_date', todayStr);
-        }
+        // [설계도-10] SSOT 단일 캐시에서 오늘/총 방문자 수 즉시 추출 및 0초 표출
+        let todayCount = 0;
+        let totalCount = 0;
+        try {
+            const cachedStats = JSON.parse(localStorage.getItem('site_stats_cache') || '{}');
+            if (cachedStats) {
+                const kstToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+                todayCount = cachedStats.date === kstToday ? (Number(cachedStats.today) || 0) : 0;
+                totalCount = Number(cachedStats.total) || 0;
+            }
+        } catch (eStatParse) {}
 
         if (totalStat) totalStat.textContent = `${applications.length}건`;
         if (visitorsStat) visitorsStat.textContent = `${todayCount}명`;
@@ -2805,34 +2830,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pInEl) pInEl.textContent = pipeIn;
         if (pAfterEl) pAfterEl.textContent = pipeAfter;
         if (pCompletedEl) pCompletedEl.textContent = pipeCompleted;
-
-
-        // Supabase에서 최신 방문자 통계 비동기 백그라운드 동기화 (UI 블로킹 완전 제거)
-        if (window.supabaseClient) {
-            (async () => {
-                try {
-                    const { data } = await window.supabaseClient
-                        .from('site_stats')
-                        .select('*')
-                        .eq('id', 'visitor_counter')
-                        .single();
-                    if (data) {
-                        if (data.today_date === todayStr && data.today_count > todayCount) {
-                            todayCount = data.today_count;
-                            localStorage.setItem('visitor_today', todayCount.toString());
-                            if (visitorsStat) visitorsStat.textContent = `${todayCount}명`;
-                        }
-                        if (data.total_count > totalCount) {
-                            totalCount = data.total_count;
-                            localStorage.setItem('visitor_total', totalCount.toString());
-                            if (totalVisitorsStat) totalVisitorsStat.textContent = `${totalCount}명`;
-                        }
-                    }
-                } catch (e) {
-                    // Fallback to localStorage
-                }
-            })();
-        }
 
         if (!skipSync) {
             syncAdminDataFromSupabaseMob(true);

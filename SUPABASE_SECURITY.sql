@@ -174,5 +174,47 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.users;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.inquiries;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.site_stats;
 
+-- 11. [설계도-10] 서버 원자적(Atomic) 방문자수 집계 RPC 함수 (increment_visitor_count)
+-- 클라이언트 로컬스토리지 덮어쓰기 버그 원천 박멸, DB 트랜잭션 내부에서 날짜 갱신 및 +1 안전 원자적 처리
+CREATE OR REPLACE FUNCTION public.increment_visitor_count()
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_today VARCHAR(20);
+    v_today_count INT;
+    v_total_count INT;
+BEGIN
+    -- 한국 표준시 (KST: UTC+9) 기준 오늘 날짜 (YYYY-MM-DD)
+    v_today := to_char(timezone('Asia/Seoul', NOW()), 'YYYY-MM-DD');
+
+    -- site_stats 테이블의 'visitor_counter' 단일 행을 안전하게 원자적 갱신
+    INSERT INTO public.site_stats (id, today_date, today_count, total_count, updated_at)
+    VALUES ('visitor_counter', v_today, 1, 1, timezone('utc'::text, NOW()))
+    ON CONFLICT (id) DO UPDATE
+    SET 
+        today_count = CASE 
+            WHEN public.site_stats.today_date = v_today THEN COALESCE(public.site_stats.today_count, 0) + 1
+            ELSE 1
+        END,
+        total_count = COALESCE(public.site_stats.total_count, 0) + 1,
+        today_date = v_today,
+        updated_at = timezone('utc'::text, NOW())
+    RETURNING today_count, total_count INTO v_today_count, v_total_count;
+
+    RETURN json_build_object(
+        'success', true,
+        'today_date', v_today,
+        'today_count', v_today_count,
+        'total_count', v_total_count
+    );
+END;
+$$;
+
+-- anon 및 authenticated 역할에 RPC 실행 권한 부여
+GRANT EXECUTE ON FUNCTION public.increment_visitor_count() TO anon, authenticated, service_role;
+
+
 
 

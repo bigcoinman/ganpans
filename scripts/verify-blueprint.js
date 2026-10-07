@@ -528,6 +528,41 @@ assertRule(
   '단일 동기화 파이프라인(SupabaseSync) 원칙을 위배하는 독자 전역 바인딩이 발견되었습니다!'
 );
 
+console.log('\n--- [설계도-10 검증] BP-VISITOR-ANALYTICS (방문자수 서버 원자적 집계 및 무결성) ---');
+assertRule(
+  '[BP-10] visitor 로컬스토리지 덮어쓰기 찌꺼기 100% 부존재 검증',
+  !appCode.includes("localStorage.setItem('visitor_total'") && 
+  !appCode.includes("localStorage.setItem('visitor_today'"),
+  'app.js 내에 방문자수를 로컬스토리지로 덮어쓰는 구형 찌꺼기가 잔존합니다!'
+);
+
+assertRule(
+  '[BP-10] visitor 구형 리셋 플래그 잔재 100% 부존재 검증',
+  !appCode.includes('visitor_reset_flag_20260817'),
+  'app.js 내에 과거 visitor_reset_flag 하드코딩 찌꺼기가 잔존합니다!'
+);
+
+assertRule(
+  '[BP-10] 렌더링 함수 내 site_stats 독자 쿼리 100% 부존재 검증',
+  !appCode.includes("eq('id', 'visitor_counter').single()"),
+  'app.js 렌더링 함수 내에 site_stats 독자 쿼리 찌꺼기가 잔존합니다!'
+);
+
+assertRule(
+  '[BP-10] increment_visitor_count RPC 기반 trackVisitorSSOT 단일 파이프라인 탑재 준수',
+  appCode.includes('trackVisitorSSOT') && 
+  appCode.includes("rpc('increment_visitor_count')") &&
+  appCode.includes('ganpan_visitor_counted_v1'),
+  'app.js 내에 [설계도-10] trackVisitorSSOT 원자적 파이프라인이 탑재되지 않았습니다!'
+);
+
+assertRule(
+  '[BP-10] security-utils.js syncAllData 내 site_stats 수집 및 Realtime 구독 준수',
+  secUtilsCode.includes("table: 'site_stats'") && 
+  secUtilsCode.includes("localStorage.setItem('site_stats_cache'"),
+  'security-utils.js에 site_stats 수집 또는 Realtime 구독이 누락되었습니다!'
+);
+
 console.log('\n--- [이원화 금지 검사] 유령 코드 및 찌꺼기 패턴 검사 ---');
 const ghostPatterns = [
   'viewDraftModalForSales',
@@ -540,7 +575,9 @@ const ghostPatterns = [
   'fetchAndRenderAdminApplicationsFresh',
   'fetchAndRenderAdminUsersFresh',
   'finalUserAddress',
-  'finalUserPhone'
+  'finalUserPhone',
+  'visitor_reset_flag_20260817',
+  'visitor_session_counted_v2'
 ];
 for (const pattern of ghostPatterns) {
   assertRule(
@@ -552,7 +589,7 @@ for (const pattern of ghostPatterns) {
 
 console.log('\n========================================================');
 if (passed) {
-  console.log('🎉 [검증 완료] 9대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
+  console.log('🎉 [검증 완료] 10대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
   console.log('   기존 기능 훼손 0건, 이원화 찌꺼기 0건 확인 완료.');
   console.log('========================================================\n');
   process.exit(0);
@@ -562,3 +599,4 @@ if (passed) {
   console.error('========================================================\n');
   process.exit(1);
 }
+

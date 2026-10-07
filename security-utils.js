@@ -3168,8 +3168,32 @@ window.SupabaseSync = {
         }
       }
 
+      // --- D. [설계도-10] 사이트 통계 및 방문자수(Site Stats) Supabase 클라우드 원천 직접 수집 ---
+      let statsChanged = false;
+      try {
+        const { data: supaStats, error: statsErr } = await window.supabaseClient
+          .from('site_stats')
+          .select('id, today_date, today_count, total_count')
+          .eq('id', 'visitor_counter')
+          .maybeSingle();
+        if (!statsErr && supaStats) {
+          const kstToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+          const statObj = {
+            today: supaStats.today_date === kstToday ? (Number(supaStats.today_count) || 0) : 0,
+            total: Number(supaStats.total_count) || 0,
+            date: supaStats.today_date
+          };
+          const oldStatsStr = localStorage.getItem('site_stats_cache') || '';
+          const newStatsStr = JSON.stringify(statObj);
+          if (oldStatsStr !== newStatsStr) {
+            localStorage.setItem('site_stats_cache', newStatsStr);
+            statsChanged = true;
+          }
+        }
+      } catch (eStatSync) {}
+
       // 실제 데이터가 변경되었거나 강제 갱신(force)일 때 화면 갱신 이벤트 발화
-      if (usersChanged || appsChanged || inqsChanged || force) {
+      if (usersChanged || appsChanged || inqsChanged || statsChanged || force) {
         window.dispatchEvent(new CustomEvent('supabase-data-synced', {
           detail: { timestamp: new Date().toISOString() }
         }));
@@ -3209,6 +3233,9 @@ window.SupabaseSync = {
           triggerDebouncedSync();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'inquiries' }, () => {
+          triggerDebouncedSync();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'site_stats' }, () => {
           triggerDebouncedSync();
         })
         .subscribe((status, err) => {

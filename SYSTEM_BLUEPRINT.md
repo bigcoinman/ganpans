@@ -15,6 +15,7 @@
 * **`[설계도-07] BP-AUTH-RECOVERY`**: 로그인 팝업 내 아이디 찾기 및 비밀번호 재설정 단일 연동 설계도 *(공식 확정)*
 * **`[설계도-08] BP-TRAFFIC-DIET`**: 트래픽 다이어트 및 Supabase 대역폭(Egress) 영구 방어 설계도 *(공식 확정)*
 * **`[설계도-09] BP-CLEAN-PIPELINE`**: 땜빵 금지, 구형 찌꺼기 전수 삭제 및 단일 파이프라인(Clean Slate Single Pipeline) 보존 설계도 *(공식 확정)*
+* **`[설계도-10] BP-VISITOR-ANALYTICS`**: 방문자수 서버 원자적(Atomic) 집계 및 외부 정밀 애널리틱스 연동 설계도 *(공식 확정)*
 
 ---
 
@@ -466,6 +467,34 @@ graph TD
    - `renderAdminDashboardMob` 등 렌더링 함수 바디 내에 독자 Supabase 쿼리(`client.from`) 부존재 검사.
 3. **[검문 3] 렌더링 루프 재조회 우회 타이머 부존재 검증**:
    - 화면 렌더링 함수 내에서 `skipSync`를 무시하고 비동기로 클라우드를 재조회하는 이중 쿼리 부존재 검사.
+
+---
+
+## 📐 [설계도-10] BP-VISITOR-ANALYTICS: 방문자수 서버 원자적(Atomic) 집계 및 외부 정밀 애널리틱스 연동 설계도 *(공식 확정)*
+
+### 1. 4대 불변 원칙 (Absolute Rules)
+1. **서버 원자적 카운팅 단일 파이프라인 (SSOT Atomic Counting)**:
+   - 클라이언트 브라우저 로컬스토리지(`localStorage.getItem('visitor_total')`)를 읽어와서 DB에 강제로 덮어쓰는 행위를 100% 영구 엄격 금지한다.
+   - 모든 방문자 집계는 Supabase Postgres RPC 함수(`increment_visitor_count`) 단 1개의 파이프라인으로 일원화하여, 서버 DB 트랜잭션 내부에서 날짜 갱신과 `today_count`, `total_count` 원자적 증가(+1)를 안전하게 처리한다.
+   - 만약 RPC 함수 미지원 환경일 때도 서버의 현재 최신값을 먼저 조회한 후 갱신하는 Server-Read-First 안전 폴백을 탑재하여 다른 사용자의 카운트를 덮어쓰는 데이터 오염을 원천 차단한다.
+2. **브라우저 세션 잠금 원칙 (Session Lock SSOT)**:
+   - 동일 브라우저 탭 내에서 새로고침을 연타하거나 페이지 이동 시 카운트가 무한정 올라가지 않도록 `sessionStorage`를 활용한 단일 세션 잠금(`ganpan_visitor_counted_v1`)을 적용하여 1세션당 딱 1회만 카운팅을 수행한다.
+3. **최고관리자 대시보드 단일 렌더러 일원화**:
+   - `renderAdminDashboardMob` 화면 렌더링 함수 내부에서 독자적으로 비동기 DB 쿼리(`client.from('site_stats')`)를 실행하는 찌꺼기를 전수 삭제한다.
+   - 대시보드는 `DataStore` 및 안전 캐시 저장소에서 0초 만에 방문자 카드를 즉시 표시하며, Realtime 브로드캐스트 이벤트(`site_stats` 변경)를 통해 새로운 방문자가 들어왔을 때 대시보드 화면이 0초 실시간으로 자동 갱신된다.
+4. **외부 전문 분석 도구(GA4 / Cloudflare) 무간섭 격리**:
+   - 구글 애널리틱스(GA4) 및 Cloudflare Web Analytics는 `index.html` 상단에 비동기(`async / defer`)로 격리 탑재한다.
+   - 개인 식별 정보(PII) 전송을 엄격히 배제하며, 자체 애플리케이션 상태나 DB 트랜잭션과 100% 물리적 독립성을 유지한다.
+
+### 2. 자동 검문소 (`verify-blueprint.js`) 영구 감시 규칙
+1. **[검문 1] visitor 로컬스토리지 덮어쓰기 찌꺼기 100% 부존재 검증**:
+   - `localStorage.getItem('visitor_total')`을 읽어와서 Supabase에 직접 upsert하는 구형 코드 부존재 검사.
+2. **[검문 2] visitor 구형 리셋 플래그 잔재 100% 부존재 검증**:
+   - `visitor_reset_flag_20260817` 등 구형 하드코딩 플래그 부존재 검사.
+3. **[검문 3] 렌더링 함수 내 site_stats 독자 쿼리 100% 부존재 검증**:
+   - `renderAdminDashboardMob` 내부 바디에 `from('site_stats')` 독자 쿼리 부존재 검사.
+4. **[검문 4] increment_visitor_count RPC 기반 trackVisitorSSOT 단일 파이프라인 탑재 준수**:
+   - `trackVisitorSSOT` 함수 및 원자적 카운팅 파이프라인 탑재 검증.
 
 ---
 
