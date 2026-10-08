@@ -563,6 +563,14 @@ assertRule(
   'security-utils.js에 site_stats 수집 또는 Realtime 구독이 누락되었습니다!'
 );
 
+assertRule(
+  '[BP-10] 폴백 조회 실패 시 1 리셋 방어벽 (readError 방어) 탑재 준수',
+  appCode.includes('readError') && 
+  appCode.includes('if (readError)') &&
+  appCode.includes('Anti-Decreasing Guard'),
+  'app.js 내에 [설계도-10] readError 방어벽 및 단조 증가 수호 장치가 탑재되지 않았습니다!'
+);
+
 console.log('\n--- [이원화 금지 검사] 유령 코드 및 찌꺼기 패턴 검사 ---');
 const ghostPatterns = [
   'viewDraftModalForSales',

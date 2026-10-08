@@ -476,7 +476,8 @@ graph TD
 1. **서버 원자적 카운팅 단일 파이프라인 (SSOT Atomic Counting)**:
    - 클라이언트 브라우저 로컬스토리지(`localStorage.getItem('visitor_total')`)를 읽어와서 DB에 강제로 덮어쓰는 행위를 100% 영구 엄격 금지한다.
    - 모든 방문자 집계는 Supabase Postgres RPC 함수(`increment_visitor_count`) 단 1개의 파이프라인으로 일원화하여, 서버 DB 트랜잭션 내부에서 날짜 갱신과 `today_count`, `total_count` 원자적 증가(+1)를 안전하게 처리한다.
-   - 만약 RPC 함수 미지원 환경일 때도 서버의 현재 최신값을 먼저 조회한 후 갱신하는 Server-Read-First 안전 폴백을 탑재하여 다른 사용자의 카운트를 덮어쓰는 데이터 오염을 원천 차단한다.
+   - **[초기화 방어벽 헌법 (Zero Destructive Overwrite Guard)]**: RPC 미지원 환경 폴백 동작 시, 서버 조회에서 일시적 네트워크 오류나 타임아웃(`readError`) 발생 시 절대로 DB를 1로 덮어쓰지 않고 작업을 즉각 중단하여 기존 서버 레코드를 100% 영구 보존한다.
+   - **[단조 증가 수호 헌법 (Anti-Decreasing Guard)]**: 총 누적 방문자 수는 어떠한 경우에도 이전 누적치보다 작아질 수 없으며, 오직 안전한 `+1` 단조 증가(Monotonic Increase)만 허용한다.
 2. **브라우저 세션 잠금 원칙 (Session Lock SSOT)**:
    - 동일 브라우저 탭 내에서 새로고침을 연타하거나 페이지 이동 시 카운트가 무한정 올라가지 않도록 `sessionStorage`를 활용한 단일 세션 잠금(`ganpan_visitor_counted_v1`)을 적용하여 1세션당 딱 1회만 카운팅을 수행한다.
 3. **최고관리자 대시보드 단일 렌더러 일원화**:
@@ -495,6 +496,8 @@ graph TD
    - `renderAdminDashboardMob` 내부 바디에 `from('site_stats')` 독자 쿼리 부존재 검사.
 4. **[검문 4] increment_visitor_count RPC 기반 trackVisitorSSOT 단일 파이프라인 탑재 준수**:
    - `trackVisitorSSOT` 함수 및 원자적 카운팅 파이프라인 탑재 검증.
+5. **[검문 5] 폴백 조회 실패 시 1 리셋 방어벽 (readError 방어) 탑재 준수**:
+   - `readError` 발생 시 DB 덮어쓰기 즉각 중단 및 데이터 보존 검증.
 
 ---
 

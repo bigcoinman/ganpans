@@ -699,7 +699,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // 세션 각인 (즉시 잠금)
         sessionStorage.setItem(SESSION_KEY, 'true');
 
-        if (!window.supabaseClient) return;
+        if (!window.supabaseClient && typeof initGlobalSupabaseClient === 'function') {
+            initGlobalSupabaseClient();
+        }
+        if (!window.supabaseClient) {
+            sessionStorage.removeItem(SESSION_KEY);
+            setTimeout(trackVisitorSSOT, 500);
+            return;
+        }
 
         try {
             // 1순위: Supabase Postgres RPC 원자적 트랜잭션 호출 (동시접속 완전 무결 보장)
@@ -713,23 +720,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 2순위: RPC 미지원 환경 대비 Server-Read-First 안전 폴백 (로컬스토리지 덮어쓰기 원천 배제)
-            const { data: currentData } = await window.supabaseClient
+            const { data: currentData, error: readError } = await window.supabaseClient
                 .from('site_stats')
                 .select('id, today_date, today_count, total_count')
                 .eq('id', 'visitor_counter')
                 .maybeSingle();
 
-            let nextToday = 1;
-            let nextTotal = 1;
-
-            if (currentData) {
-                nextTotal = (Number(currentData.total_count) || 0) + 1;
-                if (currentData.today_date === KST_TODAY) {
-                    nextToday = (Number(currentData.today_count) || 0) + 1;
-                } else {
-                    nextToday = 1;
-                }
+            // [초기화 방어벽 Rule 1] 조회 중 네트워크 오류, 타임아웃, RLS 에러 발생 시 절대 DB를 1로 덮어쓰지 않고 즉시 중단
+            if (readError) {
+                console.warn('[Visitor] site_stats 조회 오류 (데이터 보호를 위해 덮어쓰기 중단):', readError.message);
+                return;
             }
+
+            // [초기화 방어벽 Rule 2] DB 데이터가 존재하는 경우에만 안전하게 누적 (null로 인한 1 리셋 원천 차단)
+            let prevTotal = currentData ? (Number(currentData.total_count) || 0) : 0;
+            let prevToday = (currentData && currentData.today_date === KST_TODAY) ? (Number(currentData.today_count) || 0) : 0;
+
+            // [초기화 방어벽 Rule 3] 단조 증가 수호 (Anti-Decreasing Guard): 로컬 캐시보다 서버 수치가 작아지는 기현상 원천 방어
+            try {
+                const cachedStats = JSON.parse(localStorage.getItem('site_stats_cache') || '{}');
+                if (cachedStats && typeof cachedStats.total === 'number' && cachedStats.total > prevTotal) {
+                    prevTotal = cachedStats.total;
+                }
+            } catch (eCache) {}
+
+            const nextTotal = prevTotal + 1;
+            const nextToday = prevToday + 1;
 
             const payload = {
                 id: 'visitor_counter',
@@ -739,9 +755,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 updated_at: new Date().toISOString()
             };
 
-            await window.supabaseClient.from('site_stats').upsert(payload);
-            localStorage.setItem('site_stats_cache', JSON.stringify({ today: nextToday, total: nextTotal, date: KST_TODAY }));
-            updateVisitorStatUI(nextToday, nextTotal);
+            const { error: upsertError } = await window.supabaseClient.from('site_stats').upsert(payload);
+            if (!upsertError) {
+                localStorage.setItem('site_stats_cache', JSON.stringify({ today: nextToday, total: nextTotal, date: KST_TODAY }));
+                updateVisitorStatUI(nextToday, nextTotal);
+            } else {
+                console.warn('[Visitor] site_stats upsert 오류:', upsertError.message);
+            }
         } catch (err) {
             console.warn('[Visitor] 원자적 방문자 집계 처리 알림:', err.message);
         }
