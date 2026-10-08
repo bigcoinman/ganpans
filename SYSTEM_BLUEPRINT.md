@@ -323,9 +323,9 @@ graph TD
 ### 2. 기술 인프라 4대 불변 원칙 (Absolute Rules)
 1. **무(無)캐시 통과형 서비스워커 (`sw.js`) 절대 준수**:
    - PWA 설치 요건을 100% 충족하되, 캐시를 0% 저장하고 실시간 네트워크(`fetch(event.request)`)로 패스스루하여 화면/데이터 캐시 왜곡 영구 방지.
-2. **단일 표준 도메인(`https://ganpans.com`) 단일화 & Vercel 301 영구 리다이렉트**:
-   - 구형 `/app` 리다이렉트나 임시 파라미터를 배제하고 공식 단일 도메인만 참조.
-   - 외부/구형 서버(`ganpans.vercel.app`)로 인입되는 구형 트래픽은 `vercel.json` 301 영구 리다이렉트로 공식 도메인(`https://ganpans.com`)에 0초 만에 흡수 일원화.
+2. **단일 표준 도메인(`https://ganpans.com`) 단일화 & 일체 이원화 호스팅 배제**:
+   - 구형 경로 및 외부 임시 호스팅을 완전 배제하고 오직 공식 단일 도메인(`https://ganpans.com`)만 100% 참조.
+   - 단 하나의 단일 반응형 웹 SSOT 원칙에 따라 복수 호스팅 관리를 영구 중단하고 단일 파이프라인으로 순수성 수호.
 3. **QR 코드 바이너리 이미지 단일 표준 일원화 (`ganpan-app-qr.png`)**:
    - 모달에 노출되는 QR 이미지 파일은 반드시 `https://ganpans.com` 공식 단일 주소만 인코딩된 정식 바이너리 파일이어야 하며, 캐시 버스팅 타임스탬프를 동기화하여 클라이언트 캐시 왜곡을 원천 방어.
 4. **이벤트 단일 바인딩 의무 (Rule #4)**:
@@ -337,7 +337,7 @@ graph TD
 2. **[검문 2] 원클릭 바로가기 설치 함수 장착**: `window.handleAppShortcut` 정상 선언 검증.
 3. **[검문 3] 서비스워커 무캐시 통과형 엔진 유지**: `fetch(event.request)` 통과 및 `unregister()` 부존재 검증.
 4. **[검문 4] 이벤트 단일 바인딩 준수**: PWA 버튼에 중복 `addEventListener` 0건 검증.
-5. **[검문 5] QR 코드 단일 공식 도메인 및 Vercel 301 리다이렉트 준수**: `ganpan-app-qr.png` 존재, `vercel.json` 301 리다이렉트 설정, `index.html` 내 구형 Vercel 주소 부존재 전수 검증.
+5. **[검문 5] QR 코드 단일 공식 도메인 및 순수 SSOT 준수**: `ganpan-app-qr.png` 존재, 공식 도메인(`https://ganpans.com`) 단일 참조, `index.html` 내 구형 외부 주소 부존재 전수 검증.
 
 ---
 
