@@ -320,13 +320,24 @@ graph TD
   - 아이폰(iOS 사파리): `하단 공유(⎋) ➔ [홈 화면에 추가 (+)]` 1줄 명쾌한 안내.
   - 카카오톡 인앱: 외부 브라우저(크롬/사파리) 자동 전환 연결.
 
-### 2. 기술 인프라 3대 불변 원칙 (Absolute Rules)
+### 2. 기술 인프라 4대 불변 원칙 (Absolute Rules)
 1. **무(無)캐시 통과형 서비스워커 (`sw.js`) 절대 준수**:
    - PWA 설치 요건을 100% 충족하되, 캐시를 0% 저장하고 실시간 네트워크(`fetch(event.request)`)로 패스스루하여 화면/데이터 캐시 왜곡 영구 방지.
-2. **단일 표준 도메인(`https://ganpans.com`) 단일화**:
+2. **단일 표준 도메인(`https://ganpans.com`) 단일화 & Vercel 301 영구 리다이렉트**:
    - 구형 `/app` 리다이렉트나 임시 파라미터를 배제하고 공식 단일 도메인만 참조.
-3. **이벤트 단일 바인딩 의무 (Rule #4)**:
+   - 외부/구형 서버(`ganpans.vercel.app`)로 인입되는 구형 트래픽은 `vercel.json` 301 영구 리다이렉트로 공식 도메인(`https://ganpans.com`)에 0초 만에 흡수 일원화.
+3. **QR 코드 바이너리 이미지 단일 표준 일원화 (`ganpan-app-qr.png`)**:
+   - 모달에 노출되는 QR 이미지 파일은 반드시 `https://ganpans.com` 공식 단일 주소만 인코딩된 정식 바이너리 파일이어야 하며, 캐시 버스팅 타임스탬프를 동기화하여 클라이언트 캐시 왜곡을 원천 방어.
+4. **이벤트 단일 바인딩 의무 (Rule #4)**:
    - 인라인 `onclick`과 자바스크립트 `addEventListener` 중복 바인딩을 영구 엄격 금지하며, 단일 이벤트 발화로 충돌 방어.
+
+### 3. 자동 검문소 (검증망) 영구 감시 규칙 (Automated Blueprint Guard Rules)
+배포(`npm run deploy`) 전 실행되는 자동 검문소(`scripts/verify-blueprint.js`)에서 다음 5대 항목을 전수 검사하며, 단 1개라도 불일치 시 배포는 원천 차단된다:
+1. **[검문 1] 모바일 앱 공유 함수 장착**: `window.handleAppShare` 정상 선언 검증.
+2. **[검문 2] 원클릭 바로가기 설치 함수 장착**: `window.handleAppShortcut` 정상 선언 검증.
+3. **[검문 3] 서비스워커 무캐시 통과형 엔진 유지**: `fetch(event.request)` 통과 및 `unregister()` 부존재 검증.
+4. **[검문 4] 이벤트 단일 바인딩 준수**: PWA 버튼에 중복 `addEventListener` 0건 검증.
+5. **[검문 5] QR 코드 단일 공식 도메인 및 Vercel 301 리다이렉트 준수**: `ganpan-app-qr.png` 존재, `vercel.json` 301 리다이렉트 설정, `index.html` 내 구형 Vercel 주소 부존재 전수 검증.
 
 ---
 
