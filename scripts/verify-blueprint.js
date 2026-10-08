@@ -396,6 +396,16 @@ assertRule(
   'pwa 버튼에 중복 addEventListener가 존재합니다. Rule #4를 준수하세요.'
 );
 
+assertRule(
+  '[BP-06] QR 코드 단일 공식 도메인(ganpans.com) 일원화 및 vercel.json 301 리다이렉트 준수',
+  fs.existsSync('ganpan-app-qr.png') &&
+  fs.existsSync('vercel.json') &&
+  fs.readFileSync('vercel.json', 'utf8').includes('https://ganpans.com') &&
+  fs.readFileSync('index.html', 'utf8').includes('src="./ganpan-app-qr.png?v=') &&
+  !fs.readFileSync('index.html', 'utf8').includes('ganpans.vercel.app'),
+  'QR 코드 단일 도메인 연동 또는 Vercel 301 리다이렉트 설정이 훼손되었습니다.'
+);
+
 console.log('\n--- [설계도-07 검증] BP-AUTH-RECOVERY (아이디 찾기 및 비밀번호 재설정) ---');
 const indexHtmlCode = fs.readFileSync('index.html', 'utf8');
 

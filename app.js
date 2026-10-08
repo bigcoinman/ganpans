@@ -481,7 +481,21 @@ window.handleAppShare = function () {
     };
 
     if (navigator.share) {
-        navigator.share(shareData).catch(() => {});
+        navigator.share(shareData).catch((err) => {
+            if (err && err.name !== 'AbortError') {
+                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                    navigator.clipboard.writeText('https://ganpans.com')
+                        .then(() => {
+                            alert('간판지원단 모바일 앱 링크(https://ganpans.com)가 복사되었습니다.\n카카오톡이나 문자메시지에 붙여넣어 공유하세요!');
+                        })
+                        .catch(() => {
+                            prompt('아래 링크를 복사하여 공유하세요:', 'https://ganpans.com');
+                        });
+                } else {
+                    prompt('아래 링크를 복사하여 공유하세요:', 'https://ganpans.com');
+                }
+            }
+        });
     } else if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
         navigator.clipboard.writeText('https://ganpans.com')
             .then(() => {
@@ -554,7 +568,7 @@ window.openInstallModalMob = function (e) {
             qrImg.onerror = () => {
                 qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fganpans.com';
             };
-            qrImg.src = './ganpan-app-qr.png?v=20260817';
+            qrImg.src = './ganpan-app-qr.png?v=20261008_v1';
         }
         const qrSection = document.getElementById('install-qr-section');
         if (qrSection) qrSection.style.display = 'flex';
