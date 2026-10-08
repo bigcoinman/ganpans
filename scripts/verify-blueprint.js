@@ -13,7 +13,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 console.log('========================================================');
-console.log('🛡️ [간판지원단] 9대 공식 설계도 자동 검문소 가동');
+console.log('🛡️ [간판지원단] 10대 공식 설계도 자동 검문소 가동');
 console.log('========================================================\n');
 
 let passed = true;
@@ -47,16 +47,17 @@ const secUtilsCode = fs.readFileSync('security-utils.js', 'utf8');
 
 console.log('\n--- [설계도 등록 확인] SYSTEM_BLUEPRINT.md 체계 검사 ---');
 assertRule(
-  'SYSTEM_BLUEPRINT.md 공식 9대 설계도 목차 등록',
+  'SYSTEM_BLUEPRINT.md 공식 10대 설계도 목차 등록',
   blueprintCode.includes('BP-SALES-DASHBOARD') && 
   blueprintCode.includes('BP-APPLY-ACCOUNT') && 
   blueprintCode.includes('BP-APP-LIFECYCLE') && 
   blueprintCode.includes('BP-CONSTRUCTOR-FLOW') && 
-  blueprintCode.includes('BP-ADMIN-SSOT') &&
-  blueprintCode.includes('BP-APP-SHARE-INSTALL') &&
-  blueprintCode.includes('BP-AUTH-RECOVERY') &&
-  blueprintCode.includes('BP-TRAFFIC-DIET') &&
-  blueprintCode.includes('BP-CLEAN-PIPELINE'),
+  blueprintCode.includes('BP-ADMIN-SSOT') && 
+  blueprintCode.includes('BP-APP-SHARE-INSTALL') && 
+  blueprintCode.includes('BP-AUTH-RECOVERY') && 
+  blueprintCode.includes('BP-TRAFFIC-DIET') && 
+  blueprintCode.includes('BP-CLEAN-PIPELINE') && 
+  blueprintCode.includes('BP-VISITOR-ANALYTICS'),
   '설계도 공식 목차가 누락되었습니다.'
 );
 
