@@ -581,6 +581,50 @@ assertRule(
   'app.js 내에 [설계도-10] readError 방어벽 및 단조 증가 수호 장치가 탑재되지 않았습니다!'
 );
 
+console.log('\n--- [설계도-11 검증] BP-SLIM-PAGINATION (모바일 최적화 20건 슬림 페이지네이션 & 스마트 상단 앵커링) ---');
+
+assertRule(
+  '[BP-11] 6대 대시보드 목록 슬림 페이지네이션 변수 및 변경 엔진 탑재 준수',
+  appCode.includes('_adminUsersCurrentPage') &&
+  appCode.includes('_adminAppsCurrentPage') &&
+  appCode.includes('_adminItemsCurrentPage') &&
+  appCode.includes('_adminConstCurrentPage') &&
+  appCode.includes('_salesAppsCurrentPage') &&
+  appCode.includes('_salesBizItemsCurrentPage') &&
+  appCode.includes('changeAdminUsersPage') &&
+  appCode.includes('changeAdminAppsPage') &&
+  appCode.includes('changeAdminItemsPage') &&
+  appCode.includes('changeAdminConstPage') &&
+  appCode.includes('changeSalesAppsPage') &&
+  appCode.includes('changeSalesBizItemsPage'),
+  '6대 대시보드 목록의 슬림 페이지네이션 변수 또는 변경 엔진이 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-11] 엑셀 다운로드 SSOT 100% 보존 준수 (페이징 변수 참조 찌꺼기 100% 부존재)',
+  (() => {
+    const fnStart = appCode.indexOf('function exportBizRegisteredItemsMobToExcel()');
+    if (fnStart === -1) return false;
+    const snippet = appCode.slice(fnStart, fnStart + 1500);
+    return !snippet.includes('displayBiz') && !snippet.includes('pageBiz') && snippet.includes('getBizItemsForUser');
+  })(),
+  '영업물건 엑셀 다운로드 함수가 20건 페이징 슬라이스 변수를 참조하여 전체 데이터가 누락될 위험이 있습니다!'
+);
+
+assertRule(
+  '[BP-11] 검색창 입력 시 1페이지 자동 리셋 준수 (고스트 빈 화면 원천 차단)',
+  appCode.includes('_adminUsersCurrentPage = 1') &&
+  appCode.includes('_salesAppsCurrentPage = 1') &&
+  appCode.includes('_salesBizItemsCurrentPage = 1'),
+  '검색창 입력 시 현재 페이지를 1페이지로 리셋하는 안전 코드가 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-11] 페이지 전환 시 스마트 상단 앵커링(block: start) 스크롤 준수',
+  appCode.includes("scrollIntoView({ behavior: 'smooth', block: 'start' })"),
+  '페이지 전환 시 목록 상단으로 부드럽게 스크롤하는 앵커링 코드가 누락되었습니다!'
+);
+
 console.log('\n--- [이원화 금지 검사] 유령 코드 및 찌꺼기 패턴 검사 ---');
 const ghostPatterns = [
   'viewDraftModalForSales',
@@ -607,7 +651,7 @@ for (const pattern of ghostPatterns) {
 
 console.log('\n========================================================');
 if (passed) {
-  console.log('🎉 [검증 완료] 10대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
+  console.log('🎉 [검증 완료] 11대 공식 설계도 보존 법칙 검사를 100% 통과했습니다!');
   console.log('   기존 기능 훼손 0건, 이원화 찌꺼기 0건 확인 완료.');
   console.log('========================================================\n');
   process.exit(0);

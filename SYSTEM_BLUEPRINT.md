@@ -16,6 +16,7 @@
 * **`[설계도-08] BP-TRAFFIC-DIET`**: 트래픽 다이어트 및 Supabase 대역폭(Egress) 영구 방어 설계도 *(공식 확정)*
 * **`[설계도-09] BP-CLEAN-PIPELINE`**: 땜빵 금지, 구형 찌꺼기 전수 삭제 및 단일 파이프라인(Clean Slate Single Pipeline) 보존 설계도 *(공식 확정)*
 * **`[설계도-10] BP-VISITOR-ANALYTICS`**: 방문자수 서버 원자적(Atomic) 집계 및 외부 정밀 애널리틱스 연동 설계도 *(공식 확정)*
+* **`[설계도-11] BP-SLIM-PAGINATION`**: 모바일 최적화 20건 슬림 페이지네이션 및 스마트 상단 앵커링 설계도 *(공식 확정)*
 
 ---
 
@@ -509,6 +510,32 @@ graph TD
    - `trackVisitorSSOT` 함수 및 원자적 카운팅 파이프라인 탑재 검증.
 5. **[검문 5] 폴백 조회 실패 시 1 리셋 방어벽 (readError 방어) 탑재 준수**:
    - `readError` 발생 시 DB 덮어쓰기 즉각 중단 및 데이터 보존 검증.
+
+---
+
+## 📐 [설계도-11] BP-SLIM-PAGINATION: 모바일 최적화 20건 슬림 페이지네이션 및 스마트 상단 앵커링 설계도 *(공식 확정)*
+
+### 1. 5대 불변 헌법 원칙 (Absolute Rules)
+1. **6대 대시보드 목록 표준 20건 페이징 통일 (Uniform 20-Item Standard)**:
+   - 최고관리자 대시보드 4대 목록 (`회원 정보 관리`, `신청서 목록`, `영업물건 진행상황`, `시공업체 진행현황`) 및 영업자 대시보드 2대 목록 (`내 온라인 간편 지원 신청 내역`, `내 영업물건 현황 및 진행상황`)의 총 6개 목록은 모바일 환경에 최적화된 **20건 단위 슬림 페이지네이션**으로 통일한다.
+2. **검색 및 필터 전환 시 0초 1페이지 자동 리셋 (Instant Zero-Second Page Reset)**:
+   - 검색창 입력(`input` 이벤트) 및 카테고리 칩 전환 시, 현재 페이지 번호(`currentPage`)를 0초 만에 1페이지로 즉각 리셋하여 '고스트 빈 화면' 오류를 원천 차단한다.
+3. **페이지 넘김 시 스마트 상단 앵커링 (Smart Top-Anchoring Scroll)**:
+   - [다음] / [이전] 페이지 버튼 클릭 시, 해당 목록의 첫 번째 항목(상단)으로 매끄럽게 자동 스크롤(`scrollIntoView({ behavior: 'smooth', block: 'start' })`)되어 사용자가 위에서부터 자연스럽게 확인할 수 있도록 보장한다.
+4. **엑셀 다운로드 SSOT 100% 보존 원칙 (Full Dataset SSOT Export Guard)**:
+   - 엑셀(CSV) 다운로드 기능은 화면에 20건으로 쪼개진 슬라이스 데이터가 아니라, 해당 권한의 **전체 데이터(SSOT)**를 100% 온전히 추출하여 저장해야 한다.
+5. **접힘 상태 및 소량 데이터 스마트 숨김 (Smart Visibility Guard)**:
+   - 영업자 대시보드의 접힘 상태(기본 3건) 및 데이터 총 건수가 20건 이하인 목록에서는 불필요한 슬림 페이지 바를 완전 숨김(`display: none`) 처리하여 모바일 UI의 심플함과 쾌적함을 유지한다.
+
+### 2. 자동 검문소 (`verify-blueprint.js`) 영구 감시 규칙
+1. **[검문 1] 6대 대시보드 목록 슬림 페이지네이션 변수/엔진 탑재 준수**:
+   - `_adminUsersCurrentPage`, `_adminAppsCurrentPage`, `_adminItemsCurrentPage`, `_adminConstCurrentPage`, `_salesAppsCurrentPage`, `_salesBizItemsCurrentPage` 6종 변수 및 핸들러 검증.
+2. **[검문 2] 엑셀 다운로드 함수 내 20건 페이징 변수 참조 찌꺼기 100% 부존재 검증**:
+   - `exportBizRegisteredItemsMobToExcel` 및 `exportAllApplicationsToExcel` 함수가 페이징 슬라이스 변수가 아닌 DataStore 원본을 온전히 참조하는지 검증.
+3. **[검문 3] 검색창 입력 시 1페이지 리셋 탑재 준수**:
+   - `search-all-users-input-mob`, `search-apps-input-mob`, `search-items-input-mob`, `search-const-progress-input-mob`, `search-user-apps-mob`, `search-biz-items-mob` 검색 이벤트 리스너 내 1페이지 리셋 코드 전수 검증.
+4. **[검문 4] 페이지 전환 시 상단 앵커링 스크롤(`block: 'start'`) 탑재 준수**:
+   - 페이지 전환 함수 6종의 `scrollIntoView` 내 `block: 'start'` 탑재 검증.
 
 ---
 

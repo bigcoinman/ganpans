@@ -2008,7 +2008,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderUserApplicationsMob();
         }
         const el = document.getElementById('user-apps-list-mobile');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     window.changeSalesBizItemsPage = function (delta) {
@@ -2017,7 +2017,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderBizRegisteredItemsMob();
         }
         const el = document.getElementById('biz-items-list-mobile');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     function handleApplicationPhotoUploadMob(appId) {
