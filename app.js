@@ -2750,10 +2750,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+    // [회원 정보 관리] 4대 카테고리 필터 & A타입 20명 슬림 페이지네이션 상태 및 엔진
+    window._adminUserCategoryFilter = 'all';
+    window._adminUsersCurrentPage = 1;
+
+    window.setAdminUserCategoryFilter = function (category) {
+        window._adminUserCategoryFilter = category;
+        window._adminUsersCurrentPage = 1; // 카테고리 변경 시 1페이지로 리셋
+        document.querySelectorAll('.admin-user-filter-chip').forEach(btn => {
+            if (btn.getAttribute('data-category') === category) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        renderAdminDashboardMob(true);
+    };
+
+    window.changeAdminUsersPage = function (delta) {
+        window._adminUsersCurrentPage = Math.max(1, (window._adminUsersCurrentPage || 1) + delta);
+        renderAdminDashboardMob(true);
+        const userListEl = document.getElementById('admin-all-users-list-mob');
+        if (userListEl) {
+            userListEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
     // 모바일 회원 검색창 이벤트
     const searchAllUsersInputMob = document.getElementById('search-all-users-input-mob');
     if (searchAllUsersInputMob) {
         searchAllUsersInputMob.addEventListener('input', () => {
+            window._adminUsersCurrentPage = 1; // 검색어 입력 시 1페이지로 리셋
             renderAdminDashboardMob(true);
         });
     }
@@ -2874,13 +2901,51 @@ document.addEventListener('DOMContentLoaded', () => {
             ? window.DataStore.getUsers()
             : (JSON.parse(localStorage.getItem('users')) || []);
 
-        // 0) Render All Users list (회원정보관리)
+        // 0) Render All Users list (회원정보관리 - 4대 카테고리 & 20명 슬림 페이지네이션 단일 SSOT 파이프라인)
         const allUsersListMob = document.getElementById('admin-all-users-list-mob');
         if (allUsersListMob) {
-            let displayUsers = allStoreUsers.filter(u => u && u.id && u.role !== 'deleted');
+            let validUsers = allStoreUsers.filter(u => u && u.id && u.role !== 'deleted');
 
+            // 4대 카테고리 실시간 인원수 집계
+            const countAll = validUsers.length;
+            const countNormal = validUsers.filter(u => u.role !== 'business' && !u.bizCode && u.role !== 'constructor' && !u.constCode && u.role !== 'admin').length;
+            const countBusiness = validUsers.filter(u => u.role === 'business' || Boolean(u.bizCode)).length;
+            const countConstructor = validUsers.filter(u => u.role === 'constructor' || Boolean(u.constCode)).length;
+
+            const chipAll = document.getElementById('chip-count-all');
+            const chipNormal = document.getElementById('chip-count-normal');
+            const chipBusiness = document.getElementById('chip-count-business');
+            const chipConstructor = document.getElementById('chip-count-constructor');
+            if (chipAll) chipAll.textContent = countAll;
+            if (chipNormal) chipNormal.textContent = countNormal;
+            if (chipBusiness) chipBusiness.textContent = countBusiness;
+            if (chipConstructor) chipConstructor.textContent = countConstructor;
+
+            // 현재 카테고리 필터 버튼 active 상태 동기화
+            const currentCat = window._adminUserCategoryFilter || 'all';
+            document.querySelectorAll('.admin-user-filter-chip').forEach(btn => {
+                if (btn.getAttribute('data-category') === currentCat) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            // 1단계: 카테고리 필터링
+            let displayUsers = validUsers;
+            if (currentCat === 'business') {
+                displayUsers = displayUsers.filter(u => u.role === 'business' || Boolean(u.bizCode));
+            } else if (currentCat === 'constructor') {
+                displayUsers = displayUsers.filter(u => u.role === 'constructor' || Boolean(u.constCode));
+            } else if (currentCat === 'normal') {
+                displayUsers = displayUsers.filter(u => u.role !== 'business' && !u.bizCode && u.role !== 'constructor' && !u.constCode && u.role !== 'admin');
+            }
+
+            // 정렬 (최신 가입일자 우선)
             const sortFn = (typeof window.sortUsersLatestFirst === 'function' ? window.sortUsersLatestFirst : null);
             displayUsers = sortFn ? sortFn(displayUsers) : displayUsers;
+
+            // 2단계: 검색어 필터링
             const searchInput = document.getElementById('search-all-users-input-mob');
             const q = searchInput && searchInput.value ? searchInput.value.trim().slice(0, 30).toLowerCase() : '';
 
@@ -2894,11 +2959,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
             }
 
+            // 3단계: 20명 단위 슬림 페이지네이션 (A타입)
+            const USERS_PER_PAGE = 20;
+            const totalFilteredCount = displayUsers.length;
+            const totalPages = Math.ceil(totalFilteredCount / USERS_PER_PAGE) || 1;
+            window._adminUsersCurrentPage = Math.min(Math.max(1, window._adminUsersCurrentPage || 1), totalPages);
+            const curPage = window._adminUsersCurrentPage;
+
+            const startIndex = (curPage - 1) * USERS_PER_PAGE;
+            const pageUsers = displayUsers.slice(startIndex, startIndex + USERS_PER_PAGE);
+
+            // 페이지네이션 컨트롤 UI 갱신
+            const paginationEl = document.getElementById('admin-users-pagination-mob');
+            const prevBtn = document.getElementById('btn-users-page-prev');
+            const nextBtn = document.getElementById('btn-users-page-next');
+            const indicatorEl = document.getElementById('users-page-indicator');
+
+            if (paginationEl) {
+                if (totalFilteredCount <= USERS_PER_PAGE) {
+                    paginationEl.style.display = 'none';
+                } else {
+                    paginationEl.style.display = 'flex';
+                    if (indicatorEl) {
+                        indicatorEl.textContent = `${curPage} / ${totalPages} 페이지 (총 ${totalFilteredCount}명)`;
+                    }
+                    if (prevBtn) {
+                        prevBtn.disabled = (curPage <= 1);
+                        prevBtn.style.opacity = (curPage <= 1) ? '0.45' : '1';
+                        prevBtn.style.cursor = (curPage <= 1) ? 'not-allowed' : 'pointer';
+                    }
+                    if (nextBtn) {
+                        nextBtn.disabled = (curPage >= totalPages);
+                        nextBtn.style.opacity = (curPage >= totalPages) ? '0.45' : '1';
+                        nextBtn.style.cursor = (curPage >= totalPages) ? 'not-allowed' : 'pointer';
+                    }
+                }
+            }
+
             allUsersListMob.innerHTML = '';
             if (displayUsers.length === 0) {
-                allUsersListMob.innerHTML = '<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">등록/검색된 회원이 없습니다.</p>';
+                let emptyMsg = '등록/검색된 회원이 없습니다.';
+                if (q) {
+                    emptyMsg = `검색어 [${escapeHtml(q)}]에 일치하는 회원이 없습니다.`;
+                } else if (currentCat === 'business') {
+                    emptyMsg = '등록된 영업자 회원이 없습니다.';
+                } else if (currentCat === 'constructor') {
+                    emptyMsg = '등록된 시공사 회원이 없습니다.';
+                } else if (currentCat === 'normal') {
+                    emptyMsg = '등록된 일반회원이 없습니다.';
+                }
+                allUsersListMob.innerHTML = `<p class="text-muted" style="text-align:center; padding: 26px 14px; font-size: 0.95rem; color: #64748b;">${emptyMsg}</p>`;
             } else {
-                displayUsers.forEach(u => {
+                pageUsers.forEach(u => {
                     const card = document.createElement('div');
                     card.className = 'admin-user-card-mob';
                     card.style.background = '#ffffff';
@@ -2907,10 +3019,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.style.border = '1px solid var(--border-color)';
                     card.style.marginBottom = '12px';
 
+                    // 자동생성 계정(비회원 간편신청 계정) 여부 판별
+                    const uIdStr = String(u.id || '').trim();
+                    const uPhoneDigits = String(u.phone || '').replace(/[^0-9]/g, '');
+                    const isAutoCreated = /^\d{10,11}$/.test(uIdStr) && (uPhoneDigits ? uIdStr === uPhoneDigits : /^01[016789]\d{7,8}$/.test(uIdStr));
+
                     let roleBadge = '<span style="background: #e2e8f0; color: #475569; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">일반</span>';
-                    if (u.role === 'admin') roleBadge = '<span style="background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">최고관리자</span>';
-                    else if (u.role === 'business') roleBadge = `<span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">영업자 (${u.bizCode || '-'})</span>`;
-                    else if (u.role === 'constructor') roleBadge = `<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">시공사 (${u.constCode || '-'})</span>`;
+                    if (u.role === 'admin') {
+                        roleBadge = '<span style="background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">최고관리자</span>';
+                    } else if (u.role === 'business') {
+                        roleBadge = `<span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">영업자 (${u.bizCode || '-'})</span>`;
+                    } else if (u.role === 'constructor') {
+                        roleBadge = `<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">시공사 (${u.constCode || '-'})</span>`;
+                    } else if (isAutoCreated) {
+                        roleBadge = '<span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 4px; font-size: 0.82rem; font-weight: 600; border: 1px solid #cbd5e1;">일반 (자동생성)</span>';
+                    }
 
                     const deleteBtn = u.role === 'admin' ? '' : `
                         <button type="button" class="btn btn-secondary btn-sm btn-delete-user-mob" onclick="window.deleteUserAdminMob('${escapeHtml(u.id)}', this, event)" style="padding: 6px 14px; font-size: 0.85rem; color: #dc2626; border-color: rgba(239,68,68,0.3); background: #fee2e2; border-radius: 6px; cursor: pointer; touch-action: manipulation; font-weight: 600;">

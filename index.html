@@ -1509,15 +1509,40 @@
 
                     <!-- 1. 회원 정보 관리 패널 (기본 표시) -->
                     <div id="admin-panel-users-mob" class="admin-panel-view-mob" style="display: block;">
+                        <!-- 4대 카테고리 필터 칩 바 (전체, 일반회원, 영업자, 시공사) -->
+                        <div id="admin-user-category-chips" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+                            <button type="button" class="admin-user-filter-chip active" data-category="all" onclick="window.setAdminUserCategoryFilter('all')">
+                                전체 <span id="chip-count-all" class="chip-badge">0</span>
+                            </button>
+                            <button type="button" class="admin-user-filter-chip" data-category="normal" onclick="window.setAdminUserCategoryFilter('normal')">
+                                일반회원 <span id="chip-count-normal" class="chip-badge">0</span>
+                            </button>
+                            <button type="button" class="admin-user-filter-chip" data-category="business" onclick="window.setAdminUserCategoryFilter('business')">
+                                영업자 <span id="chip-count-business" class="chip-badge">0</span>
+                            </button>
+                            <button type="button" class="admin-user-filter-chip" data-category="constructor" onclick="window.setAdminUserCategoryFilter('constructor')">
+                                시공사 <span id="chip-count-constructor" class="chip-badge">0</span>
+                            </button>
+                        </div>
+
                         <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
                             <input type="text" id="search-all-users-input-mob" placeholder="아이디 / 이름 / 연락처 검색" maxlength="30" style="padding: 10px 14px; font-size: 0.95rem; border-radius: 8px; border: 1px solid #cbd5e1; flex: 1; box-sizing: border-box;">
                             <button type="button" id="btn-force-sync-users" onclick="if(window.SupabaseSync){window.SupabaseSync.isSyncing=false;window.SupabaseSync.syncAllData(true);}this.innerHTML='<i class=\'fa-solid fa-check\'></i>';setTimeout(()=>{this.innerHTML='<i class=\'fa-solid fa-rotate\'></i>';},1500);" style="padding: 10px 14px; background: #1e40af; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer; flex-shrink: 0; touch-action: manipulation;" title="Supabase에서 최신 회원 목록 강제 재동기화">
                                 <i class="fa-solid fa-rotate"></i>
                             </button>
-
                         </div>
                         <div id="admin-all-users-list-mob" style="display: flex; flex-direction: column; gap: 10px;">
                             <!-- Users populate dynamically -->
+                        </div>
+                        <!-- 20명 단위 슬림 페이지네이션 바 (A타입) -->
+                        <div id="admin-users-pagination-mob" style="display: none; justify-content: center; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 0;">
+                            <button type="button" id="btn-users-page-prev" onclick="window.changeAdminUsersPage(-1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-chevron-left"></i> 이전
+                            </button>
+                            <span id="users-page-indicator" style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">1 / 1 페이지</span>
+                            <button type="button" id="btn-users-page-next" onclick="window.changeAdminUsersPage(1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                다음 <i class="fa-solid fa-chevron-right"></i>
+                            </button>
                         </div>
                     </div>
 
