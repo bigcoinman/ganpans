@@ -1573,6 +1573,16 @@
                         <div id="admin-apps-list-mob" style="display: flex; flex-direction: column; gap: 12px;">
                             <!-- Applications populate dynamically -->
                         </div>
+                        <!-- 20건 단위 슬림 페이지네이션 바 (신청서 목록) -->
+                        <div id="admin-apps-pagination-mob" style="display: none; justify-content: center; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 0;">
+                            <button type="button" id="btn-apps-page-prev" onclick="window.changeAdminAppsPage(-1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-chevron-left"></i> 이전
+                            </button>
+                            <span id="apps-page-indicator" style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">1 / 1 페이지</span>
+                            <button type="button" id="btn-apps-page-next" onclick="window.changeAdminAppsPage(1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                다음 <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div id="admin-panel-items-mob" class="admin-panel-view-mob" style="display: none;">
@@ -1582,6 +1592,16 @@
                         <div id="admin-items-list-mob" style="display: flex; flex-direction: column; gap: 10px;">
                             <!-- Items populate dynamically -->
                         </div>
+                        <!-- 20건 단위 슬림 페이지네이션 바 (영업물건 진행상황) -->
+                        <div id="admin-items-pagination-mob" style="display: none; justify-content: center; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 0;">
+                            <button type="button" id="btn-items-page-prev" onclick="window.changeAdminItemsPage(-1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-chevron-left"></i> 이전
+                            </button>
+                            <span id="items-page-indicator" style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">1 / 1 페이지</span>
+                            <button type="button" id="btn-items-page-next" onclick="window.changeAdminItemsPage(1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                다음 <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div id="admin-panel-const-progress-mob" class="admin-panel-view-mob" style="display: none;">
@@ -1590,6 +1610,16 @@
                         </div>
                         <div id="admin-const-progress-list-mob" style="display: flex; flex-direction: column; gap: 10px;">
                             <!-- 시공업체 진행현황 데이터 연동 영역 -->
+                        </div>
+                        <!-- 20건 단위 슬림 페이지네이션 바 (시공업체 진행현황) -->
+                        <div id="admin-const-pagination-mob" style="display: none; justify-content: center; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 0;">
+                            <button type="button" id="btn-const-page-prev" onclick="window.changeAdminConstPage(-1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-chevron-left"></i> 이전
+                            </button>
+                            <span id="const-page-indicator" style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">1 / 1 페이지</span>
+                            <button type="button" id="btn-const-page-next" onclick="window.changeAdminConstPage(1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                다음 <i class="fa-solid fa-chevron-right"></i>
+                            </button>
                         </div>
                     </div>
 

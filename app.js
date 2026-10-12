@@ -2776,6 +2776,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // [신청서 목록] 20건 단위 슬림 페이지네이션 상태 및 엔진
+    window._adminAppsCurrentPage = 1;
+    window.changeAdminAppsPage = function (delta) {
+        window._adminAppsCurrentPage = Math.max(1, (window._adminAppsCurrentPage || 1) + delta);
+        renderAdminDashboardMob(true);
+        const appsListEl = document.getElementById('admin-apps-list-mob');
+        if (appsListEl) {
+            appsListEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
+    // [영업물건 진행상황] 20건 단위 슬림 페이지네이션 상태 및 엔진
+    window._adminItemsCurrentPage = 1;
+    window.changeAdminItemsPage = function (delta) {
+        window._adminItemsCurrentPage = Math.max(1, (window._adminItemsCurrentPage || 1) + delta);
+        renderAdminDashboardMob(true);
+        const itemsListEl = document.getElementById('admin-items-list-mob');
+        if (itemsListEl) {
+            itemsListEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
+    // [시공업체 진행현황] 20건 단위 슬림 페이지네이션 상태 및 엔진
+    window._adminConstCurrentPage = 1;
+    window.changeAdminConstPage = function (delta) {
+        window._adminConstCurrentPage = Math.max(1, (window._adminConstCurrentPage || 1) + delta);
+        renderAdminDashboardMob(true);
+        const constListEl = document.getElementById('admin-const-progress-list-mob');
+        if (constListEl) {
+            constListEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
     // 모바일 회원 검색창 이벤트
     const searchAllUsersInputMob = document.getElementById('search-all-users-input-mob');
     if (searchAllUsersInputMob) {
@@ -2789,6 +2822,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchAppsInputMob = document.getElementById('search-apps-input-mob');
     if (searchAppsInputMob) {
         searchAppsInputMob.addEventListener('input', () => {
+            window._adminAppsCurrentPage = 1; // 검색어 입력 시 1페이지로 리셋
             renderAdminDashboardMob(true);
         });
     }
@@ -2797,6 +2831,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchItemsInputMob = document.getElementById('search-items-input-mob');
     if (searchItemsInputMob) {
         searchItemsInputMob.addEventListener('input', () => {
+            window._adminItemsCurrentPage = 1; // 검색어 입력 시 1페이지로 리셋
             renderAdminDashboardMob(true);
         });
     }
@@ -2805,6 +2840,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchAdminConstInputMob = document.getElementById('search-admin-const-input-mob');
     if (searchAdminConstInputMob) {
         searchAdminConstInputMob.addEventListener('input', () => {
+            window._adminConstCurrentPage = 1; // 검색어 입력 시 1페이지로 리셋
             renderAdminDashboardMob(true);
         });
     }
@@ -3199,12 +3235,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
+            // 20건 단위 슬림 페이지네이션 (신청서 목록)
+            const APPS_PER_PAGE = 20;
+            const totalAppsCount = sortedApps.length;
+            const totalAppsPages = Math.ceil(totalAppsCount / APPS_PER_PAGE) || 1;
+            window._adminAppsCurrentPage = Math.min(Math.max(1, window._adminAppsCurrentPage || 1), totalAppsPages);
+            const curAppsPage = window._adminAppsCurrentPage;
+
+            const startAppsIdx = (curAppsPage - 1) * APPS_PER_PAGE;
+            const pageApps = sortedApps.slice(startAppsIdx, startAppsIdx + APPS_PER_PAGE);
+
+            const paginationAppsEl = document.getElementById('admin-apps-pagination-mob');
+            const prevAppsBtn = document.getElementById('btn-apps-page-prev');
+            const nextAppsBtn = document.getElementById('btn-apps-page-next');
+            const indicatorAppsEl = document.getElementById('apps-page-indicator');
+
+            if (paginationAppsEl) {
+                if (totalAppsCount <= APPS_PER_PAGE) {
+                    paginationAppsEl.style.display = 'none';
+                } else {
+                    paginationAppsEl.style.display = 'flex';
+                    if (indicatorAppsEl) {
+                        indicatorAppsEl.textContent = `${curAppsPage} / ${totalAppsPages} 페이지 (총 ${totalAppsCount}건)`;
+                    }
+                    if (prevAppsBtn) {
+                        prevAppsBtn.disabled = (curAppsPage <= 1);
+                        prevAppsBtn.style.opacity = (curAppsPage <= 1) ? '0.45' : '1';
+                        prevAppsBtn.style.cursor = (curAppsPage <= 1) ? 'not-allowed' : 'pointer';
+                    }
+                    if (nextAppsBtn) {
+                        nextAppsBtn.disabled = (curAppsPage >= totalAppsPages);
+                        nextAppsBtn.style.opacity = (curAppsPage >= totalAppsPages) ? '0.45' : '1';
+                        nextAppsBtn.style.cursor = (curAppsPage >= totalAppsPages) ? 'not-allowed' : 'pointer';
+                    }
+                }
+            }
+
             if (sortedApps.length === 0) {
                 const emptyMsg = qApps ? `검색어 [${escapeHtml(qApps)}] 에 일치하는 신청서가 없습니다.` : '접수된 온라인 신청서가 없습니다.';
                 appsList.innerHTML = `<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.95rem;">${emptyMsg}</p>`;
+                if (paginationAppsEl) paginationAppsEl.style.display = 'none';
             } else {
                 appsList.innerHTML = '';
-                sortedApps.forEach(app => {
+                pageApps.forEach(app => {
                     const card = document.createElement('div');
                     card.className = 'admin-app-card-mob';
                     card.style.background = '#ffffff';
@@ -3392,11 +3465,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
+            // 20건 단위 슬림 페이지네이션 (영업물건 진행상황)
+            const ITEMS_PER_PAGE = 20;
+            const totalItemsCount = filteredItemsMob.length;
+            const totalItemsPages = Math.ceil(totalItemsCount / ITEMS_PER_PAGE) || 1;
+            window._adminItemsCurrentPage = Math.min(Math.max(1, window._adminItemsCurrentPage || 1), totalItemsPages);
+            const curItemsPage = window._adminItemsCurrentPage;
+
+            const startItemsIdx = (curItemsPage - 1) * ITEMS_PER_PAGE;
+            const pageItems = filteredItemsMob.slice(startItemsIdx, startItemsIdx + ITEMS_PER_PAGE);
+
+            const paginationItemsEl = document.getElementById('admin-items-pagination-mob');
+            const prevItemsBtn = document.getElementById('btn-items-page-prev');
+            const nextItemsBtn = document.getElementById('btn-items-page-next');
+            const indicatorItemsEl = document.getElementById('items-page-indicator');
+
+            if (paginationItemsEl) {
+                if (totalItemsCount <= ITEMS_PER_PAGE) {
+                    paginationItemsEl.style.display = 'none';
+                } else {
+                    paginationItemsEl.style.display = 'flex';
+                    if (indicatorItemsEl) {
+                        indicatorItemsEl.textContent = `${curItemsPage} / ${totalItemsPages} 페이지 (총 ${totalItemsCount}건)`;
+                    }
+                    if (prevItemsBtn) {
+                        prevItemsBtn.disabled = (curItemsPage <= 1);
+                        prevItemsBtn.style.opacity = (curItemsPage <= 1) ? '0.45' : '1';
+                        prevItemsBtn.style.cursor = (curItemsPage <= 1) ? 'not-allowed' : 'pointer';
+                    }
+                    if (nextItemsBtn) {
+                        nextItemsBtn.disabled = (curItemsPage >= totalItemsPages);
+                        nextItemsBtn.style.opacity = (curItemsPage >= totalItemsPages) ? '0.45' : '1';
+                        nextItemsBtn.style.cursor = (curItemsPage >= totalItemsPages) ? 'not-allowed' : 'pointer';
+                    }
+                }
+            }
+
             if (filteredItemsMob.length === 0) {
                 const emptyMsg = qItems ? `검색어 [${escapeHtml(qItems)}] 에 일치하는 영업물건이 없습니다.` : '등록된 영업물건이 없습니다.';
                 itemsList.innerHTML = `<p class="text-muted" style="text-align:center; padding: 20px; font-size: 0.92rem;">${emptyMsg}</p>`;
+                if (paginationItemsEl) paginationItemsEl.style.display = 'none';
             } else {
-                filteredItemsMob.forEach(({ user: u, item }) => {
+                pageItems.forEach(({ user: u, item }) => {
                     const card = document.createElement('div');
                     card.className = 'admin-req-card-mob';
                     card.style.background = '#f8fafc';
@@ -3618,11 +3728,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
+            // 20건 단위 슬림 페이지네이션 (시공업체 진행현황)
+            const CONST_PER_PAGE = 20;
+            const totalConstCount = filteredConstJobs.length;
+            const totalConstPages = Math.ceil(totalConstCount / CONST_PER_PAGE) || 1;
+            window._adminConstCurrentPage = Math.min(Math.max(1, window._adminConstCurrentPage || 1), totalConstPages);
+            const curConstPage = window._adminConstCurrentPage;
+
+            const startConstIdx = (curConstPage - 1) * CONST_PER_PAGE;
+            const pageConstJobs = filteredConstJobs.slice(startConstIdx, startConstIdx + CONST_PER_PAGE);
+
+            const paginationConstEl = document.getElementById('admin-const-pagination-mob');
+            const prevConstBtn = document.getElementById('btn-const-page-prev');
+            const nextConstBtn = document.getElementById('btn-const-page-next');
+            const indicatorConstEl = document.getElementById('const-page-indicator');
+
+            if (paginationConstEl) {
+                if (totalConstCount <= CONST_PER_PAGE) {
+                    paginationConstEl.style.display = 'none';
+                } else {
+                    paginationConstEl.style.display = 'flex';
+                    if (indicatorConstEl) {
+                        indicatorConstEl.textContent = `${curConstPage} / ${totalConstPages} 페이지 (총 ${totalConstCount}건)`;
+                    }
+                    if (prevConstBtn) {
+                        prevConstBtn.disabled = (curConstPage <= 1);
+                        prevConstBtn.style.opacity = (curConstPage <= 1) ? '0.45' : '1';
+                        prevConstBtn.style.cursor = (curConstPage <= 1) ? 'not-allowed' : 'pointer';
+                    }
+                    if (nextConstBtn) {
+                        nextConstBtn.disabled = (curConstPage >= totalConstPages);
+                        nextConstBtn.style.opacity = (curConstPage >= totalConstPages) ? '0.45' : '1';
+                        nextConstBtn.style.cursor = (curConstPage >= totalConstPages) ? 'not-allowed' : 'pointer';
+                    }
+                }
+            }
+
             if (filteredConstJobs.length === 0) {
                 const emptyMsg = qConst ? `검색어 [${escapeHtml(qConst)}] 에 일치하는 시공 진행건이 없습니다.` : '배정된 시공업체 진행현황이 없습니다.';
                 constProgressListMob.innerHTML = `<p class="text-muted" style="text-align:center; padding: 25px 0; font-size: 0.92rem;">${emptyMsg}</p>`;
+                if (paginationConstEl) paginationConstEl.style.display = 'none';
             } else {
-                filteredConstJobs.forEach(job => {
+                pageConstJobs.forEach(job => {
                     const card = document.createElement('div');
                     card.className = 'admin-req-card-mob';
                     card.style.background = '#ffffff';
