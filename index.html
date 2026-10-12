@@ -1372,6 +1372,15 @@
                         <div id="user-apps-list-mobile" class="biz-mobile-list">
                             <!-- Populated dynamically -->
                         </div>
+                        <div id="sales-apps-pagination-mob" style="display: none; justify-content: center; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 0;">
+                            <button type="button" id="btn-sales-apps-page-prev" onclick="window.changeSalesAppsPage(-1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-chevron-left"></i> 이전
+                            </button>
+                            <span id="sales-apps-page-indicator" style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">1 / 1 페이지</span>
+                            <button type="button" id="btn-sales-apps-page-next" onclick="window.changeSalesAppsPage(1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                다음 <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- 2. 내 영업물건 현황 및 진행상황 (검색 + 접기/펼치기 토글 + 공단/진흥원 접수 안내 + 엑셀 다운로드) -->
@@ -1395,6 +1404,15 @@
                         </div>
                         <div id="biz-items-list-mobile" class="biz-mobile-list">
                             <!-- Populated dynamically -->
+                        </div>
+                        <div id="sales-biz-items-pagination-mob" style="display: none; justify-content: center; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 0;">
+                            <button type="button" id="btn-sales-biz-items-page-prev" onclick="window.changeSalesBizItemsPage(-1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-chevron-left"></i> 이전
+                            </button>
+                            <span id="sales-biz-items-page-indicator" style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">1 / 1 페이지</span>
+                            <button type="button" id="btn-sales-biz-items-page-next" onclick="window.changeSalesBizItemsPage(1)" style="padding: 6px 14px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: 4px;">
+                                다음 <i class="fa-solid fa-chevron-right"></i>
+                            </button>
                         </div>
                     </div>
                 </div>

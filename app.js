@@ -1995,9 +1995,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return '<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock"></i> 지원대기중</span>';
     }
 
-    // Mobile Business Dashboard Toggle States
+    // Mobile Business Dashboard Toggle & Pagination States (20건 단위 슬림 페이지네이션)
     let userAppsMobExpanded = false; // false: 최근 3건 요약, true: 전체 확장
     let bizItemsMobExpanded = false; // false: 최근 3건 요약, true: 전체 확장
+    const SALES_ITEMS_PER_PAGE = 20;
+    window._salesAppsCurrentPage = 1;
+    window._salesBizItemsCurrentPage = 1;
+
+    window.changeSalesAppsPage = function (delta) {
+        window._salesAppsCurrentPage = Math.max(1, (window._salesAppsCurrentPage || 1) + delta);
+        if (typeof renderUserApplicationsMob === 'function') {
+            renderUserApplicationsMob();
+        }
+        const el = document.getElementById('user-apps-list-mobile');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    window.changeSalesBizItemsPage = function (delta) {
+        window._salesBizItemsCurrentPage = Math.max(1, (window._salesBizItemsCurrentPage || 1) + delta);
+        if (typeof renderBizRegisteredItemsMob === 'function') {
+            renderBizRegisteredItemsMob();
+        }
+        const el = document.getElementById('biz-items-list-mobile');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
 
     function handleApplicationPhotoUploadMob(appId) {
         if (typeof window.handleApplicationPhotoUploadProcess === 'function') {
@@ -2107,14 +2128,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        const paginationAppsEl = document.getElementById('sales-apps-pagination-mob');
+        const prevAppsBtn = document.getElementById('btn-sales-apps-page-prev');
+        const nextAppsBtn = document.getElementById('btn-sales-apps-page-next');
+        const indicatorAppsEl = document.getElementById('sales-apps-page-indicator');
+
         if (filtered.length === 0) {
             const emptyMsg = q ? `검색어 [${escapeHtml(q)}] 에 일치하는 신청 내역이 없습니다.` : '접수한 온라인 간편 지원 신청 내역이 없습니다.';
             userAppsContainer.innerHTML = `<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.88rem; background: #f8fafc; border-radius: 8px;">${emptyMsg}</p>`;
+            if (paginationAppsEl) paginationAppsEl.style.display = 'none';
             return;
         }
 
         const sortedApps = [...filtered].sort((a, b) => new Date(b.appliedAt || 0).getTime() - new Date(a.appliedAt || 0).getTime());
-        const displayApps = userAppsMobExpanded ? sortedApps : sortedApps.slice(0, 3);
+        let displayApps = [];
+
+        if (!userAppsMobExpanded) {
+            displayApps = sortedApps.slice(0, 3);
+            if (paginationAppsEl) paginationAppsEl.style.display = 'none';
+        } else {
+            const totalAppsPages = Math.ceil(totalCount / SALES_ITEMS_PER_PAGE) || 1;
+            window._salesAppsCurrentPage = Math.min(Math.max(1, window._salesAppsCurrentPage || 1), totalAppsPages);
+            const curPage = window._salesAppsCurrentPage;
+            const startIdx = (curPage - 1) * SALES_ITEMS_PER_PAGE;
+            displayApps = sortedApps.slice(startIdx, startIdx + SALES_ITEMS_PER_PAGE);
+
+            if (paginationAppsEl) {
+                if (totalCount <= SALES_ITEMS_PER_PAGE) {
+                    paginationAppsEl.style.display = 'none';
+                } else {
+                    paginationAppsEl.style.display = 'flex';
+                    if (indicatorAppsEl) {
+                        indicatorAppsEl.textContent = `${curPage} / ${totalAppsPages} 페이지 (총 ${totalCount}건)`;
+                    }
+                    if (prevAppsBtn) {
+                        prevAppsBtn.disabled = (curPage <= 1);
+                        prevAppsBtn.style.opacity = (curPage <= 1) ? '0.45' : '1';
+                        prevAppsBtn.style.cursor = (curPage <= 1) ? 'not-allowed' : 'pointer';
+                    }
+                    if (nextAppsBtn) {
+                        nextAppsBtn.disabled = (curPage >= totalAppsPages);
+                        nextAppsBtn.style.opacity = (curPage >= totalAppsPages) ? '0.45' : '1';
+                        nextAppsBtn.style.cursor = (curPage >= totalAppsPages) ? 'not-allowed' : 'pointer';
+                    }
+                }
+            }
+        }
 
         userAppsContainer.innerHTML = '';
         displayApps.forEach(app => {
@@ -2316,14 +2375,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        const paginationBizEl = document.getElementById('sales-biz-items-pagination-mob');
+        const prevBizBtn = document.getElementById('btn-sales-biz-items-page-prev');
+        const nextBizBtn = document.getElementById('btn-sales-biz-items-page-next');
+        const indicatorBizEl = document.getElementById('sales-biz-items-page-indicator');
+
         if (filtered.length === 0) {
             const emptyMsg = q ? `검색어 [${escapeHtml(q)}] 에 일치하는 영업물건이 없습니다.` : '등록된 영업물건이 없습니다.<br><span style="font-size: 0.76rem; color: #94a3b8;">(최고관리자가 승인/영업물건으로 등록한 물건만 표시됩니다)</span>';
             bizListContainer.innerHTML = `<p class="text-muted" style="text-align:center; padding: 15px; font-size: 0.88rem; background: #f8fafc; border-radius: 8px; line-height: 1.5;">${emptyMsg}</p>`;
+            if (paginationBizEl) paginationBizEl.style.display = 'none';
             return;
         }
 
         const sortedBiz = [...filtered].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-        const displayBiz = bizItemsMobExpanded ? sortedBiz : sortedBiz.slice(0, 3);
+        let displayBiz = [];
+
+        if (!bizItemsMobExpanded) {
+            displayBiz = sortedBiz.slice(0, 3);
+            if (paginationBizEl) paginationBizEl.style.display = 'none';
+        } else {
+            const totalBizPages = Math.ceil(totalCount / SALES_ITEMS_PER_PAGE) || 1;
+            window._salesBizItemsCurrentPage = Math.min(Math.max(1, window._salesBizItemsCurrentPage || 1), totalBizPages);
+            const curBizPage = window._salesBizItemsCurrentPage;
+            const startBizIdx = (curBizPage - 1) * SALES_ITEMS_PER_PAGE;
+            displayBiz = sortedBiz.slice(startBizIdx, startBizIdx + SALES_ITEMS_PER_PAGE);
+
+            if (paginationBizEl) {
+                if (totalCount <= SALES_ITEMS_PER_PAGE) {
+                    paginationBizEl.style.display = 'none';
+                } else {
+                    paginationBizEl.style.display = 'flex';
+                    if (indicatorBizEl) {
+                        indicatorBizEl.textContent = `${curBizPage} / ${totalBizPages} 페이지 (총 ${totalCount}건)`;
+                    }
+                    if (prevBizBtn) {
+                        prevBizBtn.disabled = (curBizPage <= 1);
+                        prevBizBtn.style.opacity = (curBizPage <= 1) ? '0.45' : '1';
+                        prevBizBtn.style.cursor = (curBizPage <= 1) ? 'not-allowed' : 'pointer';
+                    }
+                    if (nextBizBtn) {
+                        nextBizBtn.disabled = (curBizPage >= totalBizPages);
+                        nextBizBtn.style.opacity = (curBizPage >= totalBizPages) ? '0.45' : '1';
+                        nextBizBtn.style.cursor = (curBizPage >= totalBizPages) ? 'not-allowed' : 'pointer';
+                    }
+                }
+            }
+        }
 
         bizListContainer.innerHTML = '';
         displayBiz.forEach(item => {
@@ -2481,11 +2578,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // 모바일 영업자 대시보드 [전체 펼치기 / 기본 3건만 접기] 글로벌 핸들러
     window.toggleBizItemsMob = function () {
         bizItemsMobExpanded = !bizItemsMobExpanded;
+        window._salesBizItemsCurrentPage = 1;
         renderBizRegisteredItemsMob();
     };
 
     window.toggleUserAppsMob = function () {
         userAppsMobExpanded = !userAppsMobExpanded;
+        window._salesAppsCurrentPage = 1;
         renderUserApplicationsMob();
     };
 
@@ -2500,6 +2599,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchUserAppsMobInput = document.getElementById('search-user-apps-mob');
     if (searchUserAppsMobInput) {
         searchUserAppsMobInput.addEventListener('input', () => {
+            window._salesAppsCurrentPage = 1;
             renderUserApplicationsMob();
         });
     }
@@ -2509,6 +2609,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchBizItemsMobInput = document.getElementById('search-biz-items-mob');
     if (searchBizItemsMobInput) {
         searchBizItemsMobInput.addEventListener('input', () => {
+            window._salesBizItemsCurrentPage = 1;
             renderBizRegisteredItemsMob();
         });
     }
