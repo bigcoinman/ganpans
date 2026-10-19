@@ -89,7 +89,7 @@ console.log('\n--- 3. getAppStatusBadgeHtmlMob 뱃지 렌더러 검증 ---');
 
 testAssert(
     'getAppStatusBadgeHtmlMob 내 지원 신청 취소 뱃지 코드 장착',
-    appJs.includes("preBadgeHtml = '<span style=\"background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;\"><i class=\"fa-solid fa-trash-can\"></i> 지원 신청 취소</span>';")
+    appJs.includes("preBadgeHtml = '<span style=\"background: #f5f3ff; color: #7c3aed; border: 1.5px solid #c4b5fd; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;\"><i class=\"fa-solid fa-trash-can\"></i> 지원 신청 취소</span>';")
 );
 
 // ----------------------------------------------------

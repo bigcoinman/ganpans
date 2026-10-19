@@ -30,7 +30,7 @@ window.updateApplicationStatusMob = function(id, newStatus, selectEl) {
             statusColor = '#c2410c'; statusBg = '#fff7ed'; statusBorder = '#fed7aa';
         } else if (newStatus === 'canceled' || newStatus === 'cancelled' || newStatus === '지원 신청 취소' || newStatus === '지원신청취소' || newStatus === '지원 사업 취소' || newStatus === '지원사업취소' || newStatus === '신청취소') {
             statusLabel = '지원 신청 취소';
-            statusColor = '#475569'; statusBg = '#f8fafc'; statusBorder = '#cbd5e1';
+            statusColor = '#7c3aed'; statusBg = '#f5f3ff'; statusBorder = '#c4b5fd';
         } else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') {
             statusLabel = '지원사업 탈락';
             statusColor = '#b91c1c'; statusBg = '#fef2f2'; statusBorder = '#fca5a5';
@@ -1887,7 +1887,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (s === 'unqualified' || s === '신청요건 미달업체' || s === '신청요건미달' || s === '미달') {
             preBadgeHtml = '<span style="background: #fff7ed; color: #c2410c; border: 1.5px solid #fed7aa; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-triangle-exclamation"></i> 신청요건 미달업체</span>';
         } else if (s === 'canceled' || s === 'cancelled' || s === '지원 신청 취소' || s === '지원신청취소' || s === '지원 사업 취소' || s === '지원사업취소' || s === '신청취소') {
-            preBadgeHtml = '<span style="background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-trash-can"></i> 지원 신청 취소</span>';
+            preBadgeHtml = '<span style="background: #f5f3ff; color: #7c3aed; border: 1.5px solid #c4b5fd; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-trash-can"></i> 지원 신청 취소</span>';
         } else if (s === 'rejected' || s === '지원사업 탈락' || s === '지원사업탈락' || s === '반려됨') {
             preBadgeHtml = '<span style="background: #fef2f2; color: #ef4444; border: 1.5px solid #fecaca; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>';
         } else if (s === 'giveup' || s === '지원사업 포기' || s === '지원사업포기') {
@@ -3407,7 +3407,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let statusBadge = '<span class="badge-status pending" style="font-size: 0.85rem; padding: 3px 8px; border: 1px solid #cbd5e1; background: #f1f5f9; color: #475569; font-weight: 700;">사업시행 전 사전등록업체</span>';
                     if (isApproved) statusBadge = '<span class="badge-status approved" style="font-size: 0.85rem; padding: 3px 8px; background: #dcfce7; color: #166534; border: 1px solid #86efac; font-weight: 700;">서류준비 & 접수대기</span>';
                     else if (isUnqualified) statusBadge = '<span class="badge-status unqualified" style="font-size: 0.85rem; padding: 3px 8px; background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; font-weight: 700;">신청요건 미달업체</span>';
-                    else if (isCanceled) statusBadge = '<span class="badge-status canceled" style="font-size: 0.85rem; padding: 3px 8px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; font-weight: 700;">지원 신청 취소</span>';
+                    else if (isCanceled) statusBadge = '<span class="badge-status canceled" style="font-size: 0.85rem; padding: 3px 8px; background: #f5f3ff; color: #7c3aed; border: 1px solid #c4b5fd; font-weight: 700;">지원 신청 취소</span>';
                     else if (isRejected) statusBadge = '<span class="badge-status rejected" style="font-size: 0.85rem; padding: 3px 8px; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-weight: 700;">지원사업 탈락</span>';
                     else if (isGiveup) statusBadge = '<span class="badge-status giveup" style="font-size: 0.85rem; padding: 3px 8px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-weight: 700;">지원사업 포기</span>';
 
@@ -3424,9 +3424,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         statusBg = '#fff7ed';
                         statusBorder = '#fed7aa';
                     } else if (isCanceled) {
-                        statusColor = '#475569';
-                        statusBg = '#f8fafc';
-                        statusBorder = '#cbd5e1';
+                        statusColor = '#7c3aed';
+                        statusBg = '#f5f3ff';
+                        statusBorder = '#c4b5fd';
                     } else if (isRejected) {
                         statusColor = '#b91c1c';
                         statusBg = '#fef2f2';
