@@ -28,6 +28,9 @@ window.updateApplicationStatusMob = function(id, newStatus, selectEl) {
         } else if (newStatus === 'unqualified' || newStatus === '신청요건 미달업체') {
             statusLabel = '신청요건 미달업체';
             statusColor = '#c2410c'; statusBg = '#fff7ed'; statusBorder = '#fed7aa';
+        } else if (newStatus === 'canceled' || newStatus === 'cancelled' || newStatus === '지원 신청 취소' || newStatus === '지원신청취소' || newStatus === '지원 사업 취소' || newStatus === '지원사업취소' || newStatus === '신청취소') {
+            statusLabel = '지원 신청 취소';
+            statusColor = '#475569'; statusBg = '#f8fafc'; statusBorder = '#cbd5e1';
         } else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') {
             statusLabel = '지원사업 탈락';
             statusColor = '#b91c1c'; statusBg = '#fef2f2'; statusBorder = '#fca5a5';
@@ -91,9 +94,10 @@ window.openEditApplicationModal = function(appId) {
     const curStatus = app.status || 'pending';
     const isApproved = (curStatus === 'approved' || curStatus === '서류준비 & 접수대기' || curStatus === '서류제출 & 접수예정' || curStatus === '승인 완료');
     const isUnqualified = (curStatus === 'unqualified' || curStatus === '신청요건 미달업체' || curStatus === '미달');
+    const isCanceled = (curStatus === 'canceled' || curStatus === 'cancelled' || curStatus === '지원 신청 취소' || curStatus === '지원신청취소' || curStatus === '지원 사업 취소' || curStatus === '지원사업취소' || curStatus === '신청취소');
     const isRejected = (curStatus === 'rejected' || curStatus === '지원사업 탈락' || curStatus === '반려됨');
     const isGiveup = (curStatus === 'giveup' || curStatus === '지원사업 포기');
-    const isPending = !isApproved && !isUnqualified && !isRejected && !isGiveup;
+    const isPending = !isApproved && !isUnqualified && !isCanceled && !isRejected && !isGiveup;
 
     modal.innerHTML = `
         <div style="background: #ffffff; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); border: 1px solid #cbd5e1; padding: 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position: relative; z-index: 10000000;">
@@ -116,6 +120,7 @@ window.openEditApplicationModal = function(appId) {
                             <option value="pending" ${isPending ? 'selected' : ''}>⏳ 사업시행 전 사전등록업체</option>
                             <option value="approved" ${isApproved ? 'selected' : ''}>📑 서류준비 & 접수대기</option>
                             <option value="unqualified" ${isUnqualified ? 'selected' : ''}>⚠️ 신청요건 미달업체</option>
+                            <option value="canceled" ${isCanceled ? 'selected' : ''}>🗑️ 지원 신청 취소</option>
                             <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
                             <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
                         </select>
@@ -1881,6 +1886,8 @@ document.addEventListener('DOMContentLoaded', () => {
             preBadgeHtml = '<span style="background: #ecfdf5; color: #059669; border: 1.5px solid #86efac; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-file-signature"></i> 서류준비 & 접수대기</span>';
         } else if (s === 'unqualified' || s === '신청요건 미달업체' || s === '신청요건미달' || s === '미달') {
             preBadgeHtml = '<span style="background: #fff7ed; color: #c2410c; border: 1.5px solid #fed7aa; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-triangle-exclamation"></i> 신청요건 미달업체</span>';
+        } else if (s === 'canceled' || s === 'cancelled' || s === '지원 신청 취소' || s === '지원신청취소' || s === '지원 사업 취소' || s === '지원사업취소' || s === '신청취소') {
+            preBadgeHtml = '<span style="background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-trash-can"></i> 지원 신청 취소</span>';
         } else if (s === 'rejected' || s === '지원사업 탈락' || s === '지원사업탈락' || s === '반려됨') {
             preBadgeHtml = '<span style="background: #fef2f2; color: #ef4444; border: 1.5px solid #fecaca; padding: 4px 10px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-circle-xmark"></i> 지원사업 탈락</span>';
         } else if (s === 'giveup' || s === '지원사업 포기' || s === '지원사업포기') {
@@ -2660,6 +2667,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (constStatus === '대상자선정' || constStatus === 'before_construction') return '시공사 배정 (시공 전)';
             if (status === 'approved' || status === '서류준비 & 접수대기' || status === '서류제출 & 접수예정' || status === '승인 완료') return '서류준비 & 접수대기';
             if (status === 'unqualified' || status === '신청요건 미달업체') return '신청요건 미달업체';
+            if (status === 'canceled' || status === 'cancelled' || status === '지원 신청 취소' || status === '지원신청취소' || status === '지원 사업 취소' || status === '지원사업취소' || status === '신청취소') return '지원 신청 취소';
             if (status === 'rejected' || status === '지원사업 탈락' || status === '반려됨' || status === '지원사업탈락') return '지원사업 탈락';
             if (status === 'giveup' || status === '지원사업 포기' || status === '지원사업포기') return '지원사업 포기';
             return '사업시행 전 사전등록업체';
@@ -2756,6 +2764,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let statusText = '사업시행 전 사전등록업체';
             if (a.status === 'approved' || a.status === '서류준비 & 접수대기' || a.status === '서류제출 & 접수예정' || a.status === '승인 완료') statusText = '서류준비 & 접수대기';
             else if (a.status === 'unqualified' || a.status === '신청요건 미달업체') statusText = '신청요건 미달업체';
+            else if (a.status === 'canceled' || a.status === 'cancelled' || a.status === '지원 신청 취소' || a.status === '지원신청취소' || a.status === '지원 사업 취소' || a.status === '지원사업취소' || a.status === '신청취소') statusText = '지원 신청 취소';
             else if (a.status === 'rejected' || a.status === '지원사업 탈락') statusText = '지원사업 탈락';
             else if (a.status === 'giveup' || a.status === '지원사업 포기') statusText = '지원사업 포기';
 
@@ -3387,16 +3396,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.style.border = '1px solid var(--border-color)';
                     card.style.marginBottom = '12px';
 
-                    // Status mapping (표준 5대 상태)
+                    // Status mapping (표준 6대 상태)
                     const isApproved = (app.status === 'approved' || app.status === '서류준비 & 접수대기' || app.status === '서류제출 & 접수예정' || app.status === '서류제출&접수예정' || app.status === '승인 완료');
                     const isUnqualified = (app.status === 'unqualified' || app.status === '신청요건 미달업체' || app.status === '신청요건미달' || app.status === '미달');
+                    const isCanceled = (app.status === 'canceled' || app.status === 'cancelled' || app.status === '지원 신청 취소' || app.status === '지원신청취소' || app.status === '지원 사업 취소' || app.status === '지원사업취소' || app.status === '신청취소');
                     const isRejected = (app.status === 'rejected' || app.status === '지원사업 탈락' || app.status === '지원사업탈락' || app.status === '반려됨');
                     const isGiveup = (app.status === 'giveup' || app.status === '지원사업 포기' || app.status === '지원사업포기');
-                    const isPending = !isApproved && !isUnqualified && !isRejected && !isGiveup;
+                    const isPending = !isApproved && !isUnqualified && !isCanceled && !isRejected && !isGiveup;
 
                     let statusBadge = '<span class="badge-status pending" style="font-size: 0.85rem; padding: 3px 8px; border: 1px solid #cbd5e1; background: #f1f5f9; color: #475569; font-weight: 700;">사업시행 전 사전등록업체</span>';
                     if (isApproved) statusBadge = '<span class="badge-status approved" style="font-size: 0.85rem; padding: 3px 8px; background: #dcfce7; color: #166534; border: 1px solid #86efac; font-weight: 700;">서류준비 & 접수대기</span>';
                     else if (isUnqualified) statusBadge = '<span class="badge-status unqualified" style="font-size: 0.85rem; padding: 3px 8px; background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; font-weight: 700;">신청요건 미달업체</span>';
+                    else if (isCanceled) statusBadge = '<span class="badge-status canceled" style="font-size: 0.85rem; padding: 3px 8px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; font-weight: 700;">지원 신청 취소</span>';
                     else if (isRejected) statusBadge = '<span class="badge-status rejected" style="font-size: 0.85rem; padding: 3px 8px; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-weight: 700;">지원사업 탈락</span>';
                     else if (isGiveup) statusBadge = '<span class="badge-status giveup" style="font-size: 0.85rem; padding: 3px 8px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-weight: 700;">지원사업 포기</span>';
 
@@ -3412,6 +3423,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         statusColor = '#c2410c';
                         statusBg = '#fff7ed';
                         statusBorder = '#fed7aa';
+                    } else if (isCanceled) {
+                        statusColor = '#475569';
+                        statusBg = '#f8fafc';
+                        statusBorder = '#cbd5e1';
                     } else if (isRejected) {
                         statusColor = '#b91c1c';
                         statusBg = '#fef2f2';
@@ -3429,6 +3444,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <option value="pending" ${isPending ? 'selected' : ''}>⏳ 사업시행 전 사전등록업체</option>
                                     <option value="approved" ${isApproved ? 'selected' : ''}>📑 서류준비 & 접수대기</option>
                                     <option value="unqualified" ${isUnqualified ? 'selected' : ''}>⚠️ 신청요건 미달업체</option>
+                                    <option value="canceled" ${isCanceled ? 'selected' : ''}>🗑️ 지원 신청 취소</option>
                                     <option value="rejected" ${isRejected ? 'selected' : ''}>❌ 지원사업 탈락</option>
                                     <option value="giveup" ${isGiveup ? 'selected' : ''}>🚫 지원사업 포기</option>
                                 </select>

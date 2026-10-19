@@ -2069,6 +2069,10 @@
           statusColor = '#d97706';
           statusBg = '#fffbeb';
           statusBorder = '#fde68a';
+        } else if (newStatus === 'canceled' || newStatus === 'cancelled' || newStatus === '지원 신청 취소' || newStatus === '지원신청취소' || newStatus === '지원 사업 취소' || newStatus === '지원사업취소' || newStatus === '신청취소') {
+          statusColor = '#475569';
+          statusBg = '#f8fafc';
+          statusBorder = '#cbd5e1';
         } else if (newStatus === 'rejected' || newStatus === '지원사업 탈락' || newStatus === '지원사업탈락') {
           statusColor = '#dc2626';
           statusBg = '#fee2e2';
