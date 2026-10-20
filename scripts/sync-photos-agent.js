@@ -58,8 +58,23 @@ function getExistingPhotoHashes(folderPath) {
   return { hashSet, maxIndex, fileCount };
 }
 
-// 1. 기본 경로 설정
-const TARGET_ROOT_DIR = 'D:\\1-경기경제과학진흥원\\1- 2027년 간판지원단 신청업체 목록';
+// 1. 스마트 드라이브 감지 및 기본 경로 설정
+function resolveTargetRootDir() {
+  if (process.env.GANPAN_TARGET_DIR) {
+    return process.env.GANPAN_TARGET_DIR;
+  }
+  try {
+    if (fs.existsSync('D:\\')) {
+      return 'D:\\1-경기경제과학진흥원\\1- 2027년 간판지원단 신청업체 목록';
+    }
+  } catch (e) {}
+  try {
+    return 'C:\\1-경기경제과학진흥원\\1- 2027년 간판지원단 신청업체 목록';
+  } catch (e) {}
+  return path.join(process.env.USERPROFILE || process.env.HOME || '.', '간판지원단_신청업체_목록');
+}
+
+const TARGET_ROOT_DIR = resolveTargetRootDir();
 const CANCELED_FOLDER_NAME = '흄흄흄흄 - 취소 & 포기';
 
 // 2. Supabase 환경설정 로드
