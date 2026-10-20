@@ -58,19 +58,50 @@ function getExistingPhotoHashes(folderPath) {
   return { hashSet, maxIndex, fileCount };
 }
 
-// 1. 스마트 드라이브 감지 및 기본 경로 설정
+// 1. 스마트 드라이브 감지 및 동적 저장 경로 설정
 function resolveTargetRootDir() {
+  // 0. 환경변수 지정이 있으면 최우선
   if (process.env.GANPAN_TARGET_DIR) {
     return process.env.GANPAN_TARGET_DIR;
   }
+
+  // 1. 사용자 정의 설정 파일(저장위치_설정.txt)이 있으면 최우선 적용
+  const customConfigPath = path.resolve(__dirname, '..', '저장위치_설정.txt');
+  if (fs.existsSync(customConfigPath)) {
+    try {
+      const customPath = fs.readFileSync(customConfigPath, 'utf8').trim();
+      if (customPath && customPath.length >= 3) {
+        return customPath;
+      }
+    } catch (e) {}
+  }
+
+  const folderRelPath = path.join('1-경기경제과학진흥원', '1- 2027년 간판지원단 신청업체 목록');
+
+  // 2. 스마트 실존 폴더 탐색:
+  // 대표님이 폴더를 외장하드/USB/E드라이브 등으로 옮겨두셨을 경우, 해당 폴더를 스스로 발견하여 직행!
+  // E드라이브를 D보다 먼저 검사하여, 사용자가 D에서 E로 옮긴 의도를 최우선으로 존중합니다.
+  const checkDrives = ['E:', 'F:', 'G:', 'H:', 'D:', 'C:'];
+  for (const drv of checkDrives) {
+    try {
+      const candidatePath = path.join(drv + path.sep, folderRelPath);
+      if (fs.existsSync(candidatePath)) {
+        return candidatePath;
+      }
+    } catch (e) {}
+  }
+
+  // 3. 기존 폴더가 어디에도 없을 때(최초 실행 시 기본 위치)
+  // D드라이브가 있으면 D:, 없으면 C: 순으로 기본 생성
   try {
     if (fs.existsSync('D:\\')) {
-      return 'D:\\1-경기경제과학진흥원\\1- 2027년 간판지원단 신청업체 목록';
+      return path.join('D:\\', folderRelPath);
     }
   } catch (e) {}
   try {
-    return 'C:\\1-경기경제과학진흥원\\1- 2027년 간판지원단 신청업체 목록';
+    return path.join('C:\\', folderRelPath);
   } catch (e) {}
+
   return path.join(process.env.USERPROFILE || process.env.HOME || '.', '간판지원단_신청업체_목록');
 }
 
@@ -421,4 +452,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { runSyncAgent };
+module.exports = { runSyncAgent, resolveTargetRootDir };
