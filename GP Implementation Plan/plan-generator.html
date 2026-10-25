@@ -1134,22 +1134,26 @@
         const headerText = document.getElementById('btnHeaderApiKeyText');
 
         if (hasKey) {
-            textEl.textContent = '연동 완료';
-            textEl.style.color = '#4ade80';
+            if (textEl) {
+                textEl.textContent = '연동 완료';
+                textEl.style.color = '#4ade80';
+            }
             if (alertBanner) alertBanner.style.display = 'none';
             if (headerBtn) {
                 headerBtn.className = 'btn-api-key connected';
-                headerIcon.textContent = '✅';
-                headerText.textContent = 'Gemini API 연동됨 (설정)';
+                if (headerIcon) headerIcon.textContent = '✅';
+                if (headerText) headerText.textContent = 'Gemini API 연동됨 (설정)';
             }
         } else {
-            textEl.textContent = '등록 필요';
-            textEl.style.color = '#f87171';
+            if (textEl) {
+                textEl.textContent = '등록 필요';
+                textEl.style.color = '#f87171';
+            }
             if (alertBanner) alertBanner.style.display = 'flex';
             if (headerBtn) {
                 headerBtn.className = 'btn-api-key';
-                headerIcon.textContent = '🔑';
-                headerText.textContent = '[필수] Gemini API 키 등록';
+                if (headerIcon) headerIcon.textContent = '🔑';
+                if (headerText) headerText.textContent = '[필수] Gemini API 키 등록';
             }
         }
     }
@@ -1326,11 +1330,12 @@
     }
 
     async function processBizLicenseFile(file) {
-        document.getElementById('bizDropzoneText').textContent = `선택된 파일: ${file.name} (처리 중...)`;
+        const dropzoneText = document.getElementById('bizDropzoneText');
+        if (dropzoneText) dropzoneText.textContent = `선택된 파일: ${file.name} (처리 중...)`;
         try {
             const compressedBase64 = await compressImage(file, 800, 0.7);
             AppState.bizPhotoBase64 = compressedBase64;
-            document.getElementById('bizDropzoneText').textContent = `✅ 등록 완료: ${file.name}`;
+            if (dropzoneText) dropzoneText.textContent = `✅ 등록 완료: ${file.name}`;
             
             // API Key가 있으면 즉시 OCR 자동인식 시도
             if (AppState.geminiApiKey) {
@@ -1842,46 +1847,54 @@ ${extraNotes ? extraNotes : industryDetail}
         AppState.isGenerating = isGen;
         const btn = document.getElementById('btnGenerate');
         const text = document.getElementById('btnGenerateText');
-        if (isGen) {
-            btn.disabled = true;
-            text.textContent = '노후 간판 3장을 정밀 판독하고 있습니다... (약 2~3초 소요)';
-        } else {
-            btn.disabled = false;
-            text.textContent = '50년 경력 행정 Agent로 공단 심사용 추진계획서 작성 시작';
+        if (btn) btn.disabled = isGen;
+        if (text) {
+            text.textContent = isGen 
+                ? '노후 간판 3장을 정밀 판독하고 있습니다... (약 2~3초 소요)' 
+                : '50년 경력 행정 Agent로 공단 심사용 추진계획서 작성 시작';
         }
     }
 
-    // 글자 수 실시간 카운터
+    // 글자 수 실시간 카운터 (DOM 요소 파괴 방지 및 100% 무결성 유지)
     function updateCharCount() {
-        const text = document.getElementById('planOutput').value;
-        const len = text.length;
+        const planEl = document.getElementById('planOutput');
+        if (!planEl) return;
+        const len = planEl.value.length;
         const countEl = document.getElementById('planCharCount');
         const badgeEl = document.getElementById('planCountBadge');
-        countEl.textContent = len;
 
-        if (len >= 400 && len <= 500) {
-            badgeEl.className = 'badge-count good';
-            badgeEl.innerHTML = `글자수: <strong>${len}</strong>자 / 500자 (400~500자 적정 완료)`;
-        } else if (len > 500) {
-            badgeEl.className = 'badge-count danger';
-            badgeEl.innerHTML = `글자수: <strong>${len}</strong>자 / 500자 (500자 초과 주의)`;
-        } else {
-            badgeEl.className = 'badge-count warn';
-            badgeEl.innerHTML = `글자수: <strong>${len}</strong>자 / 500자 (최소 400자 이상 필요)`;
+        if (countEl) {
+            countEl.textContent = len;
+        }
+
+        if (badgeEl) {
+            if (len >= 400 && len <= 500) {
+                badgeEl.className = 'badge-count good';
+                badgeEl.innerHTML = `글자수: <strong id="planCharCount">${len}</strong>자 / 500자 (400~500자 적정 완료)`;
+            } else if (len > 500) {
+                badgeEl.className = 'badge-count danger';
+                badgeEl.innerHTML = `글자수: <strong id="planCharCount">${len}</strong>자 / 500자 (500자 초과 주의)`;
+            } else {
+                badgeEl.className = 'badge-count warn';
+                badgeEl.innerHTML = `글자수: <strong id="planCharCount">${len}</strong>자 / 500자 (최소 400자 이상 필요)`;
+            }
         }
     }
 
     function updatePhotoCharCount(num) {
-        const text = document.getElementById(`p${num}Output`).value;
-        const len = text.length;
+        const textEl = document.getElementById(`p${num}Output`);
+        if (!textEl) return;
+        const len = textEl.value.length;
         const countEl = document.getElementById(`p${num}Count`);
         const badgeEl = document.getElementById(`p${num}CountBadge`);
-        countEl.textContent = len;
+        if (countEl) countEl.textContent = len;
 
-        if (len <= 100) {
-            badgeEl.className = 'badge-count good';
-        } else {
-            badgeEl.className = 'badge-count danger';
+        if (badgeEl) {
+            if (len <= 100) {
+                badgeEl.className = 'badge-count good';
+            } else {
+                badgeEl.className = 'badge-count danger';
+            }
         }
     }
 
@@ -1945,8 +1958,10 @@ ${p3}`;
 
         // 2. 사업자등록증 드롭존 초기화
         AppState.bizPhotoBase64 = null;
-        document.getElementById('bizFileInput').value = '';
-        document.getElementById('bizDropzoneText').textContent = '사업자등록증 사진을 여기에 끌어다 놓거나 클릭하여 선택하세요';
+        const bizFileEl = document.getElementById('bizFileInput');
+        if (bizFileEl) bizFileEl.value = '';
+        const dropText = document.getElementById('bizDropzoneText');
+        if (dropText) dropText.textContent = '사업자등록증 사진을 여기에 끌어다 놓거나 클릭하여 선택하세요';
 
         // 3. 사진 슬롯 3장 및 일괄 업로드 드롭존 초기화
         for (let i = 1; i <= 3; i++) {
@@ -1979,11 +1994,14 @@ ${p3}`;
     // 토스트 팝업
     function showToast(msg) {
         const toast = document.getElementById('toastBox');
-        document.getElementById('toastMsg').textContent = msg;
-        toast.classList.add('show');
-        setTimeout(() => {
-            toast.classList.remove('show');
-        }, 2500);
+        const toastMsg = document.getElementById('toastMsg');
+        if (toastMsg) toastMsg.textContent = msg;
+        if (toast) {
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
     }
 </script>
 
