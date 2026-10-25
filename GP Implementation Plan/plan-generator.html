@@ -142,20 +142,64 @@
             box-shadow: 0 0 6px #22c55e;
         }
 
-        .btn-ghost-white {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 6px 14px;
+        .btn-api-key {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #fbbf24;
+            color: #ffffff;
+            padding: 8px 16px;
             border-radius: var(--radius-sm);
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 13px;
+            font-weight: 700;
             cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+        }
+
+        .btn-api-key:hover {
+            background: rgba(255, 255, 255, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .btn-api-key.connected {
+            border-color: #4ade80;
+            box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+        }
+
+        .api-key-alert-banner {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 2px solid #f59e0b;
+            border-radius: var(--radius-md);
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.2);
             transition: all 0.2s;
         }
 
-        .btn-ghost-white:hover {
-            background: rgba(255, 255, 255, 0.3);
+        .api-key-alert-banner:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(245, 158, 11, 0.3);
+            border-color: #d97706;
+        }
+
+        .btn-alert-cta {
+            background: #d97706;
+            color: white;
+            font-size: 13px;
+            font-weight: 800;
+            padding: 9px 18px;
+            border-radius: var(--radius-sm);
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
         }
 
         /* Card Section */
@@ -710,10 +754,26 @@
                 <span class="status-pill" id="apiKeyStatusPill">🔑 Gemini API: <span id="apiKeyStatusText">등록 필요</span></span>
             </div>
             <div>
-                <button type="button" class="btn-ghost-white" onclick="openKeyModal()">⚙️ Gemini API 키 설정</button>
+                <button type="button" id="btnHeaderApiKey" class="btn-api-key" onclick="openKeyModal()">
+                    <span id="btnHeaderApiKeyIcon">🔑</span> <span id="btnHeaderApiKeyText">[필수] Gemini API 키 등록</span>
+                </button>
             </div>
         </div>
     </header>
+
+    <!-- API Key 미등록 시 눈에 확 띄는 최상단 골드 강조 배너 -->
+    <div id="apiKeyAlertBanner" class="api-key-alert-banner" onclick="openKeyModal()">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size: 26px;">🔑</span>
+            <div>
+                <strong style="color: #b45309; font-size: 15px; display:block;">[필수 등록] Google Gemini API 키가 아직 등록되지 않았습니다!</strong>
+                <span style="font-size: 13px; color: #78350f; line-height:1.4;">
+                    여기를 클릭하시면 30초 무료 발급 가이드와 함께 API 키 입력창이 열립니다. (구글 계정만 있으면 100% 무료)
+                </span>
+            </div>
+        </div>
+        <button type="button" class="btn-alert-cta">지금 키 등록하기 ➔</button>
+    </div>
 
     <!-- Notice Banner -->
     <div class="notice-banner">
@@ -921,12 +981,22 @@
 <div class="modal-overlay" id="keyModal">
     <div class="modal-card">
         <h3 class="modal-title">🔑 Google Gemini API 키 설정</h3>
-        <p class="modal-desc">
-            구글 AI 스튜디오(<a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);">Google AI Studio</a>)에서 무료로 발급받은 Gemini API 키를 입력하세요. 키는 외부 서버로 전송되지 않고 본 브라우저에만 안전하게 보관됩니다.
+        <p class="modal-desc" style="line-height: 1.6;">
+            Gemini API는 구글에서 제공하는 초고속 AI 비전 엔진입니다. 구글 계정(Gmail)만 있으면 <strong>신용카드 등록 없이 30초 만에 100% 무료 발급</strong>됩니다.
         </p>
+        
+        <!-- 3단계 발급 가이드 박스 -->
+        <div style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13px; line-height:1.6;">
+            <strong>📌 3초 무료 발급 방법:</strong><br>
+            1. 아래 링크를 클릭하여 구글 AI 스튜디오로 이동합니다.<br>
+            &nbsp;&nbsp;&nbsp;👉 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#2563eb; font-weight:800; text-decoration:underline;">[구글 AI 스튜디오 무료 발급 페이지 바로가기 (클릭)]</a><br>
+            2. 화면에 보이는 파란색 <strong>[Create API key]</strong> 버튼 클릭 후 키를 복사합니다.<br>
+            3. 복사한 키를 아래 칸에 붙여넣고 <strong>[저장하기]</strong>를 누르면 끝입니다!
+        </div>
+
         <div class="form-group">
-            <label class="form-label" for="geminiApiKeyInput">Gemini API Key</label>
-            <input type="password" id="geminiApiKeyInput" class="input-text" placeholder="AIzaSy...">
+            <label class="form-label" for="geminiApiKeyInput">Gemini API Key 입력 <span style="font-size:11px; color:#64748b;">(로컬 브라우저에만 암호화 보관됨)</span></label>
+            <input type="password" id="geminiApiKeyInput" class="input-text" placeholder="AIzaSy... 형식의 키를 붙여넣으세요">
         </div>
         <div class="modal-footer">
             <button type="button" class="btn-sec" onclick="closeKeyModal()">닫기</button>
@@ -969,12 +1039,29 @@
     function updateApiKeyUI(hasKey) {
         const textEl = document.getElementById('apiKeyStatusText');
         const pillEl = document.getElementById('apiKeyStatusPill');
+        const alertBanner = document.getElementById('apiKeyAlertBanner');
+        const headerBtn = document.getElementById('btnHeaderApiKey');
+        const headerIcon = document.getElementById('btnHeaderApiKeyIcon');
+        const headerText = document.getElementById('btnHeaderApiKeyText');
+
         if (hasKey) {
             textEl.textContent = '연동 완료';
             textEl.style.color = '#4ade80';
+            if (alertBanner) alertBanner.style.display = 'none';
+            if (headerBtn) {
+                headerBtn.className = 'btn-api-key connected';
+                headerIcon.textContent = '✅';
+                headerText.textContent = 'Gemini API 연동됨 (설정)';
+            }
         } else {
             textEl.textContent = '등록 필요';
             textEl.style.color = '#f87171';
+            if (alertBanner) alertBanner.style.display = 'flex';
+            if (headerBtn) {
+                headerBtn.className = 'btn-api-key';
+                headerIcon.textContent = '🔑';
+                headerText.textContent = '[필수] Gemini API 키 등록';
+            }
         }
     }
 
