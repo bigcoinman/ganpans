@@ -15,6 +15,8 @@ console.log('========================================================\n');
 
 const planGenPath = path.join(__dirname, 'plan-generator.html');
 const rulesPath = path.join(__dirname, 'PLAN_RULES.md');
+const blueprintPath = path.join(__dirname, 'GP_SYSTEM_BLUEPRINT.md');
+const skillPath = path.join(__dirname, '..', '.agents', 'skills', 'plan-generator-discipline', 'SKILL.md');
 
 let totalChecks = 0;
 let passedChecks = 0;
@@ -42,6 +44,18 @@ assertCheck(
   'PLAN_RULES.md 독립 강제 원칙 문서 존재 확인',
   fs.existsSync(rulesPath),
   'PLAN_RULES.md 독립 강제 원칙 문서가 존재하지 않습니다!'
+);
+
+assertCheck(
+  'GP_SYSTEM_BLUEPRINT.md 독립 단일 절대 설계도 존재 확인',
+  fs.existsSync(blueprintPath),
+  'GP_SYSTEM_BLUEPRINT.md 단일 절대 설계도 파일이 존재하지 않습니다!'
+);
+
+assertCheck(
+  'plan-generator-discipline 공식 에이전트 스킬 존재 확인',
+  fs.existsSync(skillPath),
+  '.agents/skills/plan-generator-discipline/SKILL.md 스킬 파일이 존재하지 않습니다!'
 );
 
 const planGenCode = fs.readFileSync(planGenPath, 'utf8');
