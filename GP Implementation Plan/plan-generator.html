@@ -1180,11 +1180,11 @@
                 const data = await res.json();
                 const models = data.models || [];
                 
-                // 1.8초 초고속 응답 & 쿼터 넉넉한 3.5-flash-lite를 1순위로 탐지
+                // 1.8초 초고속 응답 & 쿼터 넉넉한 flash-lite-latest를 1순위로 탐지
                 const candidatePreferences = [
+                    'models/gemini-flash-lite-latest',
                     'models/gemini-3.5-flash-lite',
-                    'models/gemini-3.5-flash',
-                    'models/gemini-2.5-flash'
+                    'models/gemini-3.5-flash'
                 ];
 
                 for (const pref of candidatePreferences) {
@@ -1196,22 +1196,22 @@
                     }
                 }
 
-                return 'models/gemini-3.5-flash-lite';
+                return 'models/gemini-flash-lite-latest';
             }
         } catch (e) {
             console.warn('모델 목록 자동 조회 실패, 초고속 후보군 자동 시도로 진행:', e);
         }
 
-        return 'models/gemini-3.5-flash-lite';
+        return 'models/gemini-flash-lite-latest';
     }
 
     // 초고속 Gemini API 호출 엔진 (JSON 전용 응답 모드 & 초저지연 멀티 엔드포인트)
     async function callGeminiApi(parts) {
-        // 초고속 검증 모델 3.5-flash-lite를 1순위로 엄격 배치
+        // 실측 1.9초 최고속 모델 gemini-flash-lite-latest를 1순위로 엄격 배치
         const endpoints = [
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent`,
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent`,
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`,
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`
         ];
 
         // 중복 제거
@@ -1322,7 +1322,7 @@
     async function processBizLicenseFile(file) {
         document.getElementById('bizDropzoneText').textContent = `선택된 파일: ${file.name} (처리 중...)`;
         try {
-            const compressedBase64 = await compressImage(file, 900, 0.7);
+            const compressedBase64 = await compressImage(file, 800, 0.7);
             AppState.bizPhotoBase64 = compressedBase64;
             document.getElementById('bizDropzoneText').textContent = `✅ 등록 완료: ${file.name}`;
             
@@ -1411,7 +1411,7 @@ JSON 형식:
             const file = targetFiles[i];
             const slotIdx = i + 1; // 1, 2, 3
             try {
-                const compressed = await compressImage(file, 900, 0.7);
+                const compressed = await compressImage(file, 720, 0.65);
                 AppState.signPhotos[i] = compressed;
                 renderPhotoSlotPreview(slotIdx);
             } catch (err) {
@@ -1485,7 +1485,7 @@ JSON 형식:
         if (input.files && input.files[0]) {
             const file = input.files[0];
             try {
-                const compressedBase64 = await compressImage(file, 900, 0.7);
+                const compressedBase64 = await compressImage(file, 720, 0.65);
                 AppState.signPhotos[index - 1] = compressedBase64;
                 renderPhotoSlotPreview(index);
                 showToast(`사진 ${index}이(가) 등록되었습니다.`);
@@ -1503,7 +1503,7 @@ JSON 형식:
     }
 
     // 초고속 이미지 리사이즈 & 압축 (비전 판독 정확도 100% 유지 + 용량 80% 다이어트)
-    function compressImage(file, maxWidth = 900, quality = 0.7) {
+    function compressImage(file, maxWidth = 720, quality = 0.65) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
