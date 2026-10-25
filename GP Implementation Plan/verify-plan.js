@@ -46,6 +46,15 @@ assertCheck(
 
 const planGenCode = fs.readFileSync(planGenPath, 'utf8');
 
+// [제0원칙] 간판지원단 본체와의 상호 완전 분리 및 혼입 0% 검증
+assertCheck(
+  '[제0원칙] 간판지원단 본체(Supabase/DataStore/App) 의존성 0% 단독 완결성 검증',
+  !planGenCode.includes('supabase-config.js') &&
+  !planGenCode.includes('data-store.js') &&
+  !planGenCode.includes('app.js'),
+  'plan-generator.html 내 간판지원단 본체 라이브러리가 혼입되었습니다! 100% 독립성을 유지하십시오.'
+);
+
 // 2. [원칙 4] 기타 입력(bizExtraNotes) 폼 장착 검사
 assertCheck(
   '[원칙 4] 기타 입력(bizExtraNotes) textarea 폼 장착 검증',

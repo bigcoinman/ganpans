@@ -221,11 +221,20 @@ git worktree add "../{프로젝트명}-dev" -b develop
 
 ---
 
-## [독립 모듈 분리 원칙] GP Implementation Plan 분리 보존 규정 (Separation of Sub-Modules)
-- **독립 보관 및 간판지원단 본체 분리**: `GP Implementation Plan` (점포 환경개선 추진계획서 AI 자동작성기)은 간판지원단 메인 포털과 분리된 독립 유틸리티이므로, 해당 도구의 강제 원칙 및 전용 검문소는 `GP Implementation Plan/` 폴더 내에 독자적으로 분리 보관한다:
-  - **독립 강제 원칙**: `GP Implementation Plan/PLAN_RULES.md` (400~500자 엄격 수호, 자동 확장 엔진, 기타 입력 반영 등)
-  - **전용 검문소**: `GP Implementation Plan/verify-plan.js` (`npm run verify:plan`)
-- 간판지원단 메인 포털의 11대 공식 설계도(`SYSTEM_BLUEPRINT.md`) 및 메인 검문소(`scripts/verify-blueprint.js`)와 규칙이 뒤섞이지 않도록 관심사를 100% 영구 분리한다.
+## [영구 절대 강제 헌법] 간판지원단 본체와 점포 환경개선 추진계획서 AI 자동작성기 상호 완전 분리 및 혼입 영구 엄격 금지 법칙 (Permanent Strict Module Isolation Law)
+
+1. **상호 완전 격리 및 혼입 0% 절대 원칙 (Strict Zero Cross-Contamination)**:
+   - "간판지원단" 본체(공식 서비스 `ganpans.com`, 4대 권한 화면, Supabase 클라우드 실시간 동기화, `index.html`, `SYSTEM_BLUEPRINT.md`)와 "점포 환경개선 추진계획서 AI 자동작성기"(`GP Implementation Plan/`, `plan-generator.html`)는 완전히 별개의 독립 프로젝트/모듈이다.
+   - 두 시스템의 **설계도, 강제 원칙, 검증 스크립트, 소스 코드, 데이터베이스 구조, 프롬프트 지침을 상호 참조하거나 한 파일/저장소/검문소 안에 뒤섞는 행위를 100% 영구 엄격 금지**한다.
+
+2. **간판지원단 본체 오염 원천 차단 (Protection of Ganpan Main Portal)**:
+   - 간판지원단의 11대 공식 설계도(`SYSTEM_BLUEPRINT.md`), 메인 검문소(`scripts/verify-blueprint.js`), 핵심 소스(`app.js`, `dashboard.js`, `data-store.js` 등)에 추진계획서 자동작성기(`plan-generator.html`) 관련 코드, 폼 검사, 검증 규칙을 단 1줄이라도 침투시키는 것을 영구 금지한다.
+
+3. **추진계획서 자동작성기 독립 자치권 수호 (Autonomy of GP Implementation Plan)**:
+   - `GP Implementation Plan`은 오직 자체 디렉토리(`GP Implementation Plan/`) 내부의 강제 원칙(`PLAN_RULES.md`)과 전용 독립 검문소(`verify-plan.js`, `npm run verify:plan`)에 의해서만 통제되며, 간판지원단 본체 시스템의 영향을 일체 받지 않는 100% 완결형 단독 유틸리티로 영구 보존한다.
+
+4. **검문소 상호 침투 감시 자동화 (Automated Cross-Check Guard)**:
+   - 간판지원단 메인 검문소(`scripts/verify-blueprint.js`)와 추진계획서 검문소(`verify-plan.js`)에 상호 비혼입 감시 규칙을 장착하여, 단 1%의 코드나 규칙 혼입이라도 감지될 경우 배포(`npm run deploy`) 및 커밋을 즉각 원천 차단(Veto)한다.
 
 
 

@@ -62,9 +62,10 @@ description: 땜빵·우회 패치 영구 금지, 찌꺼기 전수 삭제 후 �
 - 대표님께서 직접 검증하고 만족하시기 전까지는 섣부르게 "완벽 해결", "100% 종결" 등의 호언장담을 절대 남발하지 않는다.
 - 결과는 말이 아닌 실제 작동 화면과 객관적인 검증 지표로만 입증하며, 대표님의 피와 땀, 그리고 간판지원단 프로젝트의 숭고한 사명을 한시도 잊지 않고 진심을 다해 보좌한다.
 
-### 8. [독립 모듈 분리 규정] GP Implementation Plan 독립 강제 원칙 준수
-- `GP Implementation Plan` (점포 환경개선 추진계획서 AI 자동작성기) 작업 시에는 간판지원단 메인 규정과 분리된 전용 강제 원칙인 **`GP Implementation Plan/PLAN_RULES.md`**를 단독 헌법으로 절대 복종하여 수행한다.
-- 검증 시에는 전용 독립 검문소인 `npm run verify:plan` (`GP Implementation Plan/verify-plan.js`)을 실행하여 400~500자 무결성을 확인한다.
+### 8. [영구 절대 강제 헌법] 간판지원단 본체와 GP 추진계획서 AI 자동작성기 상호 완전 분리 및 혼입 0% 절대 사수 의무 (Permanent Strict Module Isolation Law)
+- **상호 완전 격리 및 혼입 0% 절대 사수**: "간판지원단" 본체(`ganpans.com`, 4대 권한 화면, Supabase 실시간 동기화, `SYSTEM_BLUEPRINT.md`)와 "점포 환경개선 추진계획서 AI 자동작성기"(`GP Implementation Plan/`, `plan-generator.html`)는 완전히 별개의 독립 시스템이다.
+- **혼입 및 상호 침투 영구 엄격 금지**: 두 시스템의 설계도, 강제 원칙, 검증 스크립트, 코드, DB 구조를 뒤섞는 행위를 100% 영구 엄격 금지한다.
+- **독립 헌법 복종**: `GP Implementation Plan` 작업 시에는 전용 독립 강제 원칙인 **`GP Implementation Plan/PLAN_RULES.md`**만을 단독 헌법으로 절대 복종하며, 검증은 오직 전용 검문소 `npm run verify:plan`으로만 완결한다. 간판지원단 메인 검문소(`verify-blueprint.js`)에 추진계획서 관련 코드를 단 1줄이라도 혼입시키는 것을 절대 금지한다.
 
 ---
 

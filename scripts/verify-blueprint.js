@@ -625,6 +625,19 @@ assertRule(
   '페이지 전환 시 목록 상단으로 부드럽게 스크롤하는 앵커링 코드가 누락되었습니다!'
 );
 
+console.log('\n--- [영구 절대 헌법 검증] BP-ISOLATION (간판지원단 본체와 GP 추진계획서 상호 완전 분리) ---');
+const indexHtmlContent = fs.readFileSync('index.html', 'utf8');
+
+assertRule(
+  '[BP-ISOLATION] 간판지원단 메인 소스(index.html, app.js, data-store.js) 내 GP 추진계획서 혼입 0% 준수',
+  !indexHtmlContent.includes('plan-generator') &&
+  !appCode.includes('plan-generator') &&
+  !dataStoreCode.includes('plan-generator') &&
+  !indexHtmlContent.includes('bizExtraNotes') &&
+  !appCode.includes('bizExtraNotes'),
+  '간판지원단 메인 소스 코드에 GP Implementation Plan(plan-generator / bizExtraNotes)이 혼입되었습니다! 즉시 분리하십시오.'
+);
+
 console.log('\n--- [이원화 금지 검사] 유령 코드 및 찌꺼기 패턴 검사 ---');
 const ghostPatterns = [
   'viewDraftModalForSales',
@@ -639,7 +652,9 @@ const ghostPatterns = [
   'finalUserAddress',
   'finalUserPhone',
   'visitor_reset_flag_20260817',
-  'visitor_session_counted_v2'
+  'visitor_session_counted_v2',
+  'plan-generator',
+  'bizExtraNotes'
 ];
 for (const pattern of ghostPatterns) {
   assertRule(
