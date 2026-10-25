@@ -438,6 +438,28 @@
             background: var(--primary-light);
         }
 
+        .btn-slot-swap {
+            padding: 6px 8px;
+            font-size: 11.5px;
+            font-weight: 700;
+            border-radius: var(--radius-sm);
+            border: 1px solid #93c5fd;
+            background: #eff6ff;
+            color: #1d4ed8;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+        }
+
+        .btn-slot-swap:hover {
+            background: #dbeafe;
+            border-color: #2563eb;
+            color: #1e40af;
+        }
+
         /* Main CTA Button */
         .cta-container {
             margin: 28px 0;
@@ -871,15 +893,26 @@
         </p>
 
         <!-- [신규 기능] 현장 사진 3장 한번에 올리기 통합 드롭존 -->
-        <div class="dropzone" id="batchPhotoDropzone" style="margin-bottom: 16px; border-style: dashed; background: #f0fdf4; border-color: #34d399; padding: 18px 14px;" onclick="document.getElementById('batchPhotoInput').click()">
+        <div class="dropzone" id="batchPhotoDropzone" style="margin-bottom: 10px; border-style: dashed; background: #f0fdf4; border-color: #34d399; padding: 18px 14px;" onclick="document.getElementById('batchPhotoInput').click()">
             <span class="dropzone-icon" style="color: #059669; font-size: 32px;">📸</span>
             <div class="dropzone-text" id="batchPhotoDropzoneText" style="color: #065f46; font-size: 15px;">
                 <strong>노후 간판 사진 3장 한 번에 끌어다 놓기</strong> 또는 <span style="text-decoration: underline; color: #2563eb; cursor: pointer;">클릭하여 3장 일괄 선택</span>
             </div>
             <div class="dropzone-hint" style="color: #047857; margin-top: 4px;">
-                선택하신 순서대로 [사진 1: 현장육안상태] ➔ [사진 2: 시공개선방향] ➔ [사진 3: 영업마비/시급성]에 자동 배치됩니다 (개별 수정 가능)
+                선택하신 순서대로 [사진 1: 현장육안상태] ➔ [사진 2: 시공개선방향] ➔ [사진 3: 영업마비/시급성]에 자동 배치됩니다
             </div>
             <input type="file" id="batchPhotoInput" class="file-hidden" accept="image/*" multiple onchange="handleBatchPhotoUpload(this)">
+        </div>
+
+        <!-- 사진 순서 미세조정 툴바 -->
+        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">순서 재배치:</span>
+            <button type="button" class="btn-slot-swap" onclick="reversePhotoOrder()" title="사진 1번과 3번의 위치를 서로 맞바꿉니다">
+                <span>↕</span> 1번 ↔ 3번 위치 반전
+            </button>
+            <button type="button" class="btn-slot-swap" onclick="rotatePhotoOrder()" title="사진 3장을 오른쪽으로 한 칸씩 순환 이동합니다 (1➔2, 2➔3, 3➔1)">
+                <span>🔁</span> 한 칸씩 회전 (1➔2➔3)
+            </button>
         </div>
 
         <div class="photo-grid">
@@ -894,7 +927,8 @@
                 </div>
                 <input type="file" id="photoInput1" class="file-hidden" accept="image/*" onchange="handleSignPhotoUpload(this, 1)">
                 <div class="slot-actions">
-                    <button type="button" class="btn-slot" onclick="document.getElementById('photoInput1').click()">사진 선택</button>
+                    <button type="button" class="btn-slot-swap" onclick="swapPhotoSlots(1, 2)" title="사진 2번과 순서 교환">➔ 2번 교환</button>
+                    <button type="button" class="btn-slot" onclick="document.getElementById('photoInput1').click()">선택</button>
                     <button type="button" class="btn-slot" onclick="clearPhotoSlot(1)">삭제</button>
                 </div>
             </div>
@@ -910,7 +944,9 @@
                 </div>
                 <input type="file" id="photoInput2" class="file-hidden" accept="image/*" onchange="handleSignPhotoUpload(this, 2)">
                 <div class="slot-actions">
-                    <button type="button" class="btn-slot" onclick="document.getElementById('photoInput2').click()">사진 선택</button>
+                    <button type="button" class="btn-slot-swap" onclick="swapPhotoSlots(1, 2)" title="사진 1번과 순서 교환">⬅ 1번</button>
+                    <button type="button" class="btn-slot-swap" onclick="swapPhotoSlots(2, 3)" title="사진 3번과 순서 교환">3번 ➔</button>
+                    <button type="button" class="btn-slot" onclick="document.getElementById('photoInput2').click()">선택</button>
                     <button type="button" class="btn-slot" onclick="clearPhotoSlot(2)">삭제</button>
                 </div>
             </div>
@@ -926,7 +962,8 @@
                 </div>
                 <input type="file" id="photoInput3" class="file-hidden" accept="image/*" onchange="handleSignPhotoUpload(this, 3)">
                 <div class="slot-actions">
-                    <button type="button" class="btn-slot" onclick="document.getElementById('photoInput3').click()">사진 선택</button>
+                    <button type="button" class="btn-slot-swap" onclick="swapPhotoSlots(2, 3)" title="사진 2번과 순서 교환">⬅ 2번 교환</button>
+                    <button type="button" class="btn-slot" onclick="document.getElementById('photoInput3').click()">선택</button>
                     <button type="button" class="btn-slot" onclick="clearPhotoSlot(3)">삭제</button>
                 </div>
             </div>
@@ -1351,7 +1388,7 @@ JSON 형식:
         }
     }
 
-    // 현장 사진 3장 일괄 업로드 처리
+    // 현장 사진 3장 일괄 업로드 처리 (선택 순서 100% 보장)
     async function handleBatchPhotoUpload(input) {
         if (input.files && input.files.length > 0) {
             await processBatchPhotoFiles(Array.from(input.files));
@@ -1365,9 +1402,10 @@ JSON 형식:
             return;
         }
 
+        // 사용자가 선택한 순서 그대로 최대 3장 추출 (선택 순서 절대 보존)
         const targetFiles = imgFiles.slice(0, 3);
         const dropzoneText = document.getElementById('batchPhotoDropzoneText');
-        if (dropzoneText) dropzoneText.innerHTML = `<strong>사진 ${targetFiles.length}장 초고속 처리 중...</strong>`;
+        if (dropzoneText) dropzoneText.innerHTML = `<strong>선택하신 순서대로 사진 ${targetFiles.length}장 처리 중...</strong>`;
 
         for (let i = 0; i < targetFiles.length; i++) {
             const file = targetFiles[i];
@@ -1375,19 +1413,71 @@ JSON 형식:
             try {
                 const compressed = await compressImage(file, 900, 0.7);
                 AppState.signPhotos[i] = compressed;
-                const previewEl = document.getElementById(`preview${slotIdx}`);
-                if (previewEl) {
-                    previewEl.innerHTML = `<img src="${compressed}" alt="사진 ${slotIdx}">`;
-                }
+                renderPhotoSlotPreview(slotIdx);
             } catch (err) {
                 console.error(`사진 ${slotIdx} 압축 실패:`, err);
             }
         }
 
         if (dropzoneText) {
-            dropzoneText.innerHTML = `✅ <strong>사진 ${targetFiles.length}장 일괄 등록 완료!</strong> (필요시 아래에서 개별 변경 가능)`;
+            dropzoneText.innerHTML = `✅ <strong>선택 순서대로 사진 ${targetFiles.length}장 배치 완료!</strong> (필요시 아래 [교환] 버튼으로 재배치 가능)`;
         }
-        showToast(`현장 사진 ${targetFiles.length}장이 사진 1~${targetFiles.length}번에 자동 배치되었습니다.`);
+        showToast(`선택하신 순서대로 사진 1~${targetFiles.length}번에 정확히 배치되었습니다.`);
+    }
+
+    // 두 사진 슬롯 간 위치 교환 (Swap)
+    function swapPhotoSlots(idxA, idxB) {
+        const a = idxA - 1;
+        const b = idxB - 1;
+        const temp = AppState.signPhotos[a];
+        AppState.signPhotos[a] = AppState.signPhotos[b];
+        AppState.signPhotos[b] = temp;
+
+        renderPhotoSlotPreview(idxA);
+        renderPhotoSlotPreview(idxB);
+
+        showToast(`사진 ${idxA}번과 ${idxB}번의 위치가 서로 교환되었습니다.`);
+    }
+
+    // 사진 1번과 3번 위치 반전 (1번 ↔ 3번)
+    function reversePhotoOrder() {
+        if (!AppState.signPhotos[0] && !AppState.signPhotos[1] && !AppState.signPhotos[2]) {
+            alert('등록된 사진이 없습니다. 사진을 먼저 올려주세요.');
+            return;
+        }
+        swapPhotoSlots(1, 3);
+    }
+
+    // 사진 3장 한 칸씩 순환 회전 (1➔2, 2➔3, 3➔1)
+    function rotatePhotoOrder() {
+        if (!AppState.signPhotos[0] && !AppState.signPhotos[1] && !AppState.signPhotos[2]) {
+            alert('등록된 사진이 없습니다. 사진을 먼저 올려주세요.');
+            return;
+        }
+        const last = AppState.signPhotos[2];
+        AppState.signPhotos[2] = AppState.signPhotos[1];
+        AppState.signPhotos[1] = AppState.signPhotos[0];
+        AppState.signPhotos[0] = last;
+
+        renderPhotoSlotPreview(1);
+        renderPhotoSlotPreview(2);
+        renderPhotoSlotPreview(3);
+        showToast('사진 3장의 위치가 한 칸씩 회전되었습니다. (1➔2, 2➔3, 3➔1)');
+    }
+
+    // 사진 슬롯 미리보기 UI 단일 갱신 함수
+    function renderPhotoSlotPreview(index) {
+        const previewEl = document.getElementById(`preview${index}`);
+        if (!previewEl) return;
+        const base64 = AppState.signPhotos[index - 1];
+        if (base64) {
+            previewEl.innerHTML = `<img src="${base64}" alt="사진 ${index}">`;
+        } else {
+            let hint = '(백화/탈색 상태)';
+            if (index === 2) hint = '(조명/플렉스 교체)';
+            if (index === 3) hint = '(상호/전화 식별 불가)';
+            previewEl.innerHTML = `<div class="empty-label">📷 클릭하여 사진 ${index} 등록<br><span style="font-size: 11px;">${hint}</span></div>`;
+        }
     }
 
     // 간판 사진 개별 슬롯 처리 (재선택/단독교체용)
@@ -1397,8 +1487,7 @@ JSON 형식:
             try {
                 const compressedBase64 = await compressImage(file, 900, 0.7);
                 AppState.signPhotos[index - 1] = compressedBase64;
-                const previewEl = document.getElementById(`preview${index}`);
-                previewEl.innerHTML = `<img src="${compressedBase64}" alt="사진 ${index}">`;
+                renderPhotoSlotPreview(index);
                 showToast(`사진 ${index}이(가) 등록되었습니다.`);
             } catch (err) {
                 console.error(err);
@@ -1410,11 +1499,7 @@ JSON 형식:
     function clearPhotoSlot(index) {
         AppState.signPhotos[index - 1] = null;
         document.getElementById(`photoInput${index}`).value = '';
-        const previewEl = document.getElementById(`preview${index}`);
-        let hint = '(백화/탈색 상태)';
-        if (index === 2) hint = '(조명/플렉스 교체)';
-        if (index === 3) hint = '(상호/전화 식별 불가)';
-        previewEl.innerHTML = `<div class="empty-label">📷 클릭하여 사진 ${index} 등록<br><span style="font-size: 11px;">${hint}</span></div>`;
+        renderPhotoSlotPreview(index);
     }
 
     // 초고속 이미지 리사이즈 & 압축 (비전 판독 정확도 100% 유지 + 용량 80% 다이어트)
