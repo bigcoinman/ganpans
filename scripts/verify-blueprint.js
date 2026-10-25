@@ -625,6 +625,28 @@ assertRule(
   '페이지 전환 시 목록 상단으로 부드럽게 스크롤하는 앵커링 코드가 누락되었습니다!'
 );
 
+console.log('\n--- [설계도-12 검증] BP-PLAN-GENERATOR (점포 추진계획서 400~500자 헌법 및 자동 확장 엔진) ---');
+const planGenPath = 'GP Implementation Plan/plan-generator.html';
+const planGenCode = fs.existsSync(planGenPath) ? fs.readFileSync(planGenPath, 'utf8') : '';
+
+assertRule(
+  '[BP-12] 점포 추진계획서 기타 입력(bizExtraNotes) 폼 장착 준수',
+  planGenCode.includes('id="bizExtraNotes"'),
+  'plan-generator.html 내 기타 입력(bizExtraNotes) 필드가 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-12] 추진계획서 400자 미달 시 자동 정밀 확장 엔진(initialPlan.length < 400) 장착 준수',
+  planGenCode.includes('initialPlan.length < 400') && planGenCode.includes('expansionPrompt'),
+  'plan-generator.html 내 400자 미달 자동 확장 엔진 코드가 누락되었습니다!'
+);
+
+assertRule(
+  '[BP-12] 500자 초과 방어 및 최소 400자 마침표 완결 클리핑(lastPeriod >= 400) 준수',
+  planGenCode.includes('lastPeriod >= 400'),
+  'plan-generator.html 내 400자 이상 마침표 종결 방어 로직이 누락되었습니다!'
+);
+
 console.log('\n--- [이원화 금지 검사] 유령 코드 및 찌꺼기 패턴 검사 ---');
 const ghostPatterns = [
   'viewDraftModalForSales',
