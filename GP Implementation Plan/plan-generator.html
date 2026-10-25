@@ -866,9 +866,21 @@
             <span class="step-badge">AI 비전 정밀 판독 (원문 규격)</span>
         </div>
 
-        <p style="font-size: 13px; color: var(--text-sub); margin-bottom: 14px;">
-            공단 심사 기준에 맞추어 현장 간판 사진 3장을 각각 등록해 주세요. AI가 사진별 노후 상태를 객관적으로 분석하여 각각 100자 내외의 설명을 작성합니다.
+        <p style="font-size: 13px; color: var(--text-sub); margin-bottom: 12px;">
+            공단 심사 기준에 맞추어 현장 간판 사진 3장을 등록해 주세요. 아래 <strong>초록색 영역에 3장을 한 번에 끌어다 놓거나</strong> 파일창에서 3장을 일괄 선택하시면 사진 1, 2, 3번에 자동 배치됩니다.
         </p>
+
+        <!-- [신규 기능] 현장 사진 3장 한번에 올리기 통합 드롭존 -->
+        <div class="dropzone" id="batchPhotoDropzone" style="margin-bottom: 16px; border-style: dashed; background: #f0fdf4; border-color: #34d399; padding: 18px 14px;" onclick="document.getElementById('batchPhotoInput').click()">
+            <span class="dropzone-icon" style="color: #059669; font-size: 32px;">📸</span>
+            <div class="dropzone-text" id="batchPhotoDropzoneText" style="color: #065f46; font-size: 15px;">
+                <strong>노후 간판 사진 3장 한 번에 끌어다 놓기</strong> 또는 <span style="text-decoration: underline; color: #2563eb; cursor: pointer;">클릭하여 3장 일괄 선택</span>
+            </div>
+            <div class="dropzone-hint" style="color: #047857; margin-top: 4px;">
+                선택하신 순서대로 [사진 1: 현장육안상태] ➔ [사진 2: 시공개선방향] ➔ [사진 3: 영업마비/시급성]에 자동 배치됩니다 (개별 수정 가능)
+            </div>
+            <input type="file" id="batchPhotoInput" class="file-hidden" accept="image/*" multiple onchange="handleBatchPhotoUpload(this)">
+        </div>
 
         <div class="photo-grid">
             <!-- 사진 1 -->
@@ -1206,30 +1218,61 @@
 
     // 사업자등록증 드래그앤드롭 설정
     function setupDropzone() {
+        // 사업자등록증 단일 드롭존
         const dropzone = document.getElementById('bizDropzone');
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropzone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dropzone.classList.add('dragover');
+        if (dropzone) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.add('dragover');
+                });
             });
-        });
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropzone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dropzone.classList.remove('dragover');
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.remove('dragover');
+                });
             });
-        });
 
-        dropzone.addEventListener('drop', (e) => {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            if (files && files.length > 0) {
-                processBizLicenseFile(files[0]);
-            }
-        });
+            dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files && files.length > 0) {
+                    processBizLicenseFile(files[0]);
+                }
+            });
+        }
+
+        // 현장 사진 3장 일괄 업로드 드롭존
+        const batchDropzone = document.getElementById('batchPhotoDropzone');
+        if (batchDropzone) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                batchDropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    batchDropzone.classList.add('dragover');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                batchDropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    batchDropzone.classList.remove('dragover');
+                });
+            });
+
+            batchDropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files && files.length > 0) {
+                    processBatchPhotoFiles(Array.from(files));
+                }
+            });
+        }
     }
 
     // 사업자등록증 이미지 압축 및 OCR
@@ -1242,7 +1285,7 @@
     async function processBizLicenseFile(file) {
         document.getElementById('bizDropzoneText').textContent = `선택된 파일: ${file.name} (처리 중...)`;
         try {
-            const compressedBase64 = await compressImage(file, 1200, 0.8);
+            const compressedBase64 = await compressImage(file, 900, 0.7);
             AppState.bizPhotoBase64 = compressedBase64;
             document.getElementById('bizDropzoneText').textContent = `✅ 등록 완료: ${file.name}`;
             
@@ -1258,7 +1301,7 @@
         }
     }
 
-    // 사업자등록증 Gemini OCR
+    // 사업자등록증 Gemini OCR (상호/대표자/개업일/사업장주소/업종 자동 추출)
     async function runBizLicenseOCR(base64Data) {
         showToast('AI가 사업자등록증 정보를 자동 분석하고 있습니다...');
         try {
@@ -1269,6 +1312,7 @@ JSON 형식:
   "bizName": "상호명",
   "ownerName": "대표자명",
   "openDate": "개업연월일(예: 2013-05-10)",
+  "bizAddress": "사업장 소재지 주소(도로명 주소 우선)",
   "bizType": "업태",
   "bizCategory": "종목",
   "recommendedIndustry": "auto 또는 food 또는 retail 또는 factory 또는 service 중 하나 선택"
@@ -1286,6 +1330,7 @@ JSON 형식:
                 const parsed = JSON.parse(jsonMatch[0]);
                 if (parsed.bizName) document.getElementById('bizName').value = parsed.bizName;
                 if (parsed.ownerName) document.getElementById('ownerName').value = parsed.ownerName;
+                if (parsed.bizAddress) document.getElementById('bizAddress').value = parsed.bizAddress;
                 if (parsed.openDate) {
                     const year = parsed.openDate.substring(0, 4);
                     const currentYear = new Date().getFullYear();
@@ -1298,7 +1343,7 @@ JSON 형식:
                         sel.value = parsed.recommendedIndustry;
                     }
                 }
-                showToast('사업자등록증 정보가 자동 입력되었습니다.');
+                showToast('사업자등록증 정보(상호·대표자·개업일·주소·업종)가 자동 입력되었습니다.');
             }
         } catch (e) {
             console.warn('OCR 파싱 실패:', e);
@@ -1306,12 +1351,51 @@ JSON 형식:
         }
     }
 
-    // 간판 사진 3장 슬롯 처리
+    // 현장 사진 3장 일괄 업로드 처리
+    async function handleBatchPhotoUpload(input) {
+        if (input.files && input.files.length > 0) {
+            await processBatchPhotoFiles(Array.from(input.files));
+        }
+    }
+
+    async function processBatchPhotoFiles(fileList) {
+        const imgFiles = fileList.filter(f => f.type.startsWith('image/'));
+        if (imgFiles.length === 0) {
+            alert('등록할 이미지 파일을 선택해 주세요.');
+            return;
+        }
+
+        const targetFiles = imgFiles.slice(0, 3);
+        const dropzoneText = document.getElementById('batchPhotoDropzoneText');
+        if (dropzoneText) dropzoneText.innerHTML = `<strong>사진 ${targetFiles.length}장 초고속 처리 중...</strong>`;
+
+        for (let i = 0; i < targetFiles.length; i++) {
+            const file = targetFiles[i];
+            const slotIdx = i + 1; // 1, 2, 3
+            try {
+                const compressed = await compressImage(file, 900, 0.7);
+                AppState.signPhotos[i] = compressed;
+                const previewEl = document.getElementById(`preview${slotIdx}`);
+                if (previewEl) {
+                    previewEl.innerHTML = `<img src="${compressed}" alt="사진 ${slotIdx}">`;
+                }
+            } catch (err) {
+                console.error(`사진 ${slotIdx} 압축 실패:`, err);
+            }
+        }
+
+        if (dropzoneText) {
+            dropzoneText.innerHTML = `✅ <strong>사진 ${targetFiles.length}장 일괄 등록 완료!</strong> (필요시 아래에서 개별 변경 가능)`;
+        }
+        showToast(`현장 사진 ${targetFiles.length}장이 사진 1~${targetFiles.length}번에 자동 배치되었습니다.`);
+    }
+
+    // 간판 사진 개별 슬롯 처리 (재선택/단독교체용)
     async function handleSignPhotoUpload(input, index) {
         if (input.files && input.files[0]) {
             const file = input.files[0];
             try {
-                const compressedBase64 = await compressImage(file, 1200, 0.8);
+                const compressedBase64 = await compressImage(file, 900, 0.7);
                 AppState.signPhotos[index - 1] = compressedBase64;
                 const previewEl = document.getElementById(`preview${index}`);
                 previewEl.innerHTML = `<img src="${compressedBase64}" alt="사진 ${index}">`;
@@ -1645,9 +1729,15 @@ ${p3}`;
         document.getElementById('bizFileInput').value = '';
         document.getElementById('bizDropzoneText').textContent = '사업자등록증 사진을 여기에 끌어다 놓거나 클릭하여 선택하세요';
 
-        // 3. 사진 슬롯 3장 초기화
+        // 3. 사진 슬롯 3장 및 일괄 업로드 드롭존 초기화
         for (let i = 1; i <= 3; i++) {
             clearPhotoSlot(i);
+        }
+        const batchInput = document.getElementById('batchPhotoInput');
+        if (batchInput) batchInput.value = '';
+        const batchText = document.getElementById('batchPhotoDropzoneText');
+        if (batchText) {
+            batchText.innerHTML = `<strong>노후 간판 사진 3장 한 번에 끌어다 놓기</strong> 또는 <span style="text-decoration: underline; color: #2563eb; cursor: pointer;">클릭하여 3장 일괄 선택</span>`;
         }
 
         // 4. 결과 섹션 초기화 및 숨김
