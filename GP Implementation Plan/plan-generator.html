@@ -1102,12 +1102,7 @@
                 const candidatePreferences = [
                     'models/gemini-3.5-flash',
                     'models/gemini-3.6-flash',
-                    'models/gemini-3.8-flash',
-                    'models/gemini-3.7-flash',
-                    'models/gemini-3-flash-preview',
-                    'models/gemini-flash-latest',
-                    'models/gemini-2.5-flash',
-                    'models/gemini-2.0-flash'
+                    'models/gemini-3.5-flash-lite'
                 ];
 
                 for (const pref of candidatePreferences) {
@@ -1119,19 +1114,7 @@
                     }
                 }
 
-                // flash가 포함된 모델 자동 선택
-                const anyFlash = models.find(m => m.name.includes('flash') && m.supportedGenerationMethods?.includes('generateContent'));
-                if (anyFlash) {
-                    AppState.detectedModel = anyFlash.name;
-                    return anyFlash.name;
-                }
-
-                // 그 외 generateContent 지원 모델
-                const anyGen = models.find(m => m.supportedGenerationMethods?.includes('generateContent'));
-                if (anyGen) {
-                    AppState.detectedModel = anyGen.name;
-                    return anyGen.name;
-                }
+                return 'models/gemini-3.5-flash';
             }
         } catch (e) {
             console.warn('모델 목록 자동 조회 실패, 기본 후보군 자동 시도로 진행:', e);
@@ -1142,15 +1125,11 @@
 
     // 견고한 Gemini API 호출 엔진 (자동 폴백 및 버전 호환성 지원)
     async function callGeminiApi(parts) {
-        const detected = await getBestGeminiModel(AppState.geminiApiKey);
-
-        // 시도할 엔드포인트 후보군 (무료 검증 모델 3.5-flash를 1순위로 배치)
+        // 시도할 엔드포인트 후보군 (무료 검증 모델 3.5-flash, 3.6-flash, 3.5-flash-lite만 엄격 한정)
         const endpoints = [
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`,
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`,
-            `https://generativelanguage.googleapis.com/v1beta/${detected}:generateContent`,
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent`,
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent`
         ];
 
         // 중복 제거
