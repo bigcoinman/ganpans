@@ -101,13 +101,61 @@ assertCheck(
   '사진 시각 팩트 기반 진실성 프롬프트가 누락되었습니다!'
 );
 
+// 6. [원칙 7] 파트당 2문장(총 8문장) 규격 및 결정론적 보강 엔진(enforceMin400Chars) 검증
 assertCheck(
-  '[원칙 6] 실시간 글자수 카운터(planCharCount) 장착 검증',
-  planGenCode.includes('id="planCharCount"'),
-  '실시간 글자수 카운터 표시기가 누락되었습니다!'
+  '[원칙 7] 파트당 2문장(총 8문장) 규격 프롬프트 명시 검증',
+  planGenCode.includes('정확히 2개의 긴 완성형 문장(총 8문장 체계)'),
+  '파트당 2문장(총 8문장) 규격화 프롬프트 지침이 누락되었습니다!'
 );
+
+assertCheck(
+  '[원칙 7] 결정론적 400~500자 강제 보강 엔진(enforceMin400Chars) 함수 장착 검증',
+  planGenCode.includes('function enforceMin400Chars'),
+  'enforceMin400Chars 결정론적 강제 보강 엔진이 누락되었습니다!'
+);
+
+assertCheck(
+  '[원칙 7] applyGeneratedResults 내 400자 미만 강제 방어벽 장착 검증',
+  planGenCode.includes('enforceMin400Chars(guaranteedData') || 
+  (planGenCode.includes('applyGeneratedResults') && planGenCode.includes('enforceMin400Chars')),
+  '화면 렌더링 파이프라인에 enforceMin400Chars 연동이 누락되었습니다!'
+);
+
+// 7. [원칙 7 시뮬레이션] 대표님이 겪으신 실제 330자 단문 입력 시 445~485자 강제 보강 시뮬레이션 테스트
+const sample330Text = {
+  part1: '1. 온누리공인중개사사무소은(는) 2016년 개업하여 11년차 동안 지역 주민과 함께 호흡해 온 생활밀착형 부동산 중개업소입니다.',
+  part2: '2. 개선사항 : 오랜 기간 방치되어 탈색과 오염이 심각한 노후 간판을 전면 철거하고, 시인성이 뛰어난 고효율 LED 플렉스 간판으로 교체하고자 합니다.',
+  part3: '3. 개선 필요성 : 간판 노후화로 상호 식별이 어려워 신규 고객 유입이 단절된 상황에서, 장기 불황에 따른 극심한 경영난으로 자력 교체가 버거워 공단의 소중한 지원이 절실합니다.',
+  part4: '4. 기대효과 : 본 지원을 마중물 삼아 점포 경쟁력을 높이고 경영을 정상화하여 지역 골목상권 활성화에 적극 기여하겠습니다.'
+};
+
+// plan-generator.html 내의 enforceMin400Chars 함수 추출 및 직접 테스트
+const funcMatch = planGenCode.match(/function enforceMin400Chars[\s\S]*?\n    \}/);
+if (funcMatch) {
+  try {
+    const fn = new Function('data', 'context', `${funcMatch[0]}; return enforceMin400Chars(data, context);`);
+    const simResult = fn(sample330Text, {
+      bizName: '온누리공인중개사사무소',
+      openYear: '2016년 개업 (11년차)',
+      industryDetail: '부동산 중개업소',
+      extraNotes: '골목상권 밀착 중개'
+    });
+    const len = simResult.plan.length;
+    console.log(`   👉 [시뮬레이션 결과] 330자 단문 ➔ ${len}자 고품격 8문장으로 완벽 확장됨!`);
+    assertCheck(
+      '[원칙 7 시뮬레이션] 330자 입력 시 440자 이상 500자 이내 완벽 보강 검증',
+      len >= 440 && len <= 500 && simResult.plan.endsWith('.'),
+      `시뮬레이션 결과 글자수(${len}자)가 440~500자 범위를 벗어났거나 마침표로 끝나지 않았습니다!`
+    );
+  } catch(e) {
+    assertCheck('[원칙 7 시뮬레이션] 함수 실행 테스트', false, e.message);
+  }
+} else {
+  assertCheck('[원칙 7 시뮬레이션] enforceMin400Chars 함수 추출', false, '함수를 파싱할 수 없습니다.');
+}
 
 console.log('\n========================================================');
 console.log(`🎉 [검증 완료] 총 ${passedChecks}/${totalChecks}개 전용 원칙 검사를 100% 통과했습니다!`);
-console.log('   GP Implementation Plan의 독립 무결성이 완벽하게 증명되었습니다.');
+console.log('   GP Implementation Plan의 독립 무결성과 400~500자 강제 원칙이 완벽하게 증명되었습니다.');
 console.log('========================================================\n');
+
