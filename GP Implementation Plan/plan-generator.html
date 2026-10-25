@@ -1105,11 +1105,13 @@
 
     // 초기화
     window.addEventListener('DOMContentLoaded', () => {
-        // 로컬스토리지에서 저장된 API Key 복원
-        const savedKey = localStorage.getItem('gemini_api_key');
+        // 로컬스토리지 또는 파일 내 사전 주입된 API Key 100% 영구 복원
+        const savedKey = localStorage.getItem('gemini_api_key') || AppState.geminiApiKey;
         if (savedKey) {
             AppState.geminiApiKey = savedKey;
-            document.getElementById('geminiApiKeyInput').value = savedKey;
+            try { localStorage.setItem('gemini_api_key', savedKey); } catch(e) {}
+            const inputEl = document.getElementById('geminiApiKeyInput');
+            if (inputEl) inputEl.value = savedKey;
             updateApiKeyUI(true);
         } else {
             updateApiKeyUI(false);
