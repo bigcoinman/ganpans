@@ -175,13 +175,15 @@ const sample330TextWithBannedWords = {
   part4: '4. 기대효과 : 본 지원을 마중물 삼아 점포 경쟁력을 높이고 경영을 정상화하여 지역 골목상권 활성화에 적극 기여하겠습니다.'
 };
 
-// plan-generator.html 내의 enforceMin400Chars 및 sanitizePlanText 함수 추출
+// plan-generator.html 내의 extractOperationYears, enforceMin400Chars 및 sanitizePlanText 함수 추출
+const yearsMatch = planGenCode.match(/function extractOperationYears[\s\S]*?\n    \}/);
 const sanitizeMatch = planGenCode.match(/function sanitizePlanText[\s\S]*?\n    \}/);
 const funcMatch = planGenCode.match(/function enforceMin400Chars[\s\S]*?\n    \}/);
 
-if (funcMatch && sanitizeMatch) {
+if (funcMatch && sanitizeMatch && yearsMatch) {
   try {
     const fn = new Function('data', 'context', `
+      ${yearsMatch[0]}
       ${sanitizeMatch[0]}
       ${funcMatch[0]}
       return enforceMin400Chars(data, context);
@@ -215,6 +217,13 @@ if (funcMatch && sanitizeMatch) {
       '결과 텍스트 내에 금지어가 남아있습니다!'
     );
 
+    // [신규 핵심 시뮬레이션] 8년 이상 점포(11년차) part1 내 "11년간" 기간 필수 명시 검증
+    assertCheck(
+      '[원칙 9 시뮬레이션] 8년 이상 점포(11년차) part1 내 "11년간" 운영 기간 필수 명시 검증',
+      simResult.part1.includes('11년간'),
+      'part1에 "11년간" 기간이 명시되지 않았습니다!'
+    );
+
     // [신규 핵심 시뮬레이션] 530자 초과 긴 텍스트 입력 시 4. 기대효과 100% 보존 검증 (스크린샷 버그 재발 방지)
     const longTextOver530 = {
       part1: '1. 온누리공인중개사사무소은(는) 2016년에 개업하여 11년차를 맞이한 전문 공인중개사 사무소로, 지역 주민과 밀착하여 신뢰를 쌓아온 생활밀착형 서비스업 점포입니다. 한자리에서 성실히 일터를 지켜왔으나, 최근 장기화된 경기 침체와 물가 상승으로 인해 영세한 점포 운영에 적지 않은 경제적 부담을 겪고 있습니다.',
@@ -239,6 +248,12 @@ if (funcMatch && sanitizeMatch) {
       '[핵심 버그 재발 방지] 530자 초과 텍스트 균형 압축 후 글자수(440~500자) 사수 검증',
       simLongResult.plan.length >= 440 && simLongResult.plan.length <= 500 && simLongResult.plan.endsWith('.'),
       `압축 후 글자수(${simLongResult.plan.length}자)가 440~500자 범위를 벗어났습니다!`
+    );
+
+    assertCheck(
+      '[원칙 9 시뮬레이션] 530자 초과 텍스트에서도 part1 "11년간" 기간 보존 검증',
+      simLongResult.part1.includes('11년간'),
+      '530자 텍스트에서 part1의 "11년간" 기간이 누락되었습니다!'
     );
 
   } catch(e) {

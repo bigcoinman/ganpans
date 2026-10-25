@@ -45,3 +45,7 @@ description: 점포 환경개선 추진계획서 AI 자동작성기(GP Implement
 - `plan-generator.html` 내에 간판지원단 본체의 라이브러리(`supabase-config.js`, `data-store.js`, `app.js` 등)를 절대 포함하지 않는다.
 - 본체의 소스 코드에 추진계획서 로직을 혼입하지 않는다.
 - 수정 작업 후 반드시 `npm run verify:plan` 전용 검문소와 `npm run verify` 본체 검문소를 모두 100% 통과시킨 후 배포한다.
+
+### 7. 8년 이상 장기 운영 점포 운영 기간({N}년간) part1 문두 필수 명시 (Long-Term Operation Duration SSOT)
+- 8년 이상 운영된 모든 점포는 part1(사업체 소개) 첫 번째 문장에 반드시 **"지난 {N}년간 한자리에서..."** 또는 **"{N}년간..."**과 같이 구체적 기간을 문두에 직접 명시하여 오랜 세월 점포를 운영해 온 신뢰와 역사를 강력하게 각인시킨다.
+- AI 누락 시 `enforceMin400Chars` 결정론적 보강 엔진이 브라우저 화면 출력 직전에 개입하여 기간 표현을 100% 강제 주입·보정한다.
