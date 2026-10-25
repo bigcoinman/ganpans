@@ -97,9 +97,9 @@ assertCheck(
 
 // 4. [원칙 3] 500자 초과 방어 및 마침표 종결 검사
 assertCheck(
-  '[원칙 3] 400자 이상 마침표 종결 클리핑(lastPeriod >= 400) 검증',
-  planGenCode.includes('lastPeriod >= 400'),
-  '500자 초과 방어 및 최소 400자 마침표 완결 클리핑 로직이 누락되었습니다!'
+  '[원칙 3] 4개 파트 온전 보존 및 4. 기대효과 영구 사수 엔진 검증',
+  planGenCode.includes('4. 기대효과가 어떠한 경우에도 누락되지 않도록 영구 사수') && planGenCode.includes('compactPart'),
+  '4. 기대효과 영구 사수 및 파트별 균형 압축 엔진이 누락되었습니다!'
 );
 
 assertCheck(
@@ -142,6 +142,31 @@ assertCheck(
   '프롬프트 내 금지어 배제 및 매출 상승 효과 필수 명시 지침이 누락되었습니다!'
 );
 
+// [신규 검증] 샘플 데이터(loadSampleData) 내 금지어 0건 및 매출 상승 효과 장착 검증
+const sampleDataMatch = planGenCode.match(/function loadSampleData[\s\S]*?\n    \}/);
+const sampleDataCode = sampleDataMatch ? sampleDataMatch[0] : '';
+assertCheck(
+  '[원칙 8] 우진자동차공업사 샘플 데이터 내 금지어 0건 검증',
+  !sampleDataCode.includes('마중물') &&
+  !sampleDataCode.includes('영업 마비') &&
+  !sampleDataCode.includes('절실'),
+  'loadSampleData 내에 구형 금지어 잔재가 남아있습니다!'
+);
+
+assertCheck(
+  '[원칙 8] 우진자동차공업사 샘플 데이터 내 "매출 상승 효과" 명시 검증',
+  sampleDataCode.includes('매출 상승 효과'),
+  'loadSampleData 4. 기대효과에 "매출 상승 효과"가 누락되었습니다!'
+);
+
+// [신규 검증] applyGeneratedResults 내 유령 DOM ID 부존재 검증
+assertCheck(
+  '[SSOT 검증] applyGeneratedResults 내 유령 DOM ID(bizPeriod, bizCategory) 부존재 검증',
+  !planGenCode.includes("getElementById('bizPeriod')") &&
+  !planGenCode.includes("getElementById('bizCategory')"),
+  'applyGeneratedResults 내에 존재하지 않는 유령 DOM ID가 참조되고 있습니다!'
+);
+
 // 7. [원칙 7, 8 시뮬레이션] 금지어가 포함된 과거 330자 텍스트 입력 시 445~485자 확장 및 금지어 0건, 매출 상승 효과 보장 검증
 const sample330TextWithBannedWords = {
   part1: '1. 온누리공인중개사사무소은(는) 2016년 개업하여 11년차 동안 지역 주민과 함께 호흡해 온 생활밀착형 부동산 중개업소입니다.',
@@ -168,13 +193,6 @@ if (funcMatch && sanitizeMatch) {
       extraNotes: '골목상권 밀착 중개'
     });
     const len = simResult.plan.length;
-    console.log(`      • 결과 본문:\n${simResult.plan}\n`);
-    console.log(`      • 글자수: ${len}자 (440~500자 기준 충족)`);
-    console.log(`      • 매출 상승 효과 포함 여부: ${simResult.plan.includes('매출 상승 효과') ? '✅ 포함됨' : '❌ 누락'}`);
-    console.log(`      • 금지어(마중물) 잔재: ${simResult.plan.includes('마중물') ? '❌ 잔재 발견' : '✅ 0건'}`);
-    console.log(`      • 금지어(영업 마비) 잔재: ${simResult.plan.includes('영업 마비') ? '❌ 잔재 발견' : '✅ 0건'}`);
-    console.log(`      • 금지어(절박한 처지) 잔재: ${simResult.plan.includes('절박한 처지') ? '❌ 잔재 발견' : '✅ 0건'}`);
-    console.log(`      • 금지어(절실합니다) 잔재: ${simResult.plan.includes('절실합니다') ? '❌ 잔재 발견' : '✅ 0건'}`);
 
     assertCheck(
       '[원칙 7, 8 시뮬레이션] 330자 ➔ 440~500자 완벽 보강 검증',
@@ -197,6 +215,32 @@ if (funcMatch && sanitizeMatch) {
       '결과 텍스트 내에 금지어가 남아있습니다!'
     );
 
+    // [신규 핵심 시뮬레이션] 530자 초과 긴 텍스트 입력 시 4. 기대효과 100% 보존 검증 (스크린샷 버그 재발 방지)
+    const longTextOver530 = {
+      part1: '1. 온누리공인중개사사무소은(는) 2016년에 개업하여 11년차를 맞이한 전문 공인중개사 사무소로, 지역 주민과 밀착하여 신뢰를 쌓아온 생활밀착형 서비스업 점포입니다. 한자리에서 성실히 일터를 지켜왔으나, 최근 장기화된 경기 침체와 물가 상승으로 인해 영세한 점포 운영에 적지 않은 경제적 부담을 겪고 있습니다.',
+      part2: '2. 개선사항 : 노후화로 인해 색이 바래고 오염된 기존 간판을 안전하게 철거하고, 시인성이 뛰어난 고효율 LED 플렉스 간판으로 전면 교체 시공할 계획입니다. 이를 통해 주야간 원거리에서도 상호 식별이 용이하도록 조도를 대폭 개선하고, 쾌적한 점포 외관을 조성하여 고객 신뢰를 회복하고자 합니다.',
+      part3: '3. 개선 필요성 : 간판의 심각한 노후화로 인해 상호와 연락처 식별이 어려워져 신규 고객 유입이 정체되는 등 점포 운영에 실질적인 어려움이 가중되고 있습니다. 자력 교체 부담이 큰 영세 사업장 여건에서 공단의 이번 시설 지원은 경영 정상화에 큰 힘이 됩니다.',
+      part4: '4. 기대효과 : 본 공공 지원을 발판 삼아 점포 인지도를 높이고 고객 접근성을 강화하여 가시적인 매출 상승 효과를 거두고, 지역 골목상권 활성화에 적극 기여하겠습니다.'
+    };
+
+    const simLongResult = fn(longTextOver530, {
+      bizName: '온누리공인중개사사무소',
+      openYear: '2016년 개업 (11년차)',
+      industryDetail: '부동산 중개업소'
+    });
+
+    assertCheck(
+      '[핵심 버그 재발 방지] 530자 초과 텍스트에서도 "4. 기대효과" 100% 완전 보존 검증',
+      simLongResult.plan.includes('4. 기대효과') && simLongResult.plan.includes('매출 상승 효과'),
+      '500자 초과 시 4. 기대효과가 잘려나갔습니다!'
+    );
+
+    assertCheck(
+      '[핵심 버그 재발 방지] 530자 초과 텍스트 균형 압축 후 글자수(440~500자) 사수 검증',
+      simLongResult.plan.length >= 440 && simLongResult.plan.length <= 500 && simLongResult.plan.endsWith('.'),
+      `압축 후 글자수(${simLongResult.plan.length}자)가 440~500자 범위를 벗어났습니다!`
+    );
+
   } catch(e) {
     assertCheck('[원칙 7, 8 시뮬레이션] 함수 실행 테스트', false, e.message);
   }
@@ -206,6 +250,6 @@ if (funcMatch && sanitizeMatch) {
 
 console.log('\n========================================================');
 console.log(`🎉 [검증 완료] 총 ${passedChecks}/${totalChecks}개 전용 원칙 검사를 100% 통과했습니다!`);
-console.log('   GP Implementation Plan의 독립 무결성과 비굴 표현 영구 배제 원칙이 완벽하게 증명되었습니다.');
+console.log('   GP Implementation Plan의 독립 무결성과 4개 파트 완전 보존 원칙이 완벽하게 증명되었습니다.');
 console.log('========================================================\n');
 

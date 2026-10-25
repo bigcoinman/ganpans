@@ -1548,21 +1548,21 @@ JSON 형식:
         document.getElementById('openYear').value = '2013년 개업 (13년차 운영)';
         document.getElementById('bizCategorySelect').value = 'auto';
         const extraEl = document.getElementById('bizExtraNotes');
-        if (extraEl) extraEl.value = '13년간 한자리에서 정직한 정비로 지역 주민들의 신뢰가 두터우나, 노후 간판의 심각한 백화로 야간 신규 차량 유입이 단절되어 보조금 지원을 통한 시설 개선과 재기가 절실함';
+        if (extraEl) extraEl.value = '13년간 한자리에서 정직한 정비로 지역 주민들의 신뢰가 두터우나, 노후 간판의 심각한 백화로 야간 신규 차량 유입이 정체되어 보조금 지원을 통한 시설 개선과 재도약이 꼭 필요함';
         document.getElementById('bizAddress').value = '경기도 수원시 팔달구 매산로 123';
 
         document.getElementById('planOutput').value = 
-`1. 우진자동차공업사는 2013년 개업 이래 13년간 한자리에서 정직한 정비 기술로 지역 주민의 안전을 책임져온 필수 서비스업체입니다. 오랜 기간 성실히 운영해 왔으나 최근 경기 침체로 시설 개선에 큰 어려움을 겪고 있습니다.
+`1. 우진자동차공업사는 2013년 개업 이래 13년간 한자리에서 정직한 정비 기술로 지역 주민의 안전을 책임져온 필수 서비스업체입니다. 오랜 기간 성실히 운영해 왔으나 최근 지속된 경기 침체로 시설 개선에 적지 않은 경제적 부담을 겪고 있습니다.
 
-2. 개선사항 : 노후화로 심하게 백화·탈색되어 상호 식별이 불가능한 전면 간판을 철거하고, 전기요금이 절감되는 고효율 친환경 LED 플렉스 간판으로 교체 시공하여 야간 시인성과 미관을 획기적으로 개선하고자 합니다.
+2. 개선사항 : 노후화로 심하게 백화·탈색되어 상호 식별이 어려운 전면 간판을 철거하고, 전기요금이 절감되는 고효율 친환경 LED 플렉스 간판으로 교체 시공하고자 합니다. 주야간 원거리 상호 식별 조도를 대폭 개선하고 쾌적한 외관을 정비하여 점포 신뢰도를 높이겠습니다.
 
-3. 개선 필요성 : 간판 시인성 마비로 신규 고객 유입이 차단되어 매출이 크게 위축되었습니다. 자력으로 수백만 원의 교체 비용을 부담하기 어려운 영세 업체의 현실이므로, 이번 경영환경개선 보조금 지원이 대단히 절실합니다.
+3. 개선 필요성 : 간판 시인성 저하로 신규 고객 유입이 정체되어 점포 운영에 어려움이 가중되고 있습니다. 자력으로 수백만 원의 교체 비용을 부담하기 어려운 영세 업체의 현실에서 이번 시설 개선 보조금 지원은 경영 정상화에 큰 힘이 됩니다.
 
-4. 기대효과 : 시인성이 강화된 새 간판으로 매장 신뢰도를 회복하고 내방율을 높여 매출 증대를 견인하겠습니다. 지원을 마중물 삼아 조속히 경영을 정상화하고, 밝아진 외관으로 침체된 골목상권 활성화에도 기여하겠습니다.`;
+4. 기대효과 : 시인성이 강화된 새 간판으로 매장 신뢰도를 회복하고 가시적인 매출 상승 효과를 거두어 경영을 조속히 정상화하겠습니다. 밝아진 점포 외관으로 방문 고객을 확대하여 침체된 골목상권 활성화에도 적극 기여하겠습니다.`;
 
         document.getElementById('p1Output').value = `돌출간판 한쪽 면이 완벽히 백화되어 상호 식별이 아예 불가능한 상태입니다. 하단 회전간판 또한 오랜 세월로 탈색 및 오염이 심각하여 야간 시인성을 완전히 상실하였습니다.`;
         document.getElementById('p2Output').value = `노후화된 기존 간판을 철거하고 전기요금이 절감되는 고효율 LED 플렉스 간판으로 교체 시공하여 야간 시인성을 확보하고, 매장의 미관과 접근성을 획기적으로 개선하고자 합니다.`;
-        document.getElementById('p3Output').value = `30년간의 노후화로 글씨 변색과 구조물 부식이 심각해 신규 고객 유입이 완전히 차단된 영업 마비 상태입니다. 안전사고 예방 및 사업장 재기를 위해 간판 교체가 대단히 시급합니다.`;
+        document.getElementById('p3Output').value = `30년간의 노후화로 글씨 변색과 구조물 부식이 심각해 신규 고객 유입이 정체되는 등 운영상의 어려움이 큽니다. 안전사고 예방과 점포의 원활한 운영을 위해 간판 교체가 대단히 시급합니다.`;
 
         document.getElementById('resultSection').style.display = 'block';
         updateCharCount();
@@ -1869,9 +1869,47 @@ ${extraNotes ? extraNotes : industryDetail}
             p4 += ' ' + s4_fallback;
         }
 
+        // 금지 단어 정제 필터 및 '매출 상승 효과' 보장 필터 선행 실행
+        p1 = sanitizePlanText(p1);
+        p2 = sanitizePlanText(p2);
+        p3 = sanitizePlanText(p3);
+        p4 = sanitizePlanText(p4);
+
+        // [절대 헌법] 4개 파트(part1~part4) 100% 온전 보존 및 445~485자 균형 압축 엔진
+        // 500자 초과 시 뒤를 잘라 4. 기대효과를 증발시키는 행위 100% 영구 금지!
+        // 파트가 130자를 초과할 때 첫 문장을 온전히 보존하고 2번째 문장을 정격 행정문으로 조율하여 4개 파트 모두 100% 보존
+        const compactPart = (txt, fallback, maxLen = 130) => {
+            if (txt.length <= maxLen) return txt;
+            const m = txt.match(/^([^.!?]+[.!?]+)/);
+            if (m) {
+                return (m[1].trim() + ' ' + fallback).trim();
+            }
+            return txt;
+        };
+
+        let totalLen = p1.length + p2.length + p3.length + p4.length + 6;
+        if (totalLen > 500) {
+            p1 = compactPart(p1, s1_fallback, 130);
+            totalLen = p1.length + p2.length + p3.length + p4.length + 6;
+        }
+        if (totalLen > 500) {
+            p2 = compactPart(p2, s2_fallback, 130);
+            totalLen = p1.length + p2.length + p3.length + p4.length + 6;
+        }
+        if (totalLen > 500) {
+            p3 = compactPart(p3, s3_fallback, 130);
+            totalLen = p1.length + p2.length + p3.length + p4.length + 6;
+        }
+        if (totalLen > 500) {
+            p4 = compactPart(p4, s4_fallback, 130);
+            if (!p4.includes('매출 상승 효과')) {
+                p4 = p4.replace(/^(4\.\s*기대효과\s*:\s*)/, '$1가시적인 매출 상승 효과를 거두고 ');
+            }
+        }
+
         let planText = `${p1}\n\n${p2}\n\n${p3}\n\n${p4}`.trim();
 
-        // 400자 미달 시 추가 문장으로 445~485자 강제 도달
+        // 400자 미달 시 p1과 p4에 안전 보강
         if (planText.length < 400) {
             p1 += ' 주민 밀착형 일터로서 지역사회와 늘 함께하며 긍지를 갖고 묵묵히 자리를 지켜왔습니다.';
             planText = `${p1}\n\n${p2}\n\n${p3}\n\n${p4}`.trim();
@@ -1881,39 +1919,9 @@ ${extraNotes ? extraNotes : industryDetail}
             planText = `${p1}\n\n${p2}\n\n${p3}\n\n${p4}`.trim();
         }
 
-        // 금지 단어 정제 필터 및 '매출 상승 효과' 보장 필터 실행
-        planText = sanitizePlanText(planText);
-        p1 = sanitizePlanText(p1);
-        p2 = sanitizePlanText(p2);
-        p3 = sanitizePlanText(p3);
-        p4 = sanitizePlanText(p4);
-
-        // 500자 초과 방어 & 마침표 종결 보장 (4. 기대효과가 절대 잘리지 않도록 안전 클리핑)
-        if (planText.length > 500) {
-            const p4Idx = planText.indexOf('4. 기대효과');
-            const sub = planText.substring(0, 500);
-            const lastPeriod = sub.lastIndexOf('.');
-            if (p4Idx !== -1 && lastPeriod > p4Idx) {
-                // 4번 기대효과 항목의 마침표까지 안전 절단
-                planText = sub.substring(0, lastPeriod + 1);
-            } else {
-                // 4번 항목이 500자 뒤에 걸려있는 경우 각 파트 여백 및 앞 문장 미세 압축 후 4번 파트 100% 보존
-                let p1_c = p1.substring(0, 115).trim();
-                if (!p1_c.endsWith('.')) p1_c = p1_c.substring(0, p1_c.lastIndexOf('.') + 1);
-                let p2_c = p2.substring(0, 115).trim();
-                if (!p2_c.endsWith('.')) p2_c = p2_c.substring(0, p2_c.lastIndexOf('.') + 1);
-                let p3_c = p3.substring(0, 115).trim();
-                if (!p3_c.endsWith('.')) p3_c = p3_c.substring(0, p3_c.lastIndexOf('.') + 1);
-                let p4_c = p4.substring(0, 135).trim();
-                if (!p4_c.endsWith('.')) p4_c = p4_c.substring(0, p4_c.lastIndexOf('.') + 1);
-
-                planText = `${p1_c}\n\n${p2_c}\n\n${p3_c}\n\n${p4_c}`.trim();
-                if (planText.length > 500) {
-                    const sub2 = planText.substring(0, 500);
-                    const lp2 = sub2.lastIndexOf('.');
-                    if (lp2 >= 400) planText = sub2.substring(0, lp2 + 1);
-                }
-            }
+        // [최종 절대 방어벽] 4. 기대효과가 어떠한 경우에도 누락되지 않도록 영구 사수
+        if (!planText.includes('4. 기대효과')) {
+            planText += `\n\n${p4}`;
         }
 
         return {
@@ -1962,7 +1970,7 @@ ${extraNotes ? extraNotes : industryDetail}
         return res;
     }
 
-    // 엄격한 글자 수 후처리 및 화면 반영
+    // 엄격한 글자 수 후처리 및 화면 반영 (4개 파트 완전 보존)
     function applyGeneratedResults(data) {
         let plan = '';
         if (data.part1 && data.part2 && data.part3 && data.part4) {
@@ -1975,12 +1983,12 @@ ${extraNotes ? extraNotes : industryDetail}
         let p2 = data.photo2 || '';
         let p3 = data.photo3 || '';
 
-        // [0단계 절대 방어] 만약 어떤 경로로든 plan이 400자 미만이면 결정론적 보강 엔진 강제 실행
-        if (plan.length < 400) {
+        // [0단계 절대 방어] 만약 어떤 경로로든 plan이 400자 미만이거나 '4. 기대효과'가 없으면 결정론적 보강 엔진 강제 실행
+        if (plan.length < 400 || !plan.includes('4. 기대효과')) {
             const context = {
                 bizName: document.getElementById('bizName')?.value || '',
-                openYear: document.getElementById('bizPeriod')?.value || '',
-                industryDetail: document.getElementById('bizCategory')?.value || '',
+                openYear: document.getElementById('openYear')?.value || '',
+                industryDetail: document.getElementById('bizCategorySelect')?.value || '',
                 extraNotes: document.getElementById('bizExtraNotes')?.value || ''
             };
             const fixed = enforceMin400Chars({ plan, part1: data.part1, part2: data.part2, part3: data.part3, part4: data.part4, photo1: p1, photo2: p2, photo3: p3 }, context);
@@ -2006,25 +2014,17 @@ ${extraNotes ? extraNotes : industryDetail}
         plan = plan.replace(/(?:^|\n)\s*4\.\s*기대효과\s*:\s*/g, '\n4. 기대효과 : ');
         plan = plan.trim();
 
-        // 2. 500자 초과 방어 & 문장 끝 잘림 원천 차단 (스마트 문장 종결 클리핑: 최소 400자 이상 유지)
+        // [버그 영구 박멸] 4. 기대효과를 증발시키던 무식한 substring(0, 500) 자르기 찌꺼기 100% 전수 삭제!
+        // 만약 500자 초과 시에도 파트별 균형 압축 엔진(enforceMin400Chars)을 재호출하여 4개 파트가 모두 온전하게 종결되도록 보장
         if (plan.length > 500) {
-            const sub = plan.substring(0, 500);
-            const lastPeriod = sub.lastIndexOf('.');
-            if (lastPeriod >= 400) {
-                plan = sub.substring(0, lastPeriod + 1);
-            } else {
-                const lastNewline = sub.lastIndexOf('\n');
-                if (lastNewline >= 400) {
-                    plan = sub.substring(0, lastNewline).trim();
-                } else {
-                    const lastSpace = sub.lastIndexOf(' ');
-                    if (lastSpace >= 400) {
-                        plan = sub.substring(0, lastSpace) + '.';
-                    } else {
-                        plan = sub;
-                    }
-                }
-            }
+            const context = {
+                bizName: document.getElementById('bizName')?.value || '',
+                openYear: document.getElementById('openYear')?.value || '',
+                industryDetail: document.getElementById('bizCategorySelect')?.value || '',
+                extraNotes: document.getElementById('bizExtraNotes')?.value || ''
+            };
+            const reEnforced = enforceMin400Chars({ plan, part1: data.part1, part2: data.part2, part3: data.part3, part4: data.part4 }, context);
+            plan = reEnforced.plan;
         }
 
         // 3. 사진별 100자 초과 방어 및 마침표 종결 보장
