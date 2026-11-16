@@ -27,22 +27,79 @@ function getBufferHash(buf) {
   return crypto.createHash('md5').update(buf).digest('hex');
 }
 
-// 폴더 내 기존 사진 파일들의 디지털 지문 및 최대 순번 스캔
-function getExistingPhotoHashes(folderPath) {
-  const hashSet = new Set();
-  let maxIndex = 0;
+// 폴더 내 기존 사진 파일 개수와 최신 수정시각(ms)만 초경량 스캔 (디스크 읽기/해시 없음)
+function inspectLocalPhotos(folderPath) {
   let fileCount = 0;
-  if (!fs.existsSync(folderPath)) return { hashSet, maxIndex, fileCount };
+  let latestMtimeMs = 0;
+  if (!fs.existsSync(folderPath)) return { fileCount, latestMtimeMs };
 
   const files = fs.readdirSync(folderPath);
   for (const f of files) {
     const fullPath = path.join(folderPath, f);
     try {
-      if (!fs.statSync(fullPath).isFile()) continue;
+      const stat = fs.statSync(fullPath);
+      if (!stat.isFile()) continue;
       const ext = path.extname(f).toLowerCase();
       if (!['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext)) continue;
 
       fileCount++;
+      if (stat.mtimeMs > latestMtimeMs) {
+        latestMtimeMs = stat.mtimeMs;
+      }
+    } catch (e) {}
+  }
+  return { fileCount, latestMtimeMs };
+}
+
+// DB 메타데이터와 실제 로컬 폴더 상태를 비교해 불필요한 image_url 재다운로드(Egress) 차단 여부 판별
+function shouldSkipImageFetch(memoObj, localInfo) {
+  const safeMemo = memoObj && typeof memoObj === 'object' ? memoObj : {};
+  const hasExplicitCount = typeof safeMemo.photoCount === 'number' && !Number.isNaN(safeMemo.photoCount);
+  const expectedPhotoCount = hasExplicitCount ? Number(safeMemo.photoCount) : null;
+  const rawUpdatedAt = safeMemo.photoUpdatedAt;
+  const expectedUpdatedAt = Number(rawUpdatedAt) || (rawUpdatedAt ? new Date(rawUpdatedAt).getTime() : 0);
+
+  // 1) DB에 사진이 0장임이 명시된 경우: image_url 요청 불필요
+  if (hasExplicitCount && expectedPhotoCount === 0) {
+    return { skip: true, reason: 'no_photo_meta' };
+  }
+
+  // 2) 로컬 폴더에 이미 DB 장수 이상 존재하고, 로컬 파일 최신 시각이 DB 사진 수정시각 이후인 경우
+  if (
+    hasExplicitCount &&
+    expectedPhotoCount > 0 &&
+    localInfo &&
+    localInfo.fileCount >= expectedPhotoCount &&
+    expectedUpdatedAt > 0 &&
+    localInfo.latestMtimeMs >= expectedUpdatedAt
+  ) {
+    return { skip: true, reason: 'up_to_date_local' };
+  }
+
+  return { skip: false, reason: 'fetch_required' };
+}
+
+// 폴더 내 기존 사진 파일들의 디지털 지문, 최대 순번, 개수, 최신 수정시각(ms) 스캔
+function getExistingPhotoHashes(folderPath) {
+  const hashSet = new Set();
+  let maxIndex = 0;
+  let fileCount = 0;
+  let latestMtimeMs = 0;
+  if (!fs.existsSync(folderPath)) return { hashSet, maxIndex, fileCount, latestMtimeMs };
+
+  const files = fs.readdirSync(folderPath);
+  for (const f of files) {
+    const fullPath = path.join(folderPath, f);
+    try {
+      const stat = fs.statSync(fullPath);
+      if (!stat.isFile()) continue;
+      const ext = path.extname(f).toLowerCase();
+      if (!['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext)) continue;
+
+      fileCount++;
+      if (stat.mtimeMs > latestMtimeMs) {
+        latestMtimeMs = stat.mtimeMs;
+      }
       const match = f.match(/_현장사진_(\d+)/);
       if (match) {
         const num = parseInt(match[1], 10);
@@ -55,7 +112,7 @@ function getExistingPhotoHashes(folderPath) {
       }
     } catch (e) {}
   }
-  return { hashSet, maxIndex, fileCount };
+  return { hashSet, maxIndex, fileCount, latestMtimeMs };
 }
 
 // 1. 스마트 드라이브 감지 및 동적 저장 경로 설정
@@ -145,14 +202,22 @@ async function fetchSupabase(url, key, endpoint) {
   return await resp.json();
 }
 
-// 메인 에이전트 실행 함수
-async function runSyncAgent() {
+// 메인 에이전트 실행 함수 (options.targetIds 지정 시 변경된 건만 정밀 동기화)
+async function runSyncAgent(options = {}) {
   const startTime = Date.now();
+  const targetIds = Array.isArray(options.targetIds)
+    ? options.targetIds.map(id => String(id).trim()).filter(Boolean)
+    : [];
+  const isTargetedMode = targetIds.length > 0;
+
   console.log('===============================================================');
   console.log('   🚀 간판지원단 신청업체 사진 자동분류 다운로드 에이전트');
   console.log('===============================================================');
   console.log(`📁 저장 기준 경로: ${TARGET_ROOT_DIR}`);
   console.log(`🏷️ 취소/포기 격리 폴더명: ${CANCELED_FOLDER_NAME}`);
+  if (isTargetedMode) {
+    console.log(`🎯 증분 동기화 대상: ${targetIds.length}건 (${targetIds.join(', ')})`);
+  }
   console.log(`⏰ 실행 시작: ${new Date().toLocaleString('ko-KR')}\n`);
 
   // 루트 폴더 생성 보장
@@ -206,11 +271,16 @@ async function runSyncAgent() {
     }
   });
 
-  // Step 2: 신청서 메타데이터 조회 (대역폭 보호: 사진 컬럼 제외)
+  // Step 2: 신청서 메타데이터 조회 (대역폭 보호: 사진 컬럼 제외, 증분 모드 시 대상 ID만 조회)
   console.log('📋 [2/3] 신청서 목록 메타데이터 조회 중...');
   const appColumns = 'id,user_id,owner_name,phone,store_name,store_address,sign_type,referrer_code,status,assigned_constructor_name,construction_status,memo,applied_at,created_at';
-  const applications = await fetchSupabase(url, key, `applications?select=${appColumns}&order=created_at.asc`);
-  console.log(`📊 총 ${applications.length}건의 신청서가 접수되어 있습니다.\n`);
+  let appEndpoint = `applications?select=${appColumns}&order=created_at.asc`;
+  if (isTargetedMode) {
+    const encodedIn = targetIds.map(id => `"${id.replace(/"/g, '')}"`).join(',');
+    appEndpoint = `applications?select=${appColumns}&id=in.(${encodeURIComponent(encodedIn)})&order=created_at.asc`;
+  }
+  const applications = await fetchSupabase(url, key, appEndpoint);
+  console.log(`📊 조회된 신청서: ${applications.length}건\n`);
 
   // Step 3: 업체별 폴더 생성 및 사진 온디맨드 다운로드
   console.log('📂 [3/3] 영업자별 폴더 분류 및 사진 다운로드 동기화 시작...');
@@ -222,6 +292,7 @@ async function runSyncAgent() {
     canceledApps: 0,
     downloadedPhotos: 0,
     skippedPhotos: 0,
+    skippedEgressApps: 0,
     noPhotoApps: 0
   };
 
@@ -293,6 +364,21 @@ async function runSyncAgent() {
     const storeFolderName = `${cleanStoreName}_${cleanOwnerName} (${cleanAppId})`;
     const storeFolderPath = path.join(parentFolder, storeFolderName);
 
+    // 정상 <-> 취소/포기 상태 변경 시 기존 폴더를 안전 이동해 사진 재다운로드 방지 (파일 잠금 예외 방어)
+    const alternateParentFolder = isCanceled ? salesFolder : path.join(salesFolder, CANCELED_FOLDER_NAME);
+    const alternateFolderPath = path.join(alternateParentFolder, storeFolderName);
+    if (!fs.existsSync(storeFolderPath) && fs.existsSync(alternateFolderPath)) {
+      try {
+        if (!fs.existsSync(parentFolder)) {
+          fs.mkdirSync(parentFolder, { recursive: true });
+        }
+        fs.renameSync(alternateFolderPath, storeFolderPath);
+        console.log(`${progressPrefix} 📦 상태 변경 폴더 이동 완료: ${storeFolderName}`);
+      } catch (moveErr) {
+        console.warn(`${progressPrefix} ⚠️ 기존 폴더 이동 보류 (${storeFolderName}): ${moveErr.message}`);
+      }
+    }
+
     // 폴더 생성
     if (!fs.existsSync(storeFolderPath)) {
       fs.mkdirSync(storeFolderPath, { recursive: true });
@@ -322,7 +408,22 @@ async function runSyncAgent() {
     ].join('\r\n');
     fs.writeFileSync(path.join(storeFolderPath, '신청정보요약.txt'), '\uFEFF' + summaryText, 'utf8');
 
-    // 6) 사진 온디맨드 단일 조회
+    // 6) Egress 차단 사전 검증: 실제 로컬 사진 수 + 수정시각으로 이미 최신이면 image_url 조회 자체를 생략(0 Byte)
+    const localPhotoInfo = inspectLocalPhotos(storeFolderPath);
+    const skipCheck = shouldSkipImageFetch(memoObj, localPhotoInfo);
+    if (skipCheck.skip) {
+      if (skipCheck.reason === 'no_photo_meta') {
+        stats.noPhotoApps++;
+        console.log(`${progressPrefix} ${isCanceled ? '🚫[취소&포기]' : '📁'} ${cleanStoreName} (${cleanAppId}) | 사진 없음 (0B 스킵)`);
+      } else {
+        stats.skippedEgressApps++;
+        stats.skippedPhotos += localPhotoInfo.fileCount;
+        console.log(`${progressPrefix} ${isCanceled ? '🚫 [취소&포기]' : '✅ [정상접수]'} ${cleanStoreName} (${cleanAppId}) ➔ 로컬 최신 ${localPhotoInfo.fileCount}장 유지 (Egress 0B 스킵)`);
+      }
+      continue;
+    }
+
+    // 7) 신규/변경/누락 건에 한해서만 사진 온디맨드 단일 조회
     const photoData = await fetchSupabase(url, key, `applications?select=id,image_url&id=eq.${encodeURIComponent(app.id)}`);
     const targetRow = photoData[0] || {};
     const rawImage = targetRow.image_url;
@@ -438,7 +539,7 @@ async function runSyncAgent() {
   console.log('===============================================================');
   console.log(`⏱️ 총 소요 시간: ${durationSec}초`);
   console.log(`🏢 총 신청업체: ${stats.totalApps}개소 (정상: ${stats.normalApps}개소, 취소&포기: ${stats.canceledApps}개소)`);
-  console.log(`📸 사진 다운로드 통계: 신규 다운로드 ${stats.downloadedPhotos}장 / 이미 존재(스킵) ${stats.skippedPhotos}장`);
+  console.log(`📸 사진 다운로드 통계: 신규 다운로드 ${stats.downloadedPhotos}장 / 이미 존재(스킵) ${stats.skippedPhotos}장 / DB조회 차단 ${stats.skippedEgressApps}개소`);
   console.log(`📁 최종 저장 위치: ${TARGET_ROOT_DIR}`);
   console.log('===============================================================\n');
 
@@ -452,4 +553,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { runSyncAgent, resolveTargetRootDir };
+module.exports = { runSyncAgent, resolveTargetRootDir, inspectLocalPhotos, shouldSkipImageFetch };

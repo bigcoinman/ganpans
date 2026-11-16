@@ -3,8 +3,7 @@
  * 
  * 최고관리자 간판사진 초경량 실시간 백그라운드 동기화 에이전트
  * - 평상시 CPU 점유율 0.0%, 메모리 25MB 내외 초경량 상주
- * - 2분(120초) 주기 50바이트 초경량 핑(Head Check)으로 신규 접수 감지 (트래픽 및 호출 75% 절감)
- * - 신규 접수건 또는 사진 변경 발생 즉시 0초 만에 로컬 드라이브 자동 동기화
+ * - 10분(600초) 주기 초경량 메타데이터 감시(사진 제외)로 신규/변경 건만 증분 다운로드
  * - 하드디스크 임시 파일/로그 누적 제로 (Zero Disk Junk)
  */
 
@@ -21,12 +20,32 @@ function loadSupabaseConfig() {
 }
 
 let isSyncing = false;
-let lastCheckFingerprint = '';
+const fingerprintMap = new Map();
 
-// 초경량 메타데이터 핑 (50바이트 미만 조회로 트래픽 다이어트 준수)
-async function checkLatestAppFingerprint(url, key) {
+function buildAppFingerprint(row) {
+  let m = {};
+  if (row && row.memo) {
+    try {
+      m = typeof row.memo === 'string' ? JSON.parse(row.memo) : row.memo;
+    } catch (e) {
+      m = {};
+    }
+  }
+  return [
+    row.status || '',
+    m && m.photoCount !== undefined ? m.photoCount : '',
+    m && m.photoUpdatedAt !== undefined ? m.photoUpdatedAt : '',
+    m && m.receiptStatus ? m.receiptStatus : '',
+    m && m.progressStatus ? m.progressStatus : ''
+  ].join('|');
+}
+
+// 초경량 메타데이터 조회 (사진 컬럼 제외: 최근 10건 ~3KB / 전체 ~28KB)
+async function fetchAppMetaSnapshot(url, key, limit = 10) {
   try {
-    const endpoint = 'applications?select=id,created_at,applied_at,status&order=created_at.desc&limit=1';
+    const endpoint = limit > 0
+      ? `applications?select=id,status,memo&order=created_at.desc&limit=${limit}`
+      : 'applications?select=id,status,memo&order=created_at.asc';
     const resp = await fetch(`${url}/rest/v1/${endpoint}`, {
       headers: {
         'apikey': key,
@@ -35,11 +54,31 @@ async function checkLatestAppFingerprint(url, key) {
     });
     if (!resp.ok) return null;
     const data = await resp.json();
-    if (!data || data.length === 0) return '';
-    const latest = data[0];
-    return `${latest.id || ''}_${latest.created_at || ''}_${latest.status || ''}`;
+    return Array.isArray(data) ? data : null;
   } catch (e) {
     return null;
+  }
+}
+
+function detectChangedAppIds(rows) {
+  const changedIds = [];
+  if (!Array.isArray(rows)) return changedIds;
+  for (const row of rows) {
+    if (!row || !row.id) continue;
+    const id = String(row.id).trim();
+    const fp = buildAppFingerprint(row);
+    if (fingerprintMap.get(id) !== fp) {
+      changedIds.push(id);
+    }
+  }
+  return changedIds;
+}
+
+function updateFingerprintMap(rows) {
+  if (!Array.isArray(rows)) return;
+  for (const row of rows) {
+    if (!row || !row.id) continue;
+    fingerprintMap.set(String(row.id).trim(), buildAppFingerprint(row));
   }
 }
 
@@ -70,29 +109,35 @@ async function startRealtimeAgent() {
 
   const { url, key } = loadSupabaseConfig();
 
-  // 1. 가동 즉시 초기 동기화 1회 실행
+  // 1. 가동 즉시 초기 동기화 1회 실행 (로컬에 이미 있는 사진은 0B 스킵) + 지문 맵 초기화
   try {
     isSyncing = true;
-    const initialStats = await runSyncAgent();
-    lastCheckFingerprint = await checkLatestAppFingerprint(url, key) || '';
+    await runSyncAgent();
+    const initialSnapshot = await fetchAppMetaSnapshot(url, key, 0);
+    if (initialSnapshot) {
+      updateFingerprintMap(initialSnapshot);
+    }
     isSyncing = false;
   } catch (err) {
     console.error('초기 동기화 중 오류 발생:', err.message);
     isSyncing = false;
   }
 
-  // 2. 초경량 핑 주기 (2분마다 50바이트 경량 검사 - 트래픽 및 API 호출 75% 절감)
-  const PING_INTERVAL_MS = 120000; // 2분 (120초)
+  // 2. 초경량 증분 감시 (10분마다 전체 경량 메타 ~28KB 확인, 변경 건만 단건 동기화)
+  const PING_INTERVAL_MS = 600000; // 10분 (600초)
   setInterval(async () => {
     if (isSyncing) return;
 
     try {
-      const currentFingerprint = await checkLatestAppFingerprint(url, key);
-      if (currentFingerprint && currentFingerprint !== lastCheckFingerprint) {
-        console.log(`\n🔔 신규 접수건 또는 상태 변경 감지! [${currentFingerprint}] ➔ 자동 다운로드 시작!`);
+      const snapshot = await fetchAppMetaSnapshot(url, key, 0);
+      if (!snapshot) return;
+
+      const changedIds = detectChangedAppIds(snapshot);
+      if (changedIds.length > 0) {
+        console.log(`\n🔔 변경/신규 ${changedIds.length}건 감지 [${changedIds.join(', ')}] ➔ 증분 동기화 시작!`);
         isSyncing = true;
-        const stats = await runSyncAgent();
-        lastCheckFingerprint = currentFingerprint;
+        const stats = await runSyncAgent({ targetIds: changedIds });
+        updateFingerprintMap(snapshot);
         isSyncing = false;
 
         if (stats && stats.downloadedPhotos > 0) {
@@ -109,4 +154,4 @@ if (require.main === module) {
   startRealtimeAgent();
 }
 
-module.exports = { startRealtimeAgent };
+module.exports = { startRealtimeAgent, buildAppFingerprint, detectChangedAppIds };
